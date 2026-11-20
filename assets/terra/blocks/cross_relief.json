@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 357,
+  "name": "Cross Relief",
+  "description": "Cross Relief carved with a memorial ornament.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/cross_relief.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/cross_relief.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.03,
+        0,
+        0.5
+      ],
+      "maximum": [
+        0.97,
+        1,
+        0.94
+      ]
+    }
+  ]
+}

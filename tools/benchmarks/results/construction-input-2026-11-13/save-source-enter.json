@@ -1,0 +1,14 @@
+{
+  "source": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/worlds/Test",
+  "world_id": 205294890893140149,
+  "hashes": {
+    ".write.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "world.toml": "0742b8dde497ccacabfbdf09c385da1cf17f006d51318874c0cc50b3f82ec730",
+    "level.data": "4e4cb3fc3a0800a3f2a676d8d6fe7ea9cb4246c1b2ffccfe219b7b15441c25d6",
+    "regions/r.-1.-1.region": "1b3b2d8ebcb8b84435d31c157ca68d7f9a666afe918b0217d8c4d987913076cc",
+    "regions/r.-1.0.region": "4b5a25c6cd5045090848969a6c12010c60f8202f4e14ef2241100a6032d5de02",
+    "regions/r.0.-1.region": "d2e5460ad1611a680c625135668d07c27270ab411b5d2d6d353ee76eb69bc84e",
+    "regions/r.0.0.region": "e670606716943022424fe7bf21010b5af614401a5790923d9cde84a4836a9064",
+    "players/3daf7669-97e1-469c-9017-354f4ca07906.data": "874e6f6e3cb3512007e5d8a53e818b6c236580a8019a95bfe1da163bf0cb598c"
+  }
+}

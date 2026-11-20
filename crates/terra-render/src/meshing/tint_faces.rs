@@ -9,7 +9,9 @@ pub(super) fn split(
     subdivide(
         face,
         &|point| {
-            if authored && face.material == 1 {
+            if (authored || matches!(face.material, 306 | 400))
+                && matches!(face.material, 1 | 306 | 400)
+            {
                 tint.authored_grass_at(point)
             } else {
                 tint.at(point, face.material)

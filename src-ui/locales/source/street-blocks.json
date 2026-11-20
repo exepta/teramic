@@ -1,0 +1,67 @@
+[
+  {
+    "source": "Galle Block",
+    "en": "Galle Block",
+    "de": "Galleblock"
+  },
+  {
+    "source": "Sidewalk Block",
+    "en": "Sidewalk Block",
+    "de": "Bürgersteigblock"
+  },
+  {
+    "source": "Sidewalk",
+    "en": "Sidewalk",
+    "de": "Bürgersteig"
+  },
+  {
+    "source": "Sidewalk Left Edge",
+    "en": "Sidewalk Left Edge",
+    "de": "Bürgersteig – Kante links"
+  },
+  {
+    "source": "Sidewalk Right Edge",
+    "en": "Sidewalk Right Edge",
+    "de": "Bürgersteig – Kante rechts"
+  },
+  {
+    "source": "Sidewalk Left Curve",
+    "en": "Sidewalk Left Curve",
+    "de": "Bürgersteig – Bogen links"
+  },
+  {
+    "source": "Sidewalk Right Curve",
+    "en": "Sidewalk Right Curve",
+    "de": "Bürgersteig – Bogen rechts"
+  },
+  {
+    "source": "Lowered Sidewalk",
+    "en": "Lowered Sidewalk",
+    "de": "Abgesenkter Bürgersteig"
+  },
+  {
+    "source": "Straw Block",
+    "en": "Straw Block",
+    "de": "Strohblock"
+  },
+  {
+    "source": "Carve Sidewalk Pavers",
+    "en": "Carve Sidewalk Pavers",
+    "de": "Bürgersteigplatten behauen"
+  },
+  {
+    "source": "Tie Straw Bale",
+    "en": "Tie Straw Bale",
+    "de": "Strohballen binden"
+  },
+  {
+    "source": "Untie Straw Bale",
+    "en": "Untie Straw Bale",
+    "de": "Strohballen lösen"
+  },
+  {
+    "source": "Coat Stone with Galle",
+    "en": "Coat Stone with Galle",
+    "de": "Stein mit Galle überziehen"
+  }
+]

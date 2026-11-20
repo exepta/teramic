@@ -13,5 +13,9 @@ pub use targeting::{TargetBlock, TargetCreature, TargetTrain, TargetWorld, World
 pub(crate) use targeting::{target_block, target_creature};
 pub use vessels::VesselMotion;
 
+/// World selection tools can keep walking/look input while preventing all edits.
+#[derive(bevy::prelude::Resource, Default, Debug)]
+pub struct WorldInteractionBlock(pub bool);
+
 #[doc(hidden)]
 pub use rail_sequence::Pending as RailPending;

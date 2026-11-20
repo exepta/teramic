@@ -85,6 +85,7 @@ fn placed(
         border_models: Vec::new(),
         border_glass: HashSet::new(),
         water_contacts: HashMap::new(),
+        water_plants: HashMap::new(),
         chimney_infill: BTreeMap::new(),
         pipe_surround: BTreeMap::new(),
         funnel_supports: HashSet::new(),

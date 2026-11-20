@@ -1,0 +1,34 @@
+{
+  "status": "passed",
+  "scope": "Native model/pose fixtures; not authoritative AI, navigation or swimming tests.",
+  "client_sha256": "887e5291c1f8e53817af2744a358d92c9a755a11c9e78d1a6eb4d36536541442",
+  "scenes": {
+    "sandworm": {
+      "count": 5,
+      "marker": "Sandworm gallery passed:",
+      "captures": [
+        {
+          "file": "sandworm-0.png",
+          "sha256": "637a95c91b97d01f9baab77c286430d30960f3f6dbd45f451b4b4cbe060c9086"
+        },
+        {
+          "file": "sandworm-1.png",
+          "sha256": "9a71cd1fa14b982a785a7a8ad62ea5ea8785c7bc46f6239d2ff70a82a5d77d55"
+        },
+        {
+          "file": "sandworm-2.png",
+          "sha256": "2e71ec27871f36f8fd6f6152b408d523762aff5f9307f2f3374dd71f231a0dd0"
+        },
+        {
+          "file": "sandworm-3.png",
+          "sha256": "e20af6022d80fd8657c417d3ac358660c058e88093845795ab2b0d9f81dee936"
+        },
+        {
+          "file": "sandworm-4.png",
+          "sha256": "642c8bc34dd35a3501ee66df4a242a735f335be613237e65edde2b735c6fef65"
+        }
+      ]
+    }
+  },
+  "total_captures": 5
+}

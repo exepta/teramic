@@ -24,12 +24,16 @@ pub(crate) fn toggle(
     }
 }
 pub(crate) fn boom(
+    construction: Option<Res<super::ConstructionCamera>>,
     perspective: Res<CameraPerspective>,
     bodies: Bodies,
     mut cameras: FollowCameras,
     spatial: SpatialQuery,
     session: Option<Res<terra_network::client::ClientSession>>,
 ) {
+    if construction.as_ref().is_some_and(|camera| camera.active) {
+        return;
+    }
     for (mut camera, mut look) in &mut cameras {
         if let Some(sleep) = session.as_ref().and_then(|session| session.sleeping()) {
             let rotation =

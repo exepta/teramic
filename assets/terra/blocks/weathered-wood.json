@@ -5,29 +5,45 @@
   "id": 10,
   "name": "Weathered Wood",
   "render_kind": "cube",
-  "surface": "wood",
-  "bevel_width": 0.0,
+  "bevel_width": 0.025,
   "materials": {
     "Silver bark": {
       "base_color": [
-        1.0,
-        1.0,
-        1.0,
-        1.0
+        1,
+        1,
+        1,
+        1
       ],
-      "texture_pattern": "birch_bark"
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/birch_bark_normal.png"
+    },
+    "Silver bark end grain": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/birch_end_normal.png"
     }
   },
   "face_materials": [
     "Silver bark",
     "Silver bark",
-    "Silver bark",
-    "Silver bark",
+    "Silver bark end grain",
+    "Silver bark end grain",
     "Silver bark",
     "Silver bark"
   ],
   "hardness": 0.8,
   "resistance": 3.0,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Silver bark": "textures/block_palette/birch_bark.png",
+    "Silver bark end grain": "textures/block_palette/birch_end.png"
+  }
 }

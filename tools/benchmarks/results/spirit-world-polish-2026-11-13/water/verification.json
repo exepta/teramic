@@ -1,0 +1,19 @@
+{
+  "status": "visually_reviewed",
+  "spirit": {
+    "seed": 42042,
+    "target": [
+      -20751.5,
+      8,
+      -19639.5
+    ],
+    "measured_water_depth": 3.0,
+    "view": "Actual generated swamp with bright turquoise-white water and lily pads"
+  },
+  "cherry": {
+    "scene": "cherry-brook",
+    "view": "Close image shows real narrow brook with pink water; overview is obstructed by hillside",
+    "terrain": "Existing legacy revision-2 brook photography fixture; validates water rendering, not latest water distribution"
+  },
+  "performance": "Not a performance comparison: compiler was running concurrently"
+}

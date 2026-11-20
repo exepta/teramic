@@ -1,0 +1,6 @@
+width = 1920
+height = 1080
+view_distance = 3
+vertical_view_distance = 3
+vsync = false
+debug_overlay = false

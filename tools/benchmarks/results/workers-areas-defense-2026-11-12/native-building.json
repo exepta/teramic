@@ -1,0 +1,43 @@
+{
+  "status": "passed",
+  "screens": {
+    "building-local-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 491006
+    },
+    "building-storage-selection-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 1439156
+    },
+    "building-saved-areas-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 1530358
+    },
+    "building-job-en-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 230882
+    },
+    "building-progress-en-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 210408
+    },
+    "building-paused-en-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 201218
+    }
+  },
+  "input": "real gameplay raycasts and HTML component handlers",
+  "transport": "real local UDP server",
+  "claims": "real acknowledged Build claim",
+  "storage": "actual chest and transferred 128 structure stone plus 128 planks",
+  "craftsman_without_work_area": true,
+  "house": "actual default village template, real non-air voxel placement, acknowledged pause",
+  "responsive_geometry": true,
+  "saved_area_overlay": true
+}

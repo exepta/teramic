@@ -78,7 +78,12 @@ pub(crate) fn install(app: &mut App) {
         .init_resource::<PetMenuView>()
         .init_resource::<PetPortrait>()
         .add_message::<PetMenuAction>()
-        .add_systems(PreUpdate, opening_frame.after(bevy::input::InputSystems))
+        .add_systems(
+            PreUpdate,
+            opening_frame
+                .after(bevy::input::InputSystems)
+                .after(crate::npc_work::NpcWorkInputSet),
+        )
         .add_systems(
             Update,
             update
@@ -133,8 +138,11 @@ fn playing(world: &World) -> bool {
 
 fn unoccupied(world: &World) -> bool {
     !world
-        .get_resource::<crate::kingdom::KingdomMenuState>()
-        .is_some_and(|k| k.blocks_input())
+        .get_resource::<crate::npc_work::WorkUiState>()
+        .is_some_and(|work| work.blocks_input())
+        && !world
+            .get_resource::<crate::kingdom::KingdomMenuState>()
+            .is_some_and(|k| k.blocks_input())
         && !world
             .get_resource::<crate::inventory::InventoryState>()
             .is_some_and(|s| s.blocks_input())

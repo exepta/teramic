@@ -3,6 +3,40 @@ use crate::streaming::LoadedSection;
 use terra_core::{Inventory, ItemStack, PlayerUuid, ToolKind, WorldConfig, npc_jobs::WorkArea};
 use terra_voxel::{BlockSection, global_to_section};
 mod lumberjack;
+mod navigation_paths;
+mod planting_cycle;
+mod station;
+mod station_supplies;
+mod suspension;
+
+#[test]
+fn an_idle_target_scan_does_not_cancel_the_villagers_ordinary_walking_motion() {
+    let (mut chunks, mut journal, terrain, mut runtime, npc) = fixture(WorkKind::Collector);
+    journal.gameplay_mut().jobs.workers.insert(
+        npc,
+        WorkerState {
+            status: WorkStatus::Waiting(WaitReason::NoTargets),
+            ..Default::default()
+        },
+    );
+    let animal = journal
+        .gameplay_mut()
+        .creatures
+        .animals
+        .get_mut(&npc)
+        .unwrap();
+    animal.velocity = [0.8, 0.0, 0.2];
+    animal.behavior = CreatureBehavior::Wander;
+    let age = animal.age;
+    run(&mut chunks, &mut journal, &terrain, &mut runtime, 1);
+    let animal = &journal.gameplay().creatures.animals[&npc];
+    assert_eq!(animal.velocity, [0.8, 0.0, 0.2]);
+    assert_eq!(animal.behavior, CreatureBehavior::Wander);
+    assert_eq!(
+        animal.age, age,
+        "the ordinary resident owns idle scheduling and gravity"
+    );
+}
 
 fn set(chunks: &mut ChunkStore, cell: [i64; 3], material: u16) {
     let (owner, local) = global_to_section(cell);
@@ -58,6 +92,16 @@ fn fixture(kind: WorkKind) -> (ChunkStore, EditJournal, TerraGenerator, WorkRunt
     journal
         .set_container(storage, Inventory::default())
         .unwrap();
+    if kind == WorkKind::Lumberjack {
+        set(
+            &mut chunks,
+            [0, 1, 2],
+            terra_core::profession_stations::LUMBERJACK,
+        );
+        journal
+            .record([0, 1, 2], terra_core::profession_stations::LUMBERJACK)
+            .unwrap();
+    }
     journal.gameplay_mut().jobs.next_id = 2;
     journal.gameplay_mut().jobs.orders.insert(
         1,
@@ -480,9 +524,47 @@ fn workers_do_not_cross_a_wall_or_mine_recorded_building_blocks() {
     assert!(journal.gameplay().creatures.animals[&npc].position[0] < 3.0);
     assert_eq!(
         journal.gameplay().jobs.workers[&npc].status,
+        WorkStatus::Waiting(WaitReason::NoPath),
+        "npc {:?}, travel {:?}, route {:?}",
+        journal.gameplay().creatures.animals[&npc],
+        runtime.travel.get(&npc),
+        runtime
+            .navigation
+            .inspection(&journal.gameplay().creatures.animals[&npc])
+    );
+    for _ in 0..90 {
+        run(&mut chunks, &mut journal, &terrain, &mut runtime, 1);
+        assert_eq!(
+            journal.gameplay().jobs.workers[&npc].status,
+            WorkStatus::Waiting(WaitReason::NoPath),
+            "confirmed wall remains blocked throughout bounded retries"
+        );
+        assert!(journal.gameplay().creatures.animals[&npc].position[0] < 3.0);
+    }
+    // A real geometry change invalidates the confirmed failure immediately.
+    for z in -4..=4 {
+        for y in 1..=4 {
+            set(&mut chunks, [3, y, z], 0);
+        }
+    }
+    run(&mut chunks, &mut journal, &terrain, &mut runtime, 1);
+    assert_ne!(
+        journal.gameplay().jobs.workers[&npc].status,
         WorkStatus::Waiting(WaitReason::NoPath)
     );
+    run(&mut chunks, &mut journal, &terrain, &mut runtime, 300);
+    assert_eq!(chunks.block_at([5, 1, 0]), Some(0));
+    assert_eq!(
+        journal
+            .container_at([0, 1, 0])
+            .unwrap()
+            .count(ItemKind::Block(3)),
+        1
+    );
+    set(&mut chunks, [5, 1, 0], 3);
     journal.record([5, 1, 0], 3).unwrap();
+    run(&mut chunks, &mut journal, &terrain, &mut runtime, 100);
+    assert_eq!(chunks.block_at([5, 1, 0]), Some(3));
     assert!(!actions::mineable(&chunks, &journal, [5, 1, 0], 3));
 }
 
@@ -519,8 +601,30 @@ fn idle_work_advances_route_time_and_falls_when_its_floor_is_removed() {
     let (mut chunks, mut journal, terrain, mut runtime, npc) = fixture(WorkKind::Collector);
     let before = journal.gameplay().creatures.animals[&npc].clone();
     run(&mut chunks, &mut journal, &terrain, &mut runtime, 1);
+    assert!(!controls_movement(journal.gameplay(), npc, 0.5));
     set(&mut chunks, [2, 0, 0], 0);
-    run(&mut chunks, &mut journal, &terrain, &mut runtime, 20);
+    let residents = crate::creatures::villagers::Residents::default();
+    let mut navigation = Navigation::default();
+    // NoTargets hands movement back to ordinary residents. Reproduce the
+    // server's resident-before-scanner order rather than advancing only scans.
+    for _ in 0..20 {
+        let mut animal = journal.gameplay().creatures.animals[&npc].clone();
+        residents.step_as(
+            &mut animal,
+            &Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: &journal,
+            },
+            0.5,
+            0.1,
+            true,
+            &mut navigation,
+            journal.gameplay().creatures.owners.get(&npc).copied(),
+        );
+        journal.gameplay_mut().creatures.animals.insert(npc, animal);
+        run(&mut chunks, &mut journal, &terrain, &mut runtime, 1);
+    }
     let after = &journal.gameplay().creatures.animals[&npc];
     assert!(after.age > before.age + 2.0);
     assert!(

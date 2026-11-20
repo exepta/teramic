@@ -35,6 +35,9 @@ pub(crate) struct WeatherGpuData {
     pub flowers: [Vec4; 64],
     /// Four bounded imprint rectangles per world-cell hash bucket (two vectors each).
     pub footprints: [Vec4; 1024],
+    /// Unwrapped render clock for finite fluid geometry interpolation.
+    pub liquid: Vec4,
+    pub particle: Vec4,
 }
 
 impl Default for WeatherGpuData {
@@ -48,6 +51,8 @@ impl Default for WeatherGpuData {
             vegetation: Vec4::ZERO,
             flowers: [Vec4::splat(-1.0); 64],
             footprints: [Vec4::ZERO; 1024],
+            liquid: Vec4::ZERO,
+            particle: Vec4::ZERO,
         }
     }
 }
@@ -63,6 +68,8 @@ type SurfaceContext<'w> = (
     Option<Res<'w, terra_world::edits::EditJournal>>,
     Option<Res<'w, Time<Real>>>,
     Option<Res<'w, crate::footprints::Imprints>>,
+    Option<Res<'w, crate::ParticleFluidInput>>,
+    Option<Res<'w, crate::ParticleFluidStatus>>,
 );
 
 pub(crate) fn install(app: &mut App) {
@@ -98,7 +105,7 @@ pub(crate) fn update(
     growth: Option<Res<crate::props::PropGrowthStatus>>,
     clock: Option<Res<terra_core::WorldClock>>,
     time: Option<Res<Time>>,
-    (authority, access, preview, journal, real, imprints): SurfaceContext,
+    (authority, access, preview, journal, real, imprints, particle_input, particle_status): SurfaceContext,
     (mut payload, mut snow, mut flowers): (
         ResMut<WeatherPayload>,
         Local<snow::SnowVisual>,
@@ -109,6 +116,13 @@ pub(crate) fn update(
         config.as_deref(),
         visual.as_deref(),
         growth.as_deref().map_or(0.0, |growth| growth.shader_time),
+    );
+    data.liquid = time.as_ref().map_or(Vec4::ZERO, |time| {
+        Vec4::new(time.elapsed_secs(), time.delta_secs(), 0.0, 0.0)
+    });
+    data.particle = crate::particle_fluids::coverage_uniform(
+        particle_input.as_deref(),
+        particle_status.as_deref(),
     );
     if let Some(imprints) = imprints {
         data.footprints = imprints.0;
@@ -213,11 +227,13 @@ fn snapshot(
         vegetation: Vec4::ZERO,
         flowers: [Vec4::splat(-1.0); 64],
         footprints: [Vec4::ZERO; 1024],
+        liquid: Vec4::ZERO,
+        particle: Vec4::ZERO,
     }
 }
 
 fn encode(data: &WeatherGpuData) -> Option<Vec<u8>> {
-    let mut buffer = encase::StorageBuffer::new(Vec::with_capacity(17504));
+    let mut buffer = encase::StorageBuffer::new(Vec::with_capacity(17536));
     if let Err(error) = buffer.write(data) {
         tracing::error!(%error, "Shared weather payload encoding failed");
         return None;
@@ -354,9 +370,11 @@ mod tests {
                 }))
             }),
             footprints: [Vec4::ZERO; 1024],
+            liquid: Vec4::ZERO,
+            particle: Vec4::ZERO,
         };
         let bytes = encode(&data).unwrap();
-        assert_eq!(bytes.len(), 17504);
+        assert_eq!(bytes.len(), 17536);
         for (index, bytes) in bytes[..1120].chunks_exact(4).enumerate() {
             assert_eq!(
                 f32::from_le_bytes(bytes.try_into().unwrap()),
@@ -377,6 +395,9 @@ mod tests {
     fn flower_payload_uses_the_exact_picking_clock_without_mutating_meshes_or_materials() {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(20),
+            ))
             .init_asset::<ShaderBuffer>();
         let mut journal = terra_world::edits::EditJournal::default();
         journal.flowers.advance(0.0, 0.0);
@@ -396,7 +417,17 @@ mod tests {
             .resource_mut::<Messages<AssetEvent<ShaderBuffer>>>()
             .clear();
         app.update();
-        assert_eq!(app.world().resource::<WeatherPayload>().0, data);
+        let mut next = app.world().resource::<WeatherPayload>().0;
+        let time = app.world().resource::<Time>();
+        assert_eq!(
+            next.liquid,
+            Vec4::new(time.elapsed_secs(), time.delta_secs(), 0.0, 0.0)
+        );
+        assert!(next.liquid.x > data.liquid.x);
+        // Plant picking timestamps remain exact while the independent render
+        // clock advances; neither channel modifies the shared asset itself.
+        next.liquid = data.liquid;
+        assert_eq!(next, data);
         assert!(
             app.world_mut()
                 .resource_mut::<Messages<AssetEvent<ShaderBuffer>>>()
@@ -481,6 +512,6 @@ mod tests {
             BufferUsages::STORAGE | BufferUsages::COPY_DST
         );
         assert_eq!(buffer.buffer_size(), initial);
-        assert_eq!(buffer.buffer_size(), 17504);
+        assert_eq!(buffer.buffer_size(), 17536);
     }
 }

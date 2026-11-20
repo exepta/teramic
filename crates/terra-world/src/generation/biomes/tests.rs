@@ -7,7 +7,7 @@ fn climate_weights_are_normalized_varied_and_reproducible() {
     let a = ClimateSampler::new(42042, 2048.0, 4096.0);
     let b = ClimateSampler::new(42042, 2048.0, 4096.0);
     let c = ClimateSampler::new(42042 + (1 << 32), 2048.0, 4096.0);
-    let mut maxima = [0.0_f64; 8];
+    let mut maxima = [0.0_f64; 10];
     let mut different = false;
     for z in (-16384..=16384).step_by(512) {
         for x in (-16384..=16384).step_by(512) {
@@ -41,6 +41,8 @@ fn profiles_blend_every_weight_instead_of_selecting_a_dominant_biome() {
             mushroom_park: values[5],
             cliffted_desert: 0.0,
             cherry_forest: 0.0,
+            spirit_blossom: 0.0,
+            blood_forest: 0.0,
         },
     };
     let weights = [0.10, 0.20, 0.25, 0.15, 0.10, 0.20];
@@ -59,7 +61,11 @@ fn profiles_blend_every_weight_instead_of_selecting_a_dominant_biome() {
 }
 #[test]
 fn transitions_are_continuous_even_where_the_dominant_weight_changes() {
-    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 1,
+        ..Default::default()
+    })
+    .unwrap();
     let mut changes = 0;
     for z in [-4096.0, -1.0, 0.0, 4096.0] {
         let mut previous = terrain.climate_biome_at(-8192.0, z);

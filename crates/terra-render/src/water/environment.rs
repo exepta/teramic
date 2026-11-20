@@ -1,5 +1,5 @@
 use crate::scene::{SURFACE_AMBIENT, SURFACE_FOG, SURFACE_SATURATION, SURFACE_TEMPERATURE};
-use bevy::{prelude::*, render::view::ColorGrading};
+use bevy::{camera::CameraProjection, prelude::*, render::view::ColorGrading};
 use terra_core::{GameConfig, WaterQuality};
 use terra_player::TerraCamera;
 use terra_world::{
@@ -17,11 +17,13 @@ type Cameras<'w, 's> = Query<
     'w,
     's,
     (
+        Entity,
         &'static Transform,
         &'static mut DistanceFog,
         &'static mut ColorGrading,
         &'static mut AmbientLight,
         &'static mut crate::scene::caves::shader::CaveSettings,
+        Option<&'static mut Projection>,
     ),
     With<TerraCamera>,
 >;
@@ -31,6 +33,12 @@ type ViewEnvironment<'w> = (
     Res<'w, crate::scene::caves::CaveState>,
     Option<Res<'w, crate::weather::WeatherVisual>>,
     Option<Res<'w, terra_network::client::ClientSession>>,
+    Option<Res<'w, terra_player::ConstructionCamera>>,
+    Option<Res<'w, terra_world::streaming::StreamingRadiusLimit>>,
+);
+type ProjectionHistory<'s> = (
+    Local<'s, (f32, Option<u8>)>,
+    Local<'s, std::collections::HashMap<Entity, f32>>,
 );
 
 #[derive(Default)]
@@ -73,10 +81,29 @@ impl WaterProbe {
         &mut self,
         now: f32,
         cell: [i64; 3],
+        position: [f64; 3],
         terrain: &WorldTerrain,
         chunks: &ChunkStore,
         journal: &EditJournal,
     ) -> Option<f32> {
+        for y in [cell[1], cell[1] - 1] {
+            let at = [cell[0], y, cell[2]];
+            if let Some(raw) = chunks.block_at(at) {
+                let liquid = chunks.fluid_cell_at(&terrain.0, journal, at, raw);
+                if (1..8).contains(&liquid.amount)
+                    && (liquid.flow != [0; 2]
+                        || terra_world::water::falling_fluid_at(&terrain.0, chunks, journal, at))
+                {
+                    return terra_world::water::flowing_surface_height(
+                        chunks,
+                        &terrain.0,
+                        journal,
+                        [position[0], y as f64 + 0.5, position[2]],
+                    )
+                    .map(|h| h as f32);
+                }
+            }
+        }
         let (section, _) = terra_voxel::global_to_section(cell);
         let pointer = chunks
             .prepared_column([cell[0].div_euclid(16), cell[2].div_euclid(16)])
@@ -94,7 +121,7 @@ impl WaterProbe {
 }
 
 pub(crate) fn update(
-    (time, daylight, cave, weather, session): ViewEnvironment,
+    (time, daylight, cave, weather, session, construction, limit): ViewEnvironment,
     (config, terrain, chunks, journal): (
         Res<GameConfig>,
         Res<WorldTerrain>,
@@ -105,7 +132,16 @@ pub(crate) fn update(
     mut cameras: Cameras,
     mut probe: Local<WaterProbe>,
     mut previous_vision: Local<f32>,
+    (mut previous_offset, mut near_planes): ProjectionHistory,
 ) {
+    let limit = limit.and_then(|limit| limit.0);
+    let range = crate::scene::view_range::CameraRange::limited(
+        &config.client,
+        construction.as_deref(),
+        limit,
+    );
+    let offset_changed = *previous_offset != (range.offset, limit);
+    *previous_offset = (range.offset, limit);
     let vision = session
         .as_ref()
         .filter(|session| session.ready)
@@ -121,7 +157,9 @@ pub(crate) fn update(
         });
     let vision_changed = *previous_vision != vision;
     *previous_vision = vision;
-    for (camera, mut fog, mut grading, mut ambient, mut optical) in &mut cameras {
+    near_planes.retain(|entity, _| cameras.contains(*entity));
+    for (entity, camera, mut fog, mut grading, mut ambient, mut optical, projection) in &mut cameras
+    {
         let p = camera.translation;
         let old_depth = state.depth;
         let cell = p.floor().as_i64vec3().to_array();
@@ -139,13 +177,20 @@ pub(crate) fn update(
                     .map_or(-1.0, |water| water.level as f32 - p.y)
             } else {
                 probe
-                    .sample(time.elapsed_secs(), cell, &terrain, &chunks, &journal)
+                    .sample(
+                        time.elapsed_secs(),
+                        cell,
+                        p.as_dvec3().to_array(),
+                        &terrain,
+                        &chunks,
+                        &journal,
+                    )
                     .map_or(-1.0, |level| level - p.y)
             }
         } else {
             -1.0
         };
-        state.submerged = state.depth > if state.submerged { -0.03 } else { 0.06 };
+        state.submerged = state.depth > if state.submerged { -0.005 } else { 0.005 };
         let target = f32::from(u8::from(state.submerged));
         let stable = state.blend == target
             && state.depth == old_depth
@@ -153,6 +198,7 @@ pub(crate) fn update(
             && !daylight.is_changed()
             && !cave.is_changed()
             && !vision_changed
+            && !offset_changed
             && weather.as_ref().is_none_or(|weather| !weather.is_changed());
         state.blend += (target - state.blend) * (1.0 - (-14.0 * time.delta_secs()).exp());
         if (target - state.blend).abs() < 0.001 {
@@ -185,7 +231,34 @@ pub(crate) fn update(
         let scattering = medium_scattering(biome_color, daylight.daylight, cave.blend);
         let medium_color = scattering.truncate();
         let tint_changed = optical.scattering != scattering;
-        let world_from_view = if blend > 0.001 {
+        // A camera above the surface can still have its lower near-plane pixels
+        // beneath it. Keep per-ray optics active in that band on every quality.
+        let near_medium = state.depth > -0.30;
+        // The new volume surface owns the waterline. A per-ray flat half-space
+        // would paint the previous water plane on top of it a second time.
+        if optical.waterline != Vec4::ZERO {
+            optical.waterline = Vec4::ZERO;
+        }
+        if let Some(mut projection) = projection
+            && let Projection::Perspective(perspective) = projection.bypass_change_detection()
+        {
+            let before = perspective.near;
+            if near_medium && state.depth.abs() < 0.30 {
+                let original = *near_planes.entry(entity).or_insert(perspective.near);
+                perspective.near = original.min(0.005);
+            } else if let Some(original) = near_planes.remove(&entity) {
+                perspective.near = original;
+            }
+            let matrix = perspective.get_clip_from_view().inverse();
+            let changed = before != perspective.near;
+            if optical.view_from_clip != matrix {
+                optical.view_from_clip = matrix;
+            }
+            if changed {
+                projection.set_changed();
+            }
+        }
+        let world_from_view = if blend > 0.001 || near_medium || optical.parameters.z > 0.001 {
             Mat4::from_scale_rotation_translation(camera.scale, camera.rotation, camera.translation)
         } else {
             Mat4::IDENTITY
@@ -202,16 +275,27 @@ pub(crate) fn update(
         if stable && !tint_changed {
             continue;
         }
-        let range = f32::from(config.client.view_distance.max(1)) * 16.0;
         apply_environment(
-            blend,
+            if near_medium && state.depth.abs() < 0.30 {
+                0.0
+            } else {
+                blend
+            },
             state.depth,
-            crate::scene::surface_fog_range(range, config.client.fog_distance),
+            range.fog,
             &mut fog,
             &mut grading,
             &mut ambient,
         );
-        fog.color = medium_fog(daylight.fog, medium_color, blend);
+        fog.color = medium_fog(
+            daylight.fog,
+            medium_color,
+            if near_medium && state.depth.abs() < 0.30 {
+                0.0
+            } else {
+                blend
+            },
+        );
         ambient.brightness *= daylight.ambient / SURFACE_AMBIENT;
         ambient.color = Color::srgb(
             daylight.ambient_color.x,

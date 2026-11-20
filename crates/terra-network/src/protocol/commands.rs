@@ -49,7 +49,7 @@ pub const CATALOGUE: &[CommandDescription] = &[
         description: "Find a biome and a safe teleport destination.",
     },
     CommandDescription {
-        usage: "/locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost>",
+        usage: "/locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost|teramic::cemetery|teramic::grave_dungeon>",
         description: "Find a generated structure; Creative also supports air and water landings.",
     },
     CommandDescription {
@@ -675,6 +675,8 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
             "mushroom_park",
             "cliffted_desert",
             "cherry_forest",
+            "spirit_blossom",
+            "blood_forest",
         ]
         .iter()
         .map(|v| format!("/locate biome {v}"))
@@ -686,6 +688,8 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
             "teramic::mine",
             "teramic::kingdom",
             "teramic::outpost",
+            "teramic::cemetery",
+            "teramic::grave_dungeon",
         ]
         .iter()
         .map(|v| format!("/locate struct {v}"))

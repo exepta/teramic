@@ -1,0 +1,267 @@
+{
+  "resolution": 24,
+  "models": [
+    {
+      "model": "blood_mushrooms",
+      "before": {
+        "vertices": 1026,
+        "triangles": 1692,
+        "bytes": 72856
+      },
+      "after": {
+        "vertices": 1952,
+        "triangles": 976,
+        "bytes": 108720
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "blood_thorn_bush",
+      "before": {
+        "vertices": 1152,
+        "triangles": 936,
+        "bytes": 70096
+      },
+      "after": {
+        "vertices": 2808,
+        "triangles": 1404,
+        "bytes": 154972
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "blood_flower",
+      "before": {
+        "vertices": 384,
+        "triangles": 668,
+        "bytes": 29908
+      },
+      "after": {
+        "vertices": 500,
+        "triangles": 250,
+        "bytes": 30264
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "hanging_blood_vines",
+      "before": {
+        "vertices": 830,
+        "triangles": 1300,
+        "bytes": 57772
+      },
+      "after": {
+        "vertices": 1572,
+        "triangles": 786,
+        "bytes": 87100
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "blood_roots",
+      "before": {
+        "vertices": 378,
+        "triangles": 224,
+        "bytes": 22208
+      },
+      "after": {
+        "vertices": 2448,
+        "triangles": 1224,
+        "bytes": 133452
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "blood_bones",
+      "before": {
+        "vertices": 1259,
+        "triangles": 593,
+        "bytes": 70764
+      },
+      "after": {
+        "vertices": 464,
+        "triangles": 232,
+        "bytes": 28172
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "blood_fern",
+      "before": {
+        "vertices": 980,
+        "triangles": 1484,
+        "bytes": 67176
+      },
+      "after": {
+        "vertices": 1820,
+        "triangles": 910,
+        "bytes": 100476
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "giant_blood_mushroom",
+      "before": {
+        "vertices": 342,
+        "triangles": 564,
+        "bytes": 26484
+      },
+      "after": {
+        "vertices": 1660,
+        "triangles": 830,
+        "bytes": 92944
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "blood_ruined_arch",
+      "before": {
+        "vertices": 672,
+        "triangles": 320,
+        "bytes": 38252
+      },
+      "after": {
+        "vertices": 292,
+        "triangles": 146,
+        "bytes": 17912
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "blood_crystal_pillar",
+      "before": {
+        "vertices": 408,
+        "triangles": 208,
+        "bytes": 25332
+      },
+      "after": {
+        "vertices": 288,
+        "triangles": 144,
+        "bytes": 18844
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "glowing_spirit_flowers",
+      "before": {
+        "vertices": 1332,
+        "triangles": 1704,
+        "bytes": 87836
+      },
+      "after": {
+        "vertices": 524,
+        "triangles": 262,
+        "bytes": 31612
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "blossom_bush",
+      "before": {
+        "vertices": 2400,
+        "triangles": 4016,
+        "bytes": 167772
+      },
+      "after": {
+        "vertices": 688,
+        "triangles": 344,
+        "bytes": 41212
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "spirit_lantern_post",
+      "before": {
+        "vertices": 1848,
+        "triangles": 1576,
+        "bytes": 114800
+      },
+      "after": {
+        "vertices": 536,
+        "triangles": 268,
+        "bytes": 35932
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "lotus_flower",
+      "before": {
+        "vertices": 1092,
+        "triangles": 1240,
+        "bytes": 72516
+      },
+      "after": {
+        "vertices": 1232,
+        "triangles": 616,
+        "bytes": 71688
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "lily_pad",
+      "before": {
+        "vertices": 492,
+        "triangles": 236,
+        "bytes": 28612
+      },
+      "after": {
+        "vertices": 472,
+        "triangles": 236,
+        "bytes": 27712
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "hanging_blossom_lantern",
+      "before": {
+        "vertices": 1560,
+        "triangles": 1444,
+        "bytes": 98500
+      },
+      "after": {
+        "vertices": 328,
+        "triangles": 164,
+        "bytes": 23848
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "petal_ground_cover",
+      "before": {
+        "vertices": 1764,
+        "triangles": 3360,
+        "bytes": 128432
+      },
+      "after": {
+        "vertices": 480,
+        "triangles": 240,
+        "bytes": 29052
+      },
+      "definition_unchanged": true
+    },
+    {
+      "model": "spirit_shrine_stone",
+      "before": {
+        "vertices": 3552,
+        "triangles": 1628,
+        "bytes": 194240
+      },
+      "after": {
+        "vertices": 344,
+        "triangles": 172,
+        "bytes": 22896
+      },
+      "definition_unchanged": true
+    }
+  ],
+  "before": {
+    "vertices": 21471,
+    "triangles": 23193,
+    "bytes": 1373556
+  },
+  "after": {
+    "vertices": 18408,
+    "triangles": 9204,
+    "bytes": 1056808
+  }
+}

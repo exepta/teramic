@@ -1,0 +1,14 @@
+.keep-workers-layout { min-width: 0; display: grid; grid-template-columns: 1fr 260px; gap: 18px; align-items: start; }
+.keep-workers-editor { width: 100%; min-width: 0; display: flex; flex-direction: column; }
+.keep-workers-overview { min-width: 0; display: flex; flex-direction: column; gap: 13px; }
+.keep-summary-grid { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.keep-workers-overview .keep-worker-metric { display: flex; flex-direction: row; align-items: center; gap: 10px; min-width: 0; padding: 12px; }
+.keep-worker-metric label { flex-grow: 1; }
+.keep-worker-metric h2 { font-size: 22px; line-height: 27px; flex-shrink: 0; }
+.keep-professions { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.keep-profession { display: flex; flex-direction: row; align-items: center; gap: 8px; min-width: 0; padding: 7px 9px; background-color: #302419; border: 1px solid #705238; border-radius: 4px; }
+.keep-profession p { flex-grow: 1; }
+.keep-profession h3 { color: #d7bb79; }
+.keep-profession icon { width: 22px; height: 22px; }
+@media (max-width: 1200px) { .keep-workers-layout { grid-template-columns: 1fr; gap: 14px; } .keep-workers-overview { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } .keep-summary-grid { gap: 6px; } .keep-workers-overview .keep-worker-metric { padding: 8px 10px; gap: 8px; } .keep-worker-metric h2 { font-size: 19px; line-height: 23px; } .keep-worker-metric icon { width: 22px; height: 22px; } .keep-profession { padding: 5px 8px; } }
+@media (max-width: 760px) { .keep-workers-overview { grid-template-columns: 1fr; } .keep-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .keep-workers-overview .keep-worker-metric { flex-wrap: wrap; padding: 8px; } .keep-worker-metric label { width: 100%; } .keep-professions { flex-direction: row; flex-wrap: wrap; } }

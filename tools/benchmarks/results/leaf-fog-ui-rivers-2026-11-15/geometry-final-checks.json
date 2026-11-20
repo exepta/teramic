@@ -1,0 +1,65 @@
+[
+  {
+    "name": "fmt",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 7.86
+  },
+  {
+    "name": "check",
+    "command": [
+      "cargo",
+      "check",
+      "--workspace",
+      "--all-targets"
+    ],
+    "exit_code": 0,
+    "seconds": 22.83
+  },
+  {
+    "name": "clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--workspace",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 29.92
+  },
+  {
+    "name": "tests",
+    "command": [
+      "cargo",
+      "test",
+      "--workspace",
+      "--lib",
+      "meshing::tree_details"
+    ],
+    "exit_code": 0,
+    "seconds": 154.66
+  },
+  {
+    "name": "build",
+    "command": [
+      "cargo",
+      "build",
+      "-p",
+      "terra-client",
+      "-p",
+      "terra-server",
+      "-p",
+      "terra-building-editor"
+    ],
+    "exit_code": 0,
+    "seconds": 218.31
+  }
+]

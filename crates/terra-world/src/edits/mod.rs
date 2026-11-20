@@ -16,7 +16,7 @@ mod objects;
 mod plumbing;
 mod structures;
 pub use belts::BeltOwner;
-pub use objects::BlockObjectState;
+pub use objects::{BlockObjectState, LiquidState};
 
 #[cfg(test)]
 mod automation_direction_tests;

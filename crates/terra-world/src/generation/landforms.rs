@@ -19,7 +19,8 @@ impl TerraGenerator {
             .connected_hydrology()
             .then(|| self.lake_at(x, z))
             .flatten();
-        let height = self.river_at(x, z).map_or(raw, |river| {
+        let river = self.river_at(x, z);
+        let height = river.map_or(raw, |river| {
             let mut height = river_height(raw, river, self.config().sea_level);
             if let Some(lake) = regional_lake {
                 let wet_channel = river.distance < river.width
@@ -49,7 +50,8 @@ impl TerraGenerator {
         } else {
             self.lake_at(x, z)
         };
-        lake.map_or(height, |lake| lake.carve(height))
+        let height = lake.map_or(height, |lake| lake.carve(height));
+        self.spirit_hill_relief(x, z, height, river, lake)
     }
 
     fn river_roof_supported(&self, x: f64, z: f64, height: f64, cavity: [f64; 2]) -> bool {
@@ -157,6 +159,7 @@ impl TerraGenerator {
             + dune
             + seabed
             + cliffs;
+        let height = super::spirit_blossom::terraced_height(height, biome.weights.spirit_blossom);
         self.ocean_relief(x, z, biome, self.landscape_relief(x, z, biome, height))
     }
 }

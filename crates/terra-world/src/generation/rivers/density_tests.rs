@@ -15,6 +15,8 @@ fn terrain(seed: u64, revision: u8) -> TerraGenerator {
         seed: WorldSeed(seed),
         river_terrain_revision: revision,
         landscape_revision: 1,
+        // Compare only the historical drainage revision, keeping later ecology fixed.
+        spirit_blossom_revision: 0,
         rivers: true,
         caves: false,
         trees: false,

@@ -103,11 +103,11 @@ mod tests {
     #[test]
     fn saved_contract_defaults_old_files_to_legacy_and_new_worlds_to_main() {
         assert_eq!(WorldConfig::from_toml("").unwrap().landscape_revision, 0);
-        assert_eq!(WorldConfig::default().landscape_revision, 1);
-        for revision in 0..=5 {
+        assert_eq!(WorldConfig::default().landscape_revision, 9);
+        for revision in 0..=9 {
             assert!(WorldConfig::from_toml(&format!("landscape_revision = {revision}")).is_ok());
         }
-        assert!(WorldConfig::from_toml("landscape_revision = 6").is_err());
+        assert!(WorldConfig::from_toml("landscape_revision = 10").is_err());
     }
     #[test]
     fn fields_are_repeatable_continuous_and_change_only_opted_in_worlds() {

@@ -298,8 +298,9 @@ fn minimap_extent(canvas: Vec2, size: u16) -> Vec2 {
         .min(canvas.x * 0.34)
         .min(canvas.y * 0.55)
         .max(132.0);
-    // Includes the three compact readout rows beneath the compass.
-    Vec2::new(width, width + 66.0).min((canvas - Vec2::splat(24.0)).max(Vec2::splat(20.0)))
+    // Four readout rows, including their padding/borders and the panel gaps.
+    // Reserve the whole panel when dragging it against the viewport's bottom.
+    Vec2::new(width, width + 130.0).min((canvas - Vec2::splat(24.0)).max(Vec2::splat(20.0)))
 }
 
 fn widget_style(canvas: Vec2, position: [f32; 2], size: Vec2) -> String {

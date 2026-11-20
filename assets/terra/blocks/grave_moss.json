@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 384,
+  "name": "Moss Cover",
+  "description": "Moss Cover from the overgrown grounds of old burial sites.",
+  "creative_category": "nature",
+  "hardness": 0.4,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/grave_moss.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

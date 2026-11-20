@@ -1,0 +1,9 @@
+@if (kingdomResourcesView.visible) {
+<div id="kingdom-resources" class="kingdom-resources" [style]="kingdomResourcesView.style" [title]="localizedUi.kingdomResourcesView.status">
+  <div class="kingdom-resource-heading"><icon name="archive" size="16" /><p>{{ localizedUi.kingdomResourcesView.name }}</p></div>
+  <div class="kingdom-resource-rows">@for (resource of localizedUi.kingdomResourcesView.rows; track resource.label) {
+    <div class="kingdom-resource"><img [alt]="resource.preview_key" /><div><p>{{ resource.amount }}</p><label>{{ resource.label }}</label></div></div>
+  }</div>
+  <label class="kingdom-resource-status">{{ localizedUi.kingdomResourcesView.status }}</label>
+</div>
+}

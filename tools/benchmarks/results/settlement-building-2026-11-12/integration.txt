@@ -1,0 +1,61 @@
+   Compiling bevy_text v0.20.0
+   Compiling lightyear_utils v0.31.0
+   Compiling lightyear_serde v0.31.0
+   Compiling aeronet_io v0.22.0-rc.1
+   Compiling glam_matrix_extras v0.4.0
+   Compiling bevy_sprite v0.20.0
+   Compiling bevy_sprite_render v0.20.0
+   Compiling bevy_ui v0.20.0
+   Compiling bevy_ui_render v0.20.0
+   Compiling bevy_gizmos_render v0.20.0
+   Compiling bevy_internal v0.20.0
+   Compiling bevy v0.20.0
+   Compiling lightyear_core v0.31.0
+   Compiling lightyear_link v0.31.0
+   Compiling lightyear_connection v0.31.0
+   Compiling terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+   Compiling lightyear_transport v0.31.0
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+   Compiling lightyear_messages v0.31.0
+   Compiling bevy_transform_interpolation v0.6.0
+   Compiling bevy_heavy v0.6.0
+   Compiling avian3d v0.8.0
+   Compiling lightyear_netcode v0.31.0
+   Compiling terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+   Compiling lightyear_sync v0.31.0
+   Compiling lightyear_udp v0.31.0
+   Compiling lightyear v0.31.0
+   Compiling terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+   Compiling terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+   Compiling terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+    Finished `test` profile [optimized + debuginfo] target(s) in 4m 25s
+     Running ../../tests/headless.rs (target/debug/deps/headless-7401ed860143135a)
+
+running 2 tests
+2026-11-12T15:29:19.000309Z  INFO terra_server::bootstrap: Authoritative server initialized seed=42042 generator_version=5 tick_rate=60 save_format_version=2 configured_address=127.0.0.1:5000
+2026-11-12T15:29:19.000341Z  INFO terra_server::bootstrap: Authoritative server initialized seed=42042 generator_version=5 tick_rate=60 save_format_version=2 configured_address=127.0.0.1:5000
+2026-11-12T15:29:19.001227Z  INFO terra_network::server::spawn: World spawn selected on dry solid terrain ground=[8, 102, 24]
+2026-11-12T15:29:19.001228Z  INFO terra_network::server::spawn: World spawn selected on dry solid terrain ground=[8, 102, 24]
+2026-11-12T15:29:19.001314Z  INFO lightyear_udp::endpoint: UDP endpoint bound to 127.0.0.1:40573
+2026-11-12T15:29:19.001318Z  INFO lightyear_udp::endpoint: UDP endpoint bound to 127.0.0.1:32827
+2026-11-12T15:29:19.001421Z  INFO terra_network::server: Authoritative Terra server listening address=Some(127.0.0.1:40573)
+2026-11-12T15:29:19.001541Z  INFO terra_network::server: Authoritative Terra server listening address=Some(127.0.0.1:32827)
+test integrated_server_owns_and_releases_a_real_loopback_socket ... ok
+test dedicated_server_initializes_generates_and_exits_without_a_renderer ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests/generated_sources.rs (target/debug/deps/generated_sources-333a7beadc6fe71e)
+
+running 1 test
+test generated_farm_source_state_and_player_channel_removal_survive_actual_region_files ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/textiles.rs (target/debug/deps/textiles-e3ab42aba2409146)
+
+running 1 test
+test colored_textiles_and_every_pot_content_survive_real_region_reload_and_air_tombstones ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

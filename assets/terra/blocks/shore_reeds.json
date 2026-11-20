@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": 429,
+  "name": "Shore Reeds",
+  "description": "Shore Reeds, shaped for the regional biome flora.",
+  "creative_category": "nature",
+  "hardness": 0.15,
+  "resistance": 0.4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/shore_reeds.glb",
+  "textures": {
+    "leaf": "textures/shore_reeds.png",
+    "seed": "textures/shore_reeds.png",
+    "reed": "textures/shore_reeds.png"
+  },
+  "struct_block": true,
+  "collision_boxes": []
+}

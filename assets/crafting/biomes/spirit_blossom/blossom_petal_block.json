@@ -1,0 +1,22 @@
+{
+  "id": "teramic::blossom_petal_block",
+  "name": "Blossom Petal Block",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 309
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 322
+        },
+        "count": 4
+      }
+    ]
+  }
+}

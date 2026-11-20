@@ -1,0 +1,1 @@
+Generated eight independent biome blocks with GLBs and 256px detail textures

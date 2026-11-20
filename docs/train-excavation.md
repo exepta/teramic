@@ -40,4 +40,4 @@ und repliziert; der bestehende Zuglagerdialog zeigt die bestaetigten Inhalte.
 Neue Zugspeicher verwenden Index ID20; mit NPC-Auftraegen wird ID22 verwendet
 (bisherige ID21-Auftraege werden migriert).
 Die bisherigen Zugdaten bis ID19 werden explizit migriert. Client und Server
-benoetigen gemeinsam Protokoll 135.
+benoetigen gemeinsam Protokoll 138.

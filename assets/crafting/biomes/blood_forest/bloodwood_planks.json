@@ -1,0 +1,22 @@
+{
+  "id": "teramic::bloodwood_planks",
+  "name": "Bloodwood Planks",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 404
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 405
+        },
+        "count": 1
+      }
+    ]
+  }
+}

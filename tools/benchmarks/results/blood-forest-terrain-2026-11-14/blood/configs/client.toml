@@ -1,0 +1,7 @@
+width = 1920
+height = 1080
+view_distance = 8
+vertical_view_distance = 4
+fov_degrees = 55.0
+vsync = false
+debug_overlay = false

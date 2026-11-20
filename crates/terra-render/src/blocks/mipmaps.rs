@@ -108,6 +108,29 @@ pub(crate) fn generate(mut image: Image) -> Result<Image, String> {
     Ok(image)
 }
 
+/// Average tangent-space vectors in linear space, then renormalize each level.
+/// Color mip filtering would bend grazing-light highlights and erase relief.
+pub(crate) fn generate_normal(image: Image) -> Result<Image, String> {
+    if image.texture_descriptor.format != TextureFormat::Rgba8Unorm {
+        return Err("Normal maps must be loaded in linear RGBA8".into());
+    }
+    let mut image = generate(image)?;
+    if let Some(data) = &mut image.data {
+        for pixel in data.chunks_exact_mut(4) {
+            let normal = bevy::math::Vec3::new(
+                f32::from(pixel[0]) / 127.5 - 1.0,
+                f32::from(pixel[1]) / 127.5 - 1.0,
+                f32::from(pixel[2]) / 127.5 - 1.0,
+            )
+            .normalize_or(bevy::math::Vec3::Z);
+            for (channel, value) in pixel[..3].iter_mut().zip(normal.to_array()) {
+                *channel = ((value * 0.5 + 0.5) * 255.0).round() as u8;
+            }
+        }
+    }
+    Ok(image)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -187,6 +210,35 @@ mod tests {
                 assert_eq!(repeated.data, output.data);
                 assert_eq!(repeated.sampler, sampler);
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod normal_tests {
+    use super::*;
+    #[test]
+    fn linear_normal_mips_stay_unit_length_through_the_complete_chain() {
+        let image = Image::new(
+            bevy::render::render_resource::Extent3d {
+                width: 4,
+                height: 4,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            [196, 107, 233, 255, 79, 158, 242, 255].repeat(8),
+            TextureFormat::Rgba8Unorm,
+            bevy::asset::RenderAssetUsages::MAIN_WORLD,
+        );
+        let result = generate_normal(image).unwrap();
+        assert_eq!(result.texture_descriptor.mip_level_count, 3);
+        assert_eq!(result.texture_descriptor.format, TextureFormat::Rgba8Unorm);
+        for pixel in result.data.unwrap().chunks_exact(4) {
+            let n = bevy::math::Vec3::new(pixel[0] as f32, pixel[1] as f32, pixel[2] as f32)
+                / 127.5
+                - bevy::math::Vec3::ONE;
+            assert!((n.length() - 1.0).abs() < 0.012);
+            assert!(n.z > 0.8);
         }
     }
 }

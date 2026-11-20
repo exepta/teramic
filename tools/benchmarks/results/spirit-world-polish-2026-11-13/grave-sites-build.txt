@@ -1,0 +1,126 @@
+    Blocking waiting for file lock on build directory
+   Compiling terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+warning: method `finish_inventory_removal` is never used
+  --> crates/terra-world/src/edits/containers.rs:73:19
+   |
+ 4 | impl EditJournal {
+   | ---------------- method in this implementation
+...
+73 |     pub(crate) fn finish_inventory_removal(
+   |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `replace_infusion_views` is never used
+  --> crates/terra-world/src/edits/infusion.rs:18:19
+   |
+ 5 | impl EditJournal {
+   | ---------------- method in this implementation
+...
+18 |     pub(crate) fn replace_infusion_views(&mut self, views: impl IntoIterator<Item = HoldVisual>) {
+   |                   ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `props_need_sync` is never used
+   --> crates/terra-world/src/edits/journal.rs:760:19
+    |
+186 | impl EditJournal {
+    | ---------------- method in this implementation
+...
+760 |     pub(crate) fn props_need_sync(&self, section: SectionPos, props: &[WorldProp]) -> bool {
+    |                   ^^^^^^^^^^^^^^^
+
+warning: methods `plumbing_supply_at`, `set_plumbing_supply`, and `clear_plumbing_supply_at` are never used
+   --> crates/terra-world/src/edits/plumbing.rs:125:19
+    |
+  6 | impl EditJournal {
+    | ---------------- methods in this implementation
+...
+125 |     pub(crate) fn plumbing_supply_at(&self, position: Cell) -> Option<&SupplyToken> {
+    |                   ^^^^^^^^^^^^^^^^^^
+...
+128 |     pub(crate) fn set_plumbing_supply(&mut self, position: Cell, token: SupplyToken) {
+    |                   ^^^^^^^^^^^^^^^^^^^
+...
+138 |     pub(crate) fn clear_plumbing_supply_at(&mut self, position: Cell) {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `is_structure_block` is never used
+  --> crates/terra-world/src/generation/columns.rs:86:19
+   |
+80 | impl PreparedColumn {
+   | ------------------- method in this implementation
+...
+86 |     pub(crate) fn is_structure_block(&self, cell: [i64; 3]) -> bool {
+   |                   ^^^^^^^^^^^^^^^^^^
+
+warning: method `remesh_loaded` is never used
+   --> crates/terra-world/src/generation/sections.rs:248:19
+    |
+239 | impl SectionGenerator {
+    | --------------------- method in this implementation
+...
+248 |     pub(crate) fn remesh_loaded(
+    |                   ^^^^^^^^^^^^^
+
+warning: function `default_house_template` is never used
+  --> crates/terra-world/src/generation/structures.rs:13:15
+   |
+13 | pub(crate) fn default_house_template() -> Result<Vec<StructureObject>, String> {
+   |               ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `default_house_template` is never used
+ --> crates/terra-world/src/generation/structures/build.rs:9:15
+  |
+9 | pub(super) fn default_house_template() -> Result<Vec<StructureObject>, String> {
+  |               ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `house_template` is never used
+ --> crates/terra-world/src/generation/structures/build/village.rs:8:15
+  |
+8 | pub(super) fn house_template() -> Result<Vec<StructureObject>, String> {
+  |               ^^^^^^^^^^^^^^
+
+warning: function `cells` is never used
+ --> crates/terra-world/src/generation/structures/build/village/house_template.rs:4:15
+  |
+4 | pub(super) fn cells() -> Result<Vec<StructureObject>, String> {
+  |               ^^^^^
+
+warning: variants `Pump`, `Basin`, `Natural`, and `Stored` are never constructed
+   --> crates/terra-world/src/plumbing.rs:121:5
+    |
+120 | pub(crate) enum PressureSource {
+    |                 -------------- variants in this enum
+121 |     Pump(Cell, i8),
+    |     ^^^^
+122 |     Basin(BasinShape),
+    |     ^^^^^
+123 |     Natural(Cell, u16),
+    |     ^^^^^^^
+124 |     Stored(Cell),
+    |     ^^^^^^
+    |
+    = note: `PressureSource` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: fields `epoch`, `source`, `route`, `draw`, and `pump_directions` are never read
+   --> crates/terra-world/src/plumbing.rs:128:9
+    |
+127 | pub(crate) struct SupplyToken {
+    |                   ----------- fields in this struct
+128 |     pub epoch: u64,
+    |         ^^^^^
+129 |     pub source: PressureSource,
+    |         ^^^^^^
+130 |     pub route: Arc<Vec<(Cell, u16, u8)>>,
+    |         ^^^^^
+131 |     pub draw: Arc<Vec<Cell>>,
+    |         ^^^^
+132 |     pub pump_directions: Vec<(Cell, i8)>,
+    |         ^^^^^^^^^^^^^^^
+    |
+    = note: `SupplyToken` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: `terra-world` (lib) generated 12 warnings
+    Finished `dev` profile [optimized + debuginfo] target(s) in 19.51s
+     Running `target/debug/examples/inspect_grave_sites`

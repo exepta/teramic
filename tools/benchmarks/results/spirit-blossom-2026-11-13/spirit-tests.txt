@@ -1,0 +1,126 @@
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+   Compiling terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+   Compiling terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel)
+   Compiling terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+   Compiling terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+   Compiling terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+   Compiling terra-player v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-player)
+   Compiling terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+   Compiling terra-render v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-render)
+   Compiling terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+   Compiling terra-building-editor v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/building-editor)
+   Compiling terra-client v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/client)
+    Finished `test` profile [optimized + debuginfo] target(s) in 12m 23s
+     Running unittests src/main.rs (target/debug/deps/terra_building_editor-27cd95bc1bdc8fdd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 24 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/terra_client-87e26c2bf43d7f15)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 210 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_core-bb623d9b44eed633)
+
+running 1 test
+test config::biomes::tests::legacy_eight_biome_snapshots_append_spirit_profile_without_retrogen ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 535 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_network-859195cf265b5c07)
+
+running 2 tests
+test server::creatures::spirit_aura_tests::overlapping_glooms_do_not_stack_or_downgrade_potions ... ok
+test client::creatures::spirit_wire_tests::spirit_variants_roundtrip_and_old_kind_discriminants_stay_unchanged ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 631 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_physics-ba48817723b68c4c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 78 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_player-54939b55e1de9aaf)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 122 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_render-d5e36f472822fb86)
+
+running 3 tests
+test foliage::particles::tests::spirit_petals_retain_three_colors_without_a_shared_white_texture ... ok
+test water::biome::tests::spirit_water_blends_continuously_with_existing_biomes ... ok
+test creatures::model::spirit::tests::spirit_meshes_are_finite_distinct_and_have_animated_appendages ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1109 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_server-66d8f1b101f30eea)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/terra_server-c939cad9eff21cff)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+     Running ../../tests/headless.rs (target/debug/deps/headless-95cf5d3600c90a6e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_storage-45f7a01758daca1d)
+
+running 1 test
+test maps::spirit_migration_tests::eight_biome_cache_keeps_exploration_and_fractions_when_read_as_nine_biomes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.00s
+
+     Running tests/generated_sources.rs (target/debug/deps/generated_sources-40d44566c63f9e37)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/textiles.rs (target/debug/deps/textiles-15460512015279f5)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_ui-82e0d3dc1d78649c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 657 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_voxel-9ebdcff654b5745e)
+
+running 1 test
+test materials::spirit_blossom_tests::spirit_materials_append_stable_ids_and_distinguish_ground_foliage_and_decorations ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/terra_world-042529d1ea68b621)
+
+running 9 tests
+test generation::spirit_blossom::integration_tests::spirit_terraces_are_continuous_and_do_not_modify_legacy_or_flat_worlds ... ok
+test creature_tests::spirit_aura_is_alive_only_nearby_and_does_not_include_other_animals ... ok
+test generation::spirit_blossom::tests::saved_worlds_keep_legacy_ecology_and_revision_is_part_of_cache_identity ... ok
+test generation::spirit_blossom::tests::spirit_regions_are_deterministic_with_continuous_normalized_boundaries ... ok
+test creature_tests::separation_preserves_spirit_flight_height_instead_of_grounding_it ... ok
+test generation::spirit_blossom::tests::all_land_and_water_decorations_have_reproducible_bounded_density ... ok
+test creatures::spirit::tests::spawn_selection_has_all_species_and_respects_biomes ... ok
+test creature_tests::spirit_fliers_move_in_loaded_air_and_never_enter_voxel_walls ... ok
+test generation::spirit_blossom::integration_tests::actual_negative_spirit_region_contains_ground_trees_and_persistent_section_decoration ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 1405 filtered out; finished in 0.05s
+

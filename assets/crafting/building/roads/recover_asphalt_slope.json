@@ -1,0 +1,22 @@
+{
+  "id": "teramic::recover_asphalt_slope",
+  "name": "Recover Asphalt Road Slope",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 431
+    },
+    "count": 2
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 433
+        },
+        "count": 4
+      }
+    ]
+  }
+}

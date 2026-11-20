@@ -1,0 +1,238 @@
+{
+  "status": "passed",
+  "scope": "Native model/pose fixtures; not authoritative AI, navigation or swimming tests.",
+  "client_sha256": "86310ad51a85148e7720f02d0c789b6d9f5f5c2e7f1c929a59414b5b2bad9778",
+  "scenes": {
+    "standard": {
+      "count": 13,
+      "marker": "Creature model inspection passed: six species, two fish variants",
+      "captures": [
+        {
+          "file": "creatures-0.png",
+          "sha256": "d41da3e269c566dc6fac3b09751ea0f1ec88cc3536bbe582b0ca163c053b7f77"
+        },
+        {
+          "file": "creatures-1.png",
+          "sha256": "cb1d21b9ec1725fec7bff496432100e22b2e016ee5cb9e8453f5e0ea377f2f27"
+        },
+        {
+          "file": "creatures-2.png",
+          "sha256": "4578b7e86e6b7ea070d98bc343c67256f7bb23b90877ae2c8e38f009c8a0d983"
+        },
+        {
+          "file": "creatures-3.png",
+          "sha256": "bd8a532dc5c526484d71861fcd00f9f8853cb1b109bda1ea72b4b598a079a413"
+        },
+        {
+          "file": "creatures-4.png",
+          "sha256": "4a75ef939c8a8395018c239ece7b0983851b6d3ece2fe2c11db04cb7490b6861"
+        },
+        {
+          "file": "creatures-5.png",
+          "sha256": "d38a0e6c873d2941759ff3666fa80b8895ebef2b9c43e36795d739948350227e"
+        },
+        {
+          "file": "creatures-6.png",
+          "sha256": "ff547d1ad51a475617065b3a17bc5b2a1f01a28394ae01a1e380aecc335188bf"
+        },
+        {
+          "file": "creatures-7.png",
+          "sha256": "8a5373a0e5fd35e2c68dd5918d885b0cc29a4cc8aa79c4c13940a835245b9d5a"
+        },
+        {
+          "file": "creatures-8.png",
+          "sha256": "71873bcdce747e686d7d03d4a5377d7d810187b4f499bacddb06598c67cb957e"
+        },
+        {
+          "file": "creatures-9.png",
+          "sha256": "41e7b4a5f6d95e657dd7079b865620a961bf095ab3451ca1959036390dfb3fdd"
+        },
+        {
+          "file": "creatures-10.png",
+          "sha256": "366759a321fadc15dedcde9d236ca67a38573a68628e2d01eca761c375c733ba"
+        },
+        {
+          "file": "creatures-11.png",
+          "sha256": "ad6c2cb16644f30bf7f10eec40c763f1c8763e86bcc19cfdae35b3e8a6a2e7b1"
+        },
+        {
+          "file": "creatures-12.png",
+          "sha256": "ec06e2188e113a3b5568d655e1493a1e4b65dd4a5188c23ed52a16b7bf860a50"
+        }
+      ]
+    },
+    "spirit": {
+      "count": 4,
+      "marker": "Spirit gallery rendered seven butterfly variants",
+      "captures": [
+        {
+          "file": "spirit-creatures-0.png",
+          "sha256": "b772f07034cd6b89cede13a16f8aa8ad15e70bf22ec951bec222eb9ce3fb7692"
+        },
+        {
+          "file": "spirit-creatures-1.png",
+          "sha256": "03be595fb2f0133c264ffc9d5bf32a40692cb5ab08bb6eb7c8487f974e682129"
+        },
+        {
+          "file": "spirit-creatures-2.png",
+          "sha256": "9c2c1efe1c826780f6cc78b46efe622fb3b8b8874a4412daac8280af989ccf19"
+        },
+        {
+          "file": "spirit-creatures-3.png",
+          "sha256": "c32498b753f841d9f55e47eb465dd7ee75a55be139298a2cef5a5a23ba633b1e"
+        }
+      ]
+    },
+    "forest": {
+      "count": 4,
+      "marker": "Forest gallery rendered three Skeleton loadouts",
+      "captures": [
+        {
+          "file": "forest-creatures-0.png",
+          "sha256": "5142f94a5fc1a0cba54800566384bc1a96e4ae5f63a78938c60205d99c6e91e7"
+        },
+        {
+          "file": "forest-creatures-1.png",
+          "sha256": "58216dab489a958eccc9dca29b58929bc919973f2f5745c4349167598330d666"
+        },
+        {
+          "file": "forest-creatures-2.png",
+          "sha256": "b94227079401b6ad74612c66a49087858e524325ae9238b0790433bb5c55fdb4"
+        },
+        {
+          "file": "forest-creatures-3.png",
+          "sha256": "fec1cb1a5a8096395a4d396df6f37a4262a4a1a34576e484e3fe99a0a81667e9"
+        }
+      ]
+    },
+    "aquatic": {
+      "count": 13,
+      "marker": "Aquatic creature model inspection passed:",
+      "captures": [
+        {
+          "file": "creatures-0.png",
+          "sha256": "2ff83f7087279bc2c2381e3c42945f7fa2240585ad39be364d2bab70442023d5"
+        },
+        {
+          "file": "creatures-1.png",
+          "sha256": "01a99bd7846b6dcb17a597932621e333407245762463277b38e7b4cd266c946a"
+        },
+        {
+          "file": "creatures-2.png",
+          "sha256": "41218b85cb30596b1bb62d411197baddf4b93f3a052ccaabe26a7e41b4b94ad8"
+        },
+        {
+          "file": "creatures-3.png",
+          "sha256": "d17cdef38da9977f19c54210b67df6b1263a0b54fdd49335b037f5b5508bd6db"
+        },
+        {
+          "file": "creatures-4.png",
+          "sha256": "e20780a6ea8fff9e0b7c37a3fed06847fcac3cec4b8c0ac2e0ef16824e77167e"
+        },
+        {
+          "file": "creatures-5.png",
+          "sha256": "5e49290e1809839e604fe4340da0b97305d085c4178ea20ce55528c9c3192f57"
+        },
+        {
+          "file": "creatures-6.png",
+          "sha256": "ecf43940dce5c072df7879796accb3a6d0849f8a00c17f75d86f5a31ffe54cfe"
+        },
+        {
+          "file": "creatures-7.png",
+          "sha256": "f6fe12158a332845a2186f5af44fe1cf9a59a439e1900d4da0708abd2f246924"
+        },
+        {
+          "file": "creatures-8.png",
+          "sha256": "7e89869270e5d68edafeb96074bdafff71182c0ed911db43ff320511bc4e5477"
+        },
+        {
+          "file": "creatures-9.png",
+          "sha256": "f3a0dafb26a5c9325d40ca52e1e2fe7ebfd97dbcb56bd3bcfc6a1013351cbf93"
+        },
+        {
+          "file": "creatures-10.png",
+          "sha256": "d2a5b3a20d79a0d803ee7bc9f1ad94068862bd25df3cdb5df4142806b60f3ea9"
+        },
+        {
+          "file": "creatures-11.png",
+          "sha256": "b436275492e6d72f8624ca06efda1e4a0b565792a4406741b3c824e0838fa572"
+        },
+        {
+          "file": "creatures-12.png",
+          "sha256": "e26c705b9b39a9db8c84afdcad1f94d006e8cbdee9ecbacc52bdc2bd5a366f46"
+        }
+      ]
+    },
+    "horse": {
+      "count": 4,
+      "marker": "Horse inspection passed: sixteen coats",
+      "captures": [
+        {
+          "file": "horses-0.png",
+          "sha256": "10b89a68ba633c526fc40ac4b80d8d50b7fe35d0b2abf07aad5611b60d3cff1f"
+        },
+        {
+          "file": "horses-1.png",
+          "sha256": "abe492f9cffc04f13bfb13af42e504c037543ecd1785ae41c9b9e02bafd7232d"
+        },
+        {
+          "file": "horses-2.png",
+          "sha256": "691d84990901eef1415927050fef794d66fdf73966d82aaf0d78a3c2029df295"
+        },
+        {
+          "file": "horses-3.png",
+          "sha256": "2f8fbfb8c6adbcafed4797f2d4b63e6a156f9671e660cad02dcf042f39757df5"
+        }
+      ]
+    },
+    "spiders": {
+      "count": 4,
+      "marker": "Spider model gallery passed: three sizes;",
+      "captures": [
+        {
+          "file": "spiders-0.png",
+          "sha256": "ab6c2874f24c9f515329a1d791b29ad8888e9716d6024d390eddc6d10fc504d1"
+        },
+        {
+          "file": "spiders-1.png",
+          "sha256": "7f249084a2cb54dc734901748dad8be352abbefa6a243068ed2406b5de9e5745"
+        },
+        {
+          "file": "spiders-2.png",
+          "sha256": "4f247d8131aecfd7fbaed552105d66d9d979c3d87b63a0ad4db18d1ad646b4b8"
+        },
+        {
+          "file": "spiders-3.png",
+          "sha256": "368a1e250b731a9ea200f4e97bed4e48670996bdc9fedcb1efceae23d0bde1c2"
+        }
+      ]
+    },
+    "villagers": {
+      "count": 5,
+      "marker": "Villager gallery passed: ten representative professions",
+      "captures": [
+        {
+          "file": "villagers-0.png",
+          "sha256": "49d1aa91e6a85122e8bff344d52627d00129665f112518f6c5f2345b7d72b7d0"
+        },
+        {
+          "file": "villagers-1.png",
+          "sha256": "2f654c63f6a0225046b8e103981161645ff27591142322ec3d8d3c9580c0b849"
+        },
+        {
+          "file": "villagers-2.png",
+          "sha256": "b33b91bbac20fc495363e575b93b5de98063b0e4c62b206fe6fb5486f43a1cf2"
+        },
+        {
+          "file": "villagers-3.png",
+          "sha256": "97a377a8b4fcd6832e7740f5dc4509197010ecd4419b5e90c7b4a443a7adb60c"
+        },
+        {
+          "file": "villagers-4.png",
+          "sha256": "2a91f0ca542a51f25e43e92f9d6217df38b7339994e6d6c5ed1b5148baabe304"
+        }
+      ]
+    }
+  },
+  "total_captures": 47
+}

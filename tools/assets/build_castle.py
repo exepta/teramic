@@ -14,7 +14,7 @@ import castle_details as details
 ROOT = Path(__file__).resolve().parents[2]
 BLOCKS = ROOT / 'assets/terra/blocks'
 MODELS = BLOCKS / 'models'
-RECIPES = ROOT / 'assets/crafting'
+from recipe_paths import recipe_path
 DEFINITIONS = [
     (173, 'bergfried', 'Bergfried', 'keep', 'royal'),
     (174, 'castle_stone_wall', 'Steinmauer', 'wall', 'stone'),
@@ -76,8 +76,11 @@ class Mesh:
         })
 
     def polygon(self, points, material, normal=None):
-        a,b,c=points[:3]
-        calculated=cross([b[i]-a[i] for i in range(3)], [c[i]-a[i] for i in range(3)])
+        # Whole-boundary normal: the first corner may be concave (anchor crest).
+        calculated=[0.,0.,0.]
+        for a,b in zip(points,points[1:]+points[:1]):
+            contribution=cross(a,b)
+            calculated=[x+y for x,y in zip(calculated,contribution)]
         if sum(x*x for x in calculated)<1e-16: return
         if normal is None: normal=unit(calculated)
         elif sum(calculated[i]*normal[i] for i in range(3))<0: points=list(reversed(points))
@@ -90,7 +93,9 @@ class Mesh:
             group['normal'].append(normal)
             group['uv'].append([sum(point[i]*tangent[i] for i in range(3)),sum(point[i]*other[i] for i in range(3))])
             group['tangent'].append(tangent+[1])
-        for index in range(1,len(points)-1): group['indices'] += [offset,offset+index,offset+index+1]
+        from polygon import triangles
+        for triangle in triangles(points, normal):
+            group['indices'].extend(offset+index for index in triangle)
 
     def box(self, low, high, material, bevel=.014, solid=False):
         if solid: self.collision.append({'minimum':low,'maximum':high})
@@ -385,14 +390,15 @@ def main():
         definition['materials']={name:{'texture_pattern':pattern,'base_color':[*(min(1,tint[i]*mesh.materials[name][0][i]) for i in range(3)),1], 'roughness':.99,'reflectance':.08}
                                  for name in mesh.parts if name.startswith('stone_') or '_stone_' in name or name=='arch_join'}
         (BLOCKS/(slug+'.json')).write_text(json.dumps(definition,indent=2)+'\n')
-        recipe_path=RECIPES/(slug+'.json')
+        recipe_file=recipe_path(slug)
         if material==181:
-            recipe_path.unlink(missing_ok=True) # Retained block ID, automatic corners replace this item.
+            recipe_file.unlink(missing_ok=True) # Retained block ID, automatic corners replace this item.
         else:
-            recipe_path.write_text(json.dumps(recipe(material,slug,name),indent=2)+'\n')
+            recipe_file.parent.mkdir(parents=True, exist_ok=True)
+            recipe_file.write_text(json.dumps(recipe(material,slug,name),indent=2)+'\n')
     (MODELS/'castle_connections.json').write_text(json.dumps(profiles,separators=(',',':'))+'\n')
     # Both halves can be converted without discarding their material cost.
-    (RECIPES/'castle_arch_left_from_right.json').write_text(json.dumps({'id':'teramic::castle_arch_left_from_right','name':'Mauerbogen Links','station':'workbench','output':{'item':{'block':183},'count':1},'pattern':{'kind':'shapeless','ingredients':[ingredient(184)]}},indent=2)+'\n')
+    recipe_path('castle_arch_left_from_right').write_text(json.dumps({'id':'teramic::castle_arch_left_from_right','name':'Mauerbogen Links','station':'workbench','output':{'item':{'block':183},'count':1},'pattern':{'kind':'shapeless','ingredients':[ingredient(184)]}},indent=2)+'\n')
     print(f'Authored {len(DEFINITIONS)} castle meshes, block definitions and recipes.')
 
 if __name__=='__main__':main()

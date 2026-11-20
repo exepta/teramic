@@ -1,0 +1,3720 @@
+{
+  "maximum_block_id": 399,
+  "blocks": 399,
+  "models": 245,
+  "failing_blocks": 0,
+  "definitions": [
+    {
+      "id": 397,
+      "definition": "assets/terra/blocks/active_rune_block.json",
+      "errors": []
+    },
+    {
+      "id": 195,
+      "definition": "assets/terra/blocks/apple-leaves.json",
+      "errors": []
+    },
+    {
+      "id": 300,
+      "definition": "assets/terra/blocks/army_station.json",
+      "errors": []
+    },
+    {
+      "id": 8,
+      "definition": "assets/terra/blocks/autumn-leaves.json",
+      "errors": []
+    },
+    {
+      "id": 206,
+      "definition": "assets/terra/blocks/ballast.json",
+      "errors": []
+    },
+    {
+      "id": 208,
+      "definition": "assets/terra/blocks/ballast_slab.json",
+      "errors": []
+    },
+    {
+      "id": 207,
+      "definition": "assets/terra/blocks/ballast_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 169,
+      "definition": "assets/terra/blocks/basin.json",
+      "errors": []
+    },
+    {
+      "id": 41,
+      "definition": "assets/terra/blocks/bedrock.json",
+      "errors": []
+    },
+    {
+      "id": 160,
+      "definition": "assets/terra/blocks/belt_distributor.json",
+      "errors": []
+    },
+    {
+      "id": 158,
+      "definition": "assets/terra/blocks/belt_merger.json",
+      "errors": []
+    },
+    {
+      "id": 173,
+      "definition": "assets/terra/blocks/bergfried.json",
+      "errors": []
+    },
+    {
+      "id": 175,
+      "definition": "assets/terra/blocks/bergfried_wall.json",
+      "errors": []
+    },
+    {
+      "id": 17,
+      "definition": "assets/terra/blocks/birch-planks.json",
+      "errors": []
+    },
+    {
+      "id": 72,
+      "definition": "assets/terra/blocks/birch_bed.json",
+      "errors": []
+    },
+    {
+      "id": 66,
+      "definition": "assets/terra/blocks/birch_door.json",
+      "errors": []
+    },
+    {
+      "id": 91,
+      "definition": "assets/terra/blocks/birch_fence.json",
+      "errors": []
+    },
+    {
+      "id": 83,
+      "definition": "assets/terra/blocks/birch_slab.json",
+      "errors": []
+    },
+    {
+      "id": 75,
+      "definition": "assets/terra/blocks/birch_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 69,
+      "definition": "assets/terra/blocks/birch_window.json",
+      "errors": []
+    },
+    {
+      "id": 304,
+      "definition": "assets/terra/blocks/bishop_station.json",
+      "errors": []
+    },
+    {
+      "id": 329,
+      "definition": "assets/terra/blocks/black_clay.json",
+      "errors": []
+    },
+    {
+      "id": 317,
+      "definition": "assets/terra/blocks/blossom_bush.json",
+      "errors": []
+    },
+    {
+      "id": 309,
+      "definition": "assets/terra/blocks/blossom_petal_block.json",
+      "errors": []
+    },
+    {
+      "id": 387,
+      "definition": "assets/terra/blocks/blossoming_vines.json",
+      "errors": []
+    },
+    {
+      "id": 25,
+      "definition": "assets/terra/blocks/blue-mushroom-cap.json",
+      "errors": []
+    },
+    {
+      "id": 324,
+      "definition": "assets/terra/blocks/blue_clay.json",
+      "errors": []
+    },
+    {
+      "id": 375,
+      "definition": "assets/terra/blocks/bone_pile.json",
+      "errors": []
+    },
+    {
+      "id": 366,
+      "definition": "assets/terra/blocks/bordered_grave.json",
+      "errors": []
+    },
+    {
+      "id": 303,
+      "definition": "assets/terra/blocks/butcher_station.json",
+      "errors": []
+    },
+    {
+      "id": 162,
+      "definition": "assets/terra/blocks/campfire.json",
+      "errors": []
+    },
+    {
+      "id": 113,
+      "definition": "assets/terra/blocks/carpet_black.json",
+      "errors": []
+    },
+    {
+      "id": 109,
+      "definition": "assets/terra/blocks/carpet_blue.json",
+      "errors": []
+    },
+    {
+      "id": 116,
+      "definition": "assets/terra/blocks/carpet_gold.json",
+      "errors": []
+    },
+    {
+      "id": 111,
+      "definition": "assets/terra/blocks/carpet_green.json",
+      "errors": []
+    },
+    {
+      "id": 118,
+      "definition": "assets/terra/blocks/carpet_light_blue.json",
+      "errors": []
+    },
+    {
+      "id": 114,
+      "definition": "assets/terra/blocks/carpet_lime.json",
+      "errors": []
+    },
+    {
+      "id": 110,
+      "definition": "assets/terra/blocks/carpet_orange.json",
+      "errors": []
+    },
+    {
+      "id": 115,
+      "definition": "assets/terra/blocks/carpet_pink.json",
+      "errors": []
+    },
+    {
+      "id": 112,
+      "definition": "assets/terra/blocks/carpet_purple.json",
+      "errors": []
+    },
+    {
+      "id": 107,
+      "definition": "assets/terra/blocks/carpet_red.json",
+      "errors": []
+    },
+    {
+      "id": 117,
+      "definition": "assets/terra/blocks/carpet_silver.json",
+      "errors": []
+    },
+    {
+      "id": 106,
+      "definition": "assets/terra/blocks/carpet_white.json",
+      "errors": []
+    },
+    {
+      "id": 108,
+      "definition": "assets/terra/blocks/carpet_yellow.json",
+      "errors": []
+    },
+    {
+      "id": 183,
+      "definition": "assets/terra/blocks/castle_arch_left.json",
+      "errors": []
+    },
+    {
+      "id": 184,
+      "definition": "assets/terra/blocks/castle_arch_right.json",
+      "errors": []
+    },
+    {
+      "id": 185,
+      "definition": "assets/terra/blocks/castle_arrow_slit.json",
+      "errors": []
+    },
+    {
+      "id": 181,
+      "definition": "assets/terra/blocks/castle_battlement_corner.json",
+      "errors": []
+    },
+    {
+      "id": 182,
+      "definition": "assets/terra/blocks/castle_battlement_pillar.json",
+      "errors": []
+    },
+    {
+      "id": 180,
+      "definition": "assets/terra/blocks/castle_battlement_straight.json",
+      "errors": []
+    },
+    {
+      "id": 190,
+      "definition": "assets/terra/blocks/castle_blackstone_wall.json",
+      "errors": []
+    },
+    {
+      "id": 176,
+      "definition": "assets/terra/blocks/castle_cracked_wall.json",
+      "errors": []
+    },
+    {
+      "id": 188,
+      "definition": "assets/terra/blocks/castle_desert_wall.json",
+      "errors": []
+    },
+    {
+      "id": 179,
+      "definition": "assets/terra/blocks/castle_iron_wall.json",
+      "errors": []
+    },
+    {
+      "id": 178,
+      "definition": "assets/terra/blocks/castle_moss_wall.json",
+      "errors": []
+    },
+    {
+      "id": 177,
+      "definition": "assets/terra/blocks/castle_overgrown_wall.json",
+      "errors": []
+    },
+    {
+      "id": 191,
+      "definition": "assets/terra/blocks/castle_royal_wall.json",
+      "errors": []
+    },
+    {
+      "id": 187,
+      "definition": "assets/terra/blocks/castle_sandstone_wall.json",
+      "errors": []
+    },
+    {
+      "id": 189,
+      "definition": "assets/terra/blocks/castle_snow_wall.json",
+      "errors": []
+    },
+    {
+      "id": 174,
+      "definition": "assets/terra/blocks/castle_stone_wall.json",
+      "errors": []
+    },
+    {
+      "id": 192,
+      "definition": "assets/terra/blocks/castle_timber_wall.json",
+      "errors": []
+    },
+    {
+      "id": 186,
+      "definition": "assets/terra/blocks/castle_window.json",
+      "errors": []
+    },
+    {
+      "id": 161,
+      "definition": "assets/terra/blocks/cauldron.json",
+      "errors": []
+    },
+    {
+      "id": 56,
+      "definition": "assets/terra/blocks/cave_mushroom.json",
+      "errors": []
+    },
+    {
+      "id": 55,
+      "definition": "assets/terra/blocks/cave_root.json",
+      "errors": []
+    },
+    {
+      "id": 54,
+      "definition": "assets/terra/blocks/cave_vine.json",
+      "errors": []
+    },
+    {
+      "id": 194,
+      "definition": "assets/terra/blocks/chain.json",
+      "errors": []
+    },
+    {
+      "id": 132,
+      "definition": "assets/terra/blocks/cherry-leaves.json",
+      "errors": []
+    },
+    {
+      "id": 134,
+      "definition": "assets/terra/blocks/cherry-log.json",
+      "errors": []
+    },
+    {
+      "id": 135,
+      "definition": "assets/terra/blocks/cherry-planks.json",
+      "errors": []
+    },
+    {
+      "id": 139,
+      "definition": "assets/terra/blocks/cherry_door.json",
+      "errors": []
+    },
+    {
+      "id": 138,
+      "definition": "assets/terra/blocks/cherry_fence.json",
+      "errors": []
+    },
+    {
+      "id": 137,
+      "definition": "assets/terra/blocks/cherry_slab.json",
+      "errors": []
+    },
+    {
+      "id": 136,
+      "definition": "assets/terra/blocks/cherry_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 140,
+      "definition": "assets/terra/blocks/cherry_window.json",
+      "errors": []
+    },
+    {
+      "id": 29,
+      "definition": "assets/terra/blocks/chest.json",
+      "errors": []
+    },
+    {
+      "id": 64,
+      "definition": "assets/terra/blocks/chimney_bend_down.json",
+      "errors": []
+    },
+    {
+      "id": 63,
+      "definition": "assets/terra/blocks/chimney_bend_up.json",
+      "errors": []
+    },
+    {
+      "id": 61,
+      "definition": "assets/terra/blocks/chimney_elbow.json",
+      "errors": []
+    },
+    {
+      "id": 62,
+      "definition": "assets/terra/blocks/chimney_horizontal.json",
+      "errors": []
+    },
+    {
+      "id": 60,
+      "definition": "assets/terra/blocks/chimney_straight.json",
+      "errors": []
+    },
+    {
+      "id": 19,
+      "definition": "assets/terra/blocks/clay.json",
+      "errors": []
+    },
+    {
+      "id": 32,
+      "definition": "assets/terra/blocks/coal_ore.json",
+      "errors": []
+    },
+    {
+      "id": 148,
+      "definition": "assets/terra/blocks/conveyor.json",
+      "errors": []
+    },
+    {
+      "id": 45,
+      "definition": "assets/terra/blocks/coral-blue.json",
+      "errors": []
+    },
+    {
+      "id": 47,
+      "definition": "assets/terra/blocks/coral-purple.json",
+      "errors": []
+    },
+    {
+      "id": 44,
+      "definition": "assets/terra/blocks/coral-red.json",
+      "errors": []
+    },
+    {
+      "id": 46,
+      "definition": "assets/terra/blocks/coral-yellow.json",
+      "errors": []
+    },
+    {
+      "id": 347,
+      "definition": "assets/terra/blocks/cracked_grave_slab.json",
+      "errors": []
+    },
+    {
+      "id": 339,
+      "definition": "assets/terra/blocks/cracked_grave_stone.json",
+      "errors": []
+    },
+    {
+      "id": 357,
+      "definition": "assets/terra/blocks/cross_relief.json",
+      "errors": []
+    },
+    {
+      "id": 99,
+      "definition": "assets/terra/blocks/crusher.json",
+      "errors": []
+    },
+    {
+      "id": 353,
+      "definition": "assets/terra/blocks/crypt_arch.json",
+      "errors": []
+    },
+    {
+      "id": 394,
+      "definition": "assets/terra/blocks/crypt_arrow_trap.json",
+      "errors": []
+    },
+    {
+      "id": 378,
+      "definition": "assets/terra/blocks/crypt_books.json",
+      "errors": []
+    },
+    {
+      "id": 343,
+      "definition": "assets/terra/blocks/crypt_brick.json",
+      "errors": []
+    },
+    {
+      "id": 371,
+      "definition": "assets/terra/blocks/crypt_candles.json",
+      "errors": []
+    },
+    {
+      "id": 351,
+      "definition": "assets/terra/blocks/crypt_capital.json",
+      "errors": []
+    },
+    {
+      "id": 380,
+      "definition": "assets/terra/blocks/crypt_chain.json",
+      "errors": []
+    },
+    {
+      "id": 372,
+      "definition": "assets/terra/blocks/crypt_chandelier.json",
+      "errors": []
+    },
+    {
+      "id": 349,
+      "definition": "assets/terra/blocks/crypt_column.json",
+      "errors": []
+    },
+    {
+      "id": 352,
+      "definition": "assets/terra/blocks/crypt_column_base.json",
+      "errors": []
+    },
+    {
+      "id": 361,
+      "definition": "assets/terra/blocks/crypt_curtain.json",
+      "errors": []
+    },
+    {
+      "id": 359,
+      "definition": "assets/terra/blocks/crypt_heraldic_banner.json",
+      "errors": []
+    },
+    {
+      "id": 389,
+      "definition": "assets/terra/blocks/crypt_lever.json",
+      "errors": []
+    },
+    {
+      "id": 391,
+      "definition": "assets/terra/blocks/crypt_portcullis.json",
+      "errors": []
+    },
+    {
+      "id": 388,
+      "definition": "assets/terra/blocks/crypt_pressure_plate.json",
+      "errors": []
+    },
+    {
+      "id": 393,
+      "definition": "assets/terra/blocks/crypt_spike_trap.json",
+      "errors": []
+    },
+    {
+      "id": 360,
+      "definition": "assets/terra/blocks/crypt_torn_banner.json",
+      "errors": []
+    },
+    {
+      "id": 358,
+      "definition": "assets/terra/blocks/crypt_wall_niche.json",
+      "errors": []
+    },
+    {
+      "id": 390,
+      "definition": "assets/terra/blocks/crypt_wall_switch.json",
+      "errors": []
+    },
+    {
+      "id": 370,
+      "definition": "assets/terra/blocks/crypt_wall_torch.json",
+      "errors": []
+    },
+    {
+      "id": 338,
+      "definition": "assets/terra/blocks/dark_grave_stone.json",
+      "errors": []
+    },
+    {
+      "id": 331,
+      "definition": "assets/terra/blocks/dark_gray_clay.json",
+      "errors": []
+    },
+    {
+      "id": 385,
+      "definition": "assets/terra/blocks/dark_mushrooms.json",
+      "errors": []
+    },
+    {
+      "id": 381,
+      "definition": "assets/terra/blocks/dead_grass.json",
+      "errors": []
+    },
+    {
+      "id": 34,
+      "definition": "assets/terra/blocks/diamond_ore.json",
+      "errors": []
+    },
+    {
+      "id": 2,
+      "definition": "assets/terra/blocks/dirt.json",
+      "errors": []
+    },
+    {
+      "id": 94,
+      "definition": "assets/terra/blocks/dirt_fence.json",
+      "errors": []
+    },
+    {
+      "id": 86,
+      "definition": "assets/terra/blocks/dirt_slab.json",
+      "errors": []
+    },
+    {
+      "id": 78,
+      "definition": "assets/terra/blocks/dirt_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 37,
+      "definition": "assets/terra/blocks/dripstone.json",
+      "errors": []
+    },
+    {
+      "id": 39,
+      "definition": "assets/terra/blocks/dripstone_formation.json",
+      "errors": []
+    },
+    {
+      "id": 52,
+      "definition": "assets/terra/blocks/dripstone_tip.json",
+      "errors": []
+    },
+    {
+      "id": 305,
+      "definition": "assets/terra/blocks/farm_station.json",
+      "errors": []
+    },
+    {
+      "id": 101,
+      "definition": "assets/terra/blocks/farmland.json",
+      "errors": []
+    },
+    {
+      "id": 167,
+      "definition": "assets/terra/blocks/faucet.json",
+      "errors": []
+    },
+    {
+      "id": 157,
+      "definition": "assets/terra/blocks/filtered_funnel.json",
+      "errors": []
+    },
+    {
+      "id": 159,
+      "definition": "assets/terra/blocks/filtered_tunnel.json",
+      "errors": []
+    },
+    {
+      "id": 95,
+      "definition": "assets/terra/blocks/fine_sand_fence.json",
+      "errors": []
+    },
+    {
+      "id": 87,
+      "definition": "assets/terra/blocks/fine_sand_slab.json",
+      "errors": []
+    },
+    {
+      "id": 79,
+      "definition": "assets/terra/blocks/fine_sand_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 131,
+      "definition": "assets/terra/blocks/flower_pot.json",
+      "errors": []
+    },
+    {
+      "id": 27,
+      "definition": "assets/terra/blocks/fluid-water.json",
+      "errors": []
+    },
+    {
+      "id": 171,
+      "definition": "assets/terra/blocks/fluid_infuser.json",
+      "errors": []
+    },
+    {
+      "id": 59,
+      "definition": "assets/terra/blocks/furnace.json",
+      "errors": []
+    },
+    {
+      "id": 154,
+      "definition": "assets/terra/blocks/gearbox_horizontal.json",
+      "errors": []
+    },
+    {
+      "id": 155,
+      "definition": "assets/terra/blocks/gearbox_vertical.json",
+      "errors": []
+    },
+    {
+      "id": 15,
+      "definition": "assets/terra/blocks/glass.json",
+      "errors": []
+    },
+    {
+      "id": 96,
+      "definition": "assets/terra/blocks/glass_fence.json",
+      "errors": []
+    },
+    {
+      "id": 172,
+      "definition": "assets/terra/blocks/glass_pipe.json",
+      "errors": []
+    },
+    {
+      "id": 88,
+      "definition": "assets/terra/blocks/glass_slab.json",
+      "errors": []
+    },
+    {
+      "id": 80,
+      "definition": "assets/terra/blocks/glass_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 315,
+      "definition": "assets/terra/blocks/glowing_lantern_stone.json",
+      "errors": []
+    },
+    {
+      "id": 386,
+      "definition": "assets/terra/blocks/glowing_purple_mushrooms.json",
+      "errors": []
+    },
+    {
+      "id": 316,
+      "definition": "assets/terra/blocks/glowing_spirit_flowers.json",
+      "errors": []
+    },
+    {
+      "id": 33,
+      "definition": "assets/terra/blocks/gold_ore.json",
+      "errors": []
+    },
+    {
+      "id": 1,
+      "definition": "assets/terra/blocks/grass.json",
+      "errors": []
+    },
+    {
+      "id": 365,
+      "definition": "assets/terra/blocks/grave_cross.json",
+      "errors": []
+    },
+    {
+      "id": 369,
+      "definition": "assets/terra/blocks/grave_lantern_post.json",
+      "errors": []
+    },
+    {
+      "id": 384,
+      "definition": "assets/terra/blocks/grave_moss.json",
+      "errors": []
+    },
+    {
+      "id": 355,
+      "definition": "assets/terra/blocks/grave_relief_wall.json",
+      "errors": []
+    },
+    {
+      "id": 379,
+      "definition": "assets/terra/blocks/grave_skull.json",
+      "errors": []
+    },
+    {
+      "id": 337,
+      "definition": "assets/terra/blocks/grave_stone.json",
+      "errors": []
+    },
+    {
+      "id": 344,
+      "definition": "assets/terra/blocks/grave_stone_slab.json",
+      "errors": []
+    },
+    {
+      "id": 376,
+      "definition": "assets/terra/blocks/grave_urn.json",
+      "errors": []
+    },
+    {
+      "id": 42,
+      "definition": "assets/terra/blocks/gravel.json",
+      "errors": []
+    },
+    {
+      "id": 364,
+      "definition": "assets/terra/blocks/gravestone_large.json",
+      "errors": []
+    },
+    {
+      "id": 363,
+      "definition": "assets/terra/blocks/gravestone_medium.json",
+      "errors": []
+    },
+    {
+      "id": 362,
+      "definition": "assets/terra/blocks/gravestone_small.json",
+      "errors": []
+    },
+    {
+      "id": 330,
+      "definition": "assets/terra/blocks/gray_clay.json",
+      "errors": []
+    },
+    {
+      "id": 24,
+      "definition": "assets/terra/blocks/green-mushroom-cap.json",
+      "errors": []
+    },
+    {
+      "id": 326,
+      "definition": "assets/terra/blocks/green_clay.json",
+      "errors": []
+    },
+    {
+      "id": 100,
+      "definition": "assets/terra/blocks/hand_crank.json",
+      "errors": []
+    },
+    {
+      "id": 321,
+      "definition": "assets/terra/blocks/hanging_blossom_lantern.json",
+      "errors": []
+    },
+    {
+      "id": 383,
+      "definition": "assets/terra/blocks/hanging_ivy.json",
+      "errors": []
+    },
+    {
+      "id": 170,
+      "definition": "assets/terra/blocks/hold_block.json",
+      "errors": []
+    },
+    {
+      "id": 49,
+      "definition": "assets/terra/blocks/ice.json",
+      "errors": []
+    },
+    {
+      "id": 53,
+      "definition": "assets/terra/blocks/ice_crystal.json",
+      "errors": []
+    },
+    {
+      "id": 97,
+      "definition": "assets/terra/blocks/ice_fence.json",
+      "errors": []
+    },
+    {
+      "id": 89,
+      "definition": "assets/terra/blocks/ice_slab.json",
+      "errors": []
+    },
+    {
+      "id": 81,
+      "definition": "assets/terra/blocks/ice_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 398,
+      "definition": "assets/terra/blocks/inactive_rune_block.json",
+      "errors": []
+    },
+    {
+      "id": 348,
+      "definition": "assets/terra/blocks/inscribed_grave_slab.json",
+      "errors": []
+    },
+    {
+      "id": 143,
+      "definition": "assets/terra/blocks/iron_gear.json",
+      "errors": []
+    },
+    {
+      "id": 151,
+      "definition": "assets/terra/blocks/iron_large_gear.json",
+      "errors": []
+    },
+    {
+      "id": 31,
+      "definition": "assets/terra/blocks/iron_ore.json",
+      "errors": []
+    },
+    {
+      "id": 165,
+      "definition": "assets/terra/blocks/iron_pipe.json",
+      "errors": []
+    },
+    {
+      "id": 146,
+      "definition": "assets/terra/blocks/iron_shaft.json",
+      "errors": []
+    },
+    {
+      "id": 152,
+      "definition": "assets/terra/blocks/item_hopper.json",
+      "errors": []
+    },
+    {
+      "id": 153,
+      "definition": "assets/terra/blocks/item_importer.json",
+      "errors": []
+    },
+    {
+      "id": 193,
+      "definition": "assets/terra/blocks/lantern.json",
+      "errors": []
+    },
+    {
+      "id": 312,
+      "definition": "assets/terra/blocks/lavender_blossom_leaves.json",
+      "errors": []
+    },
+    {
+      "id": 7,
+      "definition": "assets/terra/blocks/leaves.json",
+      "errors": []
+    },
+    {
+      "id": 320,
+      "definition": "assets/terra/blocks/lily_pad.json",
+      "errors": []
+    },
+    {
+      "id": 334,
+      "definition": "assets/terra/blocks/lime_clay.json",
+      "errors": []
+    },
+    {
+      "id": 392,
+      "definition": "assets/terra/blocks/locked_crypt_gate.json",
+      "errors": []
+    },
+    {
+      "id": 319,
+      "definition": "assets/terra/blocks/lotus_flower.json",
+      "errors": []
+    },
+    {
+      "id": 297,
+      "definition": "assets/terra/blocks/lumberjack_station.json",
+      "errors": []
+    },
+    {
+      "id": 299,
+      "definition": "assets/terra/blocks/market_station.json",
+      "errors": []
+    },
+    {
+      "id": 302,
+      "definition": "assets/terra/blocks/mine_station.json",
+      "errors": []
+    },
+    {
+      "id": 156,
+      "definition": "assets/terra/blocks/mixer.json",
+      "errors": []
+    },
+    {
+      "id": 346,
+      "definition": "assets/terra/blocks/mosaic_grave_slab.json",
+      "errors": []
+    },
+    {
+      "id": 341,
+      "definition": "assets/terra/blocks/moss_grave_stone.json",
+      "errors": []
+    },
+    {
+      "id": 13,
+      "definition": "assets/terra/blocks/mossy-stone.json",
+      "errors": []
+    },
+    {
+      "id": 354,
+      "definition": "assets/terra/blocks/mossy_crypt_arch.json",
+      "errors": []
+    },
+    {
+      "id": 48,
+      "definition": "assets/terra/blocks/mud.json",
+      "errors": []
+    },
+    {
+      "id": 20,
+      "definition": "assets/terra/blocks/mushroom-stem.json",
+      "errors": []
+    },
+    {
+      "id": 399,
+      "definition": "assets/terra/blocks/mystic_mist_block.json",
+      "errors": []
+    },
+    {
+      "id": 16,
+      "definition": "assets/terra/blocks/oak-planks.json",
+      "errors": []
+    },
+    {
+      "id": 71,
+      "definition": "assets/terra/blocks/oak_bed.json",
+      "errors": []
+    },
+    {
+      "id": 65,
+      "definition": "assets/terra/blocks/oak_door.json",
+      "errors": []
+    },
+    {
+      "id": 90,
+      "definition": "assets/terra/blocks/oak_fence.json",
+      "errors": []
+    },
+    {
+      "id": 82,
+      "definition": "assets/terra/blocks/oak_slab.json",
+      "errors": []
+    },
+    {
+      "id": 74,
+      "definition": "assets/terra/blocks/oak_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 68,
+      "definition": "assets/terra/blocks/oak_window.json",
+      "errors": []
+    },
+    {
+      "id": 336,
+      "definition": "assets/terra/blocks/orange_clay.json",
+      "errors": []
+    },
+    {
+      "id": 377,
+      "definition": "assets/terra/blocks/ornate_crypt_chest.json",
+      "errors": []
+    },
+    {
+      "id": 350,
+      "definition": "assets/terra/blocks/ornate_crypt_column.json",
+      "errors": []
+    },
+    {
+      "id": 345,
+      "definition": "assets/terra/blocks/ornate_grave_slab.json",
+      "errors": []
+    },
+    {
+      "id": 340,
+      "definition": "assets/terra/blocks/ornate_grave_stone.json",
+      "errors": []
+    },
+    {
+      "id": 342,
+      "definition": "assets/terra/blocks/overgrown_grave_stone.json",
+      "errors": []
+    },
+    {
+      "id": 102,
+      "definition": "assets/terra/blocks/path.json",
+      "errors": []
+    },
+    {
+      "id": 322,
+      "definition": "assets/terra/blocks/petal_ground_cover.json",
+      "errors": []
+    },
+    {
+      "id": 310,
+      "definition": "assets/terra/blocks/pink_blossom_leaves.json",
+      "errors": []
+    },
+    {
+      "id": 333,
+      "definition": "assets/terra/blocks/pink_clay.json",
+      "errors": []
+    },
+    {
+      "id": 58,
+      "definition": "assets/terra/blocks/pink_salt_stone.json",
+      "errors": []
+    },
+    {
+      "id": 168,
+      "definition": "assets/terra/blocks/pump.json",
+      "errors": []
+    },
+    {
+      "id": 21,
+      "definition": "assets/terra/blocks/purple-mushroom-cap.json",
+      "errors": []
+    },
+    {
+      "id": 332,
+      "definition": "assets/terra/blocks/purple_clay.json",
+      "errors": []
+    },
+    {
+      "id": 205,
+      "definition": "assets/terra/blocks/rail_buffer.json",
+      "errors": []
+    },
+    {
+      "id": 204,
+      "definition": "assets/terra/blocks/rail_crossing.json",
+      "errors": []
+    },
+    {
+      "id": 198,
+      "definition": "assets/terra/blocks/rail_curve_large.json",
+      "errors": []
+    },
+    {
+      "id": 197,
+      "definition": "assets/terra/blocks/rail_curve_small.json",
+      "errors": []
+    },
+    {
+      "id": 199,
+      "definition": "assets/terra/blocks/rail_slope.json",
+      "errors": []
+    },
+    {
+      "id": 200,
+      "definition": "assets/terra/blocks/rail_slope_entry.json",
+      "errors": []
+    },
+    {
+      "id": 201,
+      "definition": "assets/terra/blocks/rail_slope_exit.json",
+      "errors": []
+    },
+    {
+      "id": 196,
+      "definition": "assets/terra/blocks/rail_straight.json",
+      "errors": []
+    },
+    {
+      "id": 202,
+      "definition": "assets/terra/blocks/rail_switch_left.json",
+      "errors": []
+    },
+    {
+      "id": 203,
+      "definition": "assets/terra/blocks/rail_switch_right.json",
+      "errors": []
+    },
+    {
+      "id": 209,
+      "definition": "assets/terra/blocks/rail_switch_stand.json",
+      "errors": []
+    },
+    {
+      "id": 295,
+      "definition": "assets/terra/blocks/rail_turntable.json",
+      "errors": []
+    },
+    {
+      "id": 301,
+      "definition": "assets/terra/blocks/railway_station.json",
+      "errors": []
+    },
+    {
+      "id": 22,
+      "definition": "assets/terra/blocks/red-mushroom-cap.json",
+      "errors": []
+    },
+    {
+      "id": 325,
+      "definition": "assets/terra/blocks/red_clay.json",
+      "errors": []
+    },
+    {
+      "id": 35,
+      "definition": "assets/terra/blocks/ruby_ore.json",
+      "errors": []
+    },
+    {
+      "id": 51,
+      "definition": "assets/terra/blocks/salt_crystal.json",
+      "errors": []
+    },
+    {
+      "id": 38,
+      "definition": "assets/terra/blocks/salt_formation.json",
+      "errors": []
+    },
+    {
+      "id": 30,
+      "definition": "assets/terra/blocks/salt_ore.json",
+      "errors": []
+    },
+    {
+      "id": 57,
+      "definition": "assets/terra/blocks/salt_stone.json",
+      "errors": []
+    },
+    {
+      "id": 4,
+      "definition": "assets/terra/blocks/sand.json",
+      "errors": []
+    },
+    {
+      "id": 11,
+      "definition": "assets/terra/blocks/sandstone.json",
+      "errors": []
+    },
+    {
+      "id": 367,
+      "definition": "assets/terra/blocks/sarcophagus_closed.json",
+      "errors": []
+    },
+    {
+      "id": 368,
+      "definition": "assets/terra/blocks/sarcophagus_open.json",
+      "errors": []
+    },
+    {
+      "id": 50,
+      "definition": "assets/terra/blocks/seagrass_block.json",
+      "errors": []
+    },
+    {
+      "id": 9,
+      "definition": "assets/terra/blocks/silver-leaves.json",
+      "errors": []
+    },
+    {
+      "id": 374,
+      "definition": "assets/terra/blocks/skeleton_remains.json",
+      "errors": []
+    },
+    {
+      "id": 356,
+      "definition": "assets/terra/blocks/skull_relief.json",
+      "errors": []
+    },
+    {
+      "id": 298,
+      "definition": "assets/terra/blocks/smith_station.json",
+      "errors": []
+    },
+    {
+      "id": 12,
+      "definition": "assets/terra/blocks/smooth-stone.json",
+      "errors": []
+    },
+    {
+      "id": 5,
+      "definition": "assets/terra/blocks/snow.json",
+      "errors": []
+    },
+    {
+      "id": 98,
+      "definition": "assets/terra/blocks/snow_layer.json",
+      "errors": []
+    },
+    {
+      "id": 14,
+      "definition": "assets/terra/blocks/solid-water.json",
+      "errors": []
+    },
+    {
+      "id": 373,
+      "definition": "assets/terra/blocks/soul_brazier.json",
+      "errors": []
+    },
+    {
+      "id": 396,
+      "definition": "assets/terra/blocks/soul_crystal_large.json",
+      "errors": []
+    },
+    {
+      "id": 395,
+      "definition": "assets/terra/blocks/soul_crystal_small.json",
+      "errors": []
+    },
+    {
+      "id": 307,
+      "definition": "assets/terra/blocks/spirit_blossom_dirt.json",
+      "errors": []
+    },
+    {
+      "id": 306,
+      "definition": "assets/terra/blocks/spirit_blossom_grass.json",
+      "errors": []
+    },
+    {
+      "id": 313,
+      "definition": "assets/terra/blocks/spirit_blossom_log.json",
+      "errors": []
+    },
+    {
+      "id": 314,
+      "definition": "assets/terra/blocks/spirit_blossom_planks.json",
+      "errors": []
+    },
+    {
+      "id": 318,
+      "definition": "assets/terra/blocks/spirit_lantern_post.json",
+      "errors": []
+    },
+    {
+      "id": 323,
+      "definition": "assets/terra/blocks/spirit_shrine_stone.json",
+      "errors": []
+    },
+    {
+      "id": 308,
+      "definition": "assets/terra/blocks/spirit_stone.json",
+      "errors": []
+    },
+    {
+      "id": 36,
+      "definition": "assets/terra/blocks/spruce-log.json",
+      "errors": []
+    },
+    {
+      "id": 18,
+      "definition": "assets/terra/blocks/spruce-planks.json",
+      "errors": []
+    },
+    {
+      "id": 73,
+      "definition": "assets/terra/blocks/spruce_bed.json",
+      "errors": []
+    },
+    {
+      "id": 67,
+      "definition": "assets/terra/blocks/spruce_door.json",
+      "errors": []
+    },
+    {
+      "id": 92,
+      "definition": "assets/terra/blocks/spruce_fence.json",
+      "errors": []
+    },
+    {
+      "id": 84,
+      "definition": "assets/terra/blocks/spruce_slab.json",
+      "errors": []
+    },
+    {
+      "id": 76,
+      "definition": "assets/terra/blocks/spruce_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 70,
+      "definition": "assets/terra/blocks/spruce_window.json",
+      "errors": []
+    },
+    {
+      "id": 3,
+      "definition": "assets/terra/blocks/stone.json",
+      "errors": []
+    },
+    {
+      "id": 93,
+      "definition": "assets/terra/blocks/stone_fence.json",
+      "errors": []
+    },
+    {
+      "id": 142,
+      "definition": "assets/terra/blocks/stone_gear.json",
+      "errors": []
+    },
+    {
+      "id": 150,
+      "definition": "assets/terra/blocks/stone_large_gear.json",
+      "errors": []
+    },
+    {
+      "id": 164,
+      "definition": "assets/terra/blocks/stone_pipe.json",
+      "errors": []
+    },
+    {
+      "id": 145,
+      "definition": "assets/terra/blocks/stone_shaft.json",
+      "errors": []
+    },
+    {
+      "id": 85,
+      "definition": "assets/terra/blocks/stone_slab.json",
+      "errors": []
+    },
+    {
+      "id": 77,
+      "definition": "assets/terra/blocks/stone_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 43,
+      "definition": "assets/terra/blocks/structure-stone.json",
+      "errors": []
+    },
+    {
+      "id": 382,
+      "definition": "assets/terra/blocks/thorn_bush.json",
+      "errors": []
+    },
+    {
+      "id": 40,
+      "definition": "assets/terra/blocks/torch.json",
+      "errors": []
+    },
+    {
+      "id": 217,
+      "definition": "assets/terra/blocks/train_assembly_station.json",
+      "errors": []
+    },
+    {
+      "id": 235,
+      "definition": "assets/terra/blocks/train_axle.json",
+      "errors": []
+    },
+    {
+      "id": 270,
+      "definition": "assets/terra/blocks/train_black_iron_block.json",
+      "errors": []
+    },
+    {
+      "id": 273,
+      "definition": "assets/terra/blocks/train_black_iron_inner_corner.json",
+      "errors": []
+    },
+    {
+      "id": 274,
+      "definition": "assets/terra/blocks/train_black_iron_outer_corner.json",
+      "errors": []
+    },
+    {
+      "id": 271,
+      "definition": "assets/terra/blocks/train_black_iron_slab.json",
+      "errors": []
+    },
+    {
+      "id": 275,
+      "definition": "assets/terra/blocks/train_black_iron_slope.json",
+      "errors": []
+    },
+    {
+      "id": 272,
+      "definition": "assets/terra/blocks/train_black_iron_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 211,
+      "definition": "assets/terra/blocks/train_bogie.json",
+      "errors": []
+    },
+    {
+      "id": 220,
+      "definition": "assets/terra/blocks/train_boiler_curved.json",
+      "errors": []
+    },
+    {
+      "id": 221,
+      "definition": "assets/terra/blocks/train_boiler_end.json",
+      "errors": []
+    },
+    {
+      "id": 219,
+      "definition": "assets/terra/blocks/train_boiler_straight.json",
+      "errors": []
+    },
+    {
+      "id": 262,
+      "definition": "assets/terra/blocks/train_bolt.json",
+      "errors": []
+    },
+    {
+      "id": 228,
+      "definition": "assets/terra/blocks/train_brass_pipe_bend.json",
+      "errors": []
+    },
+    {
+      "id": 227,
+      "definition": "assets/terra/blocks/train_brass_pipe_straight.json",
+      "errors": []
+    },
+    {
+      "id": 244,
+      "definition": "assets/terra/blocks/train_buffer.json",
+      "errors": []
+    },
+    {
+      "id": 243,
+      "definition": "assets/terra/blocks/train_buffer_beam.json",
+      "errors": []
+    },
+    {
+      "id": 214,
+      "definition": "assets/terra/blocks/train_cab.json",
+      "errors": []
+    },
+    {
+      "id": 248,
+      "definition": "assets/terra/blocks/train_cab_door.json",
+      "errors": []
+    },
+    {
+      "id": 246,
+      "definition": "assets/terra/blocks/train_cab_wall_front.json",
+      "errors": []
+    },
+    {
+      "id": 245,
+      "definition": "assets/terra/blocks/train_cab_wall_side.json",
+      "errors": []
+    },
+    {
+      "id": 247,
+      "definition": "assets/terra/blocks/train_cab_window.json",
+      "errors": []
+    },
+    {
+      "id": 216,
+      "definition": "assets/terra/blocks/train_cargo.json",
+      "errors": []
+    },
+    {
+      "id": 294,
+      "definition": "assets/terra/blocks/train_ceiling_light.json",
+      "errors": []
+    },
+    {
+      "id": 210,
+      "definition": "assets/terra/blocks/train_chassis.json",
+      "errors": []
+    },
+    {
+      "id": 224,
+      "definition": "assets/terra/blocks/train_chimney.json",
+      "errors": []
+    },
+    {
+      "id": 255,
+      "definition": "assets/terra/blocks/train_coal_load.json",
+      "errors": []
+    },
+    {
+      "id": 269,
+      "definition": "assets/terra/blocks/train_coal_piece.json",
+      "errors": []
+    },
+    {
+      "id": 236,
+      "definition": "assets/terra/blocks/train_connecting_rod_long.json",
+      "errors": []
+    },
+    {
+      "id": 237,
+      "definition": "assets/terra/blocks/train_connecting_rod_short.json",
+      "errors": []
+    },
+    {
+      "id": 213,
+      "definition": "assets/terra/blocks/train_coupler.json",
+      "errors": []
+    },
+    {
+      "id": 240,
+      "definition": "assets/terra/blocks/train_crosshead.json",
+      "errors": []
+    },
+    {
+      "id": 276,
+      "definition": "assets/terra/blocks/train_dark_steel_block.json",
+      "errors": []
+    },
+    {
+      "id": 279,
+      "definition": "assets/terra/blocks/train_dark_steel_inner_corner.json",
+      "errors": []
+    },
+    {
+      "id": 280,
+      "definition": "assets/terra/blocks/train_dark_steel_outer_corner.json",
+      "errors": []
+    },
+    {
+      "id": 277,
+      "definition": "assets/terra/blocks/train_dark_steel_slab.json",
+      "errors": []
+    },
+    {
+      "id": 281,
+      "definition": "assets/terra/blocks/train_dark_steel_slope.json",
+      "errors": []
+    },
+    {
+      "id": 278,
+      "definition": "assets/terra/blocks/train_dark_steel_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 212,
+      "definition": "assets/terra/blocks/train_frame.json",
+      "errors": []
+    },
+    {
+      "id": 218,
+      "definition": "assets/terra/blocks/train_fuel_engine.json",
+      "errors": []
+    },
+    {
+      "id": 288,
+      "definition": "assets/terra/blocks/train_grate_block.json",
+      "errors": []
+    },
+    {
+      "id": 291,
+      "definition": "assets/terra/blocks/train_grate_inner_corner.json",
+      "errors": []
+    },
+    {
+      "id": 292,
+      "definition": "assets/terra/blocks/train_grate_outer_corner.json",
+      "errors": []
+    },
+    {
+      "id": 289,
+      "definition": "assets/terra/blocks/train_grate_slab.json",
+      "errors": []
+    },
+    {
+      "id": 293,
+      "definition": "assets/terra/blocks/train_grate_slope.json",
+      "errors": []
+    },
+    {
+      "id": 290,
+      "definition": "assets/terra/blocks/train_grate_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 259,
+      "definition": "assets/terra/blocks/train_handrail.json",
+      "errors": []
+    },
+    {
+      "id": 260,
+      "definition": "assets/terra/blocks/train_handrail_post.json",
+      "errors": []
+    },
+    {
+      "id": 263,
+      "definition": "assets/terra/blocks/train_hatch.json",
+      "errors": []
+    },
+    {
+      "id": 264,
+      "definition": "assets/terra/blocks/train_headlight_front.json",
+      "errors": []
+    },
+    {
+      "id": 265,
+      "definition": "assets/terra/blocks/train_headlight_side.json",
+      "errors": []
+    },
+    {
+      "id": 257,
+      "definition": "assets/terra/blocks/train_ladder_front.json",
+      "errors": []
+    },
+    {
+      "id": 256,
+      "definition": "assets/terra/blocks/train_ladder_side.json",
+      "errors": []
+    },
+    {
+      "id": 241,
+      "definition": "assets/terra/blocks/train_main_frame.json",
+      "errors": []
+    },
+    {
+      "id": 266,
+      "definition": "assets/terra/blocks/train_number_plate.json",
+      "errors": []
+    },
+    {
+      "id": 239,
+      "definition": "assets/terra/blocks/train_piston_rod.json",
+      "errors": []
+    },
+    {
+      "id": 230,
+      "definition": "assets/terra/blocks/train_pressure_gauge.json",
+      "errors": []
+    },
+    {
+      "id": 231,
+      "definition": "assets/terra/blocks/train_pressure_unit.json",
+      "errors": []
+    },
+    {
+      "id": 296,
+      "definition": "assets/terra/blocks/train_rail_builder.json",
+      "errors": []
+    },
+    {
+      "id": 258,
+      "definition": "assets/terra/blocks/train_railing.json",
+      "errors": []
+    },
+    {
+      "id": 242,
+      "definition": "assets/terra/blocks/train_red_frame.json",
+      "errors": []
+    },
+    {
+      "id": 261,
+      "definition": "assets/terra/blocks/train_rivet_plate.json",
+      "errors": []
+    },
+    {
+      "id": 238,
+      "definition": "assets/terra/blocks/train_rod_joint.json",
+      "errors": []
+    },
+    {
+      "id": 249,
+      "definition": "assets/terra/blocks/train_roof_curved.json",
+      "errors": []
+    },
+    {
+      "id": 250,
+      "definition": "assets/terra/blocks/train_roof_flat.json",
+      "errors": []
+    },
+    {
+      "id": 251,
+      "definition": "assets/terra/blocks/train_roof_vent.json",
+      "errors": []
+    },
+    {
+      "id": 226,
+      "definition": "assets/terra/blocks/train_sand_dome.json",
+      "errors": []
+    },
+    {
+      "id": 215,
+      "definition": "assets/terra/blocks/train_seat.json",
+      "errors": []
+    },
+    {
+      "id": 282,
+      "definition": "assets/terra/blocks/train_sheet_metal_block.json",
+      "errors": []
+    },
+    {
+      "id": 285,
+      "definition": "assets/terra/blocks/train_sheet_metal_inner_corner.json",
+      "errors": []
+    },
+    {
+      "id": 286,
+      "definition": "assets/terra/blocks/train_sheet_metal_outer_corner.json",
+      "errors": []
+    },
+    {
+      "id": 283,
+      "definition": "assets/terra/blocks/train_sheet_metal_slab.json",
+      "errors": []
+    },
+    {
+      "id": 287,
+      "definition": "assets/terra/blocks/train_sheet_metal_slope.json",
+      "errors": []
+    },
+    {
+      "id": 284,
+      "definition": "assets/terra/blocks/train_sheet_metal_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 222,
+      "definition": "assets/terra/blocks/train_smokebox.json",
+      "errors": []
+    },
+    {
+      "id": 223,
+      "definition": "assets/terra/blocks/train_smokebox_door.json",
+      "errors": []
+    },
+    {
+      "id": 225,
+      "definition": "assets/terra/blocks/train_steam_dome.json",
+      "errors": []
+    },
+    {
+      "id": 229,
+      "definition": "assets/terra/blocks/train_steam_valve.json",
+      "errors": []
+    },
+    {
+      "id": 253,
+      "definition": "assets/terra/blocks/train_tender_front.json",
+      "errors": []
+    },
+    {
+      "id": 252,
+      "definition": "assets/terra/blocks/train_tender_wall.json",
+      "errors": []
+    },
+    {
+      "id": 267,
+      "definition": "assets/terra/blocks/train_toolbox.json",
+      "errors": []
+    },
+    {
+      "id": 254,
+      "definition": "assets/terra/blocks/train_water_tank.json",
+      "errors": []
+    },
+    {
+      "id": 232,
+      "definition": "assets/terra/blocks/train_wheel_large.json",
+      "errors": []
+    },
+    {
+      "id": 233,
+      "definition": "assets/terra/blocks/train_wheel_medium.json",
+      "errors": []
+    },
+    {
+      "id": 234,
+      "definition": "assets/terra/blocks/train_wheel_small.json",
+      "errors": []
+    },
+    {
+      "id": 268,
+      "definition": "assets/terra/blocks/train_wooden_plank.json",
+      "errors": []
+    },
+    {
+      "id": 335,
+      "definition": "assets/terra/blocks/turquoise_clay.json",
+      "errors": []
+    },
+    {
+      "id": 166,
+      "definition": "assets/terra/blocks/valve.json",
+      "errors": []
+    },
+    {
+      "id": 147,
+      "definition": "assets/terra/blocks/water_wheel.json",
+      "errors": []
+    },
+    {
+      "id": 10,
+      "definition": "assets/terra/blocks/weathered-wood.json",
+      "errors": []
+    },
+    {
+      "id": 133,
+      "definition": "assets/terra/blocks/white-cherry-leaves.json",
+      "errors": []
+    },
+    {
+      "id": 26,
+      "definition": "assets/terra/blocks/white-mushroom-cap.json",
+      "errors": []
+    },
+    {
+      "id": 311,
+      "definition": "assets/terra/blocks/white_blossom_leaves.json",
+      "errors": []
+    },
+    {
+      "id": 328,
+      "definition": "assets/terra/blocks/white_clay.json",
+      "errors": []
+    },
+    {
+      "id": 6,
+      "definition": "assets/terra/blocks/wood.json",
+      "errors": []
+    },
+    {
+      "id": 163,
+      "definition": "assets/terra/blocks/wood_pipe.json",
+      "errors": []
+    },
+    {
+      "id": 141,
+      "definition": "assets/terra/blocks/wooden_gear.json",
+      "errors": []
+    },
+    {
+      "id": 149,
+      "definition": "assets/terra/blocks/wooden_large_gear.json",
+      "errors": []
+    },
+    {
+      "id": 144,
+      "definition": "assets/terra/blocks/wooden_shaft.json",
+      "errors": []
+    },
+    {
+      "id": 103,
+      "definition": "assets/terra/blocks/wool.json",
+      "errors": []
+    },
+    {
+      "id": 125,
+      "definition": "assets/terra/blocks/wool_black.json",
+      "errors": []
+    },
+    {
+      "id": 121,
+      "definition": "assets/terra/blocks/wool_blue.json",
+      "errors": []
+    },
+    {
+      "id": 128,
+      "definition": "assets/terra/blocks/wool_gold.json",
+      "errors": []
+    },
+    {
+      "id": 123,
+      "definition": "assets/terra/blocks/wool_green.json",
+      "errors": []
+    },
+    {
+      "id": 130,
+      "definition": "assets/terra/blocks/wool_light_blue.json",
+      "errors": []
+    },
+    {
+      "id": 126,
+      "definition": "assets/terra/blocks/wool_lime.json",
+      "errors": []
+    },
+    {
+      "id": 122,
+      "definition": "assets/terra/blocks/wool_orange.json",
+      "errors": []
+    },
+    {
+      "id": 127,
+      "definition": "assets/terra/blocks/wool_pink.json",
+      "errors": []
+    },
+    {
+      "id": 124,
+      "definition": "assets/terra/blocks/wool_purple.json",
+      "errors": []
+    },
+    {
+      "id": 119,
+      "definition": "assets/terra/blocks/wool_red.json",
+      "errors": []
+    },
+    {
+      "id": 129,
+      "definition": "assets/terra/blocks/wool_silver.json",
+      "errors": []
+    },
+    {
+      "id": 105,
+      "definition": "assets/terra/blocks/wool_slab.json",
+      "errors": []
+    },
+    {
+      "id": 104,
+      "definition": "assets/terra/blocks/wool_stairs.json",
+      "errors": []
+    },
+    {
+      "id": 120,
+      "definition": "assets/terra/blocks/wool_yellow.json",
+      "errors": []
+    },
+    {
+      "id": 28,
+      "definition": "assets/terra/blocks/workbench.json",
+      "errors": []
+    },
+    {
+      "id": 23,
+      "definition": "assets/terra/blocks/yellow-mushroom-cap.json",
+      "errors": []
+    },
+    {
+      "id": 327,
+      "definition": "assets/terra/blocks/yellow_clay.json",
+      "errors": []
+    }
+  ],
+  "geometry": [
+    {
+      "path": "assets/terra/blocks/models/army_station.glb",
+      "vertices": 2160,
+      "triangles": 992,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/basin.gltf",
+      "vertices": 696,
+      "triangles": 348,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/belt_distributor.gltf",
+      "vertices": 1638,
+      "triangles": 816,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/belt_merger.gltf",
+      "vertices": 1242,
+      "triangles": 620,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/bergfried.gltf",
+      "vertices": 11088,
+      "triangles": 5272,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/bergfried_wall.gltf",
+      "vertices": 12576,
+      "triangles": 5764,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/birch_bed.gltf",
+      "vertices": 3936,
+      "triangles": 1892,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/birch_door.gltf",
+      "vertices": 6144,
+      "triangles": 3036,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/birch_window.gltf",
+      "vertices": 2088,
+      "triangles": 996,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/bishop_station.glb",
+      "vertices": 2944,
+      "triangles": 1312,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/blossom_bush.glb",
+      "vertices": 2400,
+      "triangles": 4016,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/blossoming_vines.glb",
+      "vertices": 7980,
+      "triangles": 3468,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/bone_pile.glb",
+      "vertices": 2448,
+      "triangles": 1116,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/bordered_grave.glb",
+      "vertices": 1392,
+      "triangles": 600,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/butcher_station.glb",
+      "vertices": 2040,
+      "triangles": 936,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/campfire.gltf",
+      "vertices": 576,
+      "triangles": 288,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_arch_left.gltf",
+      "vertices": 412,
+      "triangles": 206,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_arch_right.gltf",
+      "vertices": 412,
+      "triangles": 206,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_arrow_slit.gltf",
+      "vertices": 8448,
+      "triangles": 3872,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_battlement_corner.gltf",
+      "vertices": 21792,
+      "triangles": 9988,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_battlement_pillar.gltf",
+      "vertices": 17664,
+      "triangles": 8096,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_battlement_straight.gltf",
+      "vertices": 18528,
+      "triangles": 8492,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_blackstone_wall.gltf",
+      "vertices": 3168,
+      "triangles": 1452,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_cracked_wall.gltf",
+      "vertices": 6048,
+      "triangles": 2892,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_desert_wall.gltf",
+      "vertices": 3296,
+      "triangles": 1516,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_iron_wall.gltf",
+      "vertices": 4704,
+      "triangles": 2156,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_moss_wall.gltf",
+      "vertices": 5532,
+      "triangles": 2508,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_overgrown_wall.gltf",
+      "vertices": 11040,
+      "triangles": 4900,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_royal_wall.gltf",
+      "vertices": 8304,
+      "triangles": 3996,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_sandstone_wall.gltf",
+      "vertices": 3168,
+      "triangles": 1452,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_snow_wall.gltf",
+      "vertices": 3648,
+      "triangles": 1672,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_stone_wall.gltf",
+      "vertices": 3168,
+      "triangles": 1452,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_timber_wall.gltf",
+      "vertices": 5088,
+      "triangles": 2332,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/castle_window.gltf",
+      "vertices": 7776,
+      "triangles": 3568,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/cauldron.gltf",
+      "vertices": 3440,
+      "triangles": 1712,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/chain.gltf",
+      "vertices": 1536,
+      "triangles": 704,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/cherry_door.gltf",
+      "vertices": 5760,
+      "triangles": 2844,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/cherry_window.gltf",
+      "vertices": 1992,
+      "triangles": 948,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/chest.gltf",
+      "vertices": 4344,
+      "triangles": 2016,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/chimney_bend_down.gltf",
+      "vertices": 1120,
+      "triangles": 528,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/chimney_bend_up.gltf",
+      "vertices": 1120,
+      "triangles": 528,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/chimney_elbow.gltf",
+      "vertices": 1184,
+      "triangles": 560,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/chimney_horizontal.gltf",
+      "vertices": 1184,
+      "triangles": 560,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/chimney_straight.gltf",
+      "vertices": 1184,
+      "triangles": 560,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/conveyor.gltf",
+      "vertices": 1272,
+      "triangles": 636,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/cracked_grave_slab.glb",
+      "vertices": 960,
+      "triangles": 440,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/cross_relief.glb",
+      "vertices": 672,
+      "triangles": 308,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crusher.gltf",
+      "vertices": 6336,
+      "triangles": 3248,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_arch.glb",
+      "vertices": 576,
+      "triangles": 280,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_arrow_trap.glb",
+      "vertices": 600,
+      "triangles": 296,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_books.glb",
+      "vertices": 2688,
+      "triangles": 1232,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_candles.glb",
+      "vertices": 1416,
+      "triangles": 724,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_capital.glb",
+      "vertices": 288,
+      "triangles": 148,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_chain.glb",
+      "vertices": 2592,
+      "triangles": 1440,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_chandelier.glb",
+      "vertices": 2364,
+      "triangles": 1220,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_column.glb",
+      "vertices": 720,
+      "triangles": 388,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_column_base.glb",
+      "vertices": 288,
+      "triangles": 148,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_curtain.glb",
+      "vertices": 1568,
+      "triangles": 740,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_heraldic_banner.glb",
+      "vertices": 2048,
+      "triangles": 948,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_lever.glb",
+      "vertices": 240,
+      "triangles": 132,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_portcullis.glb",
+      "vertices": 768,
+      "triangles": 352,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_pressure_plate.glb",
+      "vertices": 192,
+      "triangles": 88,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_spike_trap.glb",
+      "vertices": 528,
+      "triangles": 296,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_torn_banner.glb",
+      "vertices": 2048,
+      "triangles": 948,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_wall_niche.glb",
+      "vertices": 1416,
+      "triangles": 708,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_wall_switch.glb",
+      "vertices": 288,
+      "triangles": 132,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/crypt_wall_torch.glb",
+      "vertices": 436,
+      "triangles": 216,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/dark_mushrooms.glb",
+      "vertices": 2652,
+      "triangles": 1188,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/dead_grass.glb",
+      "vertices": 468,
+      "triangles": 260,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/farm_station.glb",
+      "vertices": 4416,
+      "triangles": 2028,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/faucet.gltf",
+      "vertices": 808,
+      "triangles": 404,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/filtered_funnel.gltf",
+      "vertices": 1890,
+      "triangles": 944,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/filtered_tunnel.gltf",
+      "vertices": 1434,
+      "triangles": 716,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/fiverr_grass_faces.glb",
+      "vertices": 2398,
+      "triangles": 1220,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/fluid_infuser.gltf",
+      "vertices": 2984,
+      "triangles": 1488,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/furnace.gltf",
+      "vertices": 6896,
+      "triangles": 3264,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/gearbox_horizontal.gltf",
+      "vertices": 3608,
+      "triangles": 1772,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/gearbox_vertical.gltf",
+      "vertices": 3608,
+      "triangles": 1772,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/glass_pipe.gltf",
+      "vertices": 2904,
+      "triangles": 1452,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/glowing_purple_mushrooms.glb",
+      "vertices": 2652,
+      "triangles": 1188,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/glowing_spirit_flowers.glb",
+      "vertices": 1332,
+      "triangles": 1704,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/grave_cross.glb",
+      "vertices": 288,
+      "triangles": 132,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/grave_lantern_post.glb",
+      "vertices": 1092,
+      "triangles": 520,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/grave_moss.glb",
+      "vertices": 1008,
+      "triangles": 432,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/grave_relief_wall.glb",
+      "vertices": 1536,
+      "triangles": 788,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/grave_skull.glb",
+      "vertices": 1067,
+      "triangles": 481,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/grave_stone_slab.glb",
+      "vertices": 480,
+      "triangles": 220,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/grave_urn.glb",
+      "vertices": 864,
+      "triangles": 464,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/gravestone_large.glb",
+      "vertices": 960,
+      "triangles": 456,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/gravestone_medium.glb",
+      "vertices": 960,
+      "triangles": 456,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/gravestone_small.glb",
+      "vertices": 960,
+      "triangles": 456,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/hand_crank.gltf",
+      "vertices": 1320,
+      "triangles": 724,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/hanging_blossom_lantern.glb",
+      "vertices": 1560,
+      "triangles": 1444,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/hanging_ivy.glb",
+      "vertices": 1260,
+      "triangles": 588,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/hold_block.gltf",
+      "vertices": 1008,
+      "triangles": 504,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/inscribed_grave_slab.glb",
+      "vertices": 1931,
+      "triangles": 877,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/iron_gear.gltf",
+      "vertices": 3952,
+      "triangles": 1824,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/iron_large_gear.gltf",
+      "vertices": 6448,
+      "triangles": 2976,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/iron_pipe.gltf",
+      "vertices": 2904,
+      "triangles": 1452,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/iron_shaft.gltf",
+      "vertices": 1184,
+      "triangles": 576,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/item_hopper.gltf",
+      "vertices": 1074,
+      "triangles": 536,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/item_importer.gltf",
+      "vertices": 1482,
+      "triangles": 740,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/lantern.gltf",
+      "vertices": 20352,
+      "triangles": 9328,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/lily_pad.glb",
+      "vertices": 492,
+      "triangles": 236,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/locked_crypt_gate.glb",
+      "vertices": 960,
+      "triangles": 440,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/lotus_flower.glb",
+      "vertices": 1092,
+      "triangles": 1240,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/lumberjack_station.glb",
+      "vertices": 3000,
+      "triangles": 1328,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/market_station.glb",
+      "vertices": 6508,
+      "triangles": 2968,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/mine_station.glb",
+      "vertices": 4080,
+      "triangles": 1844,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/mixer.gltf",
+      "vertices": 8032,
+      "triangles": 3996,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/mosaic_grave_slab.glb",
+      "vertices": 480,
+      "triangles": 220,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/mossy_crypt_arch.glb",
+      "vertices": 768,
+      "triangles": 344,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/oak_bed.gltf",
+      "vertices": 3936,
+      "triangles": 1892,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/oak_door.gltf",
+      "vertices": 5760,
+      "triangles": 2844,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/oak_window.gltf",
+      "vertices": 1992,
+      "triangles": 948,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/ornate_crypt_chest.glb",
+      "vertices": 1632,
+      "triangles": 748,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/ornate_crypt_column.glb",
+      "vertices": 1296,
+      "triangles": 684,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/ornate_grave_slab.glb",
+      "vertices": 624,
+      "triangles": 300,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/petal_ground_cover.glb",
+      "vertices": 1764,
+      "triangles": 3360,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/pump.gltf",
+      "vertices": 2064,
+      "triangles": 1032,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_buffer.gltf",
+      "vertices": 2904,
+      "triangles": 1452,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_crossing.gltf",
+      "vertices": 7976,
+      "triangles": 3988,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_curve_large.gltf",
+      "vertices": 10334,
+      "triangles": 5008,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_curve_small.gltf",
+      "vertices": 5540,
+      "triangles": 2686,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_slope.gltf",
+      "vertices": 2928,
+      "triangles": 1464,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_slope_entry.gltf",
+      "vertices": 5712,
+      "triangles": 2856,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_slope_exit.gltf",
+      "vertices": 5712,
+      "triangles": 2856,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_straight.gltf",
+      "vertices": 2784,
+      "triangles": 1392,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_switch_left.gltf",
+      "vertices": 9205,
+      "triangles": 4536,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_switch_right.gltf",
+      "vertices": 9197,
+      "triangles": 4533,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_switch_stand.gltf",
+      "vertices": 480,
+      "triangles": 220,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/rail_turntable.gltf",
+      "vertices": 17900,
+      "triangles": 8950,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/railway_station.glb",
+      "vertices": 3384,
+      "triangles": 1496,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/sarcophagus_closed.glb",
+      "vertices": 1056,
+      "triangles": 484,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/sarcophagus_open.glb",
+      "vertices": 1760,
+      "triangles": 804,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/skeleton_remains.glb",
+      "vertices": 2763,
+      "triangles": 1297,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/skull_relief.glb",
+      "vertices": 1547,
+      "triangles": 701,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/smith_station.glb",
+      "vertices": 2427,
+      "triangles": 1113,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/soul_brazier.glb",
+      "vertices": 1692,
+      "triangles": 792,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/soul_crystal_large.glb",
+      "vertices": 360,
+      "triangles": 200,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/soul_crystal_small.glb",
+      "vertices": 360,
+      "triangles": 200,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/spirit_lantern_post.glb",
+      "vertices": 1848,
+      "triangles": 1576,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/spirit_shrine_stone.glb",
+      "vertices": 3552,
+      "triangles": 1628,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/spruce_bed.gltf",
+      "vertices": 3936,
+      "triangles": 1892,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/spruce_door.gltf",
+      "vertices": 5760,
+      "triangles": 2844,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/spruce_window.gltf",
+      "vertices": 1992,
+      "triangles": 948,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/stone_gear.gltf",
+      "vertices": 3952,
+      "triangles": 1824,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/stone_large_gear.gltf",
+      "vertices": 6448,
+      "triangles": 2976,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/stone_pipe.gltf",
+      "vertices": 2904,
+      "triangles": 1452,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/stone_shaft.gltf",
+      "vertices": 1184,
+      "triangles": 576,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/thorn_bush.glb",
+      "vertices": 1080,
+      "triangles": 612,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/torch.gltf",
+      "vertices": 6552,
+      "triangles": 3008,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_assembly_station.gltf",
+      "vertices": 576,
+      "triangles": 264,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_axle.gltf",
+      "vertices": 352,
+      "triangles": 152,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_black_iron_block.gltf",
+      "vertices": 1248,
+      "triangles": 572,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_black_iron_inner_corner.gltf",
+      "vertices": 1440,
+      "triangles": 660,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_black_iron_outer_corner.gltf",
+      "vertices": 1344,
+      "triangles": 616,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_black_iron_slab.gltf",
+      "vertices": 1248,
+      "triangles": 572,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_black_iron_slope.gltf",
+      "vertices": 18,
+      "triangles": 8,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_black_iron_stairs.gltf",
+      "vertices": 1440,
+      "triangles": 660,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_bogie.gltf",
+      "vertices": 9424,
+      "triangles": 4548,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_boiler_curved.gltf",
+      "vertices": 2528,
+      "triangles": 1204,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_boiler_end.gltf",
+      "vertices": 3488,
+      "triangles": 1592,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_boiler_straight.gltf",
+      "vertices": 3328,
+      "triangles": 1528,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_bolt.gltf",
+      "vertices": 892,
+      "triangles": 396,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_brass_pipe_bend.gltf",
+      "vertices": 480,
+      "triangles": 192,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_brass_pipe_straight.gltf",
+      "vertices": 320,
+      "triangles": 128,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_buffer.gltf",
+      "vertices": 416,
+      "triangles": 172,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_buffer_beam.gltf",
+      "vertices": 1568,
+      "triangles": 700,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_cab.gltf",
+      "vertices": 1632,
+      "triangles": 748,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_cab_door.gltf",
+      "vertices": 5760,
+      "triangles": 2844,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_cab_wall_front.gltf",
+      "vertices": 1272,
+      "triangles": 584,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_cab_wall_side.gltf",
+      "vertices": 672,
+      "triangles": 308,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_cab_window.gltf",
+      "vertices": 1992,
+      "triangles": 948,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_cargo.gltf",
+      "vertices": 480,
+      "triangles": 220,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_ceiling_light.gltf",
+      "vertices": 192,
+      "triangles": 88,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_chassis.gltf",
+      "vertices": 672,
+      "triangles": 308,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_chimney.gltf",
+      "vertices": 704,
+      "triangles": 344,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_coal_load.gltf",
+      "vertices": 1632,
+      "triangles": 748,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_coal_piece.gltf",
+      "vertices": 1536,
+      "triangles": 704,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_connecting_rod_long.gltf",
+      "vertices": 416,
+      "triangles": 172,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_connecting_rod_short.gltf",
+      "vertices": 416,
+      "triangles": 172,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_coupler.gltf",
+      "vertices": 480,
+      "triangles": 220,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_crosshead.gltf",
+      "vertices": 512,
+      "triangles": 216,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_dark_steel_block.gltf",
+      "vertices": 1248,
+      "triangles": 572,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_dark_steel_inner_corner.gltf",
+      "vertices": 1440,
+      "triangles": 660,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_dark_steel_outer_corner.gltf",
+      "vertices": 1344,
+      "triangles": 616,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_dark_steel_slab.gltf",
+      "vertices": 1248,
+      "triangles": 572,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_dark_steel_slope.gltf",
+      "vertices": 18,
+      "triangles": 8,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_dark_steel_stairs.gltf",
+      "vertices": 1440,
+      "triangles": 660,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_frame.gltf",
+      "vertices": 672,
+      "triangles": 308,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_fuel_engine.gltf",
+      "vertices": 1408,
+      "triangles": 636,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_grate_block.gltf",
+      "vertices": 960,
+      "triangles": 440,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_grate_inner_corner.gltf",
+      "vertices": 2880,
+      "triangles": 1320,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_grate_outer_corner.gltf",
+      "vertices": 1920,
+      "triangles": 880,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_grate_slab.gltf",
+      "vertices": 960,
+      "triangles": 440,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_grate_slope.gltf",
+      "vertices": 240,
+      "triangles": 120,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_grate_stairs.gltf",
+      "vertices": 2880,
+      "triangles": 1320,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_handrail.gltf",
+      "vertices": 416,
+      "triangles": 172,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_handrail_post.gltf",
+      "vertices": 256,
+      "triangles": 108,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_hatch.gltf",
+      "vertices": 864,
+      "triangles": 396,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_headlight_front.gltf",
+      "vertices": 672,
+      "triangles": 300,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_headlight_side.gltf",
+      "vertices": 768,
+      "triangles": 344,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_ladder_front.gltf",
+      "vertices": 576,
+      "triangles": 264,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_ladder_side.gltf",
+      "vertices": 768,
+      "triangles": 352,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_main_frame.gltf",
+      "vertices": 1248,
+      "triangles": 572,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_number_plate.gltf",
+      "vertices": 672,
+      "triangles": 308,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_piston_rod.gltf",
+      "vertices": 416,
+      "triangles": 172,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_pressure_gauge.gltf",
+      "vertices": 656,
+      "triangles": 292,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_pressure_unit.gltf",
+      "vertices": 976,
+      "triangles": 420,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_rail_builder.gltf",
+      "vertices": 4880,
+      "triangles": 2204,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_railing.gltf",
+      "vertices": 832,
+      "triangles": 344,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_red_frame.gltf",
+      "vertices": 1248,
+      "triangles": 572,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_rivet_plate.gltf",
+      "vertices": 672,
+      "triangles": 308,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_rod_joint.gltf",
+      "vertices": 512,
+      "triangles": 216,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_roof_curved.gltf",
+      "vertices": 768,
+      "triangles": 352,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_roof_flat.gltf",
+      "vertices": 96,
+      "triangles": 44,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_roof_vent.gltf",
+      "vertices": 576,
+      "triangles": 264,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_sand_dome.gltf",
+      "vertices": 992,
+      "triangles": 408,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_seat.gltf",
+      "vertices": 768,
+      "triangles": 352,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_sheet_metal_block.gltf",
+      "vertices": 1248,
+      "triangles": 572,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_sheet_metal_inner_corner.gltf",
+      "vertices": 1440,
+      "triangles": 660,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_sheet_metal_outer_corner.gltf",
+      "vertices": 1344,
+      "triangles": 616,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_sheet_metal_slab.gltf",
+      "vertices": 1248,
+      "triangles": 572,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_sheet_metal_slope.gltf",
+      "vertices": 18,
+      "triangles": 8,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_sheet_metal_stairs.gltf",
+      "vertices": 1440,
+      "triangles": 660,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_smokebox.gltf",
+      "vertices": 3328,
+      "triangles": 1528,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_smokebox_door.gltf",
+      "vertices": 3616,
+      "triangles": 1660,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_steam_dome.gltf",
+      "vertices": 992,
+      "triangles": 408,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_steam_valve.gltf",
+      "vertices": 944,
+      "triangles": 408,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_tender_front.gltf",
+      "vertices": 768,
+      "triangles": 352,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_tender_wall.gltf",
+      "vertices": 768,
+      "triangles": 352,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_toolbox.gltf",
+      "vertices": 480,
+      "triangles": 220,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_water_tank.gltf",
+      "vertices": 448,
+      "triangles": 196,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_wheel_large.gltf",
+      "vertices": 2364,
+      "triangles": 1136,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_wheel_medium.gltf",
+      "vertices": 2364,
+      "triangles": 1136,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_wheel_small.gltf",
+      "vertices": 2364,
+      "triangles": 1136,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/train_wooden_plank.gltf",
+      "vertices": 1152,
+      "triangles": 528,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/valve.gltf",
+      "vertices": 928,
+      "triangles": 464,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/water_wheel.gltf",
+      "vertices": 7888,
+      "triangles": 3920,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/wood_pipe.gltf",
+      "vertices": 2904,
+      "triangles": 1452,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/wooden_gear.gltf",
+      "vertices": 3952,
+      "triangles": 1824,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/wooden_large_gear.gltf",
+      "vertices": 6448,
+      "triangles": 2976,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/wooden_shaft.gltf",
+      "vertices": 1184,
+      "triangles": 576,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "assets/terra/blocks/models/workbench.gltf",
+      "vertices": 3888,
+      "triangles": 1812,
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}

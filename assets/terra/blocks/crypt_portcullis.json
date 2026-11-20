@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "id": 391,
+  "name": "Crypt Portcullis",
+  "description": "An ornamental crypt portcullis for crypt entrances and dungeon chambers.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_portcullis.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.055,
+        0,
+        0.42
+      ],
+      "maximum": [
+        0.10500000000000001,
+        1,
+        0.48
+      ]
+    },
+    {
+      "minimum": [
+        0.225,
+        0,
+        0.42
+      ],
+      "maximum": [
+        0.275,
+        1,
+        0.48
+      ]
+    },
+    {
+      "minimum": [
+        0.39499999999999996,
+        0,
+        0.42
+      ],
+      "maximum": [
+        0.445,
+        1,
+        0.48
+      ]
+    },
+    {
+      "minimum": [
+        0.565,
+        0,
+        0.42
+      ],
+      "maximum": [
+        0.615,
+        1,
+        0.48
+      ]
+    },
+    {
+      "minimum": [
+        0.735,
+        0,
+        0.42
+      ],
+      "maximum": [
+        0.785,
+        1,
+        0.48
+      ]
+    },
+    {
+      "minimum": [
+        0.905,
+        0,
+        0.42
+      ],
+      "maximum": [
+        0.9550000000000001,
+        1,
+        0.48
+      ]
+    },
+    {
+      "minimum": [
+        0.04,
+        0.15,
+        0.39
+      ],
+      "maximum": [
+        0.97,
+        0.22999999999999998,
+        0.51
+      ]
+    },
+    {
+      "minimum": [
+        0.04,
+        0.79,
+        0.39
+      ],
+      "maximum": [
+        0.97,
+        0.87,
+        0.51
+      ]
+    }
+  ]
+}

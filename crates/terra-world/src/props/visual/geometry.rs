@@ -44,26 +44,6 @@ pub(crate) fn add_box(
     Ok(())
 }
 
-/// A square-ended, leaning grass blade; the buried bottom face is omitted.
-pub(super) fn add_blade(
-    batches: &mut BTreeMap<usize, PropMesh>,
-    material: usize,
-    root: Vec3,
-    height: f32,
-    width: f32,
-    bend: Vec3,
-    yaw: f32,
-) -> Result<(), String> {
-    add_stalk(
-        batches,
-        material,
-        root,
-        Vec2::new(width, width * 0.4),
-        &[Vec3::ZERO, Vec3::Y * height + bend],
-        yaw,
-    )
-}
-
 /// Joined rectangular stalk segments: no internal caps, taper or disconnected voxels.
 pub(super) fn add_stalk(
     batches: &mut BTreeMap<usize, PropMesh>,

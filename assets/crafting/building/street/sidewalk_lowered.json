@@ -1,0 +1,22 @@
+{
+  "id": "teramic::sidewalk_lowered",
+  "name": "Lowered Sidewalk",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 447
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 441
+        },
+        "count": 6
+      }
+    ]
+  }
+}

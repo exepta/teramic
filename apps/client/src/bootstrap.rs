@@ -211,16 +211,71 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     if std::env::args().any(|arg| arg == "--smoke-test-biomes") {
         let scene = std::env::var("TERRA_BIOME_SCENE").unwrap_or_default();
         if scene.starts_with("kingdom-") || scene == "outpost" {
-            world = WorldConfig::default();
-            world.structures_revision = 8;
+            // Native structure evidence must use the finder's exact terrain.
+            world.structures_revision = 10;
             client.view_distance = 12;
+            client.vertical_view_distance = 5;
+            // The detached overview is 228 m from the keep. Disable distance
+            // fog only in this isolated smoke view instead of streaming View24.
+            client.fog_distance = 0.0;
+        } else if scene.starts_with("reference-")
+            || (scene.starts_with("picker-")
+                && std::env::var_os("TERRA_REFERENCE_BIOMES").is_some())
+            || matches!(
+                scene.as_str(),
+                "blood-props" | "spirit-props" | "rock-formations"
+            )
+        {
+            // New ecology photographs must retain the requested terrain, not
+            // enter the ecology-zero legacy regression fixture below.
+            let requested_ecology = world.ecology_revision;
+            if std::env::var_os("TERRA_REFERENCE_BIOMES").is_some() {
+                // All eight panoramas and their plant close-ups use the same
+                // fresh-world revision set, including the Blood picker.
+                let (seed, time) = (world.seed, world.time);
+                world = WorldConfig::default();
+                world.seed = seed;
+                world.time = time;
+            }
+            world.ecology_revision = if scene == "rock-formations"
+                && std::env::var_os("TERRA_FANTASY_ROCKS").is_some()
+            {
+                requested_ecology.max(9)
+            } else {
+                9
+            };
+            if world.biome_definitions.is_none() {
+                world.biome_definitions = Some(terra_core::BiomeDefinitions::load_directory(
+                    terra_core::asset_directory().join("biome"),
+                )?);
+            }
+            client.vertical_view_distance = client.vertical_view_distance.max(4);
+            if scene.starts_with("picker-") {
+                client.view_distance = 10;
+                client.vertical_view_distance = 5;
+            }
+        } else if scene == "blood-forest" || scene == "picker-blood-forest" {
+            world.blood_forest_revision = 1;
+            if world.biome_definitions.is_none() {
+                world.biome_definitions = Some(terra_core::BiomeDefinitions::load_directory(
+                    terra_core::asset_directory().join("biome"),
+                )?);
+            }
+            client.view_distance = 8;
+            client.vertical_view_distance = 5;
+        } else if scene == "cemetery" || scene.starts_with("grave-") {
+            // Preserve the exact native finder config; never replace the saved
+            // seed/revisions with the legacy ecology-zero gallery world.
+            client.view_distance = 8;
             client.vertical_view_distance = 5;
         } else if scene.starts_with("picker-") {
             // Photograph current fresh-world biomes rather than the legacy
             // regression world's ecology-revision-zero terrain below.
             let requested_seed = world.seed;
+            let requested_time = world.time;
             world = WorldConfig::default();
             world.seed = requested_seed;
+            world.time = requested_time;
             world.biome_definitions = Some(terra_core::BiomeDefinitions::load_directory(
                 terra_core::asset_directory().join("biome"),
             )?);
@@ -637,7 +692,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
             compute_threads = bevy::tasks::ComputeTaskPool::get().thread_num(),
             async_threads = bevy::tasks::AsyncComputeTaskPool::get().thread_num(),
             io_threads = bevy::tasks::IoTaskPool::get().thread_num(),
-            "Smoke-test compute worker cap; IO and async policies are unchanged"
+            "Client worker budget; smoke overrides are isolated"
         );
     }
     crate::creature_audio::install(&mut app);
@@ -713,7 +768,10 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
         app.insert_resource(bevy::winit::WinitSettings::continuous());
     }
 
-    crate::smoke_test::install(&mut app);
+    if !crate::saved_construction_smoke::requested() {
+        crate::smoke_test::install(&mut app);
+    }
+    crate::saved_construction_smoke::install(&mut app).map_err(std::io::Error::other)?;
     crate::inventory_benchmark::install(&mut app)?;
     crate::performance_soak::install(&mut app);
     crate::main_diagnostics::install(&mut app);
@@ -786,6 +844,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     crate::furnace_smoke::install(&mut app)?;
     crate::avatar_smoke::install(&mut app)?;
     crate::hand_smoke::install(&mut app);
+    crate::runtime_health::install(&mut app);
     Ok(app)
 }
 

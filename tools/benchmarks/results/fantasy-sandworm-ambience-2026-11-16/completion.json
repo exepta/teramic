@@ -1,0 +1,52 @@
+{
+  "status": "passed",
+  "completed_at_utc": "2026-11-17T01:43:17.813731+00:00",
+  "client_sha256": "887e5291c1f8e53817af2744a358d92c9a755a11c9e78d1a6eb4d36536541442",
+  "builds": [
+    "terra-client",
+    "terra-server",
+    "terra-building-editor"
+  ],
+  "full_workspace_before_final_visual_polish": {
+    "passed": 5203,
+    "failed": 0,
+    "ignored": 10,
+    "filtered": 1
+  },
+  "final_visual_polish_checks": {
+    "fmt": true,
+    "workspace_all_targets": true,
+    "strict_clippy": true,
+    "leaf_tests": 12,
+    "model_tests": 35,
+    "phase_and_ai_tests": 7,
+    "asset_tests": 5
+  },
+  "native_runs": 5,
+  "native_captures": 24,
+  "native_audio": {
+    "decoded_clips": 118,
+    "injected_material_contacts_consumed": 27
+  },
+  "offline_decoder_audio_samples": 7,
+  "checked_asset_hashes": 44,
+  "worlds": {
+    "status": "unchanged",
+    "files_before": 25,
+    "files_after": 25,
+    "changed_or_missing": [],
+    "added": []
+  },
+  "read_only_visual_review": {
+    "leaf_captures": 7,
+    "sandworm_captures": 5,
+    "nature_captures": 4
+  },
+  "limits": [
+    "Full workspace suite ran before final renderer/texture polish; final changes have targeted regression tests and fresh native captures.",
+    "One external Original GLB fixture is unavailable and its test is explicitly filtered; ten pre-existing tests remain ignored.",
+    "Leaf motifs use folded cutout surfaces; captures do not assert pixel-identical references or frame-rate gains.",
+    "Audio samples are controlled decoder mixes; native device-sink verification uses injected contacts, not a recorded biome walk.",
+    "Ecology 9 fantasy formations apply to new worlds; saved generation revisions are preserved."
+  ]
+}

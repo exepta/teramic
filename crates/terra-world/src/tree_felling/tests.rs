@@ -3,6 +3,8 @@ use crate::{SectionGenerator, TerraGenerator, streaming::LoadedSection};
 use terra_core::{WorldConfig, WorldSeed};
 use terra_voxel::BlockSection;
 
+mod leaf_loot;
+
 fn fixture() -> (ChunkStore, EditJournal, Shape) {
     let generator = SectionGenerator::new(
         TerraGenerator::new(WorldConfig {
@@ -538,7 +540,10 @@ fn shared_natural_green_leaves_return_the_trunks_species_sapling_in_real_felling
         (36, terra_core::TreeSpecies::Spruce),
     ] {
         let root = [0, 16, 0];
-        let crown = [1, 18, 0];
+        let crown = (1..16)
+            .map(|x| [x, 18, 0])
+            .find(|cell| crate::saplings::leaf_drop_roll(*cell))
+            .expect("fixture contains a successful twenty-percent leaf roll");
         let section = global_to_section(root).0;
         let mut data = BlockSection::empty(section).unwrap();
         data.set_block(global_to_section(root).1, wood_material)
@@ -571,6 +576,18 @@ fn shared_natural_green_leaves_return_the_trunks_species_sapling_in_real_felling
         };
         let mut queue = Queue::default();
         assert!(queue.enqueue(plan, PlayerUuid::from_u128(1)));
+        let cutting = queue
+            .advance(&mut chunks, &mut journal, &Default::default(), 0.0)
+            .unwrap();
+        assert_eq!(cutting.wood, 1);
+        assert!(
+            journal
+                .gameplay()
+                .drops
+                .iter()
+                .all(|drop| matches!(drop.stack.item, ItemKind::Block(_)))
+        );
+        assert_eq!(chunks.block_at(crown), Some(7));
         queue
             .finish(&mut chunks, &mut journal, &Default::default())
             .unwrap();

@@ -1,0 +1,14 @@
+{
+  "command": "cargo test --workspace --no-fail-fast -- --skip original_glb_loads_through_the_named_reader_with_uvs_tangents_and_pbr_images",
+  "status": "passed",
+  "totals": {
+    "passed": 5046,
+    "failed": 0,
+    "ignored": 10,
+    "measured": 0,
+    "filtered": 1
+  },
+  "test_groups": 26,
+  "filtered_reason": "External fixture FIVERR/VoxelGrassBlock glb file.glb is absent; named test explicitly filtered.",
+  "log": "tests-final.txt"
+}

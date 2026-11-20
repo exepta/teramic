@@ -573,6 +573,7 @@ fn capture_models(
         models.refresh_heraldry(section.position(), &journal.gameplay().kingdoms);
         models.refresh_funnel_supports(section.position(), chunks, journal);
         models.refresh_campfire_supports(section.position(), chunks, journal);
+        models.refresh_water_plants(section.position(), chunks, journal);
     }
     Ok(models.map(Arc::new))
 }
@@ -953,6 +954,7 @@ pub(crate) fn dispatch_meshes(
     mut status: ResMut<RenderStatus>,
     mut meshes: Option<ResMut<Assets<Mesh>>>,
     (mut queue, mut appearance_inputs): (Local<MeshQueue>, Local<AppearanceInputs>),
+    mut readiness_trace: Local<Option<Instant>>,
     mut coarse_templates: Local<
         Option<(
             Arc<crate::blocks::TemplateSet>,
@@ -1116,6 +1118,19 @@ pub(crate) fn dispatch_meshes(
     let focus_changed = queue
         .focus
         .is_none_or(|previous| focus_bucket(previous) != focus_bucket(world.focus.0));
+    let invalidation_flags = [
+        world.chunks.is_changed(),
+        world.journal.is_changed(),
+        world.config.is_changed(),
+        world.terrain.is_changed(),
+        assets.is_changed(),
+        focus_changed,
+    ]
+    .into_iter()
+    .enumerate()
+    .fold(0, |flags, (bit, changed)| {
+        flags | (u8::from(changed) << bit)
+    });
     for (name, changed) in [
         ("terrain.invalidate.chunks", world.chunks.is_changed()),
         ("terrain.invalidate.journal", world.journal.is_changed()),
@@ -1536,7 +1551,7 @@ pub(crate) fn dispatch_meshes(
             let seasonal_foliage = geometry
                 .faces
                 .iter()
-                .any(|face| matches!(face.material, 7..=9 | 132 | 133 | 195));
+                .any(|face| terra_voxel::MaterialId::FOLIAGE.contains(&face.material));
             let exposure = cache
                 .4
                 .entry([position.x, position.z])
@@ -1744,6 +1759,12 @@ pub(crate) fn dispatch_meshes(
         }
     }
     status.pending_jobs = jobs.0.len();
+    static TRACE_READY: std::sync::LazyLock<bool> =
+        std::sync::LazyLock::new(|| std::env::var_os("TERRA_READINESS_DIAGNOSTICS").is_some());
+    if *TRACE_READY && readiness_trace.is_none_or(|last| last.elapsed() >= Duration::from_secs(5)) {
+        tracing::info!(focus=?world.focus.0, invalidations=invalidation_flags, jobs=jobs.0.len(), retries=jobs.1.len(), queued=queue.positions.len(), arrivals=queue.arrivals.len(), selection=queue.sweep.as_ref().map_or(0, |sweep| sweep.positions.len()), dirty=queue.dirty, selection_dirty=queue.selection_dirty, arrival_scan=queue.arrival_scan, exposure_waiting=cache.5.columns.values().filter(|state| state.pending).count(), "Terrain readiness trace");
+        *readiness_trace = Some(Instant::now());
+    }
     status.occluded_sections = world.visibility.as_ref().map_or(0, |v| v.len());
     status.pending_columns.clear();
     status
@@ -2433,6 +2454,7 @@ mod stream_exposure_tests {
                 .add(Mesh::from(Cuboid::default()));
             let staged = super::super::staging::StagedMesh {
                 handle: handle.clone(),
+                liquid: None,
                 bounds: None,
                 rooted: false,
                 damp: false,

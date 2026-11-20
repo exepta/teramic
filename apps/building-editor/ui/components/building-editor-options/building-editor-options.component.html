@@ -1,0 +1,44 @@
+@if (editorView.options) {
+<div class="editor-backdrop">
+  <div id="editor-options-dialog" class="editor-dialog editor-small">
+    <div class="editor-heading">
+      <h1 class="editor-title">{{ editorView.labels.options }}</h1>
+      <button id="editor-menu" onclick="editor_command">{{ editorView.labels.back }}</button>
+    </div>
+    <div class="editor-options-fields">
+      <div class="editor-field">
+        <label for="editor-platform-size">{{ editorView.labels.platform_size }}</label>
+        <choice-box id="editor-platform-size" onchange="editor_change">
+          <option value="9" [selected]="editorView.platform_9">9 × 9</option>
+          <option value="17" [selected]="editorView.platform_17">17 × 17</option>
+          <option value="25" [selected]="editorView.platform_25">25 × 25</option>
+          <option value="33" [selected]="editorView.platform_33">33 × 33</option>
+        </choice-box>
+        <p>{{ editorView.labels.platform_hint }}</p>
+        <p>{{ editorView.labels.platform_schema_hint }}</p>
+      </div>
+      <div class="editor-field">
+        <label>{{ editorView.labels.speed }}</label>
+        <input id="editor-speed" type="number" min="0.1" max="100" step="0.5" [value]="editorView.speed" onchange="editor_change" />
+      </div>
+      <div class="editor-field">
+        <label>{{ editorView.labels.sensitivity }}</label>
+        <input id="editor-sensitivity" type="number" min="0.0001" max="0.02" step="0.0001" [value]="editorView.sensitivity" onchange="editor_change" />
+      </div>
+      <div class="editor-field">
+        <label>{{ editorView.labels.language }}</label>
+        <choice-box id="editor-language" onchange="editor_change">
+          <option value="de" [selected]="!editorView.english">Deutsch</option>
+          <option value="en" [selected]="editorView.english">English</option>
+        </choice-box>
+      </div>
+      <h2 class="editor-subtitle">{{ editorView.labels.window }}</h2>
+      <div class="editor-actions">
+        <button id="editor-windowed" onclick="editor_command">{{ editorView.labels.windowed }}</button>
+        <button id="editor-borderless" onclick="editor_command">{{ editorView.labels.borderless }}</button>
+        <button id="editor-vsync" onclick="editor_command">{{ editorView.labels.vsync }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+}

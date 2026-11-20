@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Author modular train parts with shared model, collision and recipe data."""
 import json
-from build_castle import Mesh, BLOCKS, RECIPES
+from build_castle import Mesh, BLOCKS
+from recipe_paths import recipe_path
 from build_locomotive_parts import palette, wheel, cylinder
 
 PARTS = [
@@ -130,7 +131,7 @@ def main(materials=None):
         recipe = {'id': 'teramic::' + slug, 'name': name, 'station': 'workbench',
                   'output': {'item': {'block': material}, 'count': 1},
                   'pattern': {'kind': 'shaped', 'width': 3, 'height': 3, 'cells': cells}}
-        (RECIPES / f'{slug}.json').write_text(json.dumps(recipe, indent=2) + '\n')
+        recipe_path(slug).write_text(json.dumps(recipe, indent=2) + '\n')
     print(f'Generated {generated} modular train part models, shared collision profiles and recipes.')
 
 

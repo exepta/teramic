@@ -46,6 +46,7 @@ pub(super) fn deserialize<'de, D: Deserializer<'de>>(
                         secondary: state.secondary,
                         wood: state.wood,
                         rail_curve: None,
+                        liquid: None,
                     },
                 )
             })

@@ -4,8 +4,12 @@ mod climate;
 #[cfg(test)]
 mod distribution_tests;
 mod profile;
+mod regions;
+pub(super) use regions::RegionCache;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod thermal_tests;
 
 pub(super) use climate::ClimateSampler;
 pub use profile::{BiomeKind, BiomeSample, BiomeWeights, TerrainProfile};

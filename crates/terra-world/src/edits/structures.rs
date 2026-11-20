@@ -71,7 +71,7 @@ impl EditJournal {
                 .state
                 .is_some_and(|state| !state.valid_for(p, object.material))
                 || object.loot.as_ref().is_some_and(|loot| {
-                    object.material != 29
+                    !terra_core::containers::is_chest(object.material)
                         || !terra_core::containers::valid_chest(loot)
                         || p.iter().any(|v| v.unsigned_abs() > 1_000_000)
                 })

@@ -5,6 +5,10 @@ use terra_core::npc_jobs::{WorkArea, WorkKind, WorkOrder, WorkStatus};
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WorkAction {
     Inspect,
+    /// Private, nearby inspection. The server rechecks this subscription on every snapshot.
+    InspectNpc {
+        npc: u64,
+    },
     Assign {
         npc: u64,
         kind: WorkKind,
@@ -39,12 +43,25 @@ pub struct WorkerView {
 pub struct WorkSnapshot {
     pub revision: u64,
     pub workers: Vec<WorkerView>,
+    pub detail: Option<WorkerDetail>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct WorkerDetail {
+    pub npc: u64,
+    pub inventory: terra_core::Inventory,
 }
 
 impl WorkSnapshot {
     pub fn valid(&self) -> bool {
         let mut ids = std::collections::BTreeSet::new();
-        self.workers.len() <= 128
+        self.detail.as_ref().is_none_or(|detail| {
+            detail.npc != 0
+                && self.workers.iter().any(|worker| worker.npc == detail.npc)
+                && detail.inventory.valid()
+                && detail.inventory.slots.len() <= terra_core::npc_jobs::WORKER_SLOTS
+                && detail.inventory.cursor.is_none()
+        }) && self.workers.len() <= 128
             && self.workers.iter().all(|worker| {
                 worker.npc != 0
                     && ids.insert(worker.npc)

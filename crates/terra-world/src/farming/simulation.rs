@@ -261,7 +261,7 @@ fn sky(chunks: &ChunkStore, terrain: &WorldTerrain, position: [i64; 3]) -> SkyEx
     };
     for y in position[1] + 1..=ceiling {
         match chunks.block_at([position[0], y, position[2]]) {
-            Some(7..=9 | 132 | 133) => {
+            Some(material) if terra_voxel::MaterialId::FOLIAGE.contains(&material) => {
                 exposure.light *= 0.76;
                 exposure.rain *= 0.76;
             }

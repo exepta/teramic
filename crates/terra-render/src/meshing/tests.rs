@@ -125,6 +125,8 @@ fn templates() -> TemplateSet {
         material: 0,
     };
     TemplateSet {
+        normal_mapped_materials: Default::default(),
+        foliage_clusters: Default::default(),
         lantern_variants: Default::default(),
         opaque_cube_lods: Default::default(),
         animated_chests: false,
@@ -2428,6 +2430,80 @@ fn sand_and_snow_top_colors_are_seamless_without_splitting_greedy_faces() {
                     .unwrap();
                 for (a, b) in color.iter().zip(right[0].colors[index]) {
                     assert!((a - b).abs() < 1e-6);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn meadow_spirit_and_blood_turf_share_climate_tints_on_top_and_side_in_every_lod() {
+    use super::builder::{RenderOptions, compose_section_with_options};
+    let mut templates = templates();
+    let mut turf = templates.blocks[&1].clone();
+    turf.details.clear();
+    turf.faces = crate::blocks::cube_faces(0.0, [0; 6], None);
+    templates.blocks.insert(1, turf.clone());
+    templates.cube_lods.insert(1, turf.clone());
+    for id in [306, 400] {
+        templates.blocks.insert(id, turf.clone());
+    }
+    let terrain = terra_world::TerraGenerator::new(terra_core::WorldConfig {
+        caves: false,
+        cave_structure_revision: 0,
+        structures_revision: 0,
+        rivers: false,
+        ..Default::default()
+    })
+    .unwrap();
+    for section in [SectionPos::new(-1, 3, -1), SectionPos::new(0, 3, -1)] {
+        let expected = crate::appearance::GroundTint::new(&terrain, section.origin().unwrap());
+        for side in [1, 3, 5] {
+            for level in [
+                super::DetailLevel::Near,
+                super::DetailLevel::Middle,
+                super::DetailLevel::Far,
+            ] {
+                for material in [1, 306, 400] {
+                    let face = BlockFace {
+                        minimum: [0; 3],
+                        width: 4,
+                        height: 4,
+                        u_axis: if side == 1 { 2 } else { 0 },
+                        v_axis: if side == 3 { 2 } else { 1 },
+                        side,
+                        material,
+                        edge_mask: 15,
+                        occupied_neighbor: false,
+                    };
+                    let batches = compose_section_with_options(
+                        &[face],
+                        &templates,
+                        section,
+                        &RenderOptions {
+                            water_level: None,
+                            detail_level: level,
+                            terrain: Some(terrain.clone()),
+                            exposure: None,
+                            tints: Default::default(),
+                            conditions: Default::default(),
+                        },
+                    )
+                    .unwrap();
+                    assert!(!batches.is_empty());
+                    for batch in batches {
+                        assert_eq!(batch.surface_water.len(), batch.positions.len());
+                        for (position, color) in batch.positions.into_iter().zip(batch.colors) {
+                            let tint = expected.authored_grass_at(position);
+                            assert!(tint.into_iter().any(|v| (v - 1.0).abs() > 0.001));
+                            for axis in 0..3 {
+                                assert!(
+                                    (color[axis] - tint[axis]).abs() < 1e-6,
+                                    "material {material}, side {side}, lod {level:?}: {position:?}: {color:?} vs {tint:?}"
+                                );
+                            }
+                        }
+                    }
                 }
             }
         }

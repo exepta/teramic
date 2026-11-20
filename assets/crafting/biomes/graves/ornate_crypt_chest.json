@@ -1,0 +1,34 @@
+{
+  "id": "teramic::ornate_crypt_chest",
+  "name": "Ornate Crypt Chest",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 377
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 29
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 340
+        },
+        "count": 2
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 2
+      }
+    ]
+  }
+}

@@ -13,7 +13,7 @@ from pathlib import Path
 import struct
 import subprocess
 
-BIOMES=('plains','forest','desert','highlands','mushroom-park','cliffted-desert','cherry-forest','ocean')
+BIOMES=('plains','forest','desert','highlands','mushroom-park','cliffted-desert','cherry-forest','spirit-blossom','blood-forest','ocean')
 ROOT=Path(__file__).resolve().parents[2]
 
 def png_size(path):

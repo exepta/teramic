@@ -311,15 +311,302 @@ pub enum MaterialId {
     ButcherStation = 303,
     BishopStation = 304,
     FarmStation = 305,
+    // F35: append-only persisted material identifiers.
+    SpiritBlossomGrass = 306,
+    SpiritBlossomDirt = 307,
+    SpiritStone = 308,
+    BlossomPetalBlock = 309,
+    PinkBlossomLeaves = 310,
+    WhiteBlossomLeaves = 311,
+    LavenderBlossomLeaves = 312,
+    SpiritBlossomLog = 313,
+    SpiritBlossomPlanks = 314,
+    GlowingLanternStone = 315,
+    GlowingSpiritFlowers = 316,
+    BlossomBush = 317,
+    SpiritLanternPost = 318,
+    LotusFlower = 319,
+    LilyPad = 320,
+    HangingBlossomLantern = 321,
+    PetalGroundCover = 322,
+    SpiritShrineStone = 323,
+    BlueClay = 324,
+    RedClay = 325,
+    GreenClay = 326,
+    YellowClay = 327,
+    WhiteClay = 328,
+    BlackClay = 329,
+    GrayClay = 330,
+    DarkGrayClay = 331,
+    PurpleClay = 332,
+    PinkClay = 333,
+    LimeClay = 334,
+    TurquoiseClay = 335,
+    OrangeClay = 336,
+    GraveStone = 337,
+    DarkGraveStone = 338,
+    CrackedGraveStone = 339,
+    OrnateGraveStone = 340,
+    MossGraveStone = 341,
+    OvergrownGraveStone = 342,
+    CryptBrick = 343,
+    GraveStoneSlab = 344,
+    OrnateGraveSlab = 345,
+    MosaicGraveSlab = 346,
+    CrackedGraveSlab = 347,
+    InscribedGraveSlab = 348,
+    CryptColumn = 349,
+    OrnateCryptColumn = 350,
+    CryptCapital = 351,
+    CryptColumnBase = 352,
+    CryptArch = 353,
+    MossyCryptArch = 354,
+    GraveReliefWall = 355,
+    SkullRelief = 356,
+    CrossRelief = 357,
+    CryptWallNiche = 358,
+    CryptHeraldicBanner = 359,
+    CryptTornBanner = 360,
+    CryptCurtain = 361,
+    GravestoneSmall = 362,
+    GravestoneMedium = 363,
+    GravestoneLarge = 364,
+    GraveCross = 365,
+    BorderedGrave = 366,
+    SarcophagusClosed = 367,
+    SarcophagusOpen = 368,
+    GraveLanternPost = 369,
+    CryptWallTorch = 370,
+    CryptCandles = 371,
+    CryptChandelier = 372,
+    SoulBrazier = 373,
+    SkeletonRemains = 374,
+    BonePile = 375,
+    GraveUrn = 376,
+    OrnateCryptChest = 377,
+    CryptBooks = 378,
+    GraveSkull = 379,
+    CryptChain = 380,
+    DeadGrass = 381,
+    ThornBush = 382,
+    HangingIvy = 383,
+    GraveMoss = 384,
+    DarkMushrooms = 385,
+    GlowingPurpleMushrooms = 386,
+    BlossomingVines = 387,
+    CryptPressurePlate = 388,
+    CryptLever = 389,
+    CryptWallSwitch = 390,
+    CryptPortcullis = 391,
+    LockedCryptGate = 392,
+    CryptSpikeTrap = 393,
+    CryptArrowTrap = 394,
+    SoulCrystalSmall = 395,
+    SoulCrystalLarge = 396,
+    ActiveRuneBlock = 397,
+    InactiveRuneBlock = 398,
+    MysticMistBlock = 399,
+    BloodGrass = 400,
+    BloodDirt = 401,
+    BloodStone = 402,
+    VeinedStone = 403,
+    BloodwoodPlanks = 404,
+    BloodwoodLog = 405,
+    BloodLeaves = 406,
+    CrimsonMycelium = 407,
+    BloodMoss = 408,
+    BloodCrystalBlock = 409,
+    BloodFungalBlock = 410,
+    BloodGlowMushroomBlock = 411,
+    BloodMushrooms = 412,
+    BloodThornBush = 413,
+    BloodFlower = 414,
+    HangingBloodVines = 415,
+    BloodRoots = 416,
+    BloodBones = 417,
+    BloodFern = 418,
+    GiantBloodMushroom = 419,
+    BloodRuinedArch = 420,
+    BloodCrystalPillar = 421,
+    Cactus = 422,
+    MeadowDaisies = 423,
+    Lupine = 424,
+    ForestFern = 425,
+    FloweringShrub = 426,
+    AlpineHeather = 427,
+    DesertShrub = 428,
+    ShoreReeds = 429,
+    FogBlock = 430,
+    Asphalt = 431,
+    AsphaltCover = 432,
+    AsphaltSlope = 433,
+    AsphaltEntry = 434,
+    AsphaltExit = 435,
+    RoadCurb = 436,
+    WetTar = 437,
+    DriedTar = 438,
+    Bile = 439,
+    BileBlock = 440,
+    SidewalkBlock = 441,
+    Sidewalk = 442,
+    SidewalkLeft = 443,
+    SidewalkRight = 444,
+    SidewalkArcLeft = 445,
+    SidewalkArcRight = 446,
+    SidewalkLowered = 447,
+    StrawBlock = 448,
 }
 
 impl MaterialId {
-    pub const LAST: u16 = Self::FarmStation as u16;
-    pub const FOLIAGE: [u16; 6] = [7, 8, 9, 132, 133, 195];
+    pub const LAST: u16 = Self::StrawBlock as u16;
+    pub const FOLIAGE: [u16; 10] = [7, 8, 9, 132, 133, 195, 310, 311, 312, 406];
     pub const BLOCK_COUNT: usize = Self::LAST as usize;
 
     pub const fn identifier(self) -> &'static str {
         match self {
+            Self::Asphalt => "teramic::asphalt",
+            Self::AsphaltCover => "teramic::asphalt_cover",
+            Self::AsphaltSlope => "teramic::asphalt_slope",
+            Self::AsphaltEntry => "teramic::asphalt_entry",
+            Self::AsphaltExit => "teramic::asphalt_exit",
+            Self::RoadCurb => "teramic::road_curb",
+            Self::WetTar => "teramic::wet_tar",
+            Self::DriedTar => "teramic::dried_tar",
+            Self::Bile => "teramic::bile",
+            Self::BileBlock => "teramic::bile_block",
+            Self::SidewalkBlock => "teramic::sidewalk_block",
+            Self::Sidewalk => "teramic::sidewalk",
+            Self::SidewalkLeft => "teramic::sidewalk_left",
+            Self::SidewalkRight => "teramic::sidewalk_right",
+            Self::SidewalkArcLeft => "teramic::sidewalk_arc_left",
+            Self::SidewalkArcRight => "teramic::sidewalk_arc_right",
+            Self::SidewalkLowered => "teramic::sidewalk_lowered",
+            Self::StrawBlock => "teramic::straw_block",
+            Self::FogBlock => "teramic::fog_block",
+            Self::Cactus => "teramic::cactus",
+            Self::MeadowDaisies => "teramic::meadow_daisies",
+            Self::Lupine => "teramic::lupine",
+            Self::ForestFern => "teramic::forest_fern",
+            Self::FloweringShrub => "teramic::flowering_shrub",
+            Self::AlpineHeather => "teramic::alpine_heather",
+            Self::DesertShrub => "teramic::desert_shrub",
+            Self::ShoreReeds => "teramic::shore_reeds",
+            Self::BloodGrass => "teramic::blood_grass",
+            Self::BloodDirt => "teramic::blood_dirt",
+            Self::BloodStone => "teramic::blood_stone",
+            Self::VeinedStone => "teramic::veined_stone",
+            Self::BloodwoodPlanks => "teramic::bloodwood_planks",
+            Self::BloodwoodLog => "teramic::bloodwood_log",
+            Self::BloodLeaves => "teramic::blood_leaves",
+            Self::CrimsonMycelium => "teramic::crimson_mycelium",
+            Self::BloodMoss => "teramic::blood_moss",
+            Self::BloodCrystalBlock => "teramic::blood_crystal_block",
+            Self::BloodFungalBlock => "teramic::blood_fungal_block",
+            Self::BloodGlowMushroomBlock => "teramic::blood_glow_mushroom_block",
+            Self::BloodMushrooms => "teramic::blood_mushrooms",
+            Self::BloodThornBush => "teramic::blood_thorn_bush",
+            Self::BloodFlower => "teramic::blood_flower",
+            Self::HangingBloodVines => "teramic::hanging_blood_vines",
+            Self::BloodRoots => "teramic::blood_roots",
+            Self::BloodBones => "teramic::blood_bones",
+            Self::BloodFern => "teramic::blood_fern",
+            Self::GiantBloodMushroom => "teramic::giant_blood_mushroom",
+            Self::BloodRuinedArch => "teramic::blood_ruined_arch",
+            Self::BloodCrystalPillar => "teramic::blood_crystal_pillar",
+            Self::BlueClay => "teramic::blue_clay",
+            Self::RedClay => "teramic::red_clay",
+            Self::GreenClay => "teramic::green_clay",
+            Self::YellowClay => "teramic::yellow_clay",
+            Self::WhiteClay => "teramic::white_clay",
+            Self::BlackClay => "teramic::black_clay",
+            Self::GrayClay => "teramic::gray_clay",
+            Self::DarkGrayClay => "teramic::dark_gray_clay",
+            Self::PurpleClay => "teramic::purple_clay",
+            Self::PinkClay => "teramic::pink_clay",
+            Self::LimeClay => "teramic::lime_clay",
+            Self::TurquoiseClay => "teramic::turquoise_clay",
+            Self::OrangeClay => "teramic::orange_clay",
+            Self::GraveStone => "teramic::grave_stone",
+            Self::DarkGraveStone => "teramic::dark_grave_stone",
+            Self::CrackedGraveStone => "teramic::cracked_grave_stone",
+            Self::OrnateGraveStone => "teramic::ornate_grave_stone",
+            Self::MossGraveStone => "teramic::moss_grave_stone",
+            Self::OvergrownGraveStone => "teramic::overgrown_grave_stone",
+            Self::CryptBrick => "teramic::crypt_brick",
+            Self::GraveStoneSlab => "teramic::grave_stone_slab",
+            Self::OrnateGraveSlab => "teramic::ornate_grave_slab",
+            Self::MosaicGraveSlab => "teramic::mosaic_grave_slab",
+            Self::CrackedGraveSlab => "teramic::cracked_grave_slab",
+            Self::InscribedGraveSlab => "teramic::inscribed_grave_slab",
+            Self::CryptColumn => "teramic::crypt_column",
+            Self::OrnateCryptColumn => "teramic::ornate_crypt_column",
+            Self::CryptCapital => "teramic::crypt_capital",
+            Self::CryptColumnBase => "teramic::crypt_column_base",
+            Self::CryptArch => "teramic::crypt_arch",
+            Self::MossyCryptArch => "teramic::mossy_crypt_arch",
+            Self::GraveReliefWall => "teramic::grave_relief_wall",
+            Self::SkullRelief => "teramic::skull_relief",
+            Self::CrossRelief => "teramic::cross_relief",
+            Self::CryptWallNiche => "teramic::crypt_wall_niche",
+            Self::CryptHeraldicBanner => "teramic::crypt_heraldic_banner",
+            Self::CryptTornBanner => "teramic::crypt_torn_banner",
+            Self::CryptCurtain => "teramic::crypt_curtain",
+            Self::GravestoneSmall => "teramic::gravestone_small",
+            Self::GravestoneMedium => "teramic::gravestone_medium",
+            Self::GravestoneLarge => "teramic::gravestone_large",
+            Self::GraveCross => "teramic::grave_cross",
+            Self::BorderedGrave => "teramic::bordered_grave",
+            Self::SarcophagusClosed => "teramic::sarcophagus_closed",
+            Self::SarcophagusOpen => "teramic::sarcophagus_open",
+            Self::GraveLanternPost => "teramic::grave_lantern_post",
+            Self::CryptWallTorch => "teramic::crypt_wall_torch",
+            Self::CryptCandles => "teramic::crypt_candles",
+            Self::CryptChandelier => "teramic::crypt_chandelier",
+            Self::SoulBrazier => "teramic::soul_brazier",
+            Self::SkeletonRemains => "teramic::skeleton_remains",
+            Self::BonePile => "teramic::bone_pile",
+            Self::GraveUrn => "teramic::grave_urn",
+            Self::OrnateCryptChest => "teramic::ornate_crypt_chest",
+            Self::CryptBooks => "teramic::crypt_books",
+            Self::GraveSkull => "teramic::grave_skull",
+            Self::CryptChain => "teramic::crypt_chain",
+            Self::DeadGrass => "teramic::dead_grass",
+            Self::ThornBush => "teramic::thorn_bush",
+            Self::HangingIvy => "teramic::hanging_ivy",
+            Self::GraveMoss => "teramic::grave_moss",
+            Self::DarkMushrooms => "teramic::dark_mushrooms",
+            Self::GlowingPurpleMushrooms => "teramic::glowing_purple_mushrooms",
+            Self::BlossomingVines => "teramic::blossoming_vines",
+            Self::CryptPressurePlate => "teramic::crypt_pressure_plate",
+            Self::CryptLever => "teramic::crypt_lever",
+            Self::CryptWallSwitch => "teramic::crypt_wall_switch",
+            Self::CryptPortcullis => "teramic::crypt_portcullis",
+            Self::LockedCryptGate => "teramic::locked_crypt_gate",
+            Self::CryptSpikeTrap => "teramic::crypt_spike_trap",
+            Self::CryptArrowTrap => "teramic::crypt_arrow_trap",
+            Self::SoulCrystalSmall => "teramic::soul_crystal_small",
+            Self::SoulCrystalLarge => "teramic::soul_crystal_large",
+            Self::ActiveRuneBlock => "teramic::active_rune_block",
+            Self::InactiveRuneBlock => "teramic::inactive_rune_block",
+            Self::MysticMistBlock => "teramic::mystic_mist_block",
+            Self::SpiritBlossomGrass => "teramic::spirit_blossom_grass",
+            Self::SpiritBlossomDirt => "teramic::spirit_blossom_dirt",
+            Self::SpiritStone => "teramic::spirit_stone",
+            Self::BlossomPetalBlock => "teramic::blossom_petal_block",
+            Self::PinkBlossomLeaves => "teramic::pink_blossom_leaves",
+            Self::WhiteBlossomLeaves => "teramic::white_blossom_leaves",
+            Self::LavenderBlossomLeaves => "teramic::lavender_blossom_leaves",
+            Self::SpiritBlossomLog => "teramic::spirit_blossom_log",
+            Self::SpiritBlossomPlanks => "teramic::spirit_blossom_planks",
+            Self::GlowingLanternStone => "teramic::glowing_lantern_stone",
+            Self::GlowingSpiritFlowers => "teramic::glowing_spirit_flowers",
+            Self::BlossomBush => "teramic::blossom_bush",
+            Self::SpiritLanternPost => "teramic::spirit_lantern_post",
+            Self::LotusFlower => "teramic::lotus_flower",
+            Self::LilyPad => "teramic::lily_pad",
+            Self::HangingBlossomLantern => "teramic::hanging_blossom_lantern",
+            Self::PetalGroundCover => "teramic::petal_ground_cover",
+            Self::SpiritShrineStone => "teramic::spirit_shrine_stone",
             Self::AppleLeaves => "teramic::apple_leaves",
             Self::RailStraight => "teramic::rail_straight",
             Self::RailCurveSmall => "teramic::rail_curve_small",
@@ -939,6 +1226,150 @@ impl MaterialId {
             303 => Self::ButcherStation,
             304 => Self::BishopStation,
             305 => Self::FarmStation,
+            306 => Self::SpiritBlossomGrass,
+            307 => Self::SpiritBlossomDirt,
+            308 => Self::SpiritStone,
+            309 => Self::BlossomPetalBlock,
+            310 => Self::PinkBlossomLeaves,
+            311 => Self::WhiteBlossomLeaves,
+            312 => Self::LavenderBlossomLeaves,
+            313 => Self::SpiritBlossomLog,
+            314 => Self::SpiritBlossomPlanks,
+            315 => Self::GlowingLanternStone,
+            316 => Self::GlowingSpiritFlowers,
+            317 => Self::BlossomBush,
+            318 => Self::SpiritLanternPost,
+            319 => Self::LotusFlower,
+            320 => Self::LilyPad,
+            321 => Self::HangingBlossomLantern,
+            322 => Self::PetalGroundCover,
+            323 => Self::SpiritShrineStone,
+            324 => Self::BlueClay,
+            325 => Self::RedClay,
+            326 => Self::GreenClay,
+            327 => Self::YellowClay,
+            328 => Self::WhiteClay,
+            329 => Self::BlackClay,
+            330 => Self::GrayClay,
+            331 => Self::DarkGrayClay,
+            332 => Self::PurpleClay,
+            333 => Self::PinkClay,
+            334 => Self::LimeClay,
+            335 => Self::TurquoiseClay,
+            336 => Self::OrangeClay,
+            337 => Self::GraveStone,
+            338 => Self::DarkGraveStone,
+            339 => Self::CrackedGraveStone,
+            340 => Self::OrnateGraveStone,
+            341 => Self::MossGraveStone,
+            342 => Self::OvergrownGraveStone,
+            343 => Self::CryptBrick,
+            344 => Self::GraveStoneSlab,
+            345 => Self::OrnateGraveSlab,
+            346 => Self::MosaicGraveSlab,
+            347 => Self::CrackedGraveSlab,
+            348 => Self::InscribedGraveSlab,
+            349 => Self::CryptColumn,
+            350 => Self::OrnateCryptColumn,
+            351 => Self::CryptCapital,
+            352 => Self::CryptColumnBase,
+            353 => Self::CryptArch,
+            354 => Self::MossyCryptArch,
+            355 => Self::GraveReliefWall,
+            356 => Self::SkullRelief,
+            357 => Self::CrossRelief,
+            358 => Self::CryptWallNiche,
+            359 => Self::CryptHeraldicBanner,
+            360 => Self::CryptTornBanner,
+            361 => Self::CryptCurtain,
+            362 => Self::GravestoneSmall,
+            363 => Self::GravestoneMedium,
+            364 => Self::GravestoneLarge,
+            365 => Self::GraveCross,
+            366 => Self::BorderedGrave,
+            367 => Self::SarcophagusClosed,
+            368 => Self::SarcophagusOpen,
+            369 => Self::GraveLanternPost,
+            370 => Self::CryptWallTorch,
+            371 => Self::CryptCandles,
+            372 => Self::CryptChandelier,
+            373 => Self::SoulBrazier,
+            374 => Self::SkeletonRemains,
+            375 => Self::BonePile,
+            376 => Self::GraveUrn,
+            377 => Self::OrnateCryptChest,
+            378 => Self::CryptBooks,
+            379 => Self::GraveSkull,
+            380 => Self::CryptChain,
+            381 => Self::DeadGrass,
+            382 => Self::ThornBush,
+            383 => Self::HangingIvy,
+            384 => Self::GraveMoss,
+            385 => Self::DarkMushrooms,
+            386 => Self::GlowingPurpleMushrooms,
+            387 => Self::BlossomingVines,
+            388 => Self::CryptPressurePlate,
+            389 => Self::CryptLever,
+            390 => Self::CryptWallSwitch,
+            391 => Self::CryptPortcullis,
+            392 => Self::LockedCryptGate,
+            393 => Self::CryptSpikeTrap,
+            394 => Self::CryptArrowTrap,
+            395 => Self::SoulCrystalSmall,
+            396 => Self::SoulCrystalLarge,
+            397 => Self::ActiveRuneBlock,
+            398 => Self::InactiveRuneBlock,
+            399 => Self::MysticMistBlock,
+            400 => Self::BloodGrass,
+            401 => Self::BloodDirt,
+            402 => Self::BloodStone,
+            403 => Self::VeinedStone,
+            404 => Self::BloodwoodPlanks,
+            405 => Self::BloodwoodLog,
+            406 => Self::BloodLeaves,
+            407 => Self::CrimsonMycelium,
+            408 => Self::BloodMoss,
+            409 => Self::BloodCrystalBlock,
+            410 => Self::BloodFungalBlock,
+            411 => Self::BloodGlowMushroomBlock,
+            412 => Self::BloodMushrooms,
+            413 => Self::BloodThornBush,
+            414 => Self::BloodFlower,
+            415 => Self::HangingBloodVines,
+            416 => Self::BloodRoots,
+            417 => Self::BloodBones,
+            418 => Self::BloodFern,
+            419 => Self::GiantBloodMushroom,
+            420 => Self::BloodRuinedArch,
+            421 => Self::BloodCrystalPillar,
+            422 => Self::Cactus,
+            423 => Self::MeadowDaisies,
+            424 => Self::Lupine,
+            425 => Self::ForestFern,
+            426 => Self::FloweringShrub,
+            427 => Self::AlpineHeather,
+            428 => Self::DesertShrub,
+            429 => Self::ShoreReeds,
+            430 => Self::FogBlock,
+            431 => Self::Asphalt,
+            432 => Self::AsphaltCover,
+            433 => Self::AsphaltSlope,
+            434 => Self::AsphaltEntry,
+            435 => Self::AsphaltExit,
+            436 => Self::RoadCurb,
+            437 => Self::WetTar,
+            438 => Self::DriedTar,
+            439 => Self::Bile,
+            440 => Self::BileBlock,
+            441 => Self::SidewalkBlock,
+            442 => Self::Sidewalk,
+            443 => Self::SidewalkLeft,
+            444 => Self::SidewalkRight,
+            445 => Self::SidewalkArcLeft,
+            446 => Self::SidewalkArcRight,
+            447 => Self::SidewalkLowered,
+            448 => Self::StrawBlock,
+
             193 => Self::Lantern,
             194 => Self::Chain,
             _ => return None,
@@ -947,9 +1378,14 @@ impl MaterialId {
 
     /// Fluid anchors and torches remain selectable without blocking movement.
     pub const fn is_solid(self) -> bool {
+        if matches!(self as u16, 359..=361 | 370..=372 | 374..=375 | 378..=387 | 399 | 412..=419 | 423..=429)
+        {
+            return false;
+        }
         !matches!(
             self,
             Self::Air
+                | Self::Bile
                 | Self::FluidWater
                 | Self::Torch
                 | Self::Lantern
@@ -958,11 +1394,34 @@ impl MaterialId {
                 | Self::CaveVine
                 | Self::CaveRoot
                 | Self::CaveMushroom
+                | Self::GlowingSpiritFlowers
+                | Self::BlossomBush
+                | Self::LotusFlower
+                | Self::LilyPad
+                | Self::HangingBlossomLantern
+                | Self::PetalGroundCover
         )
     }
 
     pub const fn is_opaque(self) -> bool {
-        if matches!(self, Self::Ballast) {
+        if matches!(self, Self::BileBlock | Self::StrawBlock) {
+            return true;
+        }
+        if matches!(self as u16, 324..=343 | 397..=398 | 400..=405 | 407..=411 | 422 | 430..=431 | 440)
+        {
+            return true;
+        }
+        if matches!(
+            self,
+            Self::Ballast
+                | Self::SpiritBlossomGrass
+                | Self::SpiritBlossomDirt
+                | Self::SpiritStone
+                | Self::BlossomPetalBlock
+                | Self::SpiritBlossomLog
+                | Self::SpiritBlossomPlanks
+                | Self::GlowingLanternStone
+        ) {
             return true;
         }
         if (self as u16) >= 141 && (self as u16) <= Self::LAST {
@@ -1041,6 +1500,14 @@ impl MaterialId {
                 | Self::Clay
                 | Self::Gravel
                 | Self::Mud
+                | Self::SpiritBlossomGrass
+                | Self::SpiritBlossomDirt
+                | Self::SpiritStone
+                | Self::BloodGrass
+                | Self::BloodDirt
+                | Self::BloodStone
+                | Self::CrimsonMycelium
+                | Self::BloodMoss
         )
     }
 
@@ -1053,7 +1520,11 @@ impl MaterialId {
     }
 
     pub const fn flammable(self) -> bool {
-        if matches!(self as u16, 74..=76 | 82..=84 | 90..=92 | 103..=130 | 134..=140) {
+        if matches!(self as u16, 404..=406 | 412..=416 | 418..=419 | 422..=429) {
+            return true;
+        }
+        if matches!(self as u16, 359..=361 | 377..=378 | 381..=387 | 392 | 309..=314 | 316..=317 | 319..=322 | 74..=76 | 82..=84 | 90..=92 | 103..=130 | 134..=140)
+        {
             return true;
         }
         matches!(
@@ -1091,6 +1562,33 @@ impl MaterialId {
 mod tests {
     use super::*;
     #[test]
+    fn tar_coatings_append_after_roads_and_keep_partial_shape_neighbors_visible() {
+        assert_eq!(MaterialId::RoadCurb as u16, 436);
+        for (id, material, identifier) in [
+            (437, MaterialId::WetTar, "teramic::wet_tar"),
+            (438, MaterialId::DriedTar, "teramic::dried_tar"),
+        ] {
+            assert_eq!(material as u16, id);
+            assert_eq!(MaterialId::from_raw(id), Some(material));
+            assert_eq!(material.identifier(), identifier);
+            assert!(material.is_solid());
+            assert!(!material.is_opaque());
+        }
+    }
+
+    #[test]
+    fn regional_flora_appends_ids_and_cactus_uses_real_solid_voxels() {
+        assert_eq!(MaterialId::BloodCrystalPillar as u16, 421);
+        assert_eq!(MaterialId::Cactus as u16, 422);
+        assert!(MaterialId::Cactus.is_solid() && MaterialId::Cactus.is_opaque());
+        for id in 423..=429 {
+            let material = MaterialId::from_raw(id).unwrap();
+            assert!(!material.is_solid() && !material.is_opaque());
+            assert!(material.flammable());
+            assert!(material.identifier().starts_with("teramic::"));
+        }
+    }
+    #[test]
     fn ballast_and_switch_stand_append_ids_without_changing_old_rail_codes() {
         for (id, material, identifier, opaque) in [
             (205, MaterialId::RailBuffer, "teramic::rail_buffer", false),
@@ -1116,7 +1614,7 @@ mod tests {
             assert_eq!(material.is_opaque(), opaque);
             assert!(!material.flammable());
         }
-        assert_eq!(MaterialId::LAST, 305);
+        assert_eq!(MaterialId::LAST, 448);
     }
 
     #[test]
@@ -1239,5 +1737,90 @@ mod tests {
         assert!(!MaterialId::FluidWater.is_opaque());
         assert!(!MaterialId::FluidWater.flammable());
         assert!(MaterialId::SolidWater.is_solid());
+    }
+}
+
+#[cfg(test)]
+mod spirit_blossom_tests {
+    use super::MaterialId;
+
+    #[test]
+    fn spirit_materials_append_stable_ids_and_distinguish_ground_foliage_and_decorations() {
+        assert_eq!(MaterialId::FarmStation as u16, 305);
+        for raw in 306..=323 {
+            let material = MaterialId::from_raw(raw).unwrap();
+            assert_eq!(material as u16, raw);
+            assert!(material.identifier().starts_with("teramic::"));
+        }
+        for raw in [306, 307, 308] {
+            assert!(MaterialId::from_raw(raw).unwrap().is_natural_ground());
+        }
+        for raw in [310, 311, 312] {
+            assert!(MaterialId::FOLIAGE.contains(&raw));
+            assert!(!MaterialId::from_raw(raw).unwrap().is_opaque());
+        }
+        for raw in [316, 317, 319, 320, 321, 322] {
+            assert!(!MaterialId::from_raw(raw).unwrap().is_solid());
+        }
+        for raw in [306, 307, 308, 309, 313, 314, 315] {
+            assert!(MaterialId::from_raw(raw).unwrap().is_opaque());
+        }
+    }
+}
+
+#[cfg(test)]
+mod blood_forest_tests {
+    use super::MaterialId;
+
+    #[test]
+    fn bloodwood_and_plants_burn_but_stone_crystals_and_bones_do_not() {
+        for material in [
+            MaterialId::BloodwoodPlanks,
+            MaterialId::BloodwoodLog,
+            MaterialId::BloodLeaves,
+            MaterialId::BloodMushrooms,
+            MaterialId::BloodThornBush,
+            MaterialId::BloodFlower,
+            MaterialId::HangingBloodVines,
+            MaterialId::BloodRoots,
+            MaterialId::BloodFern,
+            MaterialId::GiantBloodMushroom,
+        ] {
+            assert!(material.flammable(), "{material:?}");
+        }
+        for material in [
+            MaterialId::BloodStone,
+            MaterialId::BloodCrystalBlock,
+            MaterialId::BloodBones,
+            MaterialId::BloodRuinedArch,
+            MaterialId::BloodCrystalPillar,
+        ] {
+            assert!(!material.flammable(), "{material:?}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod cemetery_tests {
+    use super::MaterialId;
+
+    #[test]
+    fn cemetery_ids_preserve_terrain_seams_and_nonblocking_decoration() {
+        assert_eq!(MaterialId::SpiritShrineStone as u16, 323);
+        assert_eq!(MaterialId::BlueClay as u16, 324);
+        assert_eq!(MaterialId::MysticMistBlock as u16, 399);
+        let mut names = std::collections::HashSet::new();
+        for id in 324..=399 {
+            let material = MaterialId::from_raw(id).unwrap();
+            assert!(names.insert(material.identifier()));
+            assert_eq!(
+                material.is_opaque(),
+                matches!(id, 324..=343 | 397..=398 | 400..=405 | 407..=411 | 422 | 430)
+            );
+            assert_eq!(
+                material.is_solid(),
+                !matches!(id, 359..=361 | 370..=372 | 374..=375 | 378..=387 | 399 | 412..=419 | 423..=429)
+            );
+        }
     }
 }

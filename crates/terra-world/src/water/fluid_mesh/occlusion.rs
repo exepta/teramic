@@ -49,7 +49,12 @@ pub(super) fn fragments(
     visible
 }
 
-fn clip(polygon: &[[f32; 3]], axis: usize, boundary: f32, keep_above: bool) -> Vec<[f32; 3]> {
+pub(super) fn clip(
+    polygon: &[[f32; 3]],
+    axis: usize,
+    boundary: f32,
+    keep_above: bool,
+) -> Vec<[f32; 3]> {
     let mut output = Vec::with_capacity(polygon.len() + 1);
     let distance = |p: [f32; 3]| {
         if keep_above {

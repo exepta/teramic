@@ -1,0 +1,15 @@
+
+running 9 tests
+test generation::spirit_blossom::integration_tests::spirit_terraces_are_continuous_and_do_not_modify_legacy_or_flat_worlds ... ok
+test generation::spirit_blossom::tests::spirit_regions_are_deterministic_with_continuous_normalized_boundaries ... ok
+test generation::spirit_blossom::tests::saved_worlds_keep_legacy_ecology_and_revision_is_part_of_cache_identity ... ok
+Spirit Blossom seed 42042 core: [-5632, 33, -6912]
+test generation::spirit_blossom::integration_tests::actual_negative_spirit_region_contains_ground_trees_and_persistent_section_decoration ... ok
+test generation::spirit_blossom::tests::all_land_and_water_decorations_have_reproducible_bounded_density ... ok
+test creatures::spirit::tests::spawn_selection_has_all_species_and_respects_biomes ... ok
+test creature_tests::spirit_aura_is_alive_only_nearby_and_does_not_include_other_animals ... ok
+test creature_tests::separation_preserves_spirit_flight_height_instead_of_grounding_it ... ok
+test creature_tests::spirit_fliers_move_in_loaded_air_and_never_enter_voxel_walls ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 1405 filtered out; finished in 4.02s
+

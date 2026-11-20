@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 399,
+  "name": "Mystic Mist Block",
+  "description": "A translucent violet stone for mystical decorations.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "mystic_mist_block": {
+      "base_color": [
+        1,
+        1,
+        1,
+        0.35
+      ],
+      "roughness": 0.3
+    }
+  },
+  "textures": {
+    "mystic_mist_block": "textures/mystic_mist_block.png"
+  },
+  "face_materials": [
+    "mystic_mist_block",
+    "mystic_mist_block",
+    "mystic_mist_block",
+    "mystic_mist_block",
+    "mystic_mist_block",
+    "mystic_mist_block"
+  ]
+}

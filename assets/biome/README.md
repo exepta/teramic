@@ -1,16 +1,17 @@
 # Biome und Landschaften einstellen
 
-Neue Welten verwenden `landscape_revision = 5` und standardmaessig `sea_level = 22`.
-Die acht Biome-Dateien und optional `terrain_profiles.json` werden bei der Erstellung
+Neue Menü-Welten verwenden derzeit `landscape_revision = 1`; der Meeresspiegel
+kommt aus der Weltvorlage (Standard: 8). Gespeicherte Landschaftsrevisionen 0–5
+bleiben lesbar. Die neun Biome-Dateien und optional `terrain_profiles.json` werden bei der Erstellung
 unter `world.biome_definitions` gespeichert; fehlt die optionale Datei, gelten eingebaute Profile.
 Altwelten 0..4 behalten Revision, Meeresspiegel und Profile auch in neuen Gebieten; keine Retrogen.
 Auch bestehende Revision-5-Snapshots behalten ihre urspruenglichen Berge.
 Die niedrigeren, breiteren Bergprofile gelten nur fuer neue Welten. Fehlende
 alte Profilmetadaten werden aus einem eingefrorenen Legacy-Snapshot ergaenzt.
 
-## Acht Biome-Dateien
+## Neun Biome-Dateien
 
-Alle acht Dateien sind noetig; `biome` muss zur Datei passen. Falsche IDs, Felder oder Werte verhindern die Erstellung.
+Alle neun Dateien sind noetig; `biome` muss zur Datei passen. Falsche IDs, Felder oder Werte verhindern die Erstellung.
 Die folgenden `terrain.min_height`/`max_height` gelten fuer den Hoehenvertrag von
 Revision 4, nicht fuer die neue Landschaftsform von Revision 5:
 
@@ -21,6 +22,7 @@ Revision 4, nicht fuer die neue Landschaftsform von Revision 5:
 | `desert.json` / `desert` | 50 bis 100 |
 | `forest.json` / `forest` | 40 bis 90 |
 | `cherry_forest.json` / `cherry_forest` | 45 bis 115 |
+| `spirit_blossom.json` / `spirit_blossom` | 38 bis 155 |
 | `ocean.json` / `ocean` | -98 bis 22 |
 | `mushroom_park.json` / `mushroom_park` | 38 bis 82 |
 | `cliffted_desert.json` / `cliffted_desert` | 65 bis 145 |
@@ -47,3 +49,11 @@ normalisiert und raeumlich geclustert, nicht als exakte Flaechenanteile garantie
 `cold_temperature`, `warm_temperature`, `swamp_humidity`: 0..1; kalte Schwelle < warme Schwelle.
 Clay-Cluster: `clay_frequency` (0..1), `clay_cluster_scale` (2..128), `clay_depth` (0..8).
 Tiefes Ocean-Terrain behaelt eine geschuetzte Hoehlendecke.
+
+## Spirit Blossom
+
+`spirit_blossom_revision = 1` aktiviert die zusätzliche, weich gemischte
+Klimamaske, Blütenbäume, violette Erd-/Steinschichten und Dekorationen.
+Alte Spielstände ohne dieses Feld behalten Revision 0. Achtteilige gespeicherte
+Biomdefinitionen werden um den neunten Eintrag ergänzt, ohne das Biom in einer
+alten Welt nachträglich zu aktivieren. Details: [Spirit Blossom](../../docs/spirit-blossom.md).

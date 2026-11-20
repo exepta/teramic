@@ -635,17 +635,26 @@ fn biome_upload_keeps_flow_foam_and_the_shared_material() {
         mesh.attribute(Mesh::ATTRIBUTE_COLOR),
         Some(&VertexAttributeValues::Float32x4(effects))
     );
-    let Some(VertexAttributeValues::Float32x3(colors)) =
+    let Some(VertexAttributeValues::Float32x4(colors)) =
         mesh.attribute(super::biome::ATTRIBUTE_BIOME_TINT)
     else {
         panic!("water must carry its own biome tint, not reuse current/foam attributes");
     };
     let palette = super::biome::WaterTint::new(&world.resource::<WorldTerrain>().0, [0; 3]);
+    let Some(VertexAttributeValues::Float32(blood)) =
+        mesh.attribute(super::biome::ATTRIBUTE_BLOOD_WEIGHT)
+    else {
+        panic!("blood viscosity must use its own scalar vertex format");
+    };
+    assert_eq!(blood.len(), colors.len());
+    for (value, point) in blood.iter().zip([[0., 8., 0.], [0., 8., 1.], [1., 8., 0.]]) {
+        assert_eq!(*value, palette.blood_at(point));
+    }
     for (color, point) in colors
         .iter()
         .zip([[0.0, 8.0, 0.0], [0.0, 8.0, 1.0], [1.0, 8.0, 0.0]])
     {
-        assert_eq!(*color, palette.at(point));
+        assert_eq!(*color, palette.payload(point));
     }
 }
 
@@ -736,7 +745,7 @@ fn solid_water_blocks_share_the_surface_palette_without_current_uvs() {
         .unwrap();
     assert!(mesh.attribute(Mesh::ATTRIBUTE_UV_1).is_none());
     assert!(matches!(mesh.attribute(super::biome::ATTRIBUTE_BIOME_TINT),
-        Some(VertexAttributeValues::Float32x3(colors)) if colors.len() == mesh.count_vertices()));
+        Some(VertexAttributeValues::Float32x4(colors)) if colors.len() == mesh.count_vertices()));
     assert_eq!(world.resource::<Assets<WaterMaterial>>().len(), 1);
     assert_eq!(
         world

@@ -1,0 +1,19 @@
+{
+  "status": "unchanged",
+  "files": 13,
+  "sha256": {
+    "worlds/Test/session.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "worlds/Test/world.toml": "7be86277caa7d9c072bc5423d246c293478279d197026d8cf79c350631c231ea",
+    "worlds/Test/.write.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "worlds/Test/level.data": "b0f220083852c356ffccb1f38f92e70ffb66f876a5a14b9e65fcb7f9bd9440c4",
+    "worlds/Test/regions/r.0.-6.region": "6385bfb2abf7ac5b0cd20331c62cf536d15a87e2dac6a401c56fd69f8e5b6470",
+    "worlds/Test/regions/r.1.-6.region": "c434c7cbbcb3e1f15bf55cb8318d9aea7b48833cfe73b9cdfe73c837d4327a29",
+    "worlds/Test/regions/r.-3.-2.region": "9ffba3431e221208bc6fc45e0f4f07f7ebf3547697ea298c73083330b5525c2b",
+    "worlds/Test/regions/r.-2.-2.region": "d0c2d8c5f998ddc5ac15ecb2fd72465d6d0607ec6cbd07fa945696d5573dd919",
+    "worlds/Test/regions/r.3.-14.region": "864afd89bc07149e3a26c628f44202ae9367fe3a1d0d2c4d3cabba0e8d70fdb0",
+    "worlds/Test/regions/r.3.-13.region": "1d307e6b56c42d5ae0fd424356a4fb81153da9b727aa3beee5bb64e316fc9180",
+    "worlds/Test/regions/r.4.-14.region": "0e365458cf42b1376dfadcc7e40c810ef2e999d8d898d54317d4b6027b694df2",
+    "worlds/Test/regions/r.4.-13.region": "bfccd026e697c0be91574b90b2b5e6483f65e29247820417ad6e9ffc7c0158aa",
+    "worlds/Test/players/3daf7669-97e1-469c-9017-354f4ca07906.data": "8424e62ffefa58dce035bca1ffadc4986e9ddfaac767c2e1399351af2a07c16e"
+  }
+}

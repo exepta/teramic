@@ -318,30 +318,40 @@ fn generated_tree_sections_match_global_samples_and_any_generation_order() {
 
 #[test]
 fn tree_boundary_edits_override_regeneration_and_neighbor_padding() {
+    for ecology_revision in 0..=WorldConfig::default().ecology_revision {
+        assert_tree_boundary_edits(ecology_revision);
+    }
+}
+
+fn assert_tree_boundary_edits(ecology_revision: u8) {
     let mut found = None;
     for seed in 0..64 {
-        let terrain = flat(seed, true);
+        let terrain = TerraGenerator::new(WorldConfig {
+            ecology_revision,
+            ..flat(seed, true).config().clone()
+        })
+        .expect("flat world with explicit ecology revision");
         for tree in trees_in_region(&terrain, [-16, 0, 0], 32) {
-            if tree.origin[0] == -5 {
-                let point = [-1, tree.origin[1], tree.origin[2]];
-                if tree.wood_at(point).is_some() {
-                    found = Some((terrain, point));
-                    break;
-                }
+            if let Some(point) = negative_section_wood_crossing(&tree) {
+                found = Some((terrain, point, tree.wood_material));
+                break;
             }
         }
         if found.is_some() {
             break;
         }
     }
-    let (terrain, point) = found.expect("root crosses negative chunk edge");
+    let (terrain, point, wood) = found.unwrap_or_else(|| {
+        panic!("generated wood crosses a negative section edge in ecology {ecology_revision}")
+    });
     let generator = SectionGenerator::new(terrain);
     let (owner, local) = global_to_section(point);
+    let adjacent = [point[0] + 1, point[1], point[2]];
+    assert!(adjacent[0] < 0);
+    assert_eq!(local[0], 15);
     let original = generator.generate(owner).expect("owner");
-    assert!(matches!(
-        MaterialId::from_raw(original.block(local).expect("wood")),
-        Some(MaterialId::Wood | MaterialId::WeatheredWood | MaterialId::SpruceLog)
-    ));
+    assert_eq!(original.block(local).expect("wood"), wood as u16);
+    assert_eq!(generator.block_at(adjacent).unwrap(), wood as u16);
     let mut journal = EditJournal::default();
     journal.record(point, 0).expect("mine root");
     let rebuilt = generator
@@ -355,6 +365,7 @@ fn tree_boundary_edits_override_regeneration_and_neighbor_padding() {
     assert_eq!(rebuilt.data.block(local).expect("edited block"), 0);
     assert_eq!(rebuilt.data.revision(), 1);
     let neighbor = owner.offset([1, 0, 0]).expect("neighbor");
+    assert_eq!(neighbor, global_to_section(adjacent).0);
     assert_eq!(
         journal
             .snapshot(neighbor)
@@ -374,6 +385,30 @@ fn tree_boundary_edits_override_regeneration_and_neighbor_padding() {
             .data,
         rebuilt.data
     );
+}
+
+fn negative_section_wood_crossing(tree: &Tree) -> Option<[i64; 3]> {
+    // Anchors have a four-cell inset from the placement grid. Their short roots
+    // need not cross a section edge; branches can cross at another height. Only
+    // inspect the two touching columns of each actual negative boundary inside
+    // this tree's finite bounds, rather than assuming x=0 or root height.
+    let min_x = tree.origin[0] + i64::from(tree.bounds.min[0]);
+    let max_x = tree.origin[0] + i64::from(tree.bounds.max[0]);
+    for boundary in (((min_x.div_euclid(16) + 1) * 16)..max_x.min(0)).step_by(16) {
+        for y in tree.bounds.min[1]..tree.bounds.max[1] {
+            for z in tree.bounds.min[2]..tree.bounds.max[2] {
+                let p = [
+                    boundary - 1,
+                    tree.origin[1] + i64::from(y),
+                    tree.origin[2] + i64::from(z),
+                ];
+                if tree.wood_at(p).is_some() && tree.wood_at([boundary, p[1], p[2]]).is_some() {
+                    return Some(p);
+                }
+            }
+        }
+    }
+    None
 }
 
 #[test]
@@ -568,6 +603,7 @@ fn new_structure_sampling_matches_section_stamping_at_negative_boundaries() {
 fn mushroom_park_places_real_structures_on_solid_ground_and_keeps_reload_stable() {
     let terrain = TerraGenerator::new(WorldConfig {
         landscape_revision: 4,
+        blood_forest_revision: 0,
         sea_level: 22.0,
         rivers: true,
         biome_definitions: Some(terra_core::BiomeDefinitions::default()),
@@ -815,6 +851,11 @@ fn legacy_spruce_and_cherry_wood_skins_keep_their_real_species_in_felling_and_le
             "legacy {kind:?}: leaf attribution must use actual generator species"
         );
         let plan = crate::tree_felling::Plan::prepare(&chunks, &journal, shape.origin).unwrap();
+        let expected_saplings = shape
+            .leaves
+            .iter()
+            .filter(|cell| crate::saplings::leaf_drop_roll(**cell))
+            .count() as u16;
         let mut queue = crate::tree_felling::Queue::default();
         assert!(queue.enqueue(plan, PlayerUuid::from_u128(1)));
         queue
@@ -828,8 +869,8 @@ fn legacy_spruce_and_cherry_wood_skins_keep_their_real_species_in_felling_and_le
                 .filter(|d| d.stack.item == ItemKind::Prop(expected.sapling()))
                 .map(|d| d.stack.count)
                 .sum::<u16>(),
-            1,
-            "legacy {kind:?}: whole-tree replacement sapling"
+            expected_saplings,
+            "legacy {kind:?}: successful leaf rolls keep the original species"
         );
         assert!(
             !journal

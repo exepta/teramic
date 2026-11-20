@@ -158,6 +158,23 @@ fn commit(
         return Err("Mounted-light support removal exceeds item-drop capacity".into());
     }
     let (owner, local) = global_to_section(request.position);
+    let withdrew_water_source = request.expected_material == MaterialId::FluidWater as u16
+        && request.material == MaterialId::Air as u16;
+    if withdrew_water_source {
+        if journal.fluid_epoch(owner) > u64::MAX - 16 {
+            return Err("Water source withdrawal revision exhausted".into());
+        }
+        for dz in -1..=1 {
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    let section = owner.offset([dx, dy, dz]).map_err(|e| e.to_string())?;
+                    if journal.water_mesh_epoch(section) > u64::MAX - 16 {
+                        return Err("Water source withdrawal mesh revision exhausted".into());
+                    }
+                }
+            }
+        }
+    }
     let inventory_drops = (drop_inventory
         && (matches!(request.expected_material, 29 | 59 | 99 | 156 | 161 | 162)
             || journal.container_at(request.position).is_some()
@@ -257,6 +274,11 @@ fn commit(
     let affected = journal
         .record(request.position, request.material)
         .map_err(|e| e.to_string())?;
+    if withdrew_water_source {
+        journal
+            .set_fluid(request.position, crate::water::FluidCell::default())
+            .map_err(|e| e.to_string())?;
+    }
     if let Some(water) = retained_water.filter(|water| water.amount > 0) {
         journal
             .set_fluid(request.position, water)

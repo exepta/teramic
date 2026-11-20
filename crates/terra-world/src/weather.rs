@@ -1,6 +1,9 @@
 //! Climate-local precipitation and bounded, non-colliding surface accumulation.
 use crate::{TerraGenerator, generation::biomes::BiomeSample};
 use terra_core::{WeatherPattern, WorldWeather};
+pub mod ecology;
+#[cfg(feature = "bevy")]
+pub mod ice;
 
 /// Furniture sheds precipitation; it remains a roof for the floor below it.
 pub fn retains_snow(material: u16) -> bool {
@@ -316,6 +319,8 @@ mod tests {
                     mushroom_park: 0.0,
                     cliffted_desert: 0.0,
                     cherry_forest: 0.0,
+                    spirit_blossom: 0.0,
+                    blood_forest: 0.0,
                 },
             };
             let local = from_surface(&weather, &surface, 8.0, spring);

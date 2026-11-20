@@ -1,4 +1,8 @@
 //! Shared placement layout and authored collision for prediction and authority.
+mod chests;
+#[cfg(test)]
+#[path = "placement/road_tests.rs"]
+mod road_tests;
 use crate::{
     edits::{BlockObjectState, EditJournal},
     streaming::{BlockEditRequest, ChunkStore},
@@ -14,6 +18,9 @@ pub struct Layout {
 }
 pub fn furniture(material: u16) -> bool {
     matches!(material, 28..=29 | 59..=73 | 99..=100 | 131 | 141..=172)
+        || (terra_core::grave_blocks::is_prop(material)
+            || terra_core::blood_blocks::is_prop(material)
+            || terra_core::biome_flora::is_prop(material))
         || terra_core::profession_stations::is_station(material)
         || crate::objects::is_opening(material)
         || terra_core::construction::is_shape(material)
@@ -246,6 +253,29 @@ pub fn layout(
     look: [f32; 2],
     crank_owner: Option<[i64; 3]>,
 ) -> Result<Layout, String> {
+    layout_with_chest(
+        chunks,
+        journal,
+        position,
+        expected,
+        material,
+        look,
+        crank_owner,
+        terra_core::containers::ChestMerge::Auto,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn layout_with_chest(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    position: [i64; 3],
+    expected: u16,
+    material: u16,
+    look: [f32; 2],
+    crank_owner: Option<[i64; 3]>,
+    merge: terra_core::containers::ChestMerge,
+) -> Result<Layout, String> {
     if position.iter().any(|p| p.unsigned_abs() > 990_000) || look.iter().any(|v| !v.is_finite()) {
         return Err("Invalid placement coordinates".into());
     }
@@ -295,6 +325,19 @@ pub fn layout(
         return Ok(result);
     }
     let mut state = BlockObjectState::from_yaw(look[0]);
+    if terra_core::street::is_shape(material) {
+        let yaw = f64::from(look[0]);
+        state.facing = terra_core::street::placement_facing(
+            material,
+            position,
+            [-yaw.sin(), 0.0, -yaw.cos()],
+            |p| chunks.block_at(p),
+        );
+    }
+    if terra_core::roads::is_shape(material) {
+        let yaw = f64::from(look[0]);
+        state.facing = terra_core::roads::placement_facing(material, [-yaw.sin(), 0.0, -yaw.cos()]);
+    }
     if terra_core::train_boiler::is_boiler(material)
         && terra_core::train_boiler::wide_support(position, state.facing, |cell| {
             chunks.block_at(cell)
@@ -411,41 +454,20 @@ pub fn layout(
                 ..state
             }),
         ));
-    } else if material == 29 {
-        let mut neighbors = Vec::new();
-        for direction in [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]] {
-            let peer = offset(position, direction, 1);
-            if chunks.block_at(peer) == Some(29) {
-                let other = journal.object_state(peer).unwrap_or_default();
-                let sign = direction
-                    .into_iter()
-                    .zip(other.right())
-                    .map(|(a, b)| a * b)
-                    .sum::<i64>();
-                if sign != 0 {
-                    if other.peer.is_some() {
-                        return Err("A double chest cannot merge again".into());
-                    }
-                    neighbors.push((peer, sign, other));
-                }
-            }
-        }
-        if neighbors.len() > 1 {
-            return Err("Chest would create a triple merge".into());
-        }
-        if let Some((peer, sign, other)) = neighbors.pop() {
-            state.facing = other.facing;
-            state.peer = Some(peer);
-            state.secondary = sign < 0;
-            result.states.push((
-                peer,
-                Some(BlockObjectState {
-                    peer: Some(position),
-                    secondary: sign > 0,
-                    ..other
-                }),
-            ));
-        }
+    } else if material == 29
+        && let Some((peer, sign, other)) = chests::partner(chunks, journal, position, merge)?
+    {
+        state.facing = other.facing;
+        state.peer = Some(peer);
+        state.secondary = sign < 0;
+        result.states.push((
+            peer,
+            Some(BlockObjectState {
+                peer: Some(position),
+                secondary: sign > 0,
+                ..other
+            }),
+        ));
     }
     if material == 60 {
         state.facing = chimney(position, look, chunks, journal, &mut result.states)?;
@@ -1028,7 +1050,30 @@ pub fn propose(
     ray: ([f64; 3], [f64; 3]),
     look: [f32; 2],
 ) -> Result<Layout, String> {
+    propose_with_chest(
+        chunks,
+        journal,
+        hit,
+        item,
+        ray,
+        look,
+        terra_core::containers::ChestMerge::Auto,
+    )
+}
+
+pub fn propose_with_chest(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    hit: terra_voxel::blocks::BlockHit,
+    item: terra_core::ItemKind,
+    ray: ([f64; 3], [f64; 3]),
+    look: [f32; 2],
+    merge: terra_core::containers::ChestMerge,
+) -> Result<Layout, String> {
     let material = item.block_material().ok_or("Item cannot be placed")?;
+    if terra_core::roads::is_tar(material) {
+        return Err("Tar coatings require a tar bucket and a prepared path".into());
+    }
     if terra_core::rails::is_rail(material) {
         return crate::rails::placement(chunks, journal, hit, material, ray, look);
     }
@@ -1048,7 +1093,17 @@ pub fn propose(
             })
         })
         .flatten();
-    let mut plan = layout(chunks, journal, position, expected, material, look, crank)?;
+    if let terra_core::containers::ChestMerge::Target(peer) = merge
+        && (material != 29
+            || hit.position != peer
+            || hit.normal[1] != 0
+            || hit.adjacent() != position)
+    {
+        return Err("Chest connection must target its actual side".into());
+    }
+    let mut plan = layout_with_chest(
+        chunks, journal, position, expected, material, look, crank, merge,
+    )?;
     if material == terra_core::train_parts::RAIL_BUILDER && hit.normal[1] == 0 {
         // The rear mounting lug touches the clicked face. The scoop points
         // outwards, independent of the angle from which the player approaches.
@@ -1234,7 +1289,30 @@ pub fn resolve(
     look: [f32; 2],
     bounded: bool,
 ) -> Result<Layout, String> {
-    let plan = propose(chunks, journal, hit, item, ray, look)?;
+    resolve_with_chest(
+        chunks,
+        journal,
+        hit,
+        item,
+        ray,
+        look,
+        bounded,
+        terra_core::containers::ChestMerge::Auto,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn resolve_with_chest(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    hit: terra_voxel::blocks::BlockHit,
+    item: terra_core::ItemKind,
+    ray: ([f64; 3], [f64; 3]),
+    look: [f32; 2],
+    bounded: bool,
+    merge: terra_core::containers::ChestMerge,
+) -> Result<Layout, String> {
+    let plan = propose_with_chest(chunks, journal, hit, item, ray, look, merge)?;
     environment(&plan, chunks, journal, bounded)?;
     Ok(plan)
 }
@@ -1244,6 +1322,68 @@ mod tests {
     use super::*;
     use crate::streaming::LoadedSection;
     use terra_voxel::{BlockSection, SectionPos};
+
+    #[test]
+    fn road_forms_place_rotate_pick_and_reload_their_own_collision_and_identity() {
+        use terra_core::roads;
+        for material in roads::MATERIALS {
+            assert_eq!(
+                crate::props::placement::ground_support(material),
+                material == roads::ASPHALT
+            );
+            assert_eq!(
+                terra_core::beds::supports_bed_floor(material),
+                material == roads::ASPHALT
+            );
+            for facing in 0..4 {
+                let (mut chunks, mut journal) = fixture();
+                let position = [7, 2, 7];
+                let yaw = facing as f32 * std::f32::consts::FRAC_PI_2;
+                let plan =
+                    layout(&chunks, &journal, position, 0, material, [yaw, 0.], None).unwrap();
+                assert_eq!(plan.edits.len(), 1);
+                environment(&plan, &chunks, &journal, false).unwrap();
+                let mut state = BlockObjectState::default();
+                if material != roads::ASPHALT {
+                    assert_eq!(plan.states.len(), 1);
+                    state = plan.states[0].1.unwrap();
+                    assert!(state.valid_for(position, material));
+                }
+                chunks
+                    .loaded
+                    .get_mut(&SectionPos::default())
+                    .unwrap()
+                    .data
+                    .set_block([7, 2, 7], material)
+                    .unwrap();
+                journal.record(position, material).unwrap();
+                if material != roads::ASPHALT {
+                    journal.set_object_state(position, Some(state)).unwrap();
+                }
+                assert_eq!(
+                    picked_item(&chunks, &journal, position),
+                    Some(terra_core::ItemKind::Block(material))
+                );
+                let encoded =
+                    serde_json::to_string(&journal.section_delta(SectionPos::default())).unwrap();
+                let mut restored = EditJournal::default();
+                restored
+                    .import_delta(serde_json::from_str(&encoded).unwrap())
+                    .unwrap();
+                assert_eq!(restored.block(position), Some(material));
+                if material != roads::ASPHALT {
+                    assert_eq!(restored.object_state(position), Some(state));
+                    let actual =
+                        terra_core::construction::placed_boxes(material, state.facing, [None; 6]);
+                    let expected: Vec<_> = roads::boxes(material)
+                        .iter()
+                        .map(|b| b.rotated_y(state.facing))
+                        .collect();
+                    assert_eq!(actual, expected);
+                }
+            }
+        }
+    }
 
     fn place_kinetic(
         chunks: &mut ChunkStore,
@@ -1950,6 +2090,55 @@ mod tests {
             }
             assert!(layout(&chunks, &journal, [7, 4, 7], 0, material, [0.; 2], None).is_err());
         }
+    }
+    #[test]
+    fn regional_flora_placement_preserves_orientation_through_section_deltas() {
+        let (chunks, journal) = fixture();
+        let p = [7, 2, 7];
+        for material in terra_core::biome_flora::FIRST_PROP..=terra_core::biome_flora::LAST_PROP {
+            assert!(furniture(material));
+            for facing in 0..4 {
+                let yaw = facing as f32 * std::f32::consts::FRAC_PI_2;
+                let plan = layout(&chunks, &journal, p, 0, material, [yaw, 0.], None).unwrap();
+                assert_eq!(plan.edits.len(), 1);
+                assert_eq!(plan.states.len(), 1);
+                let state = plan.states[0].1.unwrap();
+                assert_eq!(state.facing, facing);
+                assert!(state.valid_for(p, material));
+                assert!(terra_core::block_shapes::builtin_boxes(material).is_empty());
+                let mut saved = EditJournal::default();
+                saved.record(p, material).unwrap();
+                saved.set_object_state(p, Some(state)).unwrap();
+                let mut replica = EditJournal::default();
+                replica
+                    .import_delta(saved.section_delta(SectionPos::default()))
+                    .unwrap();
+                assert_eq!(replica.object_state(p), Some(state));
+                replica.record(p, 0).unwrap();
+                assert!(replica.object_state(p).is_none());
+            }
+            assert!(
+                !BlockObjectState {
+                    facing: 4,
+                    ..Default::default()
+                }
+                .valid_for(p, material)
+            );
+        }
+        let cactus = layout(
+            &chunks,
+            &journal,
+            p,
+            0,
+            terra_core::biome_flora::CACTUS,
+            [1., 0.],
+            None,
+        )
+        .unwrap();
+        assert!(
+            cactus.states.is_empty(),
+            "Cactus remains ordinary voxel terrain"
+        );
     }
     #[test]
     fn construction_and_train_parts_attach_to_every_face_without_a_floor() {

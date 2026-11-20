@@ -17,6 +17,7 @@ impl Royal<'_, '_> {
     ) {
         let x = cx - w / 2;
         let z = cz - d / 2;
+        let y = self.local_floor(x, z, w, d, y);
         let floors = levels.max(1);
         let roof_y = y + floors as i64 * (h + 1) - 1;
         self.foundation(x, z, w, d, y);
@@ -165,6 +166,7 @@ impl Royal<'_, '_> {
         let (w, d, h) = (13, 23, 10);
         let left = x - w / 2;
         let north = z - d / 2;
+        let y = self.local_floor(left, north, w, d, y);
         self.foundation(left, north, w, d, y);
         self.fill([left, y - 1, north], [left + w, y - 1, north + d], 43);
         self.fill([left, y, north], [left + w, y + h + 10, north + d], 0);
@@ -333,6 +335,15 @@ impl Royal<'_, '_> {
         );
     }
     pub(super) fn tent(&mut self, x: i64, z: i64, y: i64, w: i64, d: i64) {
+        let y = self.local_floor(x - w / 2, z - d / 2, w, d, y);
+        if self.terrain_adapted() {
+            self.foundation(x - w / 2, z - d / 2, w, d, y);
+            self.fill(
+                [x - w / 2, y, z - d / 2],
+                [x + w / 2, y + w / 2 + 1, z + d / 2],
+                0,
+            );
+        }
         for dx in -w / 2..=w / 2 {
             let h = w / 2 - dx.abs();
             for dz in -d / 2..=d / 2 {
@@ -382,6 +393,11 @@ impl Royal<'_, '_> {
         );
     }
     pub(super) fn stable(&mut self, x: i64, z: i64, y: i64) {
+        let y = self.local_floor(x - 5, z - 5, 10, 10, y);
+        if self.terrain_adapted() {
+            self.foundation(x - 5, z - 5, 10, 10, y);
+            self.fill([x - 5, y, z - 5], [x + 5, y + 8, z + 5], 0);
+        }
         for dx in [-5, 5] {
             for dz in [-5, 5] {
                 self.fill([x + dx, y, z + dz], [x + dx, y + 4, z + dz], 36);

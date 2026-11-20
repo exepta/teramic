@@ -1,0 +1,8 @@
+{
+  "parent": "fiverr_grass_faces.glb",
+  "parent_sha256": "6c7c16a62a8388e9028b5beceffcf66bab2a3ee4cb341577ade0599b17693044",
+  "geometry": "unchanged accessors, nodes, meshes, UVs, indices and original binary prefix",
+  "albedo_resolution": 512,
+  "normal": "paired shallow height gradients; glTF tangent space",
+  "orm": "unchanged matte source ORM and material roughness"
+}

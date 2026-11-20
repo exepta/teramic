@@ -125,7 +125,7 @@ fn glasses(b: &mut Sculpt) {
     b.block([0.0, 0.02, -0.285], [0.10, 0.025, 0.025], metal);
 }
 
-pub(super) fn build(role: u8) -> Sculpt {
+pub(super) fn build(role: u8, female: bool) -> Sculpt {
     let mut b = Sculpt::detailed_head();
     let hair = hair_color(role);
     // Rounded cheeks and a tapered chin keep the face human and softly carved.
@@ -180,7 +180,7 @@ pub(super) fn build(role: u8) -> Sculpt {
         }
         b.rotated(
             [side * 0.11, 0.085, -0.205],
-            [0.10, if female(role) { 0.025 } else { 0.04 }, 0.035],
+            [0.10, if female { 0.025 } else { 0.04 }, 0.035],
             tint(hair, 0.76),
             Quat::from_rotation_z(if smiling { side * 0.16 } else { -side * 0.07 }),
         );
@@ -240,13 +240,13 @@ pub(super) fn build(role: u8) -> Sculpt {
             (x + 4) as u32,
         );
     }
-    if matches!(role, 0 | 4 | 5 | 8 | 9 | 13 | 14 | 15 | 16 | 18 | 19) {
+    if !female && matches!(role, 0 | 4 | 5 | 8 | 9 | 13 | 14 | 15 | 16 | 18 | 19) {
         beard(&mut b, role, hair);
     }
-    if matches!(role, 3 | 9 | 17) {
+    if female && matches!(role, 0 | 3 | 7 | 9 | 15 | 17) {
         bun(&mut b, [-0.045, 0.31, 0.12], hair);
     }
-    if matches!(role, 1 | 20 | 21) {
+    if female && matches!(role, 1 | 20 | 21) {
         for side in [-1.0, 1.0] {
             braid(&mut b, side, hair, if role == 21 { 7 } else { 5 });
         }
@@ -259,7 +259,7 @@ pub(super) fn build(role: u8) -> Sculpt {
         2 => helmet(&mut b),
         5 => mitre(&mut b),
         8 => goggles(&mut b),
-        13 => engineer_cap(&mut b),
+        13 | 23 => engineer_cap(&mut b),
         14 => miner_helmet(&mut b),
         16 => headband(&mut b),
         18 => traveller_hat(&mut b),

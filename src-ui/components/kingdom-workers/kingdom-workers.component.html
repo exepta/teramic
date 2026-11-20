@@ -1,0 +1,11 @@
+@if (kingdomView.sections.own_realm) {
+<div class="keep-section"><div class="keep-section-heading"><div><h2>{{ i18n.text_arbeitskr_fte_5214526c5b34 }}</h2><p class="keep-muted">{{ i18n.text_auftr_ge_beruf_und_inventar_einer_ar_db5cdf9b68be }}</p></div><icon name="settings-wrench" size="32" /></div>
+  <div class="keep-workers-layout">
+    <div class="keep-workers-editor"><npc-work-panel></npc-work-panel></div>
+    <div class="keep-workers-overview">
+      <div class="keep-summary-grid">@for (stat of localizedUi.kingdomView.sections.worker_stats; track stat.key) { <div class="keep-card keep-worker-metric"><icon name="users-round" size="32" [src]="stat.icon" /><label>{{ stat.label }}</label><h2>{{ stat.value }}</h2></div> }</div>
+      <div class="keep-card keep-workers-professions"><h3>{{ i18n.text_nach_beruf_69bac3b9ccb9 }}</h3><div class="keep-professions">@for (stat of localizedUi.kingdomView.sections.professions; track stat.key) { <div class="keep-profession"><icon name="settings-wrench" size="32" [src]="stat.icon" /><p>{{ stat.label }}</p><h3>{{ stat.value }}</h3></div> }</div></div>
+    </div>
+  </div>
+</div>
+} @else { <div class="keep-card"><h2>{{ i18n.text_arbeitskr_fte_5214526c5b34 }}</h2><p>{{ i18n.text_arbeitskr_fte_k_nnen_im_eigenen_reic_f5e78460e73d }}</p></div> }

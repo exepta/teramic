@@ -14,7 +14,11 @@
   "mining_level": 1,
   "textures": {
     "iron": "textures/machinery-iron-hd.png",
-    "rivet": "textures/machinery-iron-hd.png"
+    "rivet": "textures/machinery-iron-hd.png",
+    "stone_0": "textures/block_palette/stone.png",
+    "stone_1": "textures/block_palette/stone.png",
+    "stone_2": "textures/block_palette/stone.png",
+    "stone_3": "textures/block_palette/stone.png"
   },
   "collision_boxes": [
     {
@@ -32,48 +36,48 @@
   ],
   "materials": {
     "stone_0": {
-      "texture_pattern": "stone",
       "base_color": [
         0.93,
         0.93,
         0.93,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "stone_1": {
-      "texture_pattern": "stone",
       "base_color": [
         0.97,
         0.97,
         0.97,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "stone_2": {
-      "texture_pattern": "stone",
       "base_color": [
-        1,
-        1,
-        1,
+        1.0,
+        1.0,
+        1.0,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "stone_3": {
-      "texture_pattern": "stone",
       "base_color": [
         0.985,
         0.985,
         0.985,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     }
   }
 }

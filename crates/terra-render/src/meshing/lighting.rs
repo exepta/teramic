@@ -82,7 +82,8 @@ pub(super) fn apply(batches: &mut [MeshBatch], bits: &[u64], templates: &Templat
     for batch in batches {
         if batch.shadow_only
             || templates.blocks.iter().any(|(&id, block)| {
-                matches!(id, 7..=9 | 132 | 133 | 195 | 14 | 15 | 27..=29 | 40)
+                (terra_voxel::MaterialId::FOLIAGE.contains(&id)
+                    || matches!(id, 14 | 15 | 27..=29 | 40))
                     && block.face_materials.contains(&batch.material)
             })
         {

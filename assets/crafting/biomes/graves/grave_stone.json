@@ -1,0 +1,28 @@
+{
+  "id": "teramic::grave_stone",
+  "name": "Grave Stone",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 337
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 1
+      }
+    ]
+  }
+}

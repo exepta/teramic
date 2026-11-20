@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": 313,
+  "name": "Spirit Blossom Log",
+  "description": "Twisted dark bark with rose-colored end grain.",
+  "creative_category": "nature",
+  "hardness": 1.4,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0.025,
+  "materials": {
+    "spirit_blossom_log": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/ghost_bark_normal.png"
+    },
+    "spirit_blossom_log_end": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/ghost_end_normal.png"
+    }
+  },
+  "textures": {
+    "spirit_blossom_log": "textures/block_palette/ghost_bark.png",
+    "spirit_blossom_log_end": "textures/block_palette/ghost_end.png"
+  },
+  "face_materials": [
+    "spirit_blossom_log",
+    "spirit_blossom_log",
+    "spirit_blossom_log_end",
+    "spirit_blossom_log_end",
+    "spirit_blossom_log",
+    "spirit_blossom_log"
+  ]
+}

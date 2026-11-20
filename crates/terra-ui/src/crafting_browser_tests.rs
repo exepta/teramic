@@ -28,6 +28,39 @@ fn command(app: &mut App, action: CraftingAction) {
 }
 
 #[test]
+fn road_tmi_exposes_real_machine_binder_aggregate_and_all_construction_forms() {
+    let book = RecipeBook::builtins();
+    for (item, kind) in [
+        (ItemKind::Bitumen, RecipeKind::Smelting),
+        (ItemKind::RoadAggregate, RecipeKind::Crushing),
+    ] {
+        let choices = alternatives(book, Some(item));
+        assert!(choices.iter().any(|choice| choice.selection().1 == kind));
+    }
+    for material in terra_core::roads::MATERIALS {
+        let choices = alternatives(book, Some(ItemKind::Block(material)));
+        assert!(!choices.is_empty());
+        assert!(
+            choices
+                .iter()
+                .all(|choice| choice.selection().1 == RecipeKind::Craft)
+        );
+    }
+}
+
+#[test]
+fn tar_bucket_tmi_exposes_the_real_workbench_recipe() {
+    let choices = alternatives(
+        RecipeBook::builtins(),
+        Some(ItemKind::Tool(terra_core::ToolKind::TarBucket)),
+    );
+    assert!(choices.iter().any(|choice| {
+        let (key, kind) = choice.selection();
+        key == terra_core::crafting::recipe_key("teramic::tar_bucket") && kind == RecipeKind::Craft
+    }));
+}
+
+#[test]
 fn recipe_search_accepts_localized_output_metadata_while_preserving_keys_and_input() {
     let mut app = browser_app();
     let axe = ItemKind::Tool(terra_core::ToolKind::IronAxe);

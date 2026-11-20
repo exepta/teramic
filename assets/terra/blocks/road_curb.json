@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": 436,
+  "name": "Stone Road Curb",
+  "description": "A quarter-height stone edging strip. Rotate it to follow the road.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0,
+  "hardness": 1.4,
+  "resistance": 5,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "materials": {
+    "Road aggregate": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 1,
+      "reflectance": 0.06
+    }
+  },
+  "textures": {
+    "Road aggregate": "textures/road_curb.png"
+  },
+  "face_materials": [
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate"
+  ],
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.25,
+        0.1875
+      ]
+    }
+  ]
+}

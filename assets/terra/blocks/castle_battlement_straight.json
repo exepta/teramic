@@ -12,7 +12,36 @@
   "resistance": 12,
   "required_tool": "pickaxe",
   "mining_level": 1,
-  "textures": {},
+  "textures": {
+    "battlement_00_stone_0": "textures/block_palette/stone.png",
+    "battlement_00_stone_1": "textures/block_palette/stone.png",
+    "battlement_00_stone_2": "textures/block_palette/stone.png",
+    "battlement_00_stone_3": "textures/block_palette/stone.png",
+    "battlement_01_stone_0": "textures/block_palette/stone.png",
+    "battlement_01_stone_1": "textures/block_palette/stone.png",
+    "battlement_01_stone_2": "textures/block_palette/stone.png",
+    "battlement_01_stone_3": "textures/block_palette/stone.png",
+    "battlement_02_stone_0": "textures/block_palette/stone.png",
+    "battlement_02_stone_1": "textures/block_palette/stone.png",
+    "battlement_02_stone_2": "textures/block_palette/stone.png",
+    "battlement_02_stone_3": "textures/block_palette/stone.png",
+    "battlement_03_stone_0": "textures/block_palette/stone.png",
+    "battlement_03_stone_1": "textures/block_palette/stone.png",
+    "battlement_03_stone_2": "textures/block_palette/stone.png",
+    "battlement_03_stone_3": "textures/block_palette/stone.png",
+    "battlement_04_stone_0": "textures/block_palette/stone.png",
+    "battlement_04_stone_1": "textures/block_palette/stone.png",
+    "battlement_04_stone_2": "textures/block_palette/stone.png",
+    "battlement_04_stone_3": "textures/block_palette/stone.png",
+    "battlement_05_stone_0": "textures/block_palette/stone.png",
+    "battlement_05_stone_1": "textures/block_palette/stone.png",
+    "battlement_05_stone_2": "textures/block_palette/stone.png",
+    "battlement_05_stone_3": "textures/block_palette/stone.png",
+    "battlement_06_stone_0": "textures/block_palette/stone.png",
+    "battlement_06_stone_1": "textures/block_palette/stone.png",
+    "battlement_06_stone_2": "textures/block_palette/stone.png",
+    "battlement_06_stone_3": "textures/block_palette/stone.png"
+  },
   "collision_boxes": [
     {
       "minimum": [
@@ -53,312 +82,312 @@
   ],
   "materials": {
     "battlement_00_stone_0": {
-      "texture_pattern": "stone",
       "base_color": [
         0.93,
         0.93,
         0.93,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_00_stone_1": {
-      "texture_pattern": "stone",
       "base_color": [
         0.97,
         0.97,
         0.97,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_00_stone_2": {
-      "texture_pattern": "stone",
       "base_color": [
-        1,
-        1,
-        1,
+        1.0,
+        1.0,
+        1.0,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_00_stone_3": {
-      "texture_pattern": "stone",
       "base_color": [
         0.985,
         0.985,
         0.985,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_01_stone_0": {
-      "texture_pattern": "stone",
       "base_color": [
         0.93,
         0.93,
         0.93,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_01_stone_1": {
-      "texture_pattern": "stone",
       "base_color": [
         0.97,
         0.97,
         0.97,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_01_stone_2": {
-      "texture_pattern": "stone",
       "base_color": [
-        1,
-        1,
-        1,
+        1.0,
+        1.0,
+        1.0,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_01_stone_3": {
-      "texture_pattern": "stone",
       "base_color": [
         0.985,
         0.985,
         0.985,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_02_stone_0": {
-      "texture_pattern": "stone",
       "base_color": [
         0.93,
         0.93,
         0.93,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_02_stone_1": {
-      "texture_pattern": "stone",
       "base_color": [
         0.97,
         0.97,
         0.97,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_02_stone_2": {
-      "texture_pattern": "stone",
       "base_color": [
-        1,
-        1,
-        1,
+        1.0,
+        1.0,
+        1.0,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_02_stone_3": {
-      "texture_pattern": "stone",
       "base_color": [
         0.985,
         0.985,
         0.985,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_03_stone_0": {
-      "texture_pattern": "stone",
       "base_color": [
         0.93,
         0.93,
         0.93,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_03_stone_1": {
-      "texture_pattern": "stone",
       "base_color": [
         0.97,
         0.97,
         0.97,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_03_stone_2": {
-      "texture_pattern": "stone",
       "base_color": [
-        1,
-        1,
-        1,
+        1.0,
+        1.0,
+        1.0,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_03_stone_3": {
-      "texture_pattern": "stone",
       "base_color": [
         0.985,
         0.985,
         0.985,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_04_stone_0": {
-      "texture_pattern": "stone",
       "base_color": [
         0.93,
         0.93,
         0.93,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_04_stone_1": {
-      "texture_pattern": "stone",
       "base_color": [
         0.97,
         0.97,
         0.97,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_04_stone_2": {
-      "texture_pattern": "stone",
       "base_color": [
-        1,
-        1,
-        1,
+        1.0,
+        1.0,
+        1.0,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_04_stone_3": {
-      "texture_pattern": "stone",
       "base_color": [
         0.985,
         0.985,
         0.985,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_05_stone_0": {
-      "texture_pattern": "stone",
       "base_color": [
         0.93,
         0.93,
         0.93,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_05_stone_1": {
-      "texture_pattern": "stone",
       "base_color": [
         0.97,
         0.97,
         0.97,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_05_stone_2": {
-      "texture_pattern": "stone",
       "base_color": [
-        1,
-        1,
-        1,
+        1.0,
+        1.0,
+        1.0,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_05_stone_3": {
-      "texture_pattern": "stone",
       "base_color": [
         0.985,
         0.985,
         0.985,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_06_stone_0": {
-      "texture_pattern": "stone",
       "base_color": [
         0.93,
         0.93,
         0.93,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_06_stone_1": {
-      "texture_pattern": "stone",
       "base_color": [
         0.97,
         0.97,
         0.97,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_06_stone_2": {
-      "texture_pattern": "stone",
       "base_color": [
-        1,
-        1,
-        1,
+        1.0,
+        1.0,
+        1.0,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "battlement_06_stone_3": {
-      "texture_pattern": "stone",
       "base_color": [
         0.985,
         0.985,
         0.985,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     }
   }
 }

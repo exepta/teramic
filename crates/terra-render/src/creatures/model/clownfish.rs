@@ -1,5 +1,5 @@
 use super::{Part, shape};
-use crate::players::model::Builder;
+use crate::creatures::model::voxel::Builder;
 use bevy::prelude::*;
 
 const ORANGE: [f32; 3] = [0.95, 0.40, 0.055];

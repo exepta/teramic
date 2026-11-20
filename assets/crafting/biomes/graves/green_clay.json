@@ -1,0 +1,28 @@
+{
+  "id": "teramic::green_clay",
+  "name": "Green Clay",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 326
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "dye": "green"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

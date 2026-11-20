@@ -1,4 +1,7 @@
 //! Explicit model/animation inspection, separate from authoritative network tests.
+mod forest;
+mod sandworm;
+mod spirit;
 use bevy::{
     prelude::*,
     render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk},
@@ -43,6 +46,23 @@ fn setup(
     mut creatures: ResMut<ReplicatedCreatures>,
     mut journal: ResMut<terra_world::edits::EditJournal>,
 ) {
+    if std::env::var_os("TERRA_EYE_INSPECT").is_some()
+        || std::env::var_os("TERRA_SPIDER_MODEL_INSPECT").is_some()
+    {
+        return;
+    }
+    if std::env::var_os("TERRA_SANDWORM_INSPECT").is_some() {
+        sandworm::setup(&mut creatures, &mut journal);
+        return;
+    }
+    if std::env::var_os("TERRA_FOREST_INSPECT").is_some() {
+        forest::setup(&mut creatures);
+        return;
+    }
+    if std::env::var_os("TERRA_SPIRIT_INSPECT").is_some() {
+        spirit::setup(&mut creatures);
+        return;
+    }
     if std::env::var_os("TERRA_SMOKE_VILLAGERS").is_some() {
         setup_villagers(&mut creatures, &mut journal);
         return;
@@ -91,7 +111,15 @@ fn setup(
             if aquatic {
                 kind.is_aquatic() && *kind != CreatureKind::Fish
             } else {
-                (!kind.is_aquatic() || *kind == CreatureKind::Fish) && *kind != CreatureKind::Horse
+                matches!(
+                    kind,
+                    CreatureKind::Sheep
+                        | CreatureKind::Cow
+                        | CreatureKind::Pig
+                        | CreatureKind::Fish
+                        | CreatureKind::Bee
+                        | CreatureKind::Bear
+                )
             }
         })
         .enumerate()
@@ -166,6 +194,23 @@ fn setup(
     }
 }
 fn run(world: &mut World) {
+    if std::env::var_os("TERRA_EYE_INSPECT").is_some()
+        || std::env::var_os("TERRA_SPIDER_MODEL_INSPECT").is_some()
+    {
+        return;
+    }
+    if std::env::var_os("TERRA_SANDWORM_INSPECT").is_some() {
+        sandworm::run(world);
+        return;
+    }
+    if std::env::var_os("TERRA_FOREST_INSPECT").is_some() {
+        forest::run(world);
+        return;
+    }
+    if std::env::var_os("TERRA_SPIRIT_INSPECT").is_some() {
+        spirit::run(world);
+        return;
+    }
     if std::env::var_os("TERRA_SMOKE_VILLAGERS").is_some() {
         villagers_run(world);
         return;
@@ -398,23 +443,53 @@ fn run(world: &mut World) {
         );
 }
 
+// Representative civilian professions, each inspected with both immutable identity sexes.
+const VILLAGER_GALLERY_ROLES: [u8; 10] = [
+    villagers::LUMBERJACK,
+    villagers::MINER,
+    1, // Farmer.
+    villagers::CRAFTSMAN,
+    villagers::ENGINEER,
+    villagers::BUTCHER,
+    villagers::SELLER,
+    5, // Bishop.
+    6, // Archer artisan; carries a stick outside work poses.
+    villagers::UNEMPLOYED,
+];
+const VILLAGER_GALLERY_COUNT: usize = VILLAGER_GALLERY_ROLES.len() * 2;
+
+fn villager_gallery_position(slot: usize, sleeping: bool) -> [f64; 3] {
+    [
+        3.5 + (slot % 10) as f64 * 2.0,
+        if sleeping { 32.79 } else { 32.0 },
+        (if sleeping { 14.1 } else { 23.5 }) + (slot / 10) as f64 * 4.0,
+    ]
+}
+
 fn setup_villagers(
     creatures: &mut ReplicatedCreatures,
     journal: &mut terra_world::edits::EditJournal,
 ) {
     use terra_world::edits::BlockObjectState;
-    for role in 0..villagers::ROLE_COUNT {
-        let home = [0, 0];
-        let id = villagers::id(home, u16::from(role)).unwrap();
+    for (slot, (role, sex)) in VILLAGER_GALLERY_ROLES
+        .into_iter()
+        .flat_map(|role| [CreatureSex::Male, CreatureSex::Female].map(|sex| (role, sex)))
+        .enumerate()
+    {
+        // Home is only the fixture slot here; select a real stable identity for each sex.
+        let home = [slot as i64, 0];
+        let Some(id) = (0..villagers::MAX_RESIDENTS)
+            .filter_map(|resident| villagers::id(home, resident))
+            .find(|id| CreatureSex::from_spawn_id(*id) == sex)
+        else {
+            error!(role, ?sex, "No identity for villager inspection fixture");
+            continue;
+        };
         let animal = Creature {
             id,
             kind: CreatureKind::Villager,
             home,
-            position: [
-                4.5 + f64::from(role % 5) * 2.0,
-                32.0,
-                23.5 + f64::from(role / 5) * 3.0,
-            ],
+            position: villager_gallery_position(slot, false),
             velocity: [0.0; 3],
             yaw: std::f32::consts::PI,
             health: CreatureKind::Villager.health(),
@@ -434,11 +509,8 @@ fn setup_villagers(
                 playback: Default::default(),
             },
         );
-        let foot = [
-            4 + i64::from(role % 5) * 2,
-            32,
-            14 + i64::from(role / 5) * 3,
-        ];
+        let sleeping_position = villager_gallery_position(slot, true);
+        let foot = sleeping_position.map(|coordinate| coordinate.floor() as i64);
         let head = [foot[0], foot[1], foot[2] + 1];
         for (position, peer, secondary) in [(foot, head, false), (head, foot, true)] {
             journal.record(position, 71).unwrap();
@@ -478,7 +550,7 @@ fn villagers_run(world: &mut World) {
             return;
         }
         info!(
-            "Villager gallery passed: ten role models, shared player-held tools on nine right hands, idle, closeup, walking, bed-aligned sleep without held tools and action poses; rendering fixture, not an authoritative AI test"
+            "Villager gallery passed: ten representative professions with male and female models (20 residents), two visible everyday tools, eight action tools, idle, closeup, walking, bed-aligned sleep without held tools and action poses; rendering fixture, not an authoritative AI test"
         );
         world.write_message(AppExit::Success);
         return;
@@ -488,7 +560,7 @@ fn villagers_run(world: &mut World) {
         .creatures
         .values_mut()
     {
-        let role = track.current.variant;
+        let slot = track.current.home[0] as usize;
         track.current.behavior = match stage {
             2 => CreatureBehavior::Wander,
             3 => CreatureBehavior::Sleep,
@@ -500,24 +572,10 @@ fn villagers_run(world: &mut World) {
         } else {
             [0.0; 3]
         };
-        track.current.position = if stage == 3 {
-            [
-                4.5 + f64::from(role % 5) * 2.0,
-                32.79,
-                14.1 + f64::from(role / 5) * 3.0,
-            ]
-        } else {
-            [
-                4.5 + f64::from(role % 5) * 2.0,
-                32.0,
-                23.5 + f64::from(role / 5) * 3.0
-                    + if stage == 2 {
-                        stride_time.sin() * 0.65
-                    } else {
-                        0.0
-                    },
-            ]
-        };
+        track.current.position = villager_gallery_position(slot, stage == 3);
+        if stage == 2 {
+            track.current.position[2] += stride_time.sin() * 0.65;
+        }
         track.current.yaw = if stage == 3 {
             0.0
         } else {
@@ -530,11 +588,12 @@ fn villagers_run(world: &mut World) {
         track.previous = track.current.clone();
     }
     let eye = match stage {
+        // Close-up of the male/female lumberjacks and miners, including their working tools.
         1 | 4 => {
-            Transform::from_xyz(10.2, 34.0, 29.1).looking_at(Vec3::new(8.5, 33.0, 26.5), Vec3::Y)
+            Transform::from_xyz(6.5, 35.3, 31.5).looking_at(Vec3::new(6.5, 33.0, 23.5), Vec3::Y)
         }
-        3 => Transform::from_xyz(8.5, 36.9, 24.4).looking_at(Vec3::new(8.5, 32.7, 16.6), Vec3::Y),
-        _ => Transform::from_xyz(8.5, 36.2, 34.8).looking_at(Vec3::new(8.5, 33.0, 24.8), Vec3::Y),
+        3 => Transform::from_xyz(12.5, 43.0, 34.5).looking_at(Vec3::new(12.5, 32.7, 16.1), Vec3::Y),
+        _ => Transform::from_xyz(12.5, 40.5, 46.0).looking_at(Vec3::new(12.5, 33.0, 25.5), Vec3::Y),
     };
     for mut body in world
         .query_filtered::<&mut Transform, With<terra_player::PlayerBody>>()
@@ -548,7 +607,7 @@ fn villagers_run(world: &mut World) {
     {
         *camera = eye;
     }
-    world.resource_mut::<terra_world::streaming::ChunkFocus>().0 = [8.5, 33.0, 21.0];
+    world.resource_mut::<terra_world::streaming::ChunkFocus>().0 = [12.5, 33.0, 21.0];
     let ready = world.resource::<terra_render::RenderStatus>().ready
         && world
             .resource::<terra_world::streaming::WorldGeneration>()
@@ -563,11 +622,16 @@ fn villagers_run(world: &mut World) {
         .iter(world)
         .map(|(held, parent)| (held.arm, parent.parent()))
         .collect();
-    let expected_held = if stage == 3 {
-        0
-    } else {
-        usize::from(villagers::ROLE_COUNT - 1)
-    };
+    // Work-only tools are stowed in idle/walking poses; sleep hides every hand item.
+    let expected_held = VILLAGER_GALLERY_ROLES
+        .into_iter()
+        .filter(|role| match stage {
+            3 => false,
+            4 => matches!(*role, 1..=4 | 6 | 7 | 9 | 14),
+            _ => matches!(*role, 2..=4 | 6 | 7),
+        })
+        .count()
+        * 2;
     let held_ready = held.len() == expected_held
         && held.iter().all(|(arm, parent)| arm == parent)
         && held
@@ -578,7 +642,7 @@ fn villagers_run(world: &mut World) {
             == expected_held;
     let state = world.resource::<Inspection>();
     if !ready
-        || count != usize::from(villagers::ROLE_COUNT)
+        || count != VILLAGER_GALLERY_COUNT
         || !held_ready
         || state.start.elapsed() < Duration::from_secs(8)
         || state.requested != state.captured
@@ -621,7 +685,7 @@ fn horse_run(world: &mut World) {
     let stage = world.resource::<Inspection>().captured;
     if stage >= 4 {
         info!(
-            "Horse inspection passed: sixteen coats, idle, walking and sleeping poses; shared real creature meshes"
+            "Horse inspection passed: sixteen coats, front overview, face, side walking and side sleeping poses; shared real creature meshes"
         );
         world.write_message(AppExit::Success);
         return;
@@ -632,8 +696,16 @@ fn horse_run(world: &mut World) {
         return;
     }
     let eye = match stage {
-        0 => Transform::from_xyz(24.0, 45.0, 43.0).looking_at(Vec3::new(9.7, 32.8, 19.7), Vec3::Y),
-        _ => Transform::from_xyz(14.4, 34.5, 26.4).looking_at(Vec3::new(11.6, 33.0, 21.6), Vec3::Y),
+        0 => Transform::from_xyz(24.0, 44.0, 1.0).looking_at(Vec3::new(9.7, 32.8, 19.7), Vec3::Y),
+        1 => {
+            Transform::from_xyz(10.0, 33.65, 10.5).looking_at(Vec3::new(11.6, 34.1, 14.0), Vec3::Y)
+        }
+        2 => {
+            Transform::from_xyz(15.1, 33.55, 12.4).looking_at(Vec3::new(11.6, 34.1, 14.0), Vec3::Y)
+        }
+        _ => {
+            Transform::from_xyz(15.1, 33.55, 12.4).looking_at(Vec3::new(11.6, 33.65, 14.0), Vec3::Y)
+        }
     };
     for mut body in world
         .query_filtered::<&mut Transform, With<terra_player::PlayerBody>>()

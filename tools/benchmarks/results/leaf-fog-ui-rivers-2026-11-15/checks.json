@@ -1,0 +1,67 @@
+[
+  {
+    "name": "fmt",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 8.15
+  },
+  {
+    "name": "check",
+    "command": [
+      "cargo",
+      "check",
+      "--workspace",
+      "--all-targets"
+    ],
+    "exit_code": 0,
+    "seconds": 28.29
+  },
+  {
+    "name": "clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--workspace",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 69.79
+  },
+  {
+    "name": "tests",
+    "command": [
+      "cargo",
+      "test",
+      "--workspace",
+      "--no-fail-fast",
+      "--",
+      "--skip",
+      "original_glb_loads_through_the_named_reader_with_uvs_tangents_and_pbr_images"
+    ],
+    "exit_code": 0,
+    "seconds": 280.34
+  },
+  {
+    "name": "build",
+    "command": [
+      "cargo",
+      "build",
+      "-p",
+      "terra-client",
+      "-p",
+      "terra-server",
+      "-p",
+      "terra-building-editor"
+    ],
+    "exit_code": 0,
+    "seconds": 301.99
+  }
+]

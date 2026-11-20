@@ -1,0 +1,142 @@
+[
+  {
+    "source": "Baumodus",
+    "de": "Baumodus",
+    "en": "Construction mode"
+  },
+  {
+    "source": "Bauvorlagen",
+    "de": "Bauvorlagen",
+    "en": "Building templates"
+  },
+  {
+    "source": "Im Stadtlager / benötigt. Creative baut ohne Materialverbrauch.",
+    "de": "Im Stadtlager / benötigt. Creative baut ohne Materialverbrauch.",
+    "en": "In town storage / required. Creative construction consumes no materials."
+  },
+  {
+    "source": "WASD: Kamera · Mausrad: Zoom · R: Drehen · Linksklick: Bauen oder Bewohner öffnen · Rechtsklick: Platzierung abbrechen",
+    "de": "WASD: Kamera · Mausrad: Zoom · R: Drehen · Linksklick: Bauen oder Bewohner öffnen · Rechtsklick: Platzierung abbrechen",
+    "en": "WASD: camera · Wheel: zoom · R: rotate · Left click: build or inspect worker · Right click: cancel placement"
+  },
+  {
+    "source": "Bauauftrag wird angelegt …",
+    "de": "Bauauftrag wird angelegt …",
+    "en": "Creating construction order …"
+  },
+  {
+    "source": "Construction Mode",
+    "de": "Baumodus",
+    "en": "Construction Mode"
+  },
+  {
+    "source": "Baumodus ist nur in eigenen Bau-Chunks mit Baurecht verfügbar",
+    "de": "Baumodus ist nur in eigenen Bau-Chunks mit Baurecht verfügbar",
+    "en": "Construction mode requires building permission in your own build chunks"
+  },
+  {
+    "source": "Einen geladenen Boden innerhalb eigener Bau-Chunks wählen",
+    "de": "Einen geladenen Boden innerhalb eigener Bau-Chunks wählen",
+    "en": "Choose loaded ground within your own build chunks"
+  },
+  {
+    "source": "Keine Serverantwort. Bauaufträge im Bergfried prüfen",
+    "de": "Keine Serverantwort. Bauaufträge im Bergfried prüfen",
+    "en": "No response. Check construction orders in the keep"
+  },
+  {
+    "source": "Lagerbestände werden geladen …",
+    "de": "Lagerbestände werden geladen …",
+    "en": "Loading storage stock …"
+  },
+  {
+    "source": "Creative: unbegrenzte Baumaterialien",
+    "de": "Creative: unbegrenzte Baumaterialien",
+    "en": "Creative: unlimited building materials"
+  },
+  {
+    "source": "Stadtlager im Bergfried festlegen",
+    "de": "Stadtlager im Bergfried festlegen",
+    "en": "Assign town storage in the keep"
+  },
+  {
+    "source": "Lager teilweise nicht geladen",
+    "de": "Lager teilweise nicht geladen",
+    "en": "Storage is partly unloaded"
+  },
+  {
+    "source": "Holz",
+    "de": "Holz",
+    "en": "Wood"
+  },
+  {
+    "source": "Kohle",
+    "de": "Kohle",
+    "en": "Coal"
+  },
+  {
+    "source": "Im Baumodus platzieren",
+    "de": "Im Baumodus platzieren",
+    "en": "Place in construction mode"
+  },
+  {
+    "source": "Stadtlager / benötigt",
+    "de": "Stadtlager / benötigt",
+    "en": "Town storage / required"
+  },
+  {
+    "source": "Vorlagen aktualisieren",
+    "de": "Vorlagen aktualisieren",
+    "en": "Refresh templates"
+  },
+  {
+    "source": "Bauvorlagen werden aktualisiert …",
+    "de": "Bauvorlagen werden aktualisiert …",
+    "en": "Reloading building templates …"
+  },
+  {
+    "source": "Bauvorlagen aktualisiert",
+    "de": "Bauvorlagen aktualisiert",
+    "en": "Building templates refreshed"
+  },
+  {
+    "source": "Keine Berechtigung für Lagerbestände",
+    "de": "Keine Berechtigung für Lagerbestände",
+    "en": "No permission to view town stock"
+  },
+  {
+    "source": "Stein",
+    "de": "Stein",
+    "en": "Stone"
+  },
+  {
+    "source": "Eisen",
+    "de": "Eisen",
+    "en": "Iron"
+  },
+  {
+    "source": "Vorschau wird geladen …",
+    "de": "Vorschau wird geladen …",
+    "en": "Loading preview …"
+  },
+  {
+    "source": "H: Gebiete ausblenden",
+    "de": "H: Gebiete ausblenden",
+    "en": "H: Hide areas"
+  },
+  {
+    "source": "H: Gebiete anzeigen",
+    "de": "H: Gebiete anzeigen",
+    "en": "H: Show areas"
+  },
+  {
+    "source": "Bau-Chunk-Grenze",
+    "de": "Bau-Chunk-Grenze",
+    "en": "Build chunk border"
+  },
+  {
+    "source": "Vorlage platzieren · Eingabe",
+    "de": "Vorlage platzieren · Eingabe",
+    "en": "Place template · Enter"
+  }
+]

@@ -159,14 +159,71 @@ struct SessionJobs {
     reveal_elapsed: Option<Duration>,
     deferred_start: Option<SessionRequest>,
 }
+
+#[derive(Resource)]
+struct ViewWarmup {
+    next: Instant,
+}
+const STARTUP_VIEW_RADIUS: u8 = 15; // 31 × 31 = 961 chunk columns, independent of far view.
+
+fn reset_streaming_limit(world: &mut World) {
+    let requested = world.resource::<GameConfig>().client.view_distance;
+    world
+        .resource_mut::<terra_world::streaming::StreamingRadiusLimit>()
+        .0 = Some(requested.min(STARTUP_VIEW_RADIUS));
+    world.resource_mut::<ViewWarmup>().next = Instant::now() + Duration::from_millis(750);
+}
+
+fn update_streaming_limit(world: &mut World) {
+    use terra_world::streaming::{GenerationStatus, StreamingRadiusLimit, WorldGeneration};
+    let menu = world.resource::<MenuState>();
+    let active = menu.session_active;
+    let loading = menu.page == MenuPage::Loading;
+    let playing = menu.page == MenuPage::Playing;
+    let requested = world
+        .resource::<terra_core::GameConfig>()
+        .client
+        .view_distance;
+    if !active || loading {
+        let radius = requested.min(STARTUP_VIEW_RADIUS);
+        if world.resource::<StreamingRadiusLimit>().0 != Some(radius) {
+            world.resource_mut::<StreamingRadiusLimit>().0 = Some(radius);
+        }
+        world.resource_mut::<ViewWarmup>().next = Instant::now() + Duration::from_millis(750);
+        return;
+    }
+    if !playing || Instant::now() < world.resource::<ViewWarmup>().next {
+        return;
+    }
+    let current = world.resource::<StreamingRadiusLimit>().0;
+    let Some(current) = current else {
+        return;
+    };
+    if current >= requested {
+        world.resource_mut::<StreamingRadiusLimit>().0 = None;
+        return;
+    }
+    if world.resource::<WorldGeneration>().status == GenerationStatus::Ready
+        && world.resource::<terra_render::RenderStatus>().ready
+        && world.resource::<terra_render::WaterStatus>().initial_ready
+    {
+        world.resource_mut::<StreamingRadiusLimit>().0 = Some(current + 1);
+        world.resource_mut::<ViewWarmup>().next = Instant::now() + Duration::from_millis(750);
+    }
+}
 pub(crate) fn install(app: &mut App) {
     app.init_resource::<SessionJobs>()
+        .init_resource::<terra_world::streaming::StreamingRadiusLimit>()
+        .insert_resource(ViewWarmup {
+            next: Instant::now(),
+        })
         .init_resource::<StartupProgress>()
         .add_systems(
             Update,
             update.after(terra_world::streaming::StreamingSet::Dispatch),
         )
         .add_systems(PostUpdate, update_loading)
+        .add_systems(PreUpdate, update_streaming_limit)
         .add_systems(Last, limit_fps);
 }
 fn update(world: &mut World) {
@@ -196,7 +253,10 @@ fn update(world: &mut World) {
         }
         if let Some(StartupLaunch(token)) = world.remove_resource::<StartupLaunch>() {
             match barrier {
-                Ok(false) => connect_session(world, token),
+                Ok(false) => {
+                    reset_streaming_limit(world);
+                    connect_session(world, token);
+                }
                 Err(error) => fail(world, error),
                 Ok(true) => unreachable!(),
             }
@@ -216,6 +276,7 @@ fn update(world: &mut World) {
                     world.insert_resource(host);
                 }
                 if world.resource::<SessionJobs>().closing.is_none() {
+                    reset_streaming_limit(world);
                     connect_session(world, prepared.token);
                     world.resource_mut::<MenuState>().session_active = true;
                     world.resource_mut::<MenuState>().status = "Connecting to server ...".into();
@@ -580,12 +641,27 @@ fn fail(world: &mut World, error: String) {
     menu.status = "Session could not be opened".into();
     menu.quitting = false;
 }
-fn limit_fps(graphics: Res<terra_core::GraphicsConfig>, mut previous: Local<Option<Instant>>) {
+fn limit_fps(
+    graphics: Res<terra_core::GraphicsConfig>,
+    windows: Query<&Window>,
+    mut previous: Local<Option<Instant>>,
+) {
     let now = Instant::now();
-    if graphics.fps_limit != 0
+    static SMOKE: std::sync::LazyLock<bool> =
+        std::sync::LazyLock::new(|| std::env::args().any(|arg| arg.starts_with("--smoke-test")));
+    let limit = frame_limit(
+        graphics.fps_limit,
+        windows.iter().next().filter(|_| !*SMOKE).map(|w| {
+            (
+                w.focused,
+                w.resolution.physical_width() == 0 || w.resolution.physical_height() == 0,
+            )
+        }),
+    );
+    if limit != 0
         && let Some(previous) = *previous
     {
-        let budget = Duration::from_secs_f64(1.0 / f64::from(graphics.fps_limit));
+        let budget = Duration::from_secs_f64(1.0 / f64::from(limit));
         if let Some(remaining) = budget.checked_sub(now.duration_since(previous)) {
             std::thread::sleep(remaining);
         }
@@ -593,11 +669,80 @@ fn limit_fps(graphics: Res<terra_core::GraphicsConfig>, mut previous: Local<Opti
     *previous = Some(Instant::now());
 }
 
+fn frame_limit(requested: u16, window: Option<(bool, bool)>) -> u16 {
+    match window {
+        Some((_, true)) => {
+            if requested == 0 {
+                5
+            } else {
+                requested.min(5)
+            }
+        }
+        Some((false, _)) => {
+            if requested == 0 {
+                30
+            } else {
+                requested.min(30)
+            }
+        }
+        _ => requested,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{chunk_counts, reveal_fraction};
     use std::time::Duration;
     use terra_voxel::SectionPos;
+
+    #[test]
+    fn initial_load_stays_below_one_thousand_columns_then_waits_for_finished_background_rings() {
+        use super::*;
+        use terra_world::streaming::{GenerationStatus, StreamingRadiusLimit, WorldGeneration};
+        let mut world = World::new();
+        let mut config = GameConfig::default();
+        config.client.view_distance = 32;
+        world.insert_resource(config);
+        world.init_resource::<MenuState>();
+        world.init_resource::<StreamingRadiusLimit>();
+        world.insert_resource(ViewWarmup {
+            next: Instant::now(),
+        });
+        world.init_resource::<WorldGeneration>();
+        world.init_resource::<terra_render::RenderStatus>();
+        world.init_resource::<terra_render::WaterStatus>();
+        world.resource_mut::<MenuState>().page = MenuPage::Loading;
+        world.resource_mut::<MenuState>().session_active = true;
+        update_streaming_limit(&mut world);
+        assert_eq!(world.resource::<StreamingRadiusLimit>().0, Some(15));
+        assert_eq!((u32::from(STARTUP_VIEW_RADIUS) * 2 + 1).pow(2), 961);
+        world.resource_mut::<MenuState>().page = MenuPage::Playing;
+        world.resource_mut::<ViewWarmup>().next = Instant::now();
+        update_streaming_limit(&mut world);
+        assert_eq!(world.resource::<StreamingRadiusLimit>().0, Some(15));
+        world.resource_mut::<WorldGeneration>().status = GenerationStatus::Ready;
+        world.resource_mut::<terra_render::RenderStatus>().ready = true;
+        world
+            .resource_mut::<terra_render::WaterStatus>()
+            .initial_ready = true;
+        update_streaming_limit(&mut world);
+        assert_eq!(world.resource::<StreamingRadiusLimit>().0, Some(16));
+        update_streaming_limit(&mut world);
+        assert_eq!(world.resource::<StreamingRadiusLimit>().0, Some(16));
+        assert_eq!(world.resource::<GameConfig>().client.view_distance, 32);
+        world.resource_mut::<MenuState>().page = MenuPage::Loading;
+        update_streaming_limit(&mut world);
+        assert_eq!(world.resource::<StreamingRadiusLimit>().0, Some(15));
+    }
+
+    #[test]
+    fn background_window_releases_cpu_even_with_an_unlimited_foreground_setting() {
+        assert_eq!(super::frame_limit(0, Some((true, false))), 0);
+        assert_eq!(super::frame_limit(144, Some((true, false))), 144);
+        assert_eq!(super::frame_limit(0, Some((false, false))), 30);
+        assert_eq!(super::frame_limit(60, Some((false, false))), 30);
+        assert_eq!(super::frame_limit(60, Some((true, true))), 5);
+    }
 
     #[test]
     fn startup_barrier_is_absent_for_headless_and_finished_or_demand_only_clients() {

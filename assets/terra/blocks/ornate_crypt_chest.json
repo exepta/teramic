@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "id": 377,
+  "name": "Ornate Crypt Chest",
+  "description": "An ornate chest for storing valuables in a crypt.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/ornate_crypt_chest.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.1,
+        0.05,
+        0.15
+      ],
+      "maximum": [
+        0.9,
+        0.54,
+        0.85
+      ]
+    },
+    {
+      "minimum": [
+        0.12,
+        0.54,
+        0.14
+      ],
+      "maximum": [
+        0.215,
+        0.6575635062384366,
+        0.86
+      ]
+    },
+    {
+      "minimum": [
+        0.215,
+        0.54,
+        0.14
+      ],
+      "maximum": [
+        0.31,
+        0.692521597926798,
+        0.86
+      ]
+    },
+    {
+      "minimum": [
+        0.31,
+        0.54,
+        0.14
+      ],
+      "maximum": [
+        0.405,
+        0.7107478393702932,
+        0.86
+      ]
+    },
+    {
+      "minimum": [
+        0.405,
+        0.54,
+        0.14
+      ],
+      "maximum": [
+        0.5,
+        0.7189883448350975,
+        0.86
+      ]
+    },
+    {
+      "minimum": [
+        0.5,
+        0.54,
+        0.14
+      ],
+      "maximum": [
+        0.595,
+        0.7190302035530409,
+        0.86
+      ]
+    },
+    {
+      "minimum": [
+        0.595,
+        0.54,
+        0.14
+      ],
+      "maximum": [
+        0.69,
+        0.710881282084185,
+        0.86
+      ]
+    },
+    {
+      "minimum": [
+        0.6900000000000001,
+        0.54,
+        0.14
+      ],
+      "maximum": [
+        0.785,
+        0.6927798630075422,
+        0.86
+      ]
+    },
+    {
+      "minimum": [
+        0.785,
+        0.54,
+        0.14
+      ],
+      "maximum": [
+        0.88,
+        0.6580868746973523,
+        0.86
+      ]
+    }
+  ]
+}

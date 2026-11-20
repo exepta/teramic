@@ -33,7 +33,20 @@ fn category(item: ItemKind) -> u8 {
         | ItemKind::TintedBlock { .. }
         | ItemKind::DyedBed { .. } => 0,
         ItemKind::Prop(_) | ItemKind::Flower(_) | ItemKind::Crop(_) | ItemKind::AppleCore => 1,
-        ItemKind::Stick
+        ItemKind::BloodBerry
+        | ItemKind::CrimsonMushroom
+        | ItemKind::ThornTwig
+        | ItemKind::BloodCrystal
+        | ItemKind::DarkSap
+        | ItemKind::BloodLeaf
+        | ItemKind::BloodSpore
+        | ItemKind::BloodSlimeGel
+        | ItemKind::Bone
+        | ItemKind::Bitumen
+        | ItemKind::GloomEssence
+        | ItemKind::LightSplitter
+        | ItemKind::RoadAggregate
+        | ItemKind::Stick
         | ItemKind::Mineral(_)
         | ItemKind::Dye(_)
         | ItemKind::Dust(_)

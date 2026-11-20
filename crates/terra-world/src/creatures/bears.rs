@@ -10,8 +10,17 @@ mod tests;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Effect {
     None,
-    StrikePlayer { index: usize, damage: f32 },
-    CatchFish { id: u64 },
+    StrikePlayer {
+        index: usize,
+        damage: f32,
+    },
+    CatchFish {
+        id: u64,
+    },
+    SpitBile {
+        origin: [f64; 3],
+        velocity: [f64; 3],
+    },
 }
 
 #[derive(Default)]
@@ -85,11 +94,7 @@ pub fn near_water(h: &Habitat, p: [f64; 3]) -> bool {
 
 /// Checks edited voxels at paw/head height; opaque terrain and unloaded cells block a hit.
 pub fn visible(h: &Habitat, a: [f64; 3], b: [f64; 3]) -> bool {
-    let steps = (distance(a, b).sqrt() / 0.15).ceil().clamp(1.0, 256.0) as usize;
-    (0..=steps).all(|i| {
-        let p = std::array::from_fn(|axis| a[axis] + (b[axis] - a[axis]) * i as f64 / steps as f64);
-        !h.solid(p.map(|v| v.floor() as i64))
-    })
+    super::perception::visible(h, a, b)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -145,14 +150,16 @@ pub fn step_with_navigation(
     if let Some(combat) = definition.combat {
         let pursuing = a.behavior == Behavior::Attack;
         let radius = combat.aggro_radius * if pursuing { 1.75 } else { 1.0 };
-        let nearest = players
-            .iter()
-            .enumerate()
-            .filter(|(_, p)| distance(**p, a.position) < radius.powi(2))
-            .min_by(|(_, x), (_, y)| {
-                distance(**x, a.position).total_cmp(&distance(**y, a.position))
-            });
-        if let Some((index, &player)) = nearest {
+        let nearest = super::perception::nearest_visible_at(
+            h,
+            head(a.position),
+            a.position,
+            players,
+            radius,
+            |_| true,
+            head,
+        );
+        if let Some((index, player)) = nearest {
             let before = a.behavior;
             a.needs.goal = None;
             a.behavior = Behavior::Attack;

@@ -28,7 +28,7 @@ pub struct MapSample {
     pub water_depth: u8,
     pub known: bool,
     pub canopy: bool,
-    pub biome_weights: [f32; 8],
+    pub biome_weights: [f32; 10],
     pub shore: f32,
     pub snow: f32,
 }
@@ -41,7 +41,7 @@ impl Default for MapSample {
             water_depth: 0,
             known: false,
             canopy: false,
-            biome_weights: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            biome_weights: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             shore: 0.0,
             snow: 0.0,
         }
@@ -132,6 +132,7 @@ fn color(surface: &SurfaceColumn) -> [u8; 4] {
         [159.0, 119.0, 167.0],
         [183.0, 151.0, 104.0],
         [145.0, 207.0, 99.0],
+        [153.0, 204.0, 135.0],
     ];
     let mut rgb: [f64; 3] =
         std::array::from_fn(|i| weights.iter().zip(palette).map(|(w, c)| w * c[i]).sum());
@@ -149,6 +150,10 @@ fn color(surface: &SurfaceColumn) -> [u8; 4] {
         for i in 0..3 {
             rgb[i] +=
                 ([151.0, 118.0, 145.0][i] - rgb[i]) * surface.biome.weights.cherry_forest * 0.35;
+        }
+        for (i, channel) in rgb.iter_mut().enumerate() {
+            *channel +=
+                ([117.0, 140.0, 179.0][i] - *channel) * surface.biome.weights.spirit_blossom;
         }
     } else {
         let snow = if surface.biome.aridity() <= 0.5 {
@@ -210,6 +215,8 @@ mod tests {
             mushroom_park: 0.0,
             cliffted_desert: 0.0,
             cherry_forest: 1.0,
+            spirit_blossom: 0.0,
+            blood_forest: 0.0,
         };
         surface.shore_cover = 0.0;
         surface.snow_cover = 0.0;

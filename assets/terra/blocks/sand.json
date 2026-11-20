@@ -1,6 +1,6 @@
 {
   "creative_category": "terrain",
-  "description": "Fine cohesive golden sand with subtle wind ripples from deserts, beaches and river banks.",
+  "description": "Fine cohesive pale beige sand with subtle wind ripples from deserts, beaches and river banks.",
   "schema_version": 1,
   "id": 4,
   "name": "Sand",
@@ -9,9 +9,15 @@
   "bevel_width": 0.0,
   "materials": {
     "Fine sand": {
-      "texture_pattern": "sand",
-      "roughness": 1.0,
-      "reflectance": 0.12
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/sand_normal.png"
     }
   },
   "face_materials": [
@@ -35,5 +41,8 @@
   "hardness": 0.55,
   "resistance": 0.5,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Fine sand": "textures/block_palette/sand.png"
+  }
 }

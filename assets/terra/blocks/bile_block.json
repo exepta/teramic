@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": 440,
+  "name": "Galle Block",
+  "description": "Acid-coated, pitted stone. Contact burns creatures and players.",
+  "creative_category": "building",
+  "render_kind": "cube",
+  "bevel_width": 0.022,
+  "hardness": 1.6,
+  "resistance": 5,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "materials": {
+    "Surface": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.24,
+      "reflectance": 0.45,
+      "normal_texture": "textures/street/bile_normal.png"
+    }
+  },
+  "textures": {
+    "Surface": "textures/street/bile.png"
+  },
+  "face_materials": [
+    "Surface",
+    "Surface",
+    "Surface",
+    "Surface",
+    "Surface",
+    "Surface"
+  ],
+  "surface": "mushroom"
+}

@@ -7,6 +7,7 @@ item previews select exactly one mount; no hidden overlapping pose geometry.
 from pathlib import Path
 import json
 from build_castle import Mesh
+from recipe_paths import recipe_path
 
 ROOT = Path(__file__).resolve().parents[2]
 BLOCKS = ROOT / 'assets/terra/blocks'
@@ -132,7 +133,7 @@ def main():
         recipe = {'id':'teramic::'+slug,'name':name,'station':'workbench',
                   'output':{'item':{'block':material},'count':1 if material==193 else 4},
                   'pattern':{'kind':'shapeless','ingredients':ingredients}}
-        (ROOT/'assets/crafting'/(slug+'.json')).write_text(json.dumps(recipe,indent=2)+'\n')
+        recipe_path(slug).write_text(json.dumps(recipe,indent=2)+'\n')
 
 
 if __name__ == '__main__':

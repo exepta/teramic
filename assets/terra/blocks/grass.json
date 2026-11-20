@@ -6,10 +6,24 @@
   "name": "Meadow Grass",
   "render_kind": "custom_mesh",
   "model_layout": "face_groups",
-  "model": "models/fiverr_grass_faces.glb",
+  "model": "models/fiverr_grass_reference_base.glb",
   "bevel_width": 0.02,
-  "faces": ["West", "East", "Down", "Up", "North", "South"],
-  "coarse_faces": ["WestLod", "EastLod", "DownLod", "UpLod", "NorthLod", "SouthLod"],
+  "faces": [
+    "West",
+    "East",
+    "Down",
+    "Up",
+    "North",
+    "South"
+  ],
+  "coarse_faces": [
+    "WestLod",
+    "EastLod",
+    "DownLod",
+    "UpLod",
+    "NorthLod",
+    "SouthLod"
+  ],
   "hardness": 0.55,
   "resistance": 0.5,
   "required_tool": null,

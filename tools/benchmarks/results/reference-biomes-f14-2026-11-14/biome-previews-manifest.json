@@ -1,0 +1,175 @@
+{
+  "method": "Native game screenshots; centre crop and downsample only. No upscaling or generated artwork.",
+  "images": {
+    "plains": {
+      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-plains-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "ecda114ce909d494892d453068e19682039aae9b15f3a515b7020dd2fcf4f5a6",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "28b2fecd8a374db72db3ae449c7b15c73e622a20c57ba225f1f75446a681aa16"
+    },
+    "forest": {
+      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-forest-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "a9643cc4f31f4407e828ef5a18518ee4968be134bcabc8cf1974f1e747d84352",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "019bd000d30f05d35d0b87dd1b37f4510729420b34bf556f7de830167569c150"
+    },
+    "desert": {
+      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-desert-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "164481f7d9610b1952031966559c5524dffb07470a34f942188bf432e3268cd0",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "8e5d40aeb90f088326512c2854899edf1022f7abed999130941e889a5c32ad7a"
+    },
+    "highlands": {
+      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-highlands-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "83f452eb2458033fd5dbe5b13d3b3bf2ebb849b978f6912c58f8413342965e46",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "8bfd507aa89448372df94fcc984ed100231c9f5437e9337fa27e9e9b877fecee"
+    },
+    "mushroom-park": {
+      "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-mushroom-park-overview.png",
+      "source_size": [
+        2562,
+        1440
+      ],
+      "source_sha256": "c807a178d86f8757c01d2a5775ce1c40765b277e82be11daf62206860da94bdf",
+      "crop_size": [
+        2562,
+        1281
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "a5d562db31005a7e2fbe77652fcd2fe45266dc781ec1e7eb8d593946a87ef758"
+    },
+    "cliffted-desert": {
+      "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-cliffted-desert-overview.png",
+      "source_size": [
+        2562,
+        1440
+      ],
+      "source_sha256": "5dd3c32a657d9cee19d3baa2e5ed4184794bb765c04469880922b2878ec28bcf",
+      "crop_size": [
+        2562,
+        1281
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "763dcdcdbb9e00006195f52bb00dba4671c9a0e912f4e36050cabbe379ee6e99"
+    },
+    "cherry-forest": {
+      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-cherry-forest-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "2492f6d5682932dc111daf4ca6d8524dbc9b9578ef3ac26fe15f203ec781b73f",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "d6aa3a2154dfe47332dd0ec642183f9d9dbe136b43f1dd78a2e282cb69ea4bfb"
+    },
+    "ocean": {
+      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-ocean-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "69e1557a12d6dbf2bea169f744303c30804b6dc7edfd9a8fe647d60c5efe7adc",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "6dd8cbed5a2bdea6be4070ff6e30d312488bf93c0180f515f242389caef5c25b"
+    },
+    "spirit-blossom": {
+      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-spirit-blossom-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "aba6b0c4c10dcf35b9055b4491b9a7639886b66c74661bc06063d6b0ffd1ebd1",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "e53d8dabeb355fc2db5144653bda31ed2e7b054a250c1b51c27a46797e79ae71"
+    },
+    "blood-forest": {
+      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-blood-forest-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "2de9f264e78e7ec0cb44f5216a0406aec42f2eb76218cf461b49d984ae794ef5",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "4927ecc837c1d1705a91da3a3e9c2643327c90527886c3b0f9d7bf48e7a9f1e3"
+    }
+  }
+}

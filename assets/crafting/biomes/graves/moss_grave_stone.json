@@ -1,0 +1,28 @@
+{
+  "id": "teramic::moss_grave_stone",
+  "name": "Moss Veined Stone",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 341
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 337
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "block": 13
+        },
+        "count": 1
+      }
+    ]
+  }
+}

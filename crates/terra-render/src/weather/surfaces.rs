@@ -77,6 +77,15 @@ impl Default for WetExtension {
 }
 
 impl MaterialExtension for WetExtension {
+    fn vertex_shader() -> ShaderRef {
+        "shaders/terra_liquid_vertex.wesl".into()
+    }
+    fn prepass_vertex_shader() -> ShaderRef {
+        "shaders/terra_liquid_vertex.wesl".into()
+    }
+    fn deferred_vertex_shader() -> ShaderRef {
+        "shaders/terra_liquid_vertex.wesl".into()
+    }
     fn prepass_fragment_shader() -> ShaderRef {
         "shaders/terra_imprint_prepass.wesl".into()
     }
@@ -90,10 +99,39 @@ impl MaterialExtension for WetExtension {
     fn specialize(
         _pipeline: &bevy::pbr::MaterialExtensionPipeline,
         descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
-        _layout: &bevy::mesh::MeshVertexBufferLayoutRef,
+        layout: &bevy::mesh::MeshVertexBufferLayoutRef,
         key: bevy::pbr::MaterialExtensionKey<Self>,
     ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
         terrain_depth_culling(descriptor, key.mesh_key);
+        if layout.0.contains(crate::liquid_motion::FROM) {
+            let mut attributes = vec![Mesh::ATTRIBUTE_POSITION.at_shader_location(0)];
+            let prepass = descriptor.vertex.shader_defs.iter().any(|definition| {
+                matches!(definition, bevy::shader::ShaderDefVal::Bool(name, true) if name == "PREPASS_PIPELINE")
+            });
+            let locations = if prepass {
+                [3, 1, 2, 4, 7]
+            } else {
+                [1, 2, 3, 4, 5]
+            };
+            for (attribute, location) in [
+                Mesh::ATTRIBUTE_NORMAL,
+                Mesh::ATTRIBUTE_UV_0,
+                Mesh::ATTRIBUTE_UV_1,
+                Mesh::ATTRIBUTE_TANGENT,
+                Mesh::ATTRIBUTE_COLOR,
+            ]
+            .into_iter()
+            .zip(locations)
+            {
+                if layout.0.contains(attribute) {
+                    attributes.push(attribute.at_shader_location(location));
+                }
+            }
+            attributes.push(crate::liquid_motion::FROM.at_shader_location(11));
+            attributes.push(crate::liquid_motion::DATA.at_shader_location(12));
+            descriptor.vertex.buffers = vec![layout.0.get_layout(&attributes)?];
+            descriptor.vertex.shader_defs.push("LIQUID_MOTION".into());
+        }
         Ok(())
     }
 }
@@ -292,7 +330,7 @@ impl Material for WetMaterial {
         // Opaque prepasses omit their fragment stage in Bevy. Soft ground needs
         // that stage for real footprint cutouts, without blending its coverage.
         if self.base.alpha_mode == AlphaMode::Opaque
-            && matches!(self.extension.detail.x.abs(), 4.0 | 5.0)
+            && matches!(self.extension.detail.x.abs(), 4.0 | 5.0 | 7.0)
         {
             AlphaMode::Mask(0.0)
         } else {
@@ -382,6 +420,71 @@ fn report_wet_bindings(device: Res<RenderDevice>) {
     );
 }
 
+/// Use block surface metadata rather than a short list of terrain IDs, so
+/// construction cubes share the same subtle, world-continuous close detail.
+fn detail_family(templates: &crate::blocks::TemplateSet, slot: usize) -> f32 {
+    use crate::blocks::definitions::{BlockRenderKind, CubeSurface};
+    if templates
+        .blocks
+        .get(&terra_core::bile::FLUID)
+        .is_some_and(|b| b.face_materials.contains(&slot))
+    {
+        return 14.0;
+    }
+    if templates
+        .blocks
+        .get(&terra_core::roads::WET_TAR)
+        .is_some_and(|b| b.face_materials[3] == slot)
+    {
+        return 7.0;
+    }
+    for (id, family) in [(306, 8.0), (400, 9.0)] {
+        if templates
+            .blocks
+            .get(&id)
+            .is_some_and(|b| b.face_materials.contains(&slot))
+        {
+            return family;
+        }
+    }
+    if templates.authored_terrain_material(slot) {
+        return 6.0;
+    }
+    for (id, family) in [(3, 1.0), (2, 2.0), (1, 3.0), (4, 4.0), (5, 5.0)] {
+        if templates.blocks.get(&id).is_some_and(|b| {
+            if id == 1 {
+                b.face_materials[3] == slot
+            } else {
+                b.face_materials.contains(&slot)
+            }
+        }) {
+            return family;
+        }
+    }
+    templates
+        .blocks
+        .values()
+        .filter(|b| b.render_kind == BlockRenderKind::Cube && b.face_materials.contains(&slot))
+        .map(|b| match b.surface.as_ref().map(|s| s.style()) {
+            Some(CubeSurface::Wood) => 10.0,
+            Some(CubeSurface::Rock) => 11.0,
+            Some(CubeSurface::Wool) => 12.0,
+            Some(CubeSurface::Earth | CubeSurface::Farmland) => 2.0,
+            Some(CubeSurface::Turf) => 3.0,
+            Some(CubeSurface::Sand) => 4.0,
+            Some(CubeSurface::Snow) => 5.0,
+            _ => 13.0,
+        })
+        .min_by(f32::total_cmp)
+        .unwrap_or(0.0)
+}
+
+#[derive(Default)]
+struct DetailFamilies {
+    source: Option<std::sync::Arc<crate::blocks::TemplateSet>>,
+    values: HashMap<usize, f32>,
+}
+
 #[allow(clippy::too_many_arguments)]
 fn prepare(
     blocks: Res<crate::blocks::BlockAssets>,
@@ -393,7 +496,17 @@ fn prepare(
     wet: Query<(), With<MeshMaterial3d<WetMaterial>>>,
     mut status: ResMut<super::WeatherRenderStatus>,
     mut events: MessageReader<AssetEvent<StandardMaterial>>,
+    mut families: Local<DetailFamilies>,
 ) {
+    if !families
+        .source
+        .as_ref()
+        .zip(blocks.templates.as_ref())
+        .is_some_and(|(old, current)| std::sync::Arc::ptr_eq(old, current))
+    {
+        families.source = blocks.templates.clone();
+        families.values.clear();
+    }
     status.wet_batches = wet.iter().count();
     let changed: HashSet<_> = events
         .read()
@@ -404,8 +517,8 @@ fn prepare(
             _ => None,
         })
         .collect();
-    // Only one shared wet handle per existing opaque material, not per block,
-    // plant, section or particle. Dry terrain uses stock PBR with a binding-free
+    // One shared wet handle per opaque surface or translucent Galle material,
+    // never per block or liquid level. Dry terrain uses stock PBR with a binding-free
     // depth extension, retaining StandardMaterial's bindless resource layout.
     for (slot, handle) in blocks.materials.iter().enumerate() {
         let Some(base) = standard.get(handle) else {
@@ -430,30 +543,22 @@ fn prepare(
             .templates
             .as_ref()
             .map_or_else(Default::default, |t| t.block_details);
-        let family = blocks.templates.as_ref().map_or(0.0, |templates| {
-            if templates.authored_terrain_material(slot) {
-                return 6.0;
-            }
-            [(3, 1.0), (2, 2.0), (1, 3.0), (4, 4.0), (5, 5.0)]
-                .into_iter()
-                .find_map(|(id, family)| {
-                    templates
-                        .blocks
-                        .get(&id)
-                        .filter(|block| {
-                            if id == 1 {
-                                block.face_materials[3] == slot
-                            } else {
-                                block.face_materials.contains(&slot)
-                            }
-                        })
-                        .map(|_| family)
-                })
-                .unwrap_or(0.0)
-        });
+        let family = if let Some(templates) = blocks.templates.as_ref() {
+            *families
+                .values
+                .entry(slot)
+                .or_insert_with(|| detail_family(templates, slot))
+        } else {
+            0.0
+        };
+        let family = if family == 13.0 && base.alpha_mode != AlphaMode::Opaque {
+            0.0
+        } else {
+            family
+        };
         let detail = Vec4::new(
-            if family == 6.0 {
-                -6.0
+            if (6.0..=9.0).contains(&family) || family == 14.0 {
+                -family
             } else if settings.material_detail {
                 family
             } else {
@@ -481,7 +586,10 @@ fn prepare(
             }
             continue;
         }
-        if !matches!(base.alpha_mode, AlphaMode::Opaque) || base.unlit {
+        // Galle deliberately retains its translucent material. Its paid mesh
+        // still needs the liquid vertex/fragment path; falling back to stock
+        // StandardMaterial would ignore every interpolation attribute.
+        if (!matches!(base.alpha_mode, AlphaMode::Opaque) && family != 14.0) || base.unlit {
             continue;
         }
         handles.0.insert(
@@ -595,7 +703,7 @@ mod tests {
             weather.size,
             Some(super::super::storage::WeatherGpuData::min_size().get() as usize)
         );
-        assert_eq!(weather.size, Some(16 * (6 + 64 + 1024)));
+        assert_eq!(weather.size, Some(16 * (6 + 64 + 1024 + 2)));
         let parameters = wet
             .buffers
             .iter()
@@ -902,6 +1010,125 @@ mod tests {
                 assert_eq!(descriptor.primitive.cull_mode, expected);
             }
         }
+    }
+
+    #[test]
+    fn construction_surface_metadata_selects_shared_world_detail_without_remapping_authored_turf() {
+        use crate::blocks::{
+            BlockTemplate, TemplateSet,
+            definitions::{BlockRenderKind, CubeSurface},
+            surface::SurfaceTemplate,
+        };
+        let mut templates = TemplateSet::default();
+        for (id, slot, style) in [
+            (900, 40, Some(CubeSurface::Wood)),
+            (901, 41, Some(CubeSurface::Rock)),
+            (902, 42, Some(CubeSurface::Wool)),
+            (903, 43, None),
+        ] {
+            templates.blocks.insert(
+                id,
+                BlockTemplate {
+                    surface: style.map(SurfaceTemplate::new),
+                    render_kind: BlockRenderKind::Cube,
+                    bevel_width: 0.0,
+                    faces: default(),
+                    face_materials: [slot; 6],
+                    side_cap: None,
+                    details: vec![],
+                    model: vec![],
+                },
+            );
+        }
+        assert_eq!(detail_family(&templates, 40), 10.0);
+        assert_eq!(detail_family(&templates, 41), 11.0);
+        assert_eq!(detail_family(&templates, 42), 12.0);
+        assert_eq!(detail_family(&templates, 43), 13.0);
+        assert_eq!(detail_family(&templates, 44), 0.0);
+        let mut spirit = templates.blocks[&903].clone();
+        spirit.face_materials = [45; 6];
+        templates.blocks.insert(306, spirit);
+        assert_eq!(detail_family(&templates, 45), 8.0);
+        templates.blocks.get_mut(&903).unwrap().render_kind = BlockRenderKind::CustomMesh;
+        assert_eq!(detail_family(&templates, 43), 0.0);
+    }
+
+    #[test]
+    fn translucent_galle_receives_the_flow_shader_while_other_transparency_stays_stock() {
+        use crate::blocks::{
+            BlockTemplate, TemplateSet,
+            definitions::{BlockDefinition, BlockRenderKind},
+        };
+        let definition: BlockDefinition =
+            serde_json::from_str(include_str!("../../../../assets/terra/blocks/bile.json"))
+                .unwrap();
+        let alpha = definition.materials["Bile"].base_color[3];
+        assert!(alpha < 1.0);
+        let mut app = App::new();
+        app.init_resource::<crate::blocks::BlockAssets>()
+            .init_resource::<Assets<StandardMaterial>>()
+            .init_resource::<Assets<WetMaterial>>()
+            .init_resource::<WetMaterials>()
+            .init_resource::<Assets<TerrainDepthMaterial>>()
+            .init_resource::<TerrainDepthMaterials>()
+            .init_resource::<super::super::WeatherRenderStatus>()
+            .add_message::<AssetEvent<StandardMaterial>>()
+            .add_systems(Update, prepare);
+        let mut templates = TemplateSet::default();
+        for (slot, id) in [terra_core::bile::FLUID, 15].into_iter().enumerate() {
+            let handle = app
+                .world_mut()
+                .resource_mut::<Assets<StandardMaterial>>()
+                .add(StandardMaterial {
+                    base_color: Color::linear_rgba(1.0, 1.0, 1.0, alpha),
+                    alpha_mode: AlphaMode::Blend,
+                    ..default()
+                });
+            app.world_mut()
+                .resource_mut::<crate::blocks::BlockAssets>()
+                .materials
+                .push(handle);
+            templates.blocks.insert(
+                id,
+                BlockTemplate {
+                    surface: None,
+                    model: Vec::new(),
+                    render_kind: BlockRenderKind::Boxes,
+                    face_materials: [slot; 6],
+                    side_cap: None,
+                    bevel_width: 0.0,
+                    faces: Default::default(),
+                    details: Vec::new(),
+                },
+            );
+        }
+        app.world_mut()
+            .resource_mut::<crate::blocks::BlockAssets>()
+            .templates = Some(std::sync::Arc::new(templates));
+        app.update();
+        let wet = app.world().resource::<WetMaterials>();
+        let galle = wet
+            .0
+            .get(&0)
+            .expect("translucent Galle must use the liquid shader")
+            .clone();
+        assert!(
+            !wet.0.contains_key(&1),
+            "ordinary glass retains its stock renderer"
+        );
+        assert!(app.world().resource::<TerrainDepthMaterials>().0.is_empty());
+        let materials = app.world().resource::<Assets<WetMaterial>>();
+        let material = materials.get(&galle).unwrap();
+        assert_eq!(material.alpha_mode(), AlphaMode::Blend);
+        assert_eq!(material.base.base_color.alpha(), alpha);
+        assert_eq!(material.extension.detail.x, -14.0);
+        assert_eq!(
+            material.extension.weather,
+            super::super::storage::WEATHER_BUFFER_HANDLE
+        );
+        app.update();
+        assert_eq!(app.world().resource::<WetMaterials>().0[&0], galle);
+        assert_eq!(app.world().resource::<Assets<WetMaterial>>().len(), 1);
     }
 
     #[test]

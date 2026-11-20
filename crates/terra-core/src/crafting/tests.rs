@@ -465,7 +465,10 @@ fn all_tools_have_unique_catalog_entries_and_valid_shaped_station_recipes() {
                 .count(),
             1
         );
-        if tool == crate::ToolKind::WaterBucket {
+        if matches!(
+            tool,
+            crate::ToolKind::WaterBucket | crate::ToolKind::BileBucket
+        ) {
             assert!(
                 book.get(key(tool.slug())).is_none(),
                 "water is collected, never crafted for free"
@@ -768,12 +771,12 @@ fn key(name: &str) -> u64 {
 #[test]
 fn chests_and_tools_are_shaped_in_the_actual_json_assets() {
     for source in [
-        include_str!("../../../../assets/crafting/chest.json"),
-        include_str!("../../../../assets/crafting/wood_pickaxe.json"),
-        include_str!("../../../../assets/crafting/stone_pickaxe.json"),
-        include_str!("../../../../assets/crafting/stone_axe.json"),
-        include_str!("../../../../assets/crafting/stone_shovel.json"),
-        include_str!("../../../../assets/crafting/iron_pickaxe.json"),
+        include_str!("../../../../assets/crafting/building/furniture/chest.json"),
+        include_str!("../../../../assets/crafting/equipment/tools/pickaxe/wood_pickaxe.json"),
+        include_str!("../../../../assets/crafting/equipment/tools/pickaxe/stone_pickaxe.json"),
+        include_str!("../../../../assets/crafting/equipment/tools/axe/stone_axe.json"),
+        include_str!("../../../../assets/crafting/equipment/tools/shovel/stone_shovel.json"),
+        include_str!("../../../../assets/crafting/equipment/tools/pickaxe/iron_pickaxe.json"),
     ] {
         let recipe: Recipe = serde_json::from_str(source).unwrap();
         assert!(
@@ -787,8 +790,10 @@ fn chests_and_tools_are_shaped_in_the_actual_json_assets() {
 
 #[test]
 fn workbench_accepts_four_shapeless_planks_and_keeps_dominant_wood() {
-    let recipe: Recipe =
-        serde_json::from_str(include_str!("../../../../assets/crafting/workbench.json")).unwrap();
+    let recipe: Recipe = serde_json::from_str(include_str!(
+        "../../../../assets/crafting/building/furniture/workbench.json"
+    ))
+    .unwrap();
     assert!(matches!(recipe.pattern, RecipePattern::Shapeless { .. }));
     assert_eq!(recipe.ingredients()[0].count, 4);
     let book = RecipeBook::from_recipes(vec![recipe]).unwrap();
@@ -848,7 +853,7 @@ fn every_builtin_shaped_recipe_rejects_truncation_and_accepts_only_fitting_offse
                     index,
                     ItemStack {
                         item: ingredient.item,
-                        count: 128,
+                        count: ingredient.item.max_stack(),
                     },
                 );
             }
@@ -1131,6 +1136,7 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
             + crate::CapeItem::ALL_WHITE.len()
             + 2
             + 39
+            + 1
             + 5
             + 16
             + 4
@@ -1154,9 +1160,15 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
             + 3 // Ballast block, four-tread stairs and half slab.
             + 3 // Dedicated left/right switches and their control stand.
             + 8 // Modular railway vehicle parts and assembly station.
+            + 10 // Bile stone, pavers, six sidewalk profiles and tying/untying straw.
             + crate::locomotive_parts::COUNT // Complete BR52 modular locomotive kit.
             + 1 // Cargo-fed locomotive rail builder.
             + crate::profession_stations::ALL.len() // Nine independently craftable profession depots.
+            + 20 // All existing castle recipes are also available in the embedded fallback.
+            + 6 // Spirit Blossom timber, lanterns, petals and shrine.
+            + 39 // Colored clay, crypt masonry, lights, runes and ornate storage.
+            + 11 // Asphalt, five road forms and their material recovery recipes.
+            + 1 // A paid tar bucket consumes binder and an empty vessel.
     );
     for id in [
         "lantern",
@@ -1775,4 +1787,49 @@ fn whole_apples_and_consumed_cores_are_real_sapling_recipe_ingredients() {
     assert!(food.nutrition > 0. && food.saturation > 0.);
     assert_eq!(food.remainder, Some(ItemKind::AppleCore));
     assert!(crate::food::food(ItemKind::AppleCore).is_none());
+}
+
+#[test]
+fn bile_block_consumes_acid_and_returns_exactly_one_empty_bucket_in_both_craft_paths() {
+    let book = RecipeBook::builtins();
+    let key = recipe_key("teramic::bile_block");
+    for grid in [false, true] {
+        let mut inventory = Inventory::default();
+        assert_eq!(inventory.insert(ItemKind::Block(3), 1), 0);
+        assert_eq!(
+            inventory.insert(ItemKind::Tool(crate::ToolKind::BileBucket), 1),
+            0
+        );
+        if grid {
+            assert!(book.craft_grid(
+                &mut inventory,
+                &[Some(0), Some(1), None, None],
+                2,
+                CraftStation::Workbench,
+                1,
+                CraftDestination::Cursor
+            ));
+        } else {
+            book.craft(
+                &mut inventory,
+                key,
+                1,
+                CraftStation::Workbench,
+                CraftDestination::Cursor,
+            )
+            .unwrap();
+        }
+        assert_eq!(
+            inventory.count(ItemKind::Tool(crate::ToolKind::BileBucket)),
+            0
+        );
+        assert_eq!(inventory.count(ItemKind::Tool(crate::ToolKind::Bucket)), 1);
+        assert_eq!(
+            inventory.cursor,
+            Some(ItemStack {
+                item: ItemKind::Block(440),
+                count: 1
+            })
+        );
+    }
 }

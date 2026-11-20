@@ -1,0 +1,85 @@
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Finished `test` profile [optimized + debuginfo] target(s) in 2m 09s
+     Running unittests src/lib.rs (target/debug/deps/terra_world-8abe7dd93f93dccd)
+
+running 53 tests
+test generation::rivers::brook_tests::brooks_use_existing_drains_and_flow_downhill_across_negative_section_edges ... brook seed=42042 at=[966.9917455215465, 8.0, -2560.0] width=1.71
+brook seed=42042 at=[415.07040624220735, 8.0, -2048.0] width=1.43
+brook seed=42042 at=[1978.8276988305965, 17.681535909153123, -2048.0] width=1.5699999999999998
+ok
+test generation::rivers::brook_tests::revision_three_preserves_whole_cherry_forest_and_highland_brooks_without_hydro_conflicts ... ok
+test generation::rivers::connected::tests::arbitrary_course_frames_preserve_world_flow_and_cross_chunk_coordinates ... ok
+test generation::rivers::connected::tests::connected_courses_reach_real_lakes_or_sea_and_vary_in_length ... ok
+test generation::rivers::connected::tests::continuous_lake_connections_hold_one_level_and_never_reverse_the_flow ... ok
+test generation::rivers::connected::tests::courses_have_no_dry_gaps_and_use_real_fluid_cells_across_negative_section_edges ... ok
+test generation::rivers::connected::tests::fractional_shore_voxels_keep_their_wet_neighbors_supported ... ok
+test generation::rivers::connected::tests::lake_shores_are_supported_beyond_the_channel_and_basin_level_stays_constant ... ok
+test generation::rivers::connected::tests::new_lakes_vary_in_size_and_river_toggle_keeps_the_same_basin ... ok
+test generation::rivers::connected::tests::region_reload_query_order_and_negative_boundaries_preserve_hydrology ... ok
+test generation::rivers::connected::tests::traced_union_lake_edges_and_fractional_river_banks_have_no_unsupported_water ... ok
+test generation::rivers::density_tests::revision_four_brooks_fit_their_cells_and_preserve_regional_rivers_and_disabled_worlds ... ok
+test generation::rivers::density_tests::revision_four_increases_real_open_river_coverage_across_multiple_seeds ... river_coverage seed=42042 old=[49119, 242] current=[49117, 281]
+river_coverage seed=7 old=[13796, 41] current=[13795, 43]
+river_coverage seed=99173 old=[19623, 57] current=[19622, 80]
+river_coverage seed=12345 old=[39250, 85] current=[39249, 124]
+river_coverage seed=86420 old=[48341, 176] current=[48341, 229]
+ok
+test generation::rivers::density_tests::revision_three_increases_actual_open_watercourse_density_on_the_main_terrain ... hydrology_density seed=42042 area_km2=16.777216 before=Density { rivers: 3, tributaries: 0, brooks: 30, river_metres: 3865.366232929876, brook_metres: 9220.423380806844 } after=Density { rivers: 3, tributaries: 3, brooks: 35, river_metres: 4578.740534087928, brook_metres: 10330.339932427181 }
+hydrology_density seed=7 area_km2=16.777216 before=Density { rivers: 2, tributaries: 0, brooks: 7, river_metres: 859.7387094162118, brook_metres: 1235.588113300623 } after=Density { rivers: 2, tributaries: 1, brooks: 8, river_metres: 1232.345481221424, brook_metres: 1437.7451541818432 }
+hydrology_density seed=99173 area_km2=16.777216 before=Density { rivers: 2, tributaries: 0, brooks: 5, river_metres: 1442.5018865752997, brook_metres: 1306.055846108734 } after=Density { rivers: 2, tributaries: 1, brooks: 8, river_metres: 2015.6895531825471, brook_metres: 1926.0444693433492 }
+ok
+test generation::rivers::density_tests::revision_three_keeps_old_course_selection_and_river_toggle_contracts ... ok
+test generation::rivers::distributaries::tests::branch_columns_share_negative_chunk_boundaries_and_have_solid_water_support ... ok
+test generation::rivers::distributaries::tests::generated_distributaries_reach_reservoirs_and_survive_cache_eviction_and_reload ... ok
+test generation::rivers::distributaries::tests::long_channel_segments_cannot_cross_between_their_sampled_points ... ok
+test generation::rivers::distributaries::tests::ocean_offshoots_bypass_intermediate_lakes_without_sampled_water_level_ascents ... ok
+test generation::rivers::distributaries::tests::old_hydrology_contracts_keep_their_original_routing_and_main_heightfield ... ok
+test generation::rivers::distributaries::tests::real_fork_keeps_shared_split_but_has_its_own_course_direction_and_mouth ... ok
+test generation::rivers::distributaries::tests::submerged_ocean_courses_are_not_land_river_forks ... ok
+test generation::rivers::erosion::tests::actual_cataracts_remove_solid_trench_banks_and_expose_rock_across_three_seeds ... waterfall terrain seed=42042 x=-423.2 z=590.0 removed_solid_voxels=698 widened_columns=32 rock_columns=19
+waterfall terrain seed=1337 x=-426.9 z=6.0 removed_solid_voxels=639 widened_columns=30 rock_columns=22
+waterfall terrain seed=99173 x=-2462.1 z=462.0 removed_solid_voxels=886 widened_columns=32 rock_columns=27
+ok
+test generation::rivers::erosion::tests::plunge_openings_are_wide_asymmetric_local_and_preserve_the_hydraulic_lip ... ok
+test generation::rivers::erosion::tests::unaffected_reaches_and_legacy_revision_keep_exact_height_and_material_samples ... ok
+test generation::rivers::erosion::tests::waterfall_section_data_is_deterministic_across_negative_seams_and_generation_order ... ok
+test generation::rivers::network::tests::angled_tributaries_keep_real_water_at_nearest_voxel_centres_in_all_directions ... ok
+test generation::rivers::network::tests::drainage_accumulation_is_acyclic_conservative_and_reaches_its_actual_outlet ... ok
+test generation::rivers::network::tests::dry_trunk_bank_never_overrides_a_wet_incoming_tributary ... ok
+test generation::rivers::network::tests::enclosed_drainage_sinks_do_not_create_a_fake_connection_or_loop ... ok
+test generation::rivers::network::tests::regional_eviction_removes_one_distant_completed_entry_and_never_inflight_cells ... ok
+test generation::rivers::network::tests::revision_five_tributaries_have_real_connected_water_and_survive_reload_and_edits ... ok
+test generation::rivers::network::tests::revisions_three_and_four_retain_unbranched_catchment_topology ... ok
+test generation::rivers::tests::bed_depth_and_width_form_pools_and_riffles_without_uphill_water ... ok
+test generation::rivers::tests::buried_terminal_galleries_extend_the_wet_channel_without_cutting_the_roof ... ok
+test generation::rivers::tests::cataract_roofs_taper_downstream_instead_of_ending_on_a_vertical_wall ... ok
+test generation::rivers::tests::covered_rivers_keep_solid_roofs_and_real_water_in_headless_and_render_sections ... river tunnel fixture: x=-498 z=-1680 level=32.126983747386916 roof=39.135373294915105
+river tunnel fixture: x=33 z=-1694 level=54.07479687468957 roof=60.85480468560026
+river tunnel fixture: x=-970 z=-1174 level=85.04020597089288 roof=92.42630708251558
+ok
+test generation::rivers::tests::desert_rarity_selects_whole_paths_deterministically ... ok
+test generation::rivers::tests::eroded_portal_roofs_remain_face_connected_to_their_banks ... ok
+test generation::rivers::tests::generated_long_cataract_has_an_open_shaft_and_water_in_every_vertical_section ... ok
+test generation::rivers::tests::hydraulic_falls_keep_their_full_height_while_exterior_banks_are_continuous ... ok
+test generation::rivers::tests::open_fork_islands_are_low_banks_instead_of_mountain_pillars ... ok
+test generation::rivers::tests::paths_are_deterministic_downhill_and_legacy_worlds_are_unchanged ... ok
+test generation::rivers::tests::portal_roofs_close_gradually_with_asymmetric_eroded_edges ... eroded river portal fixture: x=-952.1 z=115.0
+eroded river portal fixture: x=1120.4 z=172.0
+eroded river portal fixture: x=34.2 z=932.0
+ok
+test generation::rivers::tests::real_waterfalls_do_not_project_a_flat_cliff_across_the_entire_valley ... ok
+test generation::rivers::tests::river_valleys_only_carve_land_and_blend_back_into_the_original_terrain ... ok
+test generation::rivers::tests::river_water_has_supported_banks_including_negative_and_terminal_edges ... ok
+test generation::rivers::tests::side_channels_split_and_rejoin_with_a_real_dry_island ... river bifurcation fixture: main=(59.3,-1544.0) side=(39.3,-1544.0) level=54.075
+river bifurcation fixture: main=(-982.4,-1128.0) side=(-961.4,-1128.0) level=85.040
+river bifurcation fixture: main=(69.0,-1100.0) side=(47.0,-1100.0) level=122.763
+ok
+test generation::rivers::tests::small_drops_slope_continuously_and_only_five_meter_cliffs_fall ... ok
+test generation::rivers::tests::widened_river_banks_join_unchanged_terrain_at_drainage_cell_edges ... ok
+test generation::rivers::width::tests::new_river_sections_share_negative_boundaries_and_are_generation_order_independent ... ok
+test generation::rivers::width::tests::real_regional_channels_have_six_to_twenty_two_blocks_of_water_and_real_empty_water_voxels ... river_revision5 sampled_reaches=164 measured_voxel_width=[7.5, 20.125]
+ok
+test generation::rivers::width::tests::voxelized_width_limits_include_shallow_diagonal_negative_and_fractional_channels ... ok
+
+test result: ok. 53 passed; 0 failed; 0 ignored; 0 measured; 1436 filtered out; finished in 20.07s
+

@@ -1,0 +1,22 @@
+{
+  "id": "teramic::sidewalk_left",
+  "name": "Sidewalk Left Edge",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 443
+    },
+    "count": 2
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 441
+        },
+        "count": 2
+      }
+    ]
+  }
+}

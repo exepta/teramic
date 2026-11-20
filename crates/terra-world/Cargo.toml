@@ -24,3 +24,7 @@ bevy = { workspace = true, optional = true }
 [[example]]
 name = "streaming_benchmark"
 required-features = ["bevy"]
+
+[[example]]
+name = "export_house_template"
+required-features = ["bevy"]

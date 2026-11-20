@@ -1,0 +1,52 @@
+[
+  {
+    "source": "Ocean · Warm",
+    "en": "Ocean · Warm",
+    "de": "Ozean · Warm"
+  },
+  {
+    "source": "Plains · Warm",
+    "en": "Plains · Warm",
+    "de": "Ebene · Warm"
+  },
+  {
+    "source": "Forest · Warm",
+    "en": "Forest · Warm",
+    "de": "Wald · Warm"
+  },
+  {
+    "source": "Desert · Hot",
+    "en": "Desert · Hot",
+    "de": "Wüste · Heiß"
+  },
+  {
+    "source": "Highlands · Cold",
+    "en": "Highlands · Cold",
+    "de": "Hochland · Kalt"
+  },
+  {
+    "source": "Mushroom Park · Warm",
+    "en": "Mushroom Park · Warm",
+    "de": "Pilzpark · Warm"
+  },
+  {
+    "source": "Cliffted Desert · Hot",
+    "en": "Cliffted Desert · Hot",
+    "de": "Klippenwüste · Heiß"
+  },
+  {
+    "source": "Cherry Forest · Warm",
+    "en": "Cherry Forest · Warm",
+    "de": "Kirschwald · Warm"
+  },
+  {
+    "source": "Spirit Blossom · Warm",
+    "en": "Spirit Blossom · Warm",
+    "de": "Geisterblütenwald · Warm"
+  },
+  {
+    "source": "Blood Forest · Warm",
+    "en": "Blood Forest · Warm",
+    "de": "Blutwald · Warm"
+  }
+]

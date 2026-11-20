@@ -575,7 +575,7 @@ mod tests {
         };
         let mut client = ClientConfig::default();
         configure(&mut world, &mut client);
-        assert_eq!(world.landscape_revision, 1);
+        assert_eq!(world.landscape_revision, 9);
         assert_eq!(world.sea_level, 8.0);
         assert!(world.biome_definitions.is_none());
         assert_eq!(world.hill_amplitude + world.mountain_amplitude, 0.0);

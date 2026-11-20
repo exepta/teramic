@@ -9,14 +9,30 @@
   "bevel_width": 0.0,
   "materials": {
     "Rounded gravel": {
-      "texture_pattern": "gravel",
-      "roughness": 1.0,
-      "reflectance": 0.1
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/gravel_normal.png"
     }
   },
-  "face_materials": ["Rounded gravel", "Rounded gravel", "Rounded gravel", "Rounded gravel", "Rounded gravel", "Rounded gravel"],
+  "face_materials": [
+    "Rounded gravel",
+    "Rounded gravel",
+    "Rounded gravel",
+    "Rounded gravel",
+    "Rounded gravel",
+    "Rounded gravel"
+  ],
   "hardness": 0.65,
   "resistance": 0.6,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Rounded gravel": "textures/block_palette/gravel.png"
+  }
 }

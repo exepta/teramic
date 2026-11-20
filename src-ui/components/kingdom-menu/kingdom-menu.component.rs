@@ -51,6 +51,15 @@ fn kingdom_command(
                 "kingdom-tab-members" => Some(Action::Tab("members".into())),
                 "kingdom-tab-diplomacy" => Some(Action::Tab("diplomacy".into())),
                 "kingdom-tab-work" => Some(Action::Tab("work".into())),
+                "kingdom-tab-building" => Some(Action::Tab("building".into())),
+                "kingdom-tab-army" => Some(Action::Tab("army".into())),
+                "kingdom-select-member" => store
+                    .get_store::<KingdomIntent>()
+                    .and_then(|intent| intent.member.parse().ok())
+                    .map(Action::SelectMember),
+                "kingdom-select-realm" => store
+                    .get_store::<KingdomIntent>()
+                    .map(|intent| Action::SelectRealm(intent.target.clone())),
                 "kingdom-edit-role" => store
                     .get_store::<KingdomIntent>()
                     .and_then(|s| s.member.parse().ok())

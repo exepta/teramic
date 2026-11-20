@@ -1,0 +1,22 @@
+{
+  "id": "teramic::ornate_grave_slab",
+  "name": "Ornate Floor Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 345
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 340
+        },
+        "count": 3
+      }
+    ]
+  }
+}

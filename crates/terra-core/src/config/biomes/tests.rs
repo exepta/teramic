@@ -347,7 +347,7 @@ fn missing_saved_biome_metadata_preserves_legacy_sea_level_and_absent_snapshot()
         custom
     );
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.landscape_revision, 1);
+    assert_eq!(fresh.landscape_revision, 9);
     assert_eq!(fresh.sea_level, 8.0);
     assert!(!fresh.rivers);
     assert!(fresh.biome_definitions.is_none());
@@ -573,5 +573,40 @@ fn complete_old_landscape_snapshots_roundtrip_without_adopting_new_defaults() {
             restored.biome_definitions,
             WorldConfig::default().biome_definitions
         );
+    }
+}
+
+#[test]
+fn legacy_eight_biome_snapshots_append_spirit_profile_without_retrogen() {
+    let original = BiomeDefinitions::default();
+    let mut json = serde_json::to_value(&original).unwrap();
+    json["entries"].as_array_mut().unwrap().pop();
+    let restored: BiomeDefinitions = serde_json::from_value(json).unwrap();
+    assert_eq!(&restored.entries[..8], &original.entries[..8]);
+    assert_eq!(
+        restored.get(BiomeKind::SpiritBlossom),
+        original.get(BiomeKind::SpiritBlossom)
+    );
+    restored.validate().unwrap();
+    let old = WorldConfig::from_toml("seed=42").unwrap();
+    assert_eq!(old.spirit_blossom_revision, 0);
+    assert_eq!(WorldConfig::default().spirit_blossom_revision, 2);
+}
+
+#[test]
+fn climate_classes_allow_temperate_neighbors_but_separate_desert_from_alpine() {
+    use super::BiomeClimate;
+    assert_eq!(BiomeKind::Highland.climate(), BiomeClimate::Cold);
+    assert_eq!(BiomeKind::Desert.climate(), BiomeClimate::Hot);
+    assert_eq!(BiomeKind::ClifftedDesert.climate(), BiomeClimate::Hot);
+    assert_eq!(BiomeKind::Forest.climate(), BiomeClimate::Warm);
+    for a in [BiomeClimate::Cold, BiomeClimate::Warm, BiomeClimate::Hot] {
+        for b in [BiomeClimate::Cold, BiomeClimate::Warm, BiomeClimate::Hot] {
+            assert_eq!(a.allows_neighbor(b), b.allows_neighbor(a));
+            assert_eq!(
+                a.allows_neighbor(b),
+                a == b || a == BiomeClimate::Warm || b == BiomeClimate::Warm
+            );
+        }
     }
 }

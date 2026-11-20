@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 404,
+  "name": "Bloodwood Planks",
+  "description": "Bloodwood Planks from the crimson woodland.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0.025,
+  "materials": {
+    "bloodwood_planks": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/blood_planks_normal.png"
+    }
+  },
+  "textures": {
+    "bloodwood_planks": "textures/block_palette/blood_planks.png"
+  },
+  "face_materials": [
+    "bloodwood_planks",
+    "bloodwood_planks",
+    "bloodwood_planks",
+    "bloodwood_planks",
+    "bloodwood_planks",
+    "bloodwood_planks"
+  ]
+}

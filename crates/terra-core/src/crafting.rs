@@ -8,7 +8,8 @@ use std::{
 };
 
 pub const MAX_CRAFT_BATCH: u16 = 128;
-pub const MAX_RECIPES: usize = 512;
+pub const MAX_RECIPES: usize = 1024;
+mod loading;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -425,60 +426,30 @@ impl RecipeBook {
     }
     pub fn extend(&mut self, recipes: Vec<Recipe>) -> Result<(), String> {
         if self.recipes.len() + recipes.len() > MAX_RECIPES {
-            return Err("Too many recipes (maximum 512)".into());
+            return Err(format!("Too many recipes (maximum {MAX_RECIPES})"));
         }
         let mut next = self.recipes.as_ref().clone();
         for recipe in recipes {
             recipe.validate()?;
-            if next.insert(recipe.key(), recipe).is_some() {
-                return Err("Duplicate recipe ID or key collision".into());
+            match next.entry(recipe.key()) {
+                std::collections::btree_map::Entry::Vacant(entry) => {
+                    entry.insert(recipe);
+                }
+                std::collections::btree_map::Entry::Occupied(_) => {
+                    return Err(format!(
+                        "Duplicate recipe ID or key collision: {}",
+                        recipe.id
+                    ));
+                }
             }
         }
         self.recipes = Arc::new(next);
         Ok(())
     }
     /// Mod packs add namespaced recipes; a bad file never partly changes the book.
+    /// Nested category folders are visited deterministically; duplicates are errors.
     pub fn load_directory(&mut self, path: &Path) -> Result<(), String> {
-        if !path.exists() {
-            return Ok(());
-        }
-        let mut paths = std::fs::read_dir(path)
-            .map_err(|e| e.to_string())?
-            .map(|entry| entry.map(|e| e.path()).map_err(|e| e.to_string()))
-            .collect::<Result<Vec<_>, _>>()?;
-        paths.sort();
-        let mut recipes = Vec::new();
-        for path in paths.into_iter().filter(|p| {
-            p.extension()
-                .is_some_and(|ext| ext == "toml" || ext == "json")
-        }) {
-            if std::fs::metadata(&path).map_err(|e| e.to_string())?.len() > 512 * 1024 {
-                return Err("Recipe file exceeds 512 KiB".into());
-            }
-            let source = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
-            let file: RecipeFile = if path.extension().is_some_and(|ext| ext == "json") {
-                let value: serde_json::Value =
-                    serde_json::from_str(&source).map_err(|e| e.to_string())?;
-                if value.get("id").is_some() {
-                    RecipeFile {
-                        schema_version: 1,
-                        recipes: vec![serde_json::from_value(value).map_err(|e| e.to_string())?],
-                    }
-                } else {
-                    serde_json::from_value(value).map_err(|e| e.to_string())?
-                }
-            } else {
-                toml::from_str(&source).map_err(|e| format!("{}: {e}", path.display()))?
-            };
-            if file.schema_version != 1 {
-                return Err("Unsupported recipe schema".into());
-            }
-            recipes.extend(file.recipes);
-            if recipes.len() > MAX_RECIPES {
-                return Err("Too many mod recipes".into());
-            }
-        }
-        self.extend(recipes)
+        loading::load_directory(self, path)
     }
     pub fn get(&self, key: u64) -> Option<&Recipe> {
         self.recipes.get(&key)
@@ -506,6 +477,7 @@ impl RecipeBook {
         }
         let mut next = inventory.clone();
         let mut wood = WoodInputs::default();
+        let mut empty_buckets = 0;
         for ingredient in recipe.ingredients() {
             let needed = ingredient
                 .count
@@ -519,6 +491,9 @@ impl RecipeBook {
                 if ingredient.matches(stack.item) && remaining > 0 {
                     let used = remaining.min(stack.count);
                     wood.consume(stack.item, used);
+                    if stack.item == ItemKind::Tool(crate::ToolKind::BileBucket) {
+                        empty_buckets += used;
+                    }
                     stack.count -= used;
                     remaining -= used;
                     if stack.count == 0 {
@@ -526,6 +501,9 @@ impl RecipeBook {
                     }
                 }
             }
+        }
+        if next.insert(ItemKind::Tool(crate::ToolKind::Bucket), empty_buckets) > 0 {
+            return Err(CraftError::NoSpace);
         }
         let amount = recipe.output.count * count;
         let output = self.resolve_output(recipe.output, wood);
@@ -890,12 +868,16 @@ impl RecipeBook {
         };
         let mut next = inventory.clone();
         let mut wood = WoodInputs::default();
+        let mut empty_buckets = 0;
         for (slot, needed) in consumed {
             let Some(needed) = needed.checked_mul(count) else {
                 return false;
             };
             let stack = &mut next.slots[usize::from(slot)];
             wood.consume(stack.item, needed);
+            if stack.item == ItemKind::Tool(crate::ToolKind::BileBucket) {
+                empty_buckets += needed;
+            }
             if stack.count < needed {
                 return false;
             }
@@ -903,6 +885,9 @@ impl RecipeBook {
             if stack.count == 0 {
                 *stack = ItemStack::EMPTY;
             }
+        }
+        if next.insert(ItemKind::Tool(crate::ToolKind::Bucket), empty_buckets) > 0 {
+            return false;
         }
         let output = self.resolve_output(recipe.output, wood);
         match destination {

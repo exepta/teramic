@@ -6,6 +6,22 @@ type TreeCells = (Vec<[i8; 3]>, Vec<[i8; 3]>);
 /// roots are clipped so an existing soil platform is never replaced by growth.
 #[cfg(feature = "bevy")]
 pub fn planted_shape(species: terra_core::TreeSpecies, seed: u64) -> Option<TreeCells> {
+    planted_shape_with_ecology(species, seed, 4)
+}
+
+/// New birches use the saved world ecology; existing exact-cell records never
+/// regenerate. Other species retain their established player-grown silhouettes.
+#[cfg(feature = "bevy")]
+pub fn planted_shape_with_ecology(
+    species: terra_core::TreeSpecies,
+    seed: u64,
+    ecology_revision: u8,
+) -> Option<TreeCells> {
+    let revision = if species == terra_core::TreeSpecies::Birch && ecology_revision >= 7 {
+        7
+    } else {
+        4
+    };
     let species = match species {
         terra_core::TreeSpecies::Oak => TreeSpecies::Green,
         terra_core::TreeSpecies::Spruce => TreeSpecies::Spruce,
@@ -13,7 +29,7 @@ pub fn planted_shape(species: terra_core::TreeSpecies, seed: u64) -> Option<Tree
         terra_core::TreeSpecies::Cherry => TreeSpecies::Cherry(false),
         terra_core::TreeSpecies::Apple => TreeSpecies::Apple,
     };
-    let tree = Tree::with_species_revision([0; 3], seed, [0.; 4], species, 4);
+    let tree = Tree::with_species_revision([0; 3], seed, [0.; 4], species, revision);
     let shape = tree.felling_shape()?;
     let offsets = |cells: Vec<[i64; 3]>| -> Option<Vec<[i8; 3]>> {
         cells

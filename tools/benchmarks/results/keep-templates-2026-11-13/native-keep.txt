@@ -1,0 +1,71 @@
+2026-11-13T00:33:53.606486Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.5-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-13T00:33:53.703487Z  INFO terra_client::bootstrap: Smoke-test compute worker cap; IO and async policies are unchanged compute_thread_cap=4 compute_threads=16 async_threads=4 io_threads=4
+2026-11-13T00:33:53.711530Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-13T00:33:53.711561Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-13T00:33:53.712543Z  INFO bevy_winit::system: Creating new window TERAMIC (198v0)
+2026-11-13T00:33:53.712697Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-13T00:33:54.919394Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:37559 [1/1]
+2026-11-13T00:33:54.919485Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-11-13T00:33:55.272950Z  INFO terra_ui::settings: Applied window presentation policy mode=Mailbox
+2026-11-13T00:33:55.277970Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-11-13T00:33:55.329483Z  INFO lightyear_udp::endpoint: Received UDP packet from new address 127.0.0.1:52593, Spawn new LinkOf entity=251v0 endpoint_entity=231v0
+2026-11-13T00:33:55.353752Z  INFO terra_render::weather::surfaces: Terrain wet material GPU binding mode legacy_smoke_control=false bindless=true
+2026-11-13T00:33:55.419868Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-11-13T00:33:55.420043Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-11-13T00:33:55.430981Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T00:33:55.430998Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 33, generation: 0} mip_levels=1 rebound_materials=1
+2026-11-13T00:33:55.431005Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 43, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431011Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 44, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431015Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 45, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431021Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 35, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431025Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 37, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431031Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 38, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431036Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431041Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-oak-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T00:33:55.431046Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 32, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-13T00:33:55.431056Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 34, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431067Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 48, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431072Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 50, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431077Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-iron-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T00:33:55.431083Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 42, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431088Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 39, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431093Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 47, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431097Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 51, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431102Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-11-13T00:33:55.431106Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 40, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431111Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 46, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431116Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 36, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431120Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 41, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431125Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=0
+2026-11-13T00:33:55.431130Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 49, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:33:55.431134Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 31, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-13T00:33:55.431139Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-11-13T00:33:55.431144Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-belt-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T00:33:55.465093Z  INFO terra_render::blocks::loading: Block template library ready blocks=305 materials=878
+2026-11-13T00:33:55.546889Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (251v0)
+2026-11-13T00:33:55.603219Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-11-13T00:33:55.631427Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=93fc6028-e6e6-4ae1-9e5a-9b60182ecc90 name=Player-93fc6028
+2026-11-13T00:33:55.993134Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-11-13T00:33:56.877229Z  INFO terra_client::inventory_benchmark::chest: Inventory benchmark chest fixture created through a real grant and acknowledged block edit; disposable world retains the chest position=[9, 12, 24] material=173 request=1
+2026-11-13T00:33:57.968650Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/kingdom-unbound.png
+2026-11-13T00:33:59.028541Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:37559 [1/1]
+2026-11-13T00:33:59.028599Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-11-13T00:33:59.042897Z  INFO lightyear_udp::endpoint: Received UDP packet from new address 127.0.0.1:46521, Spawn new LinkOf entity=254v0 endpoint_entity=231v0
+2026-11-13T00:33:59.193895Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 281474976710656 (254v0)
+2026-11-13T00:33:59.209048Z  INFO lightyear_netcode::client_plugin: Client Netcode(281474976710656) connected
+2026-11-13T00:33:59.211967Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=2 uuid=8e05986a-fe93-4cd3-b2d6-cab6e14607b3 name=F57 Visitor
+2026-11-13T00:33:59.586837Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(2))
+2026-11-13T00:34:01.949599Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-general-de-wide.png
+2026-11-13T00:34:04.065667Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-members-de-wide.png
+2026-11-13T00:34:06.175360Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-diplomacy-de-wide.png
+2026-11-13T00:34:07.090315Z  WARN bevy_text::pipeline: Text span 3289v12 has a font size <= 0.0. Nothing will be displayed.
+2026-11-13T00:34:08.280615Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-buildings-de-wide.png
+2026-11-13T00:34:09.696645Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-workers-de-wide.png
+2026-11-13T00:34:11.100528Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-army-de-wide.png
+2026-11-13T00:34:12.499781Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-general-en-compact.png
+2026-11-13T00:34:13.911481Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-members-en-compact.png
+2026-11-13T00:34:15.318483Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-diplomacy-en-compact.png
+2026-11-13T00:34:16.735105Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-buildings-en-compact.png
+2026-11-13T00:34:18.152223Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-workers-en-compact.png
+2026-11-13T00:34:19.559522Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/keep-redesign/run.42Gyf9/captures/keep-army-en-compact.png
+2026-11-13T00:34:20.231882Z  INFO terra_client::kingdom_ui_smoke::redesign: Native keep redesign passed: six real tabs, DE/EN responsive frames, actual second member, loaded army, actual template card and authoritative material preview captures=12

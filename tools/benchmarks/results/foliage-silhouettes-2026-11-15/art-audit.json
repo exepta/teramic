@@ -1,0 +1,474 @@
+{
+  "scope": "Offline authoring and shipped PNG audit; does not establish native rendering or performance.",
+  "source": "tools/assets/biome_surfaces/foliage.py",
+  "source_sha256": "9d381085e25f275009592147510fa16055fc7d75d2a9bbdd730c428d3f63f6d9",
+  "bounds_policy": "Complete rotated blades and entire blossoms translated into UV 0.005..0.995; no wrapping, clipping, opacity fade or shifted-UV crops.",
+  "stems_policy": "Only attached petioles of 0.0125..0.0146 UV length; no exposed inter-leaf or cluster-centre branch lines. Blossom stamens retained.",
+  "executed_test_summary": {
+    "python3 -m unittest discover -s tools/assets/biome_surfaces -v": "13 passed",
+    "python3 -m unittest discover -s tools/assets/blood_forest -v": "3 passed"
+  },
+  "image_count": 20,
+  "images": [
+    {
+      "block_id": 7,
+      "file": "textures/foliage/oak_side.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "be9fff56e66d513b98678473af420d4ddfd5e8b0123febc15167c70b02e6e2b3",
+      "covered_fraction": 0.6718025207519531,
+      "fully_opaque_fraction_of_covered": 0.9929021231169333,
+      "fully_transparent_margin_px": 4,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        134.04971434126927,
+        166.88932225393032,
+        54.48451609582578
+      ]
+    },
+    {
+      "block_id": 7,
+      "file": "textures/foliage/oak_top.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "086e04691f553a2412879375957109826f2106359a1b9cf1558b70f3611fbb36",
+      "covered_fraction": 0.6700820922851562,
+      "fully_opaque_fraction_of_covered": 0.9930774573318608,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        136.26537760401737,
+        169.30908267504387,
+        55.22588023526444
+      ]
+    },
+    {
+      "block_id": 8,
+      "file": "textures/foliage/autumn_side.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "8db9e7224a81e960e30b8e8ddf188b59e6abf1d44759fe3298f50e2d0b2aa0d6",
+      "covered_fraction": 0.6767768859863281,
+      "fully_opaque_fraction_of_covered": 0.9929937490488295,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        219.58666628824432,
+        129.52552648010445,
+        42.39246182664472
+      ]
+    },
+    {
+      "block_id": 8,
+      "file": "textures/foliage/autumn_top.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "1e5760b9b165610dd0c1a196233b9bffbd52a6757a59a5284c22e17b9123e9d3",
+      "covered_fraction": 0.6696891784667969,
+      "fully_opaque_fraction_of_covered": 0.9919455441314687,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        218.97857483303758,
+        129.25316840950723,
+        42.21933375827634
+      ]
+    },
+    {
+      "block_id": 9,
+      "file": "textures/foliage/birch_side.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "0ea08814bb6095f9ac3ae5981caeca2a06a5c48dfc17991286c10ce57c3d9eac",
+      "covered_fraction": 0.6691856384277344,
+      "fully_opaque_fraction_of_covered": 0.9920876965962274,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        175.95938173355935,
+        183.64014709684832,
+        70.52553796650099
+      ]
+    },
+    {
+      "block_id": 9,
+      "file": "textures/foliage/birch_top.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "600d40033ef76edfc47fc30f831d7ecb983f10b6b0631dcc338faf3d3e3be4cb",
+      "covered_fraction": 0.6777763366699219,
+      "fully_opaque_fraction_of_covered": 0.9923568312930913,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        178.83068564006874,
+        186.5903174396116,
+        71.70486680240703
+      ]
+    },
+    {
+      "block_id": 132,
+      "file": "textures/foliage/cherry_pink_side.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "0c66405212f1d17366d36433c3780579aa1347e76b19115b8e4cf8e0a6ce39c8",
+      "covered_fraction": 0.6784172058105469,
+      "fully_opaque_fraction_of_covered": 0.9939778343820111,
+      "fully_transparent_margin_px": 6,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        219.9823331749372,
+        128.1834905980585,
+        162.3844104269907
+      ]
+    },
+    {
+      "block_id": 132,
+      "file": "textures/foliage/cherry_pink_top.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "b0b587a686e405d5663717184eabccef1ee93ed60a567f99191f3a287e9723a7",
+      "covered_fraction": 0.6726608276367188,
+      "fully_opaque_fraction_of_covered": 0.993500969750587,
+      "fully_transparent_margin_px": 8,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        217.4934927049798,
+        125.00309952736488,
+        159.27219900906454
+      ]
+    },
+    {
+      "block_id": 133,
+      "file": "textures/foliage/cherry_white_side.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "e3f1dc872597029a30e1026454b3c556cfea5994f936a3cd8d72c6146985651c",
+      "covered_fraction": 0.6858634948730469,
+      "fully_opaque_fraction_of_covered": 0.99354820768097,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        209.22449128110392,
+        193.55044644106698,
+        190.87625605284518
+      ]
+    },
+    {
+      "block_id": 133,
+      "file": "textures/foliage/cherry_white_top.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "8ee82d522031b5e7778fcde58868183fb4c8c7b5f41f3678d66487948f6861fe",
+      "covered_fraction": 0.6733283996582031,
+      "fully_opaque_fraction_of_covered": 0.993785019460764,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        209.25216062755115,
+        193.27485576813444,
+        191.02200533600893
+      ]
+    },
+    {
+      "block_id": 195,
+      "file": "textures/foliage/apple_side.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "19796cb720a8f05149ad22d8eea79849812fb1a79d2b3f7dd29eab775545d845",
+      "covered_fraction": 0.671905517578125,
+      "fully_opaque_fraction_of_covered": 0.9946575373574965,
+      "fully_transparent_margin_px": 7,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        122.40023973286908,
+        160.81331659008532,
+        50.13664773538058
+      ]
+    },
+    {
+      "block_id": 195,
+      "file": "textures/foliage/apple_top.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "98e44978fcbf95bc1cf5d20f9a6e087033f7982000652085a0ceee92fa75ee1e",
+      "covered_fraction": 0.6774826049804688,
+      "fully_opaque_fraction_of_covered": 0.9937837137805606,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        123.19121896495065,
+        161.8066733146736,
+        50.42565186351944
+      ]
+    },
+    {
+      "block_id": 310,
+      "file": "textures/foliage/spirit_pink_side.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "e4ab8f348224e989403a59546ec0543d67d544574ae895ec2c039a1dfa7d4ae3",
+      "covered_fraction": 0.6661300659179688,
+      "fully_opaque_fraction_of_covered": 0.9932081868264022,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        206.2410341566918,
+        125.38241772181092,
+        193.70779999538735
+      ]
+    },
+    {
+      "block_id": 310,
+      "file": "textures/foliage/spirit_pink_top.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "60257a892f85ccf00047e1af1407909dd2a88785b44e0408ad91c6a6cceeb56a",
+      "covered_fraction": 0.6975250244140625,
+      "fully_opaque_fraction_of_covered": 0.993530286789316,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        202.66111444440162,
+        120.13783859656849,
+        190.18145638496387
+      ]
+    },
+    {
+      "block_id": 311,
+      "file": "textures/foliage/spirit_pearl_side.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "f9cf3fad159e1c16d34b8bda387b77990879257bf7d07cb106980bcc111ae70a",
+      "covered_fraction": 0.6705207824707031,
+      "fully_opaque_fraction_of_covered": 0.993929670654765,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        161.23178368230055,
+        211.09249825420994,
+        219.62059688848694
+      ]
+    },
+    {
+      "block_id": 311,
+      "file": "textures/foliage/spirit_pearl_top.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "38a8506536b9a1ff8c59ace70a833ac7858732910cd22bc45eef73a4b11fd845",
+      "covered_fraction": 0.6714363098144531,
+      "fully_opaque_fraction_of_covered": 0.9931993659559237,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        161.34354406919275,
+        209.55624771187993,
+        217.8424915339557
+      ]
+    },
+    {
+      "block_id": 312,
+      "file": "textures/foliage/spirit_lavender_side.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "155cd7eb13201699376972b2b2eb1579e658d47e41d0e8f2d3ff1fb1fa05d02d",
+      "covered_fraction": 0.6955680847167969,
+      "fully_opaque_fraction_of_covered": 0.9937643619850937,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        180.8428825288904,
+        132.8566792861006,
+        223.0036423439035
+      ]
+    },
+    {
+      "block_id": 312,
+      "file": "textures/foliage/spirit_lavender_top.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "17adb07463be5fc81005b3e2b1f917462a8970d0cf869c0ffbfd64c99d3816dd",
+      "covered_fraction": 0.693939208984375,
+      "fully_opaque_fraction_of_covered": 0.9939696116803729,
+      "fully_transparent_margin_px": 4,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        178.07318529989215,
+        131.35484887868816,
+        218.77173353980587
+      ]
+    },
+    {
+      "block_id": 406,
+      "file": "textures/foliage/blood_side.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "110eada8362fe4a411af22d8bf80907c1deafb917633b3290a05fd9efc41a900",
+      "covered_fraction": 0.6725044250488281,
+      "fully_opaque_fraction_of_covered": 0.9901527570578526,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        219.06391035592958,
+        99.88909639831115,
+        121.19029314206821
+      ]
+    },
+    {
+      "block_id": 406,
+      "file": "textures/foliage/blood_top.png",
+      "size": [
+        512,
+        512
+      ],
+      "sha256": "06cfa230091657ead2a92a88e07d45d918b4f5e9564bd755b7b4e2ba9564a2ce",
+      "covered_fraction": 0.6885910034179688,
+      "fully_opaque_fraction_of_covered": 0.9902553875131571,
+      "fully_transparent_margin_px": 3,
+      "edge_coverage_top_bottom_left_right": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visible_mean_rgb": [
+        215.38224121823094,
+        98.12310420641003,
+        119.07541216552634
+      ]
+    }
+  ]
+}

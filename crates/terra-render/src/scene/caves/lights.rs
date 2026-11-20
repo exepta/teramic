@@ -1,4 +1,5 @@
 //! A bounded pool of real PBR lights, discovered only when section geometry changes.
+mod distant;
 mod soft_core;
 mod sunlight;
 mod updates;
@@ -20,6 +21,16 @@ use terra_world::{
 struct VoxelLamp([i64; 3], BlockLight, Vec3);
 #[derive(Resource, Default)]
 pub struct TorchSources(pub Vec<Vec3>);
+/// Observable streaming latency/work counters; no GPU or per-lamp allocation.
+#[derive(Resource, Default, Debug, Clone, Copy)]
+pub struct LightDiscoveryStatus {
+    pub selections: u64,
+    pub source_scans: u64,
+    pub fast_rejections: u64,
+    pub pending_sections: usize,
+    pub cached_sections: usize,
+    pub discovered_emitters: usize,
+}
 #[derive(Default)]
 struct Cached {
     epoch: u64,
@@ -35,6 +46,7 @@ struct Lamps {
     dirty: bool,
     next: f32,
     updates: updates::State,
+    diagnostics: LightDiscoveryStatus,
 }
 type LampEntities<'w, 's> = Query<
     'w,
@@ -65,8 +77,10 @@ fn configure_light_updates(app: &mut App) {
 
 pub(super) fn install(app: &mut App) {
     soft_core::install(app);
+    distant::install(app);
     configure_light_updates(app);
     app.init_resource::<Lamps>()
+        .init_resource::<LightDiscoveryStatus>()
         .init_resource::<TorchSources>()
         .init_resource::<sunlight::State>()
         .add_systems(
@@ -75,12 +89,21 @@ pub(super) fn install(app: &mut App) {
                 .chain()
                 .after(terra_player::PlayerSet::Movement),
         )
+        .add_systems(Update, publish_diagnostics.after(select))
         .add_systems(
             PostUpdate,
             (held, sunlight::update, flicker)
                 .chain()
                 .in_set(ApplyLocalLights),
         );
+}
+fn publish_diagnostics(cache: Res<Lamps>, mut status: ResMut<LightDiscoveryStatus>) {
+    *status = LightDiscoveryStatus {
+        pending_sections: cache.updates.pending_len(),
+        cached_sections: cache.sections.len(),
+        discovered_emitters: cache.emitters.len(),
+        ..cache.diagnostics
+    };
 }
 fn shadow_resolution(
     graphics: Option<Res<GraphicsConfig>>,
@@ -134,6 +157,7 @@ fn select(
         return;
     }
     cache.next = time.elapsed_secs() + 0.1;
+    cache.diagnostics.selections += 1;
     let definitions: BTreeMap<_, _> = assets.lights().collect();
     if definitions.is_empty() {
         for (entity, _, _, _) in &mut lamps {
@@ -354,7 +378,10 @@ fn discover(
             old.neighbors = neighbors;
             continue;
         }
-        if cache.sections.contains_key(&section) || journal.revision(section) > 0 {
+        if cache.sections.contains_key(&section)
+            || journal.revision(section) > 0
+            || source_free_section(section, chunks, journal, definitions)
+        {
             immediate.push((section, epoch, distance));
         } else {
             discoveries.push((section, epoch, distance));
@@ -395,6 +422,18 @@ fn refresh_section(
     epoch: u64,
 ) -> bool {
     let data = &chunks.loaded[&section];
+    if source_free_section(section, chunks, journal, definitions) {
+        cache.diagnostics.fast_rejections += 1;
+        cache.sections.insert(
+            section,
+            Cached {
+                epoch,
+                ..Default::default()
+            },
+        );
+        return true;
+    }
+    cache.diagnostics.source_scans += 1;
     let Ok(mut sources) = discover_sources(&data.data, journal, definitions) else {
         cache.sections.remove(&section);
         return false;
@@ -418,6 +457,26 @@ fn refresh_section(
         },
     );
     true
+}
+
+/// Negative membership proof is independent of section density. Solid terrain
+/// must not consume the bounded source-discovery queue before distant lamps.
+fn source_free_section(
+    section: SectionPos,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    definitions: &BTreeMap<u16, BlockLight>,
+) -> bool {
+    let data = &chunks.loaded[&section];
+    journal.revision(section) == 0
+        && !data
+            .props
+            .iter()
+            .chain(journal.placed_props(section))
+            .any(|prop| scarecrow_source(prop).is_some())
+        && !definitions
+            .keys()
+            .any(|&material| data.data.may_contain(material))
 }
 
 fn retain_definition(lamp: &mut VoxelLamp, selected: &mut BTreeMap<[i64; 3], BlockLight>) -> bool {
@@ -1094,9 +1153,10 @@ mod tests {
         for x in -64..=64 {
             let position = SectionPos::new(x, 0, 0);
             let mut data = terra_voxel::BlockSection::empty(position).unwrap();
-            if x == 0 {
-                data.set_block([2, 3, 4], 40).unwrap();
-            }
+            // Every section has a real source: source-free stone and sky now
+            // take the constant-time path and do not consume this budget.
+            data.set_block([1, 0, 1], 3).unwrap();
+            data.set_block([2, 3, 4], 40).unwrap();
             chunks.loaded.insert(
                 position,
                 terra_world::streaming::LoadedSection {
@@ -1124,7 +1184,7 @@ mod tests {
             cache.dirty,
             "Remaining discovery work must survive the timer"
         );
-        assert_eq!(cache.emitters.len(), 1);
+        assert_eq!(cache.emitters.len(), 128);
         discover(
             &mut cache,
             &chunks,
@@ -1135,7 +1195,8 @@ mod tests {
         );
         assert_eq!(cache.sections.len(), 129);
         assert!(!cache.dirty);
-        assert_eq!(cache.emitters[0].0, [2, 3, 4]);
+        assert_eq!(cache.emitters.len(), 129);
+        assert!(cache.emitters.iter().any(|(p, _)| *p == [2, 3, 4]));
         journal.record([2, 3, 4], 0).unwrap();
         discover(
             &mut cache,
@@ -1145,7 +1206,8 @@ mod tests {
             Vec3::ZERO,
             2000.0,
         );
-        assert!(cache.emitters.is_empty());
+        assert_eq!(cache.emitters.len(), 128);
+        assert!(cache.emitters.iter().all(|(p, _)| *p != [2, 3, 4]));
         journal.record([2, 3, 4], 40).unwrap();
         discover(
             &mut cache,
@@ -1155,7 +1217,8 @@ mod tests {
             Vec3::ZERO,
             2000.0,
         );
-        assert_eq!(cache.emitters.len(), 1);
+        assert_eq!(cache.emitters.len(), 129);
+        assert!(cache.emitters.iter().any(|(p, _)| *p == [2, 3, 4]));
         chunks.loaded.remove(&SectionPos::default());
         discover(
             &mut cache,
@@ -1166,7 +1229,8 @@ mod tests {
             2000.0,
         );
         assert_eq!(cache.sections.len(), 128);
-        assert!(cache.emitters.is_empty());
+        assert_eq!(cache.emitters.len(), 128);
+        assert!(cache.emitters.iter().all(|(p, _)| *p != [2, 3, 4]));
     }
 
     #[test]
@@ -1361,6 +1425,68 @@ mod tests {
                     .copied()
                     .collect::<std::collections::BTreeSet<_>>(),
                 expected.into_iter().collect()
+            );
+        }
+    }
+
+    #[test]
+    fn cemetery_sources_are_discovered_but_never_exceed_the_shared_light_budget() {
+        let definitions = light_definitions();
+        let ids = [358, 369, 370, 371, 372, 373, 386, 395, 396, 397];
+        let position = SectionPos::default();
+        let mut data = terra_voxel::BlockSection::empty(position).unwrap();
+        for (x, id) in ids.into_iter().enumerate() {
+            data.set_block([x + 1, 1, 1], id).unwrap();
+        }
+        data.set_block([12, 1, 1], 399).unwrap();
+        let journal = EditJournal::default();
+        let discovered = discover_sources(&data, &journal, &definitions).unwrap();
+        assert_eq!(discovered.len(), ids.len());
+        let emitters: Vec<_> = discovered
+            .into_iter()
+            .map(|(p, _, light)| (p, light))
+            .collect();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            position,
+            terra_world::streaming::LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        let mut app = App::new();
+        app.insert_resource(chunks)
+            .insert_resource(journal)
+            .init_resource::<TorchLightingStatus>()
+            .init_resource::<SelectedLamps>()
+            .add_systems(Update, apply_selected_lamps);
+        // Keep even the short-range candle eligible. From the section origin
+        // it is correctly culled behind the other lamps, beyond range + 2 m.
+        let focus = Vec3::new(6.0, 2.0, 4.0);
+        for budget in [4, 8, 12, 16] {
+            let selected = select_emitters(
+                &emitters,
+                app.world().resource::<ChunkStore>(),
+                app.world().resource::<EditJournal>(),
+                focus,
+                budget,
+            );
+            assert_eq!(selected.len(), budget.min(ids.len()));
+            app.world_mut().resource_mut::<SelectedLamps>().0 = selected;
+            app.update();
+            let mut query = app
+                .world_mut()
+                .query::<(&PointLight, Has<bevy::light::VolumetricLight>)>();
+            let lights: Vec<_> = query.iter(app.world()).collect();
+            assert_eq!(lights.len(), budget.min(ids.len()));
+            assert!(
+                lights
+                    .iter()
+                    .all(|(light, volume)| !light.shadow_maps_enabled && !volume)
             );
         }
     }

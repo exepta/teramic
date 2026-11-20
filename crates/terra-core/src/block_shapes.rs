@@ -136,6 +136,15 @@ impl ShapeBox {
 }
 
 pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
+    if crate::biome_flora::is_prop(material) {
+        return &[];
+    }
+    if crate::blood_blocks::is_prop(material) {
+        return crate::blood_blocks::boxes(material);
+    }
+    if crate::grave_blocks::is_prop(material) {
+        return crate::grave_blocks::boxes(material);
+    }
     if crate::profession_stations::is_station(material) {
         return crate::profession_stations::boxes(material);
     }

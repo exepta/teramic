@@ -8,6 +8,8 @@ fn cherry_regions_are_seeded_continuous_and_normalized_in_negative_coordinates()
     for seed in [42042, 7, 99173] {
         let config = WorldConfig {
             seed: WorldSeed(seed),
+            // Original climate-region contract, before terrain-profile biomes.
+            landscape_revision: 1,
             ..Default::default()
         };
         let a = TerraGenerator::new(config.clone()).unwrap();
@@ -44,6 +46,8 @@ fn visible_ocean_requires_actual_marine_water_not_a_climate_weight_on_dry_land()
         mushroom_park: 0.0,
         cliffted_desert: 0.0,
         cherry_forest: 0.0,
+        spirit_blossom: 0.0,
+        blood_forest: 0.0,
     };
     column.height = 40.0;
     column.river_cavity = None;

@@ -29,6 +29,7 @@ pub(crate) struct RenderWorld<'w, 's> {
     wet: Option<Res<'w, crate::weather::surfaces::WetMaterials>>,
     depth: Option<Res<'w, crate::weather::surfaces::TerrainDepthMaterials>>,
     terrain: Option<Res<'w, terra_world::streaming::WorldTerrain>>,
+    time: Option<Res<'w, Time>>,
     entering: Query<'w, 's, (), With<crate::transitions::ChunkFade>>,
     queued: Query<'w, 's, (), With<crate::transitions::QueuedChunk>>,
 }
@@ -40,7 +41,10 @@ pub(crate) fn upload_sections(
     mut meshes: ResMut<Assets<Mesh>>,
     assets: Res<BlockAssets>,
     mut jobs: ResMut<RenderJobs>,
-    mut status: ResMut<RenderStatus>,
+    (mut status, mut motion): (
+        ResMut<RenderStatus>,
+        Option<ResMut<crate::liquid_motion::History>>,
+    ),
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("terrain.upload");
     let visibility_changed = world.visibility.as_ref().is_some_and(|v| v.is_changed());
@@ -319,6 +323,62 @@ pub(crate) fn upload_sections(
             && rendered.sections.get(&position).is_none_or(|old| {
                 world.queued.contains(old.entity) || world.entering.contains(old.entity)
             });
+        if let Some(history) = motion.as_deref_mut() {
+            let now = world.time.as_ref().map_or(0.0, |time| time.elapsed_secs());
+            for kind in [
+                crate::liquid_motion::Kind::Galle,
+                crate::liquid_motion::Kind::Tar,
+            ] {
+                let present = batches.iter().any(|batch| {
+                    assets.templates.as_ref().and_then(|templates| {
+                        crate::liquid_motion::Kind::material(templates, batch.material)
+                    }) == Some(kind)
+                });
+                if present {
+                    continue;
+                }
+                // Curing changes the road's surface material in place; a wet
+                // retirement overlay would flash on top of the dry coating.
+                if kind == crate::liquid_motion::Kind::Tar
+                    && assets.templates.as_ref().is_some_and(|templates| {
+                        templates
+                            .blocks
+                            .get(&terra_core::roads::DRIED_TAR)
+                            .is_some_and(|block| {
+                                batches
+                                    .iter()
+                                    .any(|batch| batch.material == block.face_materials[3])
+                            })
+                    })
+                {
+                    history.remove(crate::liquid_motion::Key(position, kind));
+                    continue;
+                }
+                if let Some((mesh, duration, slot)) =
+                    history.drain(crate::liquid_motion::Key(position, kind), now)
+                    && let Some(material) = world
+                        .wet
+                        .as_ref()
+                        .and_then(|materials| materials.0.get(&slot))
+                    && let Ok(origin) = position.origin()
+                {
+                    let handle = meshes.add(mesh);
+                    commands.spawn((
+                        Mesh3d(handle.clone()),
+                        MeshMaterial3d(material.clone()),
+                        Transform::from_translation(Vec3::from_array(origin.map(|v| v as f32))),
+                        crate::liquid_motion::retiring(
+                            crate::liquid_motion::Key(position, kind),
+                            now + duration,
+                            handle,
+                        ),
+                        crate::miniature::layers(),
+                        bevy::light::NotShadowCaster,
+                        Name::new("Draining viscous surface"),
+                    ));
+                }
+            }
+        }
         if let Some(old) = rendered.sections.remove(&position) {
             if old.mesh_epoch == epoch && old.detail_level != level {
                 crate::transitions::record_swap(&mut commands);
@@ -348,41 +408,6 @@ pub(crate) fn upload_sections(
                 Visibility::default(),
             ))
             .id();
-        if let Some((geometry, _)) = world
-            .cache
-            .as_ref()
-            .and_then(|cache| cache.snapshot(position, epoch))
-        {
-            let mut drips = Vec::new();
-            for part in &geometry.segments {
-                if part.material != 51 {
-                    continue;
-                }
-                let global = std::array::from_fn(|a| origin[a] + i64::from(part.cell[a]));
-                let profile = terra_world::segments::profile(global, 51, |p| chunks.block_at(p));
-                let tip = profile.below == 0
-                    && (part.below == 0
-                        || chunks.block_at([global[0], global[1] - 1, global[2]]) == Some(0));
-                if !(profile.hanging || part.hanging) || !tip || chunks.block_at(global) != Some(51)
-                {
-                    continue;
-                }
-                let point = Vec3::new(
-                    f32::from(part.cell[0]) + 0.5,
-                    f32::from(part.cell[1]) + 0.02,
-                    f32::from(part.cell[2]) + 0.5,
-                );
-                drips.push(point.extend(-6.0));
-                if drips.len() == 8 {
-                    break;
-                }
-            }
-            if !drips.is_empty() {
-                commands
-                    .entity(root)
-                    .insert(crate::water::spray::SpraySources(drips));
-            }
-        }
         let shadowed_materials: std::collections::HashSet<_> = batches
             .iter()
             .filter(|batch| batch.shadow_only)
@@ -392,6 +417,26 @@ pub(crate) fn upload_sections(
         for mut batch in batches {
             let shadow_only = batch.shadow_only;
             let mut prepared = batch.staged.take().expect("complete upload is atomic");
+            if let Some(mut mesh) = prepared.liquid.take()
+                && let Some(history) = motion.as_deref_mut()
+                && let Some(kind) = assets.templates.as_ref().and_then(|templates| {
+                    crate::liquid_motion::Kind::material(templates, batch.material)
+                })
+            {
+                let now = world.time.as_ref().map_or(0.0, |time| time.elapsed_secs());
+                history.prepare(
+                    crate::liquid_motion::Key(position, kind),
+                    &mut mesh,
+                    now,
+                    !first_upload,
+                    batch.material,
+                );
+                prepared.bounds = crate::liquid_motion::bounds(&mesh);
+                if let Err(error) = meshes.insert(prepared.handle.id(), mesh) {
+                    tracing::error!(%error,"Fluid interpolation mesh publication failed");
+                }
+                prepared.far = None;
+            }
             let rooted_fibre = prepared.rooted;
             let damp = prepared.damp;
             let water = world.water.as_ref().filter(|_| {
@@ -497,7 +542,10 @@ pub(crate) fn upload_sections(
                 entity.insert(MeshMaterial3d(assets.materials[batch.material].clone()));
             }
             let permanently_shadowless = assets.templates.as_ref().is_some_and(|t| {
-                t.glass_material(batch.material) || t.torch_material(batch.material)
+                t.glass_material(batch.material)
+                    || t.torch_material(batch.material)
+                    || t.fog_material(batch.material)
+                    || t.bile_material(batch.material)
             });
             let replaced_caster = !shadow_only && shadowed_materials.contains(&batch.material);
             if replaced_caster && !permanently_shadowless {
@@ -583,7 +631,20 @@ fn prepare_batch(
         0
     };
     let tints = if water {
-        tint.map(|t| batch.positions.iter().map(|&p| t.at(p)).collect::<Vec<_>>())
+        tint.map(|t| {
+            (
+                batch
+                    .positions
+                    .iter()
+                    .map(|&p| t.payload(p))
+                    .collect::<Vec<_>>(),
+                batch
+                    .positions
+                    .iter()
+                    .map(|&p| t.blood_at(p))
+                    .collect::<Vec<_>>(),
+            )
+        })
     } else {
         None
     };
@@ -618,8 +679,9 @@ fn prepare_batch(
         values.resize(mesh.count_vertices(), [0.; 2]);
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_1, values);
     }
-    if let Some(tints) = tints {
+    if let Some((tints, blood)) = tints {
         mesh.insert_attribute(crate::water::biome::ATTRIBUTE_BIOME_TINT, tints);
+        mesh.insert_attribute(crate::water::biome::ATTRIBUTE_BLOOD_WEIGHT, blood);
     }
     if !batch.packed_normals.is_empty() {
         mesh.insert_attribute(
@@ -693,6 +755,11 @@ fn prepare_batch(
     };
     batch.staged = Some(super::staging::StagedMesh {
         opaque_shadow,
+        liquid: assets
+            .templates
+            .as_ref()
+            .and_then(|templates| crate::liquid_motion::Kind::material(templates, batch.material))
+            .map(|_| mesh.clone()),
         handle: meshes.add(mesh),
         bounds,
         rooted,
@@ -2004,6 +2071,91 @@ mod tests {
                     .count(),
                 1
             );
+        }
+    }
+
+    #[test]
+    fn fog_stone_upload_never_casts_shadows_at_any_lod() {
+        use super::super::{builder, jobs::RenderJob};
+        for fog_id in [399, terra_core::fog_blocks::MATERIAL] {
+            let mut templates = crate::blocks::authored_terrain_templates();
+            let mut fog = templates.blocks[&1].clone();
+            fog.face_materials = [0; 6];
+            fog.side_cap = None;
+            templates.blocks.insert(fog_id, fog);
+            let templates = std::sync::Arc::new(templates);
+            let mut padded = [0; terra_voxel::meshing::PADDED_VOLUME];
+            padded[1 + 18 * (1 + 18)] = fog_id;
+            let geometry = terra_voxel::meshing::mesh_section(&padded).unwrap();
+            for level in [
+                super::super::DetailLevel::Near,
+                super::super::DetailLevel::Middle,
+                super::super::DetailLevel::Far,
+            ] {
+                let mut app = App::new();
+                app.add_plugins(MinimalPlugins)
+                    .init_resource::<Assets<Mesh>>()
+                    .init_resource::<BlockAssets>()
+                    .init_resource::<RenderedSections>()
+                    .init_resource::<RenderStatus>()
+                    .init_resource::<EditJournal>()
+                    .init_resource::<ChunkStore>()
+                    .init_resource::<RenderJobs>()
+                    .add_systems(Update, upload_sections);
+                {
+                    let mut assets = app.world_mut().resource_mut::<BlockAssets>();
+                    assets.templates = Some(templates.clone());
+                    assets.materials = vec![Handle::default(); 7];
+                }
+                let position = terra_voxel::SectionPos::default();
+                app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+                    position,
+                    terra_world::streaming::LoadedSection {
+                        data: terra_voxel::BlockSection::empty(position).unwrap(),
+                        mesh: None,
+                        mesh_epoch: 0,
+                        water_epoch: 0,
+                        water: None,
+                        props: vec![],
+                    },
+                );
+                let mut batches = builder::compose_section_with_options(
+                    &geometry.faces,
+                    &templates,
+                    position,
+                    &builder::RenderOptions {
+                        water_level: None,
+                        detail_level: level,
+                        terrain: None,
+                        exposure: None,
+                        tints: Default::default(),
+                        conditions: default(),
+                    },
+                )
+                .unwrap();
+                super::super::shadows::append(&mut batches, &geometry.faces, &templates, level)
+                    .unwrap();
+                assert!(batches.iter().all(|batch| !batch.shadow_only));
+                app.world_mut().resource_mut::<RenderJobs>().0.insert(
+                    position,
+                    RenderJob {
+                        ready: Some((Ok(batches), 0.0)),
+                        micro_detail: true,
+                        epoch: 0,
+                        appearance_epoch: 0,
+                        level,
+                        task: bevy::tasks::AsyncComputeTaskPool::get()
+                            .spawn(std::future::pending()),
+                    },
+                );
+                app.update();
+                let mut meshes = app
+                    .world_mut()
+                    .query_filtered::<Option<&bevy::light::NotShadowCaster>, With<Mesh3d>>();
+                let markers: Vec<_> = meshes.iter(app.world()).collect();
+                assert!(!markers.is_empty());
+                assert!(markers.iter().all(|marker| marker.is_some()));
+            }
         }
     }
 

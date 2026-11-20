@@ -200,7 +200,10 @@ fn protected(
 }
 
 pub(super) fn block_drops(journal: &EditJournal, cell: Cell, material: u16) -> Vec<ItemStack> {
-    if matches!(material, 30 | 38) {
+    if let Some(drops) = terra_core::block_loot::blood_forest(material, cell) {
+        return drops.into_iter().flatten().collect();
+    }
+    if matches!(material, 30 | 38) || crate::saplings::leaf_species(material).is_some() {
         return vec![];
     }
     let state = journal.object_state(cell).unwrap_or_default();
@@ -530,6 +533,43 @@ mod tests {
             .data
             .set_block(local, material)
             .unwrap();
+    }
+
+    #[test]
+    fn rail_clearing_leaves_offer_only_twenty_percent_matching_seeds_without_returning_leaf_blocks()
+    {
+        for (material, species) in [
+            (7, terra_core::TreeSpecies::Oak),
+            (9, terra_core::TreeSpecies::Birch),
+            (133, terra_core::TreeSpecies::Cherry),
+            (195, terra_core::TreeSpecies::Apple),
+        ] {
+            let mut chunks = ChunkStore::default();
+            let mut journal = EditJournal::default();
+            let cells: BTreeSet<_> = (0..10)
+                .flat_map(|x| (0..10).map(move |z| [x, 11, z]))
+                .collect();
+            for &cell in &cells {
+                set(&mut chunks, cell, material);
+                journal.record(cell, material).unwrap();
+                assert!(block_drops(&journal, cell, material).is_empty());
+            }
+            let expected = cells
+                .iter()
+                .filter(|cell| crate::saplings::leaf_drop_roll(**cell))
+                .count();
+            let plan = collect(&chunks, &journal, cells.clone()).unwrap();
+            assert_eq!(plan.drops.len(), expected);
+            assert!(
+                plan.drops
+                    .iter()
+                    .all(|(_, stack)| stack.item == ItemKind::Prop(species.sapling())
+                        && stack.count == 1)
+            );
+            plan.commit(&mut chunks, &mut journal).unwrap();
+            assert!(cells.iter().all(|cell| chunks.block_at(*cell) == Some(0)));
+            assert!(collect(&chunks, &journal, cells).unwrap().drops.is_empty());
+        }
     }
 
     #[test]

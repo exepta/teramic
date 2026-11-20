@@ -1,0 +1,15 @@
+{
+  "passed": 4958,
+  "failed": 0,
+  "ignored": 10,
+  "filtered": 1,
+  "test_targets": 16,
+  "server_sections": 27,
+  "format": "passed",
+  "workspace_check_all_targets": "passed",
+  "workspace_clippy_all_targets": "passed",
+  "client_build": "passed",
+  "server_build": "passed",
+  "doctests": "passed",
+  "server_render_ui_dependencies": false
+}

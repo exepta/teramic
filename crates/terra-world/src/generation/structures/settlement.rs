@@ -184,7 +184,7 @@ pub(super) fn describe(
 /// Bed slots and resident identities stay stable while unoccupied homes gain the new jobs.
 fn civilian_role(seed: u32, resident_index: usize) -> u8 {
     use terra_core::creatures::villagers::*;
-    const HOUSE_ROLES: [u8; 17] = [
+    const HOUSE_ROLES: [u8; 18] = [
         0,
         1,
         8,
@@ -202,6 +202,7 @@ fn civilian_role(seed: u32, resident_index: usize) -> u8 {
         NOMAD_B,
         NOMAD_C,
         NOMAD_D,
+        CRAFTSMAN,
     ];
     HOUSE_ROLES[(resident_index + seed as usize) % HOUSE_ROLES.len()]
 }

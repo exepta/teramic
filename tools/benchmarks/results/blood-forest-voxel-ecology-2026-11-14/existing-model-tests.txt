@@ -1,0 +1,18 @@
+test_already_beveled_and_thin_surfaces_are_preserved (test_assets.GeometryTests.test_already_beveled_and_thin_surfaces_are_preserved) ... ok
+test_cemetery_ids_models_textures_and_collision_fit_voxel (test_assets.GeometryTests.test_cemetery_ids_models_textures_and_collision_fit_voxel) ... ok
+test_closed_box_bevel_preserves_bounds_and_face_uv (test_assets.GeometryTests.test_closed_box_bevel_preserves_bounds_and_face_uv) ... ok
+test_collapsed_face_repair_preserves_vertices_uvs_and_materials (test_assets.GeometryTests.test_collapsed_face_repair_preserves_vertices_uvs_and_materials) ... ok
+test_exact_mechanical_profiles_and_authored_tangents_are_not_reshaped (test_assets.GeometryTests.test_exact_mechanical_profiles_and_authored_tangents_are_not_reshaped) ... ok
+test_ornate_chest_lid_collision_matches_the_visible_stepped_top (test_assets.GeometryTests.test_ornate_chest_lid_collision_matches_the_visible_stepped_top) ... ok
+test_polished_props_reference_all_vertices_and_keep_resolvable_bevel_faces (test_assets.GeometryTests.test_polished_props_reference_all_vertices_and_keep_resolvable_bevel_faces) ... ok
+test_cemetery_light_centers_follow_the_actual_emissive_geometry (test_audit.AuditTests.test_cemetery_light_centers_follow_the_actual_emissive_geometry) ... ok
+test_concave_anchor_arms_cover_only_the_original_outline (test_audit.AuditTests.test_concave_anchor_arms_cover_only_the_original_outline) ... ok
+test_existing_block_assets_have_complete_geometry_and_texture_references (test_audit.AuditTests.test_existing_block_assets_have_complete_geometry_and_texture_references) ... ok
+test_indexed_petals_keep_all_faces_bounds_and_analytic_outward_normals (test_flowers.FlowerTests.test_indexed_petals_keep_all_faces_bounds_and_analytic_outward_normals) ... ok
+test_six_shipped_flower_glbs_have_complete_valid_tangent_frames_and_indices (test_flowers.FlowerTests.test_six_shipped_flower_glbs_have_complete_valid_tangent_frames_and_indices) ... ok
+test_textured_material_cannot_silently_use_untextured_uv_parameterization (test_flowers.FlowerTests.test_textured_material_cannot_silently_use_untextured_uv_parameterization) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 3.445s
+
+OK

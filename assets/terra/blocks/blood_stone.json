@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 402,
+  "name": "Blood Stone",
+  "description": "Blood Stone from the crimson woodland.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "blood_stone": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "blood_stone": "textures/blood_stone.png"
+  },
+  "face_materials": [
+    "blood_stone",
+    "blood_stone",
+    "blood_stone",
+    "blood_stone",
+    "blood_stone",
+    "blood_stone"
+  ],
+  "surface": "rock"
+}

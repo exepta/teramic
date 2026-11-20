@@ -1,6 +1,8 @@
 //! Deterministic fruit identities and pure harvest transactions, shared by replicas.
 use crate::props::PropId;
-use terra_core::{FruitPhase, TreeRecord, TreeSpecies, TreeStage};
+#[cfg(any(test, feature = "bevy"))]
+use terra_core::TreeStage;
+use terra_core::{FruitPhase, TreeRecord, TreeSpecies};
 #[cfg(feature = "bevy")]
 mod runtime;
 #[cfg(feature = "bevy")]

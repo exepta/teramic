@@ -517,6 +517,37 @@ fn app_with_height(height: f64) -> App {
 }
 
 #[test]
+fn live_view_distance_expands_to_32_chunks_and_shrinks_without_actor_movement() {
+    let mut app = app_with_height(8.0);
+    app.update();
+    let center = global_to_section(
+        app.world()
+            .resource::<ChunkFocus>()
+            .0
+            .map(|v| v.floor() as i64),
+    )
+    .0;
+    app.world_mut()
+        .resource_mut::<GameConfig>()
+        .client
+        .view_distance = 32;
+    app.update();
+    let chunks = app.world().resource::<ChunkStore>();
+    assert!(chunks.wanted.contains(&center.offset([32, 0, 0]).unwrap()));
+    assert!(chunks.wanted.contains(&center.offset([-32, 0, 0]).unwrap()));
+    assert!(!chunks.wanted.contains(&center.offset([33, 0, 0]).unwrap()));
+    app.world_mut()
+        .resource_mut::<GameConfig>()
+        .client
+        .view_distance = 2;
+    app.update();
+    let chunks = app.world().resource::<ChunkStore>();
+    assert!(chunks.wanted.contains(&center.offset([2, 0, 0]).unwrap()));
+    assert!(!chunks.wanted.contains(&center.offset([3, 0, 0]).unwrap()));
+    assert!(!chunks.wanted.contains(&center.offset([32, 0, 0]).unwrap()));
+}
+
+#[test]
 fn shoreline_water_rebuilds_after_bank_edits_and_section_reload() {
     let mut app = app_with_height(4.0);
     wait(&mut app, ready);

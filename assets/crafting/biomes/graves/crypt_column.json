@@ -1,0 +1,22 @@
+{
+  "id": "teramic::crypt_column",
+  "name": "Crypt Column",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 349
+    },
+    "count": 2
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 343
+        },
+        "count": 3
+      }
+    ]
+  }
+}

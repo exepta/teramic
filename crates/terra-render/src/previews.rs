@@ -3,6 +3,7 @@ pub(crate) mod alchemy;
 mod bellows;
 mod crops;
 mod dust;
+pub(crate) mod forest_items;
 mod hardware;
 mod products;
 mod sculpt;
@@ -39,7 +40,7 @@ use crate::{
         DetailLevel,
         builder::{MeshBatch, RenderOptions, compose_section_with_options},
     },
-    water::material::{WaterAssets, WaterMaterial},
+    particle_fluids::{FluidMaterial, HydraulicMaterials},
 };
 
 const PREVIEW_SIZE: u32 = 128;
@@ -424,7 +425,7 @@ fn admit_requested(
 #[derive(SystemParam)]
 struct PreviewAssets<'w> {
     blocks: Res<'w, BlockAssets>,
-    water: Option<Res<'w, WaterAssets>>,
+    water: Option<Res<'w, HydraulicMaterials>>,
     foliage: Option<Res<'w, crate::foliage::FoliageAssets>>,
     terrain: Option<Res<'w, terra_world::streaming::WorldTerrain>>,
     images: ResMut<'w, Assets<Image>>,
@@ -444,7 +445,7 @@ fn prepare(
     let Some(templates) = assets.blocks.templates.clone() else {
         return;
     };
-    let Some(_water) = assets.water.as_ref().map(|water| water.0.clone()) else {
+    let Some(_water) = assets.water.as_ref() else {
         return;
     };
     let Some(foliage) = assets.foliage.as_ref() else {
@@ -589,17 +590,12 @@ fn spawn_item(
     commands: &mut Commands,
     assets: &mut PreviewAssets,
     templates: &TemplateSet,
-    item: ItemKind,
+    _item: ItemKind,
     batches: Vec<MeshBatch>,
     origin: Vec3,
     visibility: Visibility,
 ) -> Entity {
-    let water = assets
-        .water
-        .as_ref()
-        .expect("water preview assets ready")
-        .0
-        .clone();
+    let water = assets.water.as_ref().expect("fluid preview assets ready");
     let root = commands
         .spawn((
             PreviewScene,
@@ -615,8 +611,8 @@ fn spawn_item(
             RenderLayers::layer(PREVIEW_LAYER),
             ChildOf(root),
         ));
-        if matches!(item, ItemKind::Block(14 | 27)) {
-            entity.insert(MeshMaterial3d::<WaterMaterial>(water.clone()));
+        if let Some(fluid) = water.for_slot(templates, batch.material) {
+            entity.insert(MeshMaterial3d::<FluidMaterial>(fluid));
         } else if let Some(handle) = assets
             .foliage
             .as_ref()
@@ -661,6 +657,19 @@ fn compose_item(
         }
         ItemKind::Dust(kind) => dust::batches(kind, templates.item_materials.opaque),
         ItemKind::Crop(kind) => crop_batches(kind, templates),
+        ItemKind::BloodBerry
+        | ItemKind::CrimsonMushroom
+        | ItemKind::ThornTwig
+        | ItemKind::BloodCrystal
+        | ItemKind::DarkSap
+        | ItemKind::BloodLeaf
+        | ItemKind::BloodSpore
+        | ItemKind::BloodSlimeGel
+        | ItemKind::Bone
+        | ItemKind::Bitumen
+        | ItemKind::GloomEssence
+        | ItemKind::LightSplitter
+        | ItemKind::RoadAggregate => forest_items::batches(item, templates.item_materials.opaque),
         ItemKind::Apple | ItemKind::AppleCore => {
             apple_batches(item == ItemKind::AppleCore, templates)
         }
@@ -746,6 +755,19 @@ fn render_next(
                     | ItemKind::Crop(_)
                     | ItemKind::Apple
                     | ItemKind::AppleCore
+                    | ItemKind::BloodBerry
+                    | ItemKind::CrimsonMushroom
+                    | ItemKind::ThornTwig
+                    | ItemKind::BloodCrystal
+                    | ItemKind::DarkSap
+                    | ItemKind::BloodLeaf
+                    | ItemKind::BloodSpore
+                    | ItemKind::BloodSlimeGel
+                    | ItemKind::Bone
+                    | ItemKind::Bitumen
+                    | ItemKind::GloomEssence
+                    | ItemKind::LightSplitter
+                    | ItemKind::RoadAggregate
                     | ItemKind::Flower(_)
                     | ItemKind::Animal(_) => {
                         item_previews.publish(job.item, job.image);
@@ -1784,7 +1806,9 @@ mod tests {
         blocks.materials = vec![Handle::default()];
         let mut app = App::new();
         app.insert_resource(blocks)
-            .insert_resource(WaterAssets(Handle::default()))
+            .insert_resource(HydraulicMaterials(std::array::from_fn(|_| {
+                Handle::default()
+            })))
             .init_resource::<crate::foliage::FoliageAssets>()
             .init_resource::<Assets<Image>>()
             .init_resource::<Assets<Mesh>>()

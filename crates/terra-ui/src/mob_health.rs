@@ -147,8 +147,13 @@ fn update(scene: Scene, mut hud: ResMut<MobHealthHud>, mut cache: Local<SightCac
         if distance > RANGE * RANGE {
             continue;
         }
-        let point = feet + Vec3::Y * (track.current.size()[1] as f32 * 0.65);
-        let label = feet + Vec3::Y * (track.current.size()[1] as f32 + 0.24);
+        let height = if track.current.kind == terra_core::creatures::CreatureKind::SandWorm {
+            terra_core::creatures::sandworm::visible_height(&track.current)
+        } else {
+            track.current.size()[1] as f32
+        };
+        let point = feet + Vec3::Y * (height * 0.65);
+        let label = feet + Vec3::Y * (height + 0.24);
         let Ok(screen) = camera.world_to_viewport(transform, label) else {
             continue;
         };
@@ -607,5 +612,41 @@ mod tests {
         assert!(fill(5.0, 10.0, [105, 203, 134]).contains("50.0%; background-color: #69cb86"));
         assert!(fill(100.0, 10.0, [223, 98, 93]).contains("100.0%; background-color: #df625d"));
         assert!(fill(f32::NAN, 10.0, [0, 0, 0]).contains("0.0%"));
+    }
+
+    #[test]
+    fn sandworm_health_label_follows_the_visible_buried_back_and_exposed_body() {
+        use terra_core::creatures::{CreatureBehavior, CreatureKind, CreatureNeeds};
+        let mut app = scene();
+        app.world_mut()
+            .resource_mut::<GameplayConfig>()
+            .mob_health_bars = MobHealthBars::InView;
+        {
+            let mut creatures = app.world_mut().resource_mut::<ReplicatedCreatures>();
+            creatures.creatures.remove(&2);
+            let track = creatures.creatures.get_mut(&1).unwrap();
+            track.current.kind = CreatureKind::SandWorm;
+            track.current.health = 21.0;
+            track.current.needs = CreatureNeeds::full(CreatureKind::SandWorm);
+            track.current.behavior = CreatureBehavior::Burrowed;
+            track.previous = track.current.clone();
+        }
+        app.update();
+        let buried = app.world().resource::<MobHealthHud>().bars.clone();
+        assert_eq!(buried.len(), 1);
+        assert_eq!(buried[0].label, "21 / 42");
+        {
+            let mut creatures = app.world_mut().resource_mut::<ReplicatedCreatures>();
+            let track = creatures.creatures.get_mut(&1).unwrap();
+            track.current.behavior = CreatureBehavior::Attack;
+            track.previous = track.current.clone();
+        }
+        app.update();
+        let exposed = &app.world().resource::<MobHealthHud>().bars;
+        assert_eq!(exposed.len(), 1);
+        assert_ne!(
+            buried[0].position, exposed[0].position,
+            "the bar must rise with the actual emerging creature"
+        );
     }
 }

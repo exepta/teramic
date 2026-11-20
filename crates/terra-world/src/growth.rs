@@ -113,14 +113,21 @@ pub(crate) fn tick(
     mut journal: ResMut<EditJournal>,
     properties: Res<BlockPropertiesCatalog>,
     terrain: Option<Res<WorldTerrain>>,
+    weather: Option<Res<terra_core::WorldWeather>>,
+    clock: Option<Res<terra_core::WorldClock>>,
     mut state: Local<Growth>,
 ) {
     let now = time.elapsed_secs_f64();
-    if !access.authoritative() || now - state.last < 1.0 {
+    if !access.authoritative()
+        || clock.as_ref().is_some_and(|clock| clock.paused)
+        || now - state.last < 1.0
+    {
         return;
     }
     state.last = now;
     let terrain = terrain.as_deref();
+    let weather = weather.as_deref().copied().unwrap_or_default();
+    let clock = clock.as_deref().copied().unwrap_or_default();
     // Discovery is amortized and allocation is bounded by loaded section count,
     // never by section volume. Edits also enqueue their immediate neighbors.
     let mut sections: Vec<_> = chunks.loaded.keys().copied().collect();
@@ -176,6 +183,23 @@ pub(crate) fn tick(
         .take(CHANGES_PER_SECOND)
         .collect();
     for position in due {
+        // Only cached climate: a not-yet-prepared column waits instead of
+        // generating terrain synchronously or guessing that it is temperate.
+        let rate = terrain.map_or(1.0, |terrain| {
+            chunks
+                .surface_column_at(position[0], position[2])
+                .map_or(0.0, |surface| {
+                    crate::weather::ecology::EcologyClimate::sample(
+                        &weather,
+                        surface.biome,
+                        position[1] as f64 + 1.0,
+                        terrain.0.config().sea_level,
+                        clock.season(terrain.0.config().seasons),
+                        journal.surface_condition(position).wetness,
+                    )
+                    .grass_rate()
+                })
+        });
         let owner = global_to_section(position).0;
         let Some(section) = chunks.loaded.get(&owner) else {
             state.active.remove(&position);
@@ -195,6 +219,9 @@ pub(crate) fn tick(
                 tracing::warn!(%error, "Cannot retire grass sprout");
             }
             state.active.remove(&position);
+        } else if rate <= 0.0 {
+            // Winter/drought pauses an existing saved sprout; it is not deleted.
+            state.active.insert(position, now + 8.0);
         } else if let Some(mut prop) = existing {
             if prop.variant % 4 == 3 {
                 match commit_block_edit(
@@ -231,7 +258,9 @@ pub(crate) fn tick(
                 if let Err(error) = journal.update_placed_prop(prop) {
                     tracing::warn!(%error, "Grass sprout update rejected");
                 }
-                state.active.insert(position, now + 8.0);
+                state
+                    .active
+                    .insert(position, now + 8.0 / f64::from(rate.max(0.05)));
             }
         } else {
             let existing_tuft = chunks.loaded.get(&owner).is_some_and(|section| {
@@ -251,7 +280,9 @@ pub(crate) fn tick(
                 }
             };
             if placed {
-                state.active.insert(position, now + 8.0);
+                state
+                    .active
+                    .insert(position, now + 8.0 / f64::from(rate.max(0.05)));
             } else {
                 state.active.remove(&position);
             }
@@ -318,6 +349,50 @@ mod tests {
         for _ in 0..count {
             app.update();
         }
+    }
+
+    #[test]
+    fn prepared_regional_soil_waits_through_winter_and_resumes_in_summer() {
+        let mut app = scene(WorldAccess::Server, 0, true);
+        let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
+            biomes: false,
+            water: false,
+            trees: false,
+            caves: false,
+            base_height: 0.,
+            hill_amplitude: 0.,
+            mountain_amplitude: 0.,
+            ..Default::default()
+        })
+        .unwrap();
+        let column = crate::SectionGenerator::new(terrain.clone())
+            .prepare_column([-1, -1], false)
+            .unwrap();
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .set_prepared_column_for_test([-1, -1], Some(std::sync::Arc::new(column)));
+        app.insert_resource(WorldTerrain(terrain));
+        app.insert_resource(terra_core::WorldClock {
+            day: 21,
+            ..Default::default()
+        });
+        frames(&mut app, 120);
+        assert_eq!(
+            app.world().resource::<ChunkStore>().block_at(TARGET),
+            Some(2)
+        );
+        assert!(
+            app.world().resource::<ChunkStore>().loaded[&global_to_section(TARGET).0]
+                .props
+                .is_empty()
+        );
+        app.world_mut().resource_mut::<terra_core::WorldClock>().day = 7;
+        frames(&mut app, 150);
+        assert_eq!(
+            app.world().resource::<ChunkStore>().block_at(TARGET),
+            Some(1)
+        );
+        assert_eq!(app.world().resource::<EditJournal>().block(TARGET), Some(1));
     }
 
     #[test]

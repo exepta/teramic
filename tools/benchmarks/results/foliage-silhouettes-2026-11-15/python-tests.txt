@@ -1,0 +1,18 @@
+test_active_binding_retains_dirt_source_and_existing_oak_bark (test_base_materials.BaseMaterialArt.test_active_binding_retains_dirt_source_and_existing_oak_bark) ... ok
+test_model_keeps_geometry_shared_material_slots_samplers_and_matte_orm (test_base_materials.BaseMaterialArt.test_model_keeps_geometry_shared_material_slots_samplers_and_matte_orm) ... ok
+test_native_resolution_and_low_contrast_continuous_earth (test_base_materials.BaseMaterialArt.test_native_resolution_and_low_contrast_continuous_earth) ... ok
+test_near_to_lod_affine_uv_mapping_including_mirrored_faces (test_base_materials.BaseMaterialArt.test_near_to_lod_affine_uv_mapping_including_mirrored_faces) ... ok
+test_cutout_layout_has_real_spaces_without_the_old_third_tile_repeat (test_foliage.FoliageArt.test_cutout_layout_has_real_spaces_without_the_old_third_tile_repeat) ... ok
+test_edge_elements_translate_whole_without_clipping_or_wrapping (test_foliage.FoliageArt.test_edge_elements_translate_whole_without_clipping_or_wrapping) ... ok
+test_existing_ten_ids_bind_distinct_top_and_side_with_authored_gaps (test_foliage.FoliageArt.test_existing_ten_ids_bind_distinct_top_and_side_with_authored_gaps) ... ok
+test_palette_families_and_top_rosettes_remain_distinct (test_foliage.FoliageArt.test_palette_families_and_top_rosettes_remain_distinct) ... ok
+test_sprays_use_only_short_petiole_lines_without_naked_branch_wires (test_foliage.FoliageArt.test_sprays_use_only_short_petiole_lines_without_naked_branch_wires) ... ok
+test_appropriate_inward_surface_styles_preserve_closed_cube_contract (test_surfaces.BiomeSurfaceArt.test_appropriate_inward_surface_styles_preserve_closed_cube_contract) ... ok
+test_authored_biome_textures_have_native_detail_and_material_specific_alpha (test_surfaces.BiomeSurfaceArt.test_authored_biome_textures_have_native_detail_and_material_specific_alpha) ... ok
+test_blood_leaf_bark_palette_remains_readable_without_emission (test_surfaces.BiomeSurfaceArt.test_blood_leaf_bark_palette_remains_readable_without_emission) ... ok
+test_periodic_leaf_fracture_and_field_sampling_has_no_boundary_reset (test_surfaces.BiomeSurfaceArt.test_periodic_leaf_fracture_and_field_sampling_has_no_boundary_reset) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 15.360s
+
+OK

@@ -189,3 +189,182 @@ fn ballast_quarters_and_legacy_thirds_have_distinct_neighbor_cache_keys() {
         "ordinary three-step materials should still share a profile"
     );
 }
+
+fn deck_uv_at(profile: &[PrimitiveTemplate], material: usize, point: bevy::math::Vec2) -> [f32; 2] {
+    use bevy::math::{Vec2, Vec3};
+    for primitive in profile.iter().filter(|p| p.material == material) {
+        for triangle in primitive.indices.chunks_exact(3) {
+            let ids = [
+                triangle[0] as usize,
+                triangle[1] as usize,
+                triangle[2] as usize,
+            ];
+            if ids.iter().any(|&i| primitive.normals[i][1] < 0.999) {
+                continue;
+            }
+            let p = ids.map(|i| Vec3::from_array(primitive.positions[i]));
+            let projected = p.map(|p| Vec2::new(p.x, p.z));
+            let a = projected[1] - projected[0];
+            let b = projected[2] - projected[0];
+            let determinant = a.perp_dot(b);
+            if determinant.abs() < 0.000001 {
+                continue;
+            }
+            let offset = point - projected[0];
+            let second = offset.perp_dot(b) / determinant;
+            let third = a.perp_dot(offset) / determinant;
+            let weights = [1.0 - second - third, second, third];
+            if weights.iter().any(|w| *w < -0.00001) {
+                continue;
+            }
+            let uv = ids.map(|i| Vec2::from_array(primitive.uvs[i]));
+            let duv = [uv[1] - uv[0], uv[2] - uv[0]];
+            let uv_determinant = duv[0].perp_dot(duv[1]);
+            let tangent = ((p[1] - p[0]) * duv[1].y - (p[2] - p[0]) * duv[0].y) / uv_determinant;
+            let bitangent = ((p[2] - p[0]) * duv[0].x - (p[1] - p[0]) * duv[1].x) / uv_determinant;
+            let normal = Vec3::from_array(primitive.normals[ids[0]]);
+            for i in ids {
+                let frame = primitive.tangents[i];
+                let stored = Vec3::new(frame[0], frame[1], frame[2]);
+                assert!(stored.dot(tangent.normalize()) > 0.999);
+                assert!((normal.cross(stored) * frame[3]).dot(bitangent.normalize()) > 0.999);
+            }
+            return (uv[0] * weights[0] + uv[1] * weights[1] + uv[2] * weights[2]).to_array();
+        }
+    }
+    panic!("missing walking-deck triangle at {point:?}");
+}
+
+#[test]
+fn sidewalk_arcs_have_a_round_street_face_and_matching_free_corner_in_every_heading() {
+    use bevy::math::Vec3;
+    use terra_core::{construction, street};
+    for id in [street::ARC_LEFT, street::ARC_RIGHT] {
+        for facing in 0..4 {
+            let mesh = crate::blocks::sidewalk::arc(id, facing, [0, 0, 0, 1, 0, 0]);
+            let top = mesh.iter().find(|p| p.material == 1).unwrap();
+            let center = Vec3::from_array(top.positions[0]);
+            let mut area = 0.;
+            for tri in top.indices.chunks_exact(3) {
+                let [a, b, c] =
+                    [tri[0], tri[1], tri[2]].map(|i| Vec3::from_array(top.positions[i as usize]));
+                let n = (b - a).cross(c - a);
+                assert!(n.y > 0.);
+                area += n.y / 2.;
+                assert_eq!(a.y, 0.25);
+                assert!(((b - center).length() - 1.).abs() < 0.0001);
+            }
+            assert!((area - std::f32::consts::FRAC_PI_4).abs() < 0.001);
+            let contacts = construction::placed_boxes(id, facing, [None; 6]);
+            for x in 0..32 {
+                for z in 0..32 {
+                    let p = Vec3::new((x as f32 + 0.5) / 32., center.y, (z as f32 + 0.5) / 32.);
+                    let radius = (p - center).length();
+                    if (radius - 1.).abs() < 0.025 {
+                        continue;
+                    }
+                    let inside = contacts.iter().any(|b| {
+                        [0, 2]
+                            .into_iter()
+                            .all(|i| (b.minimum[i]..=b.maximum[i]).contains(&f64::from(p[i])))
+                    });
+                    assert_eq!(inside, radius < 1.);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn sidewalk_paint_and_normal_frames_follow_the_adjacent_road_in_every_facing() {
+    use bevy::{
+        image::{CompressedImageFormats, ImageSampler, ImageType},
+        math::Vec2,
+        prelude::Image,
+    };
+    use terra_core::{block_shapes::ShapeBox, street};
+    let directory = terra_core::asset_directory().join("terra/blocks");
+    let image = |name: &str| {
+        Image::from_buffer(
+            &std::fs::read(directory.join(name)).unwrap(),
+            ImageType::Extension("png"),
+            CompressedImageFormats::empty(),
+            true,
+            ImageSampler::default(),
+            bevy::asset::RenderAssetUsages::MAIN_WORLD,
+        )
+        .unwrap()
+    };
+    let brightness = |image: &Image, uv: [f32; 2]| {
+        let size = image.texture_descriptor.size;
+        let x = (uv[0].clamp(0., 1.) * (size.width - 1) as f32).round() as usize;
+        let y = (uv[1].clamp(0., 1.) * (size.height - 1) as f32).round() as usize;
+        let pixel = (x + y * size.width as usize) * 4;
+        image.data.as_ref().unwrap()[pixel..pixel + 3]
+            .iter()
+            .map(|v| f32::from(*v))
+            .sum::<f32>()
+    };
+    let paving = image("textures/street/paving.png");
+    for (id, slug) in [
+        (street::NORMAL, "sidewalk"),
+        (street::LEFT, "sidewalk_left"),
+        (street::RIGHT, "sidewalk_right"),
+        (street::ARC_LEFT, "sidewalk_arc_left"),
+        (street::ARC_RIGHT, "sidewalk_arc_right"),
+        (street::LOWERED, "sidewalk_lowered"),
+    ] {
+        let definition: crate::blocks::definitions::BlockDefinition = serde_json::from_str(
+            &std::fs::read_to_string(directory.join(format!("{slug}.json"))).unwrap(),
+        )
+        .unwrap();
+        let mut templates = templates();
+        let deck_material = 1000;
+        let mut template = templates.blocks[&98].clone();
+        template.bevel_width = definition.bevel_width;
+        template.face_materials = definition
+            .face_materials
+            .unwrap()
+            .map(|name| if name == "Deck" { deck_material } else { 999 });
+        templates.blocks.insert(id, template);
+        let deck = image(&definition.textures["Deck"]);
+        let x = match id {
+            street::ARC_LEFT => 0.875,
+            street::ARC_RIGHT => 0.125,
+            _ => 0.5,
+        };
+        for road in [[0, 0, -1], [-1, 0, 0], [0, 0, 1], [1, 0, 0]] {
+            let facing = street::placement_facing(id, [0; 3], [0., 0., -1.], |p| {
+                (p == road).then_some(terra_core::roads::ASPHALT)
+            });
+            let profile = construction_profile(&cell(id, facing), &templates).unwrap();
+            let placed = |z| {
+                let p = [x, 0., z];
+                let rotated = ShapeBox {
+                    minimum: p,
+                    maximum: p,
+                    hinged: false,
+                }
+                .rotated_y(facing)
+                .minimum;
+                Vec2::new(rotated[0] as f32, rotated[2] as f32)
+            };
+            let edge = placed(0.1);
+            assert!(
+                (edge - Vec2::splat(0.5)).dot(Vec2::new(road[0] as f32, road[2] as f32)) > 0.35
+            );
+            let dark_uv = deck_uv_at(&profile, deck_material, edge);
+            let light_uv = deck_uv_at(&profile, deck_material, placed(0.9));
+            let curb_shade = brightness(&deck, dark_uv) / brightness(&paving, dark_uv);
+            let deck_shade = brightness(&deck, light_uv) / brightness(&paving, light_uv);
+            assert!(
+                (0.73..0.79).contains(&curb_shade),
+                "id={id} facing={facing} curb={curb_shade}"
+            );
+            assert!(
+                (0.99..1.01).contains(&deck_shade),
+                "id={id} facing={facing} deck={deck_shade}"
+            );
+        }
+    }
+}

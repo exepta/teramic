@@ -25,6 +25,10 @@ impl SurfaceTemplate {
         }
     }
 
+    pub(crate) fn style(&self) -> CubeSurface {
+        self.style
+    }
+
     pub fn face(
         &self,
         source: &[PrimitiveTemplate],

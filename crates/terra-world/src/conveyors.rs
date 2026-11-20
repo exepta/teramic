@@ -517,6 +517,7 @@ pub fn layout(
                     peer: Some(if p == controller { end } else { controller }),
                     secondary: false,
                     wood,
+                    liquid: None,
                 }
             }),
         ));
@@ -630,6 +631,7 @@ pub fn insert_shaft_layout(
                     secondary: false,
                     wood: shaft_item.wood_species().unwrap_or_default(),
                     peer: Some(peer),
+                    liquid: None,
                 }
             } else {
                 BlockObjectState {

@@ -10,20 +10,24 @@ pub mod bees;
 pub mod breeding;
 pub mod companions;
 pub mod ecology;
+pub mod forest;
 mod horses;
 pub mod navigation;
 #[path = "creature_needs.rs"]
 mod needs;
+mod perception;
 pub mod riding;
+pub mod sandworm;
 pub mod spawning;
 pub mod spider_hunting;
 pub mod spiders;
+pub mod spirit;
 pub mod stalker;
 mod support;
 pub mod villagers;
 mod work;
 pub use needs::{Forage, apply_forage};
-pub use work::{work_rest, work_step};
+pub use work::{work_rest, work_rest_with_access, work_step, work_step_with_access};
 
 pub const ACTIVE_RADIUS: f64 = 150.0;
 pub const UPDATE_BUDGET: usize = 128;
@@ -204,6 +208,21 @@ impl Habitat<'_> {
             for z in min[2]..=max[2] {
                 for y in min[1]..=max[1] {
                     let cell = [x, y, z];
+                    // The enclosing AABB has dry/unloaded corner cells that a
+                    // rotated long body never occupies. Apply the same SAT
+                    // intersection used for solid shapes before testing fluid.
+                    if !Self::shape_obstructs(
+                        terra_core::block_shapes::ShapeBox {
+                            minimum: cell.map(|v| v as f64),
+                            maximum: cell.map(|v| v as f64 + 1.0),
+                            hinged: false,
+                        },
+                        lower,
+                        upper,
+                        (p, size, yaw),
+                    ) {
+                        continue;
+                    }
                     let Some(block) = self.block(cell) else {
                         return false;
                     };
@@ -332,7 +351,7 @@ impl Habitat<'_> {
                 current[1],
                 start[2] + (target[2] - start[2]) * t,
             ];
-            current = if water_entry {
+            let next = if water_entry {
                 self.supported_sized(probe, size, yaw)
             } else {
                 self.ground_sized(probe, size, yaw)
@@ -343,8 +362,48 @@ impl Habitat<'_> {
                 }
                 self.wet_footprint(probe, size, yaw).then_some(probe)
             })?;
+            if !self.clear_step_transition(current, next, size, yaw) {
+                return None;
+            }
+            current = next;
         }
         Some(current)
+    }
+
+    /// Lift above a riser before advancing, then descend at the destination.
+    /// Checking only final poses can step vertically through a low ceiling.
+    fn clear_step_transition(
+        &self,
+        start: [f64; 3],
+        end: [f64; 3],
+        size: [f64; 3],
+        yaw: f64,
+    ) -> bool {
+        if (start[1] - end[1]).abs() < 0.000001 {
+            return true;
+        }
+        let height = start[1].max(end[1]);
+        let raised_start = [start[0], height, start[2]];
+        let raised_end = [end[0], height, end[2]];
+        [
+            (start, raised_start),
+            (raised_start, raised_end),
+            (raised_end, end),
+        ]
+        .into_iter()
+        .all(|(from, to)| {
+            let length = distance(from, to).sqrt();
+            let steps = (length / 0.125).ceil().clamp(1.0, 16.0) as usize;
+            (1..=steps).all(|step| {
+                self.clear_swimmer_rotated(
+                    std::array::from_fn(|axis| {
+                        from[axis] + (to[axis] - from[axis]) * step as f64 / steps as f64
+                    }),
+                    size,
+                    yaw,
+                )
+            })
+        })
     }
     pub fn ground_rotated(&self, p: [f64; 3], kind: Kind, yaw: f64) -> Option<[f64; 3]> {
         self.ground_sized(p, kind.size(), yaw)
@@ -490,10 +549,15 @@ pub(super) fn biome_slug(biome: crate::generation::biomes::BiomeKind) -> &'stati
         BiomeKind::MushroomPark => "mushroom_park",
         BiomeKind::ClifftedDesert => "cliffted_desert",
         BiomeKind::CherryForest => "cherry_forest",
+        BiomeKind::SpiritBlossom => "spirit_blossom",
+        BiomeKind::BloodForest => "blood_forest",
     }
 }
 
 pub fn spawn_cell(population: &mut CreaturePopulation, habitat: &Habitat, home: [i64; 2]) -> bool {
+    if population.explored.contains(&home) {
+        return sandworm::recover_missing_spawn(population, habitat, home);
+    }
     spawn_cell_using(
         population,
         habitat,
@@ -502,15 +566,59 @@ pub fn spawn_cell(population: &mut CreaturePopulation, habitat: &Habitat, home: 
     )
 }
 
+/// Keep natural arrivals outside the immediate vicinity of every nearby player.
+/// A deferred habitat is not marked explored and can be retried after movement.
+pub fn spawn_cell_away_from_players(
+    population: &mut CreaturePopulation,
+    habitat: &Habitat,
+    home: [i64; 2],
+    players: &[[f64; 3]],
+    available: usize,
+) -> bool {
+    if available == 0 {
+        return false;
+    }
+    let center = [home[0] as f64 * 32.0 + 16.0, home[1] as f64 * 32.0 + 16.0];
+    if players.iter().take(128).any(|player| {
+        player.iter().all(|v| v.is_finite())
+            && (player[0] - center[0]).hypot(player[2] - center[1]) < 40.0
+    }) {
+        return false;
+    }
+    if population.explored.contains(&home) {
+        sandworm::recover_missing_spawn(population, habitat, home)
+    } else {
+        spawn_cell_budgeted_using(
+            population,
+            habitat,
+            home,
+            terra_core::creatures::definitions::get,
+            available.min(4),
+        )
+    }
+}
+
 fn spawn_cell_using<'a>(
     population: &mut CreaturePopulation,
     habitat: &Habitat,
     home: [i64; 2],
     definition: impl Fn(Kind) -> &'a terra_core::creatures::definitions::MobDefinition,
 ) -> bool {
+    spawn_cell_budgeted_using(population, habitat, home, definition, 4)
+}
+
+fn spawn_cell_budgeted_using<'a>(
+    population: &mut CreaturePopulation,
+    habitat: &Habitat,
+    home: [i64; 2],
+    definition: impl Fn(Kind) -> &'a terra_core::creatures::definitions::MobDefinition,
+    available: usize,
+) -> bool {
+    let available = available
+        .min(terra_core::creatures::MAX_CREATURES.saturating_sub(population.animals.len()));
     if population.explored.contains(&home)
         || population.explored.len() >= terra_core::creatures::MAX_SPAWN_CELLS
-        || population.animals.len() + 4 > terra_core::creatures::MAX_CREATURES
+        || available == 0
         || creature_id(home, 0).is_none()
     {
         return false;
@@ -518,6 +626,9 @@ fn spawn_cell_using<'a>(
     let mut candidates = Vec::new();
     let mut bear_habitat = false;
     for slot in 0..4 {
+        if candidates.len() >= available {
+            break;
+        }
         if slot > 0 && bear_habitat {
             break;
         }
@@ -580,12 +691,20 @@ fn spawn_cell_using<'a>(
                 continue;
             };
             kind
-        } else if slot == 0
+        } else if !matches!(biome, "spirit_blossom" | "blood_forest")
+            && slot == 0
             && (group_seed >> 40).is_multiple_of(7)
             && bears::near_water(habitat, [x, y, z])
         {
+            // Keep the existing rare solitary shore-bear slot. Ambient
+            // butterflies replace herd candidates, never this habitat's bear.
             bear_habitat = true;
             Kind::Bear
+        } else if let Some(kind) = sandworm::surface_species(biome, group_seed)
+            .or_else(|| spirit::surface_species(biome, group_seed))
+            .or_else(|| forest::surface_species(biome, group_seed))
+        {
+            kind
         } else {
             if surface.biome.weights.plains > 0.35 && (group_seed >> 48).is_multiple_of(5) {
                 Kind::Horse
@@ -631,6 +750,30 @@ fn spawn_cell_using<'a>(
                 continue;
             }
             p
+        } else if kind.is_flying() {
+            let p = [x, y + 1.2 + (seed % 100) as f64 * 0.01, z];
+            if !spawn_volume_loaded(habitat, p, kind.size()) {
+                return false;
+            }
+            if !habitat.clear(p, kind.size(), false) {
+                continue;
+            }
+            p
+        } else if kind == Kind::SandWorm {
+            let candidate = [x, y, z];
+            if !spawn_volume_loaded(habitat, candidate, kind.size())
+                || (1..=3).any(|depth| {
+                    habitat
+                        .block([x.floor() as i64, y.floor() as i64 - depth, z.floor() as i64])
+                        .is_none()
+                })
+            {
+                return false;
+            }
+            let Some(p) = sandworm::spawn_surface(habitat, candidate) else {
+                continue;
+            };
+            p
         } else {
             let Some(p) =
                 habitat.ground_rotated([x, y, z], kind, f64::from((seed % 628) as f32 * 0.01))
@@ -638,7 +781,13 @@ fn spawn_cell_using<'a>(
                 continue;
             };
             let support = habitat.block([x.floor() as i64, p[1] as i64 - 1, z.floor() as i64]);
-            if !(matches!(support, Some(1 | 2)) || kind == Kind::Bear && support == Some(4)) {
+            if !(matches!(support, Some(1 | 2))
+                || kind == Kind::Bear && support == Some(4)
+                || kind == Kind::SpiritFox
+                    && support == Some(terra_voxel::MaterialId::SpiritBlossomGrass as u16)
+                || biome == "blood_forest"
+                    && matches!(support, Some(400 | 401 | 402 | 403 | 407 | 408)))
+            {
                 continue;
             }
             p
@@ -651,10 +800,27 @@ fn spawn_cell_using<'a>(
             velocity: [0.0; 3],
             yaw: (seed % 628) as f32 * 0.01,
             health: kind.health(),
-            behavior: if fish { Behavior::Swim } else { Behavior::Rest },
+            behavior: if kind == Kind::SandWorm {
+                Behavior::Burrowed
+            } else if fish {
+                Behavior::Swim
+            } else if kind.is_flying() {
+                Behavior::Fly
+            } else {
+                Behavior::Rest
+            },
             timer: 1.0 + (seed % 40) as f32 * 0.1,
             age: 0.0,
-            variant: (seed % if kind == Kind::Horse { 16 } else { 4 }) as u8,
+            variant: if kind == Kind::SpiritGloom {
+                terra_core::creatures::gloom::surface_variant(
+                    biome,
+                    surface.biome.temperature,
+                    y,
+                    seed,
+                )
+            } else {
+                (seed % u64::from(kind.variant_count())) as u8
+            },
             needs: terra_core::creatures::CreatureNeeds::full(kind),
         });
     }
@@ -750,7 +916,25 @@ pub(super) fn step_with_flowers(
         aquatics::step(animal, habitat, players, &bears::PreyIndex::default(), dt);
         return Forage::None;
     }
+    if animal.kind == Kind::SandWorm {
+        sandworm::step(animal, habitat, players, dt);
+        return Forage::None;
+    }
+    if forest::hostile(animal.kind) {
+        forest::step(animal, habitat, players, dt, search, navigation);
+        return Forage::None;
+    }
+    if matches!(
+        animal.kind,
+        Kind::Butterfly | Kind::SpiritGloom | Kind::Raven
+    ) {
+        spirit::fly(animal, habitat, players, dt);
+        return Forage::None;
+    }
     let previous_yaw = animal.yaw;
+    if animal.kind == Kind::Fish {
+        animal.needs.search_in = (animal.needs.search_in - dt).max(0.0);
+    }
     animal.age += f64::from(dt);
     animal.timer = (animal.timer - dt).max(0.0);
     if animal.kind == Kind::Horse && animal.behavior == Behavior::Leap {
@@ -779,9 +963,19 @@ pub(super) fn step_with_flowers(
         }
         return forage;
     }
-    let nearest = players
-        .iter()
-        .min_by(|a, b| distance(**a, animal.position).total_cmp(&distance(**b, animal.position)));
+    let nearest = perception::nearest_visible(
+        habitat,
+        [
+            animal.position[0],
+            animal.position[1] + animal.size()[1] * 0.65,
+            animal.position[2],
+        ],
+        animal.position,
+        players,
+        6.0,
+        |_| true,
+    )
+    .map(|(index, _)| &players[index]);
     if let Some(player) = nearest.filter(|p| {
         animal.kind != Kind::Fish
             && distance(**p, animal.position)
@@ -826,10 +1020,19 @@ pub(super) fn step_with_flowers(
         animal.behavior = Behavior::Swim;
     }
     let forage = needs::update(animal, habitat, dt, search);
-    if animal.yaw != previous_yaw
-        && !habitat.clear_swimmer_rotated(animal.position, animal.size(), f64::from(animal.yaw))
-    {
+    if animal.yaw != previous_yaw {
+        let desired_yaw = animal.yaw;
+        // Timer/need steering proposes a turn. Sweep from the previous pose;
+        // testing only its final angle misses diagonal wall intersections.
         animal.yaw = previous_yaw;
+        let clear = if animal.kind == Kind::Fish && animal.behavior != Behavior::Stranded {
+            aquatics::swim_step(animal, habitat, animal.position, desired_yaw)
+        } else {
+            habitat.clear_swimmer_rotated(animal.position, animal.size(), f64::from(desired_yaw))
+        };
+        if clear {
+            animal.yaw = desired_yaw;
+        }
     }
     let moving = matches!(
         animal.behavior,
@@ -885,11 +1088,14 @@ pub(super) fn step_with_flowers(
             }
         }
     }
+    let swim_depth = (animal.kind == Kind::Fish && animal.behavior != Behavior::Stranded)
+        .then(|| aquatics::depth_goal(animal, habitat))
+        .flatten();
     let destination = animal.needs.goal.map_or_else(
         || {
             [
                 animal.position[0] - f64::from(animal.yaw.sin()) * 4.0,
-                animal.position[1],
+                swim_depth.unwrap_or(animal.position[1]),
                 animal.position[2] - f64::from(animal.yaw.cos()) * 4.0,
             ]
         },
@@ -913,7 +1119,9 @@ pub(super) fn step_with_flowers(
                 + (waypoint[i] - animal.position[i]) / length * (speed * f64::from(dt)).min(length)
         });
         if animal.kind == Kind::Fish {
-            habitat.clear(p, animal.size(), true).then_some(p)
+            let yaw = (-(waypoint[0] - animal.position[0]))
+                .atan2(-(waypoint[2] - animal.position[2])) as f32;
+            aquatics::swim_step(animal, habitat, p, yaw).then_some(p)
         } else {
             let yaw = (animal.position[0] - p[0]).atan2(animal.position[2] - p[2]);
             habitat.travel_step_sized(animal.position, p, animal.size(), yaw)
@@ -951,8 +1159,11 @@ pub(super) fn step_with_flowers(
             // Fish actively swim against moderate current instead of being passive debris.
             *value += f64::from(flow.velocity[axis].clamp(-0.45, 0.45) * 0.2 * dt);
         }
-        target[1] += (animal.age * 0.6 + animal.id as f64 % 11.0).sin() * 0.2 * f64::from(dt);
-        habitat.clear(target, animal.size(), true).then_some(target)
+        if let Some(depth) = swim_depth {
+            let vertical_step = speed * 0.65 * f64::from(dt);
+            target[1] += (depth - animal.position[1]).clamp(-vertical_step, vertical_step);
+        }
+        aquatics::swim_step(animal, habitat, target, animal.yaw).then_some(target)
     } else if grounded {
         habitat.travel_step_sized(
             animal.position,
@@ -970,9 +1181,15 @@ pub(super) fn step_with_flowers(
     {
         nav.ground_unblocked(animal.id);
     }
+    let fish_search =
+        grounded && next.is_none() && speed > 0.0 && animal.kind == Kind::Fish && search;
     if grounded && next.is_none() && speed > 0.0 {
         let waypoint = if animal.kind == Kind::Fish {
-            navigation::waypoint(habitat, animal.position, destination, animal.kind)
+            if search {
+                navigation::waypoint(habitat, animal.position, destination, animal.kind)
+            } else {
+                None
+            }
         } else {
             navigation::ground_waypoint(animal, habitat, destination, search, navigation)
         };
@@ -983,6 +1200,9 @@ pub(super) fn step_with_flowers(
                     .atan2(-(waypoint[2] - animal.position[2])) as f32;
             }
         }
+    }
+    if fish_search {
+        animal.needs.search_in = 2.0;
     }
     if detour.is_some()
         && let Some(step) = next
@@ -1001,7 +1221,7 @@ pub(super) fn step_with_flowers(
             probe[0] -= f64::from(yaw.sin()) * 0.7;
             probe[2] -= f64::from(yaw.cos()) * 0.7;
             let candidate = if animal.kind == Kind::Fish {
-                habitat.clear(probe, animal.size(), true).then_some(probe)
+                aquatics::swim_step(animal, habitat, probe, yaw).then_some(probe)
             } else {
                 habitat.travel_step_sized(animal.position, probe, animal.size(), f64::from(yaw))
             };
@@ -1010,7 +1230,7 @@ pub(super) fn step_with_flowers(
                 step[0] -= f64::from(yaw.sin()) * speed * f64::from(dt);
                 step[2] -= f64::from(yaw.cos()) * speed * f64::from(dt);
                 next = if animal.kind == Kind::Fish {
-                    habitat.clear(step, animal.size(), true).then_some(step)
+                    aquatics::swim_step(animal, habitat, step, yaw).then_some(step)
                 } else {
                     habitat.travel_step_sized(animal.position, step, animal.size(), f64::from(yaw))
                 };
@@ -1038,7 +1258,9 @@ pub(super) fn step_with_flowers(
             Behavior::Rest
         };
         animal.needs.goal = None;
-        animal.needs.search_in = 2.0;
+        if animal.kind != Kind::Fish {
+            animal.needs.search_in = 2.0;
+        }
         animal.timer = 2.0 + (random(animal.id, animal.age as u64) % 20) as f32 * 0.1;
     }
     let vertical = animal.velocity[1];

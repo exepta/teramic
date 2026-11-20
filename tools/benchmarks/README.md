@@ -1,5 +1,15 @@
 # Benchmark Artifacts
 
+`bash tools/benchmarks/run-voxel-creatures.sh` inspects the already-built
+`target/debug/terra-client` in six isolated creature galleries. It records 43
+screenshots covering standard animals, Spirit creatures, Blood Forest creatures
+and skeletons, aquatic creatures, horses and representative villagers. The run
+checks exact filenames, completion markers, image dimensions, shader/model
+errors and an unchanged client checksum. It creates disposable configurations
+and saves under `target/voxel-creatures/`; it does not build the client or open
+player saves. These are model and animation fixtures, not authoritative AI or
+swimming tests. See [voxel creature models](../../docs/voxel-creature-models.md).
+
 `run-frame-spikes.py` runs a finite integrated comparison of clear weather,
 rain, a real village, flight into new chunks, the actual inventory and rapid
 acknowledged block edits. It freezes configurations, isolates runtime state

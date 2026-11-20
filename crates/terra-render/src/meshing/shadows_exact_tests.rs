@@ -74,7 +74,7 @@ fn material_proof_requires_opaque_zero_bias_two_sided_depth_and_no_special_shade
     let mut foliage = crate::foliage::FoliageAssets::default();
     let mut wet = crate::weather::surfaces::WetMaterials::default();
     let mut depth = crate::weather::surfaces::TerrainDepthMaterials::default();
-    for slot in 0..17 {
+    for slot in 0..19 {
         let mut material = StandardMaterial::default();
         match slot {
             2 | 16 => material.alpha_mode = AlphaMode::Blend,
@@ -112,6 +112,14 @@ fn material_proof_requires_opaque_zero_bias_two_sided_depth_and_no_special_shade
             },
         );
     }
+    let mut fog = templates.blocks[&14].clone();
+    fog.face_materials = [17; 6];
+    templates
+        .blocks
+        .insert(terra_core::fog_blocks::MATERIAL, fog);
+    let mut mystic = templates.blocks[&14].clone();
+    mystic.face_materials = [18; 6];
+    templates.blocks.insert(399, mystic);
     blocks.templates = Some(Arc::new(templates));
     assert_eq!(
         exact_materials(&blocks, &standard, &foliage, &wet, &depth),

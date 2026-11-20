@@ -24,7 +24,8 @@
     "Nomade A",
     "Nomade B",
     "Nomade C",
-    "Nomade D"
+    "Nomade D",
+    "Handwerker"
   ],
   "health": 20.0,
   "food": 30.0,

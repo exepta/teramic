@@ -8,25 +8,54 @@
   "bevel_width": 0.0,
   "materials": {
     "Silver crown": {
-      "texture_pattern": "birch_canopy",
       "base_color": [
-        0.62,
-        0.72,
-        0.26,
-        1.0
-      ]
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "Silver crown_top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "leaf_cluster": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
     }
   },
   "face_materials": [
     "Silver crown",
     "Silver crown",
     "Silver crown",
-    "Silver crown",
+    "Silver crown_top",
     "Silver crown",
     "Silver crown"
   ],
   "hardness": 0.3,
   "resistance": 0.5,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Silver crown": "textures/foliage/birch_side.png",
+    "Silver crown_top": "textures/foliage/birch_top.png",
+    "leaf_cluster": "textures/foliage/birch_cluster.png"
+  },
+  "foliage_cluster": {
+    "material": "leaf_cluster"
+  }
 }

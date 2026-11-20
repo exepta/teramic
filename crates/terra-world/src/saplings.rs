@@ -24,7 +24,7 @@ pub(crate) struct GrowthWork {
 }
 
 pub fn soil(material: u16) -> bool {
-    matches!(material, 1 | 2 | terra_core::farming::FARMLAND)
+    matches!(material, 1 | 2 | 306 | 307 | terra_core::farming::FARMLAND)
 }
 /// Saplings need a clear outdoor shaft or nearby artificial light. Unknown loaded cells
 /// are never guessed to be empty. Night delays outdoor growth, not placement.
@@ -317,7 +317,18 @@ pub fn plant(
 
 /// All newly grown trees use the existing generator's capsules/crowns.
 pub fn shape(species: TreeSpecies, seed: u64) -> (Vec<[i8; 3]>, Vec<[i8; 3]>) {
-    crate::generation::planted_shape(species, seed).unwrap_or_default()
+    shape_with_ecology(species, seed, 4)
+}
+
+/// Geometry is selected when a sapling starts growing; the world revision is
+/// persisted with its generator configuration and never inferred from defaults.
+pub fn shape_with_ecology(
+    species: TreeSpecies,
+    seed: u64,
+    ecology_revision: u8,
+) -> (Vec<[i8; 3]>, Vec<[i8; 3]>) {
+    crate::generation::planted_shape_with_ecology(species, seed, ecology_revision)
+        .unwrap_or_default()
 }
 /// Shared identity for authority placement and headless room preparation.
 pub fn placement_seed(support: [i64; 3], kind: terra_core::ResourcePropKind, epoch: u64) -> u64 {
@@ -447,13 +458,24 @@ fn begin_growth(
 /// Synchronous setup/test API uses exactly the same staged transaction. Runtime
 /// calls the bounded worker path below, rather than building an entire tree here.
 pub fn grow(chunks: &mut ChunkStore, journal: &mut EditJournal, id: u64) -> Result<bool, String> {
+    grow_with_ecology(chunks, journal, id, 4)
+}
+
+/// Explicit saved-world revision for setup and synchronous growth. Mature trees
+/// keep their exact persisted cells regardless of a later caller's revision.
+pub fn grow_with_ecology(
+    chunks: &mut ChunkStore,
+    journal: &mut EditJournal,
+    id: u64,
+    ecology_revision: u8,
+) -> Result<bool, String> {
     let Some(tree) = journal.gameplay().trees.get(id) else {
         return Ok(false);
     };
     if tree.stage != TreeStage::Sapling || tree.growth_seconds < tree.species.growth_seconds() {
         return Ok(false);
     }
-    let (wood, leaves) = shape(tree.species, tree.seed);
+    let (wood, leaves) = shape_with_ecology(tree.species, tree.seed, ecology_revision);
     let Some(mut batch) = begin_growth(chunks, journal, id, wood, leaves) else {
         return Ok(false);
     };
@@ -562,7 +584,12 @@ pub(crate) fn tick(
     if !access.authoritative() {
         return;
     }
-    advance_pending(&mut work, &mut chunks, &mut journal);
+    // ResMut coercion marks both resources Changed before advance_pending can
+    // return. An empty growth queue must not restart terrain/prop selection on
+    // every frame (including between the ordinary two-second growth checks).
+    if work.pending.is_some() {
+        advance_pending(&mut work, &mut chunks, &mut journal);
+    }
     if time.elapsed_secs_f64() < work.next {
         return;
     }
@@ -627,49 +654,72 @@ pub(crate) fn tick(
         let record = journal.gameplay().trees.get(*id).unwrap().clone();
         let species = record.species;
         let seed = record.seed;
-        let task =
-            bevy::tasks::AsyncComputeTaskPool::get().spawn(async move { shape(species, seed) });
+        let ecology_revision = terrain.0.config().ecology_revision;
+        let task = bevy::tasks::AsyncComputeTaskPool::get()
+            .spawn(async move { shape_with_ecology(species, seed, ecology_revision) });
         work.pending = Some(PendingGrowth::Shape { record, task });
     }
 }
 #[cfg(test)]
 mod tests;
 
-/// One-in-sixteen attributed leaves return their own species' sapling. Placed leaf
-/// blocks are excluded; full-tree felling separately guarantees one replacement.
+/// Unattributed green leaves default to oak; attributed trees retain their real
+/// species, including spruce's shared green leaf material and historic wood skins.
+pub const fn leaf_species(material: u16) -> Option<TreeSpecies> {
+    Some(match material {
+        7 | 8 => TreeSpecies::Oak,
+        9 => TreeSpecies::Birch,
+        132 | 133 => TreeSpecies::Cherry,
+        195 => TreeSpecies::Apple,
+        _ => return None,
+    })
+}
+
+/// One in five leaves returns a sapling. The roll is stable across retries and
+/// load order. Normal mining consumes the leaf block instead of returning it.
 pub fn leaf_drop(
     chunks: &ChunkStore,
     journal: &EditJournal,
     cell: [i64; 3],
     material: u16,
 ) -> Option<TreeSpecies> {
-    if !matches!(material, 7..=9 | 132 | 133 | 195) {
-        return None;
-    }
-    let hash = cell.into_iter().fold(0xcbf2_9ce4_8422_2325_u64, |h, v| {
-        (h ^ v as u64).wrapping_mul(0x100_0000_01b3)
-    });
-    if hash % 16 != 0 {
+    let fallback = leaf_species(material)?;
+    if !leaf_drop_roll(cell) {
         return None;
     }
     if let Some(tree) = journal.gameplay().trees.owner(cell, material) {
         return Some(tree.species);
     }
-    if journal.block(cell).is_some() {
-        return None;
+    if journal.block(cell).is_none()
+        && let Some(column) =
+            chunks.prepared_column([cell[0].div_euclid(16), cell[2].div_euclid(16)])
+        && let Some(root) = column.felling_owner(cell, material)
+    {
+        if let Some(species) = column.felling_species(root) {
+            return Some(species);
+        }
+        if let Some((wood, leaves)) = column.felling_materials(root) {
+            return Some(match (wood, leaves) {
+                (36, 7) => TreeSpecies::Spruce,
+                (_, 195) => TreeSpecies::Apple,
+                (_, 9) => TreeSpecies::Birch,
+                (_, 132 | 133) => TreeSpecies::Cherry,
+                _ => fallback,
+            });
+        }
     }
-    let column = chunks.prepared_column([cell[0].div_euclid(16), cell[2].div_euclid(16)])?;
-    let root = column.felling_owner(cell, material)?;
-    if let Some(species) = column.felling_species(root) {
-        return Some(species);
-    }
-    let materials = column.felling_materials(root)?;
-    Some(match materials {
-        (6, 195) => TreeSpecies::Apple,
-        (6, 7 | 8) => TreeSpecies::Oak,
-        (10, 9) => TreeSpecies::Birch,
-        (36, 7) => TreeSpecies::Spruce,
-        (134, 132 | 133) => TreeSpecies::Cherry,
-        _ => return None,
-    })
+    Some(fallback)
+}
+
+/// Felling retains the exact species from its original attributed plan, including
+/// after the trunk is gone. It uses the same per-leaf roll as direct mining.
+pub(crate) fn leaf_drop_roll(cell: [i64; 3]) -> bool {
+    let mut hash = cell.into_iter().fold(0xcbf2_9ce4_8422_2325_u64, |h, v| {
+        (h ^ v as u64).wrapping_mul(0x100_0000_01b3)
+    });
+    // Raw coordinate FNV has correlated residues along short rows (especially
+    // negative coordinates). Avalanche all bits before reducing to a 1/5 roll.
+    hash = (hash ^ (hash >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    hash = (hash ^ (hash >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    (hash ^ (hash >> 31)).is_multiple_of(5)
 }

@@ -1,6 +1,8 @@
 //! Chunk mesh upload, material presentation and lighting. Generation stays in terra-world.
 mod appearance;
 mod apple_fruit;
+mod blood_drips;
+pub use blood_drips::BloodDripStatus;
 mod armor;
 pub use armor::ArmorRenderStatus;
 mod building;
@@ -55,13 +57,22 @@ pub use weather::{CosmeticSnowPreview, WeatherPreview, WeatherRenderStatus};
 mod props;
 mod scene;
 pub use scene::caves::CaveState;
-pub use scene::caves::lights::{TorchLightingStatus, TorchSources};
+pub use scene::caves::lights::{LightDiscoveryStatus, TorchLightingStatus, TorchSources};
 mod selection;
 mod transitions;
 mod upload_budget;
+mod work_areas;
 pub use upload_budget::MeshUploadStatus;
+pub use work_areas::{FogBlockStatus, SpiritMistStatus, WorkAreaOverlayStatus};
+mod liquid_motion;
+pub mod particle_fluids;
+pub use particle_fluids::{
+    FluidCollider, FluidParticleSeed, FluidPath, ParticleFluidInput, ParticleFluidReadback,
+    ParticleFluidStatus,
+};
 mod water;
 pub use diagnostics::TerraRenderDiagnosticsPlugin;
+pub use liquid_motion::FlowInterpolationStatus;
 pub use meshing::visibility::TerrainVisibility;
 pub use meshing::{CoastalWashQuads, RenderStatus, RenderedSections, TerrainSection};
 pub use plugin::TerraRenderPlugin;

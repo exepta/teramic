@@ -9,10 +9,18 @@ use terra_core::Inventory;
 use terra_voxel::{SectionPos, global_to_section};
 
 mod build;
+/// Authored ordinary village house cells, without free loot or generated residents.
+pub(crate) fn default_house_template() -> Result<Vec<StructureObject>, String> {
+    build::default_house_template()
+}
 mod distribution;
+mod graves;
 #[cfg(test)]
 mod lookup_tests;
 mod loot;
+pub use graves::{
+    GRAVE_LEVEL_HEIGHT, GraveDungeonInfo, GraveFloor, GraveRoom, GraveRoomPurpose, GraveVariant,
+};
 mod mine;
 mod settlement;
 pub use settlement::{ResidentSite, VillageBed, VillageResidence, VillageSettlement, VillageSize};
@@ -33,6 +41,8 @@ pub enum StructureKind {
     Mine,
     Kingdom,
     Outpost,
+    Cemetery,
+    GraveDungeon,
 }
 impl StructureKind {
     fn enabled(self, settings: terra_core::StructureSettings) -> bool {
@@ -40,7 +50,7 @@ impl StructureKind {
             Self::Village => settings.villages,
             Self::Kingdom => settings.kingdoms,
             Self::Outpost => settings.outposts,
-            Self::Ruin => settings.ruins,
+            Self::Ruin | Self::Cemetery | Self::GraveDungeon => settings.ruins,
             Self::Mine => settings.mines,
         }
     }
@@ -84,6 +94,8 @@ pub struct SiteSummary {
     pub bounds: [[i64; 3]; 2],
     pub buildings: Vec<BuildingSummary>,
     pub containers: Vec<[i64; 3]>,
+    /// Revision-ten authored navigation/room data; old sites derive the legacy layout.
+    pub grave: Option<GraveDungeonInfo>,
 }
 
 /// Authored layouts share ordinary block/object streaming and resident simulation.

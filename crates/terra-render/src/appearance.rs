@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use terra_core::{GameConfig, WeatherKind};
 use terra_world::{environment::SurfaceCondition, generation::biomes::BiomeSample};
 
-const BIOME_COLORS: [[f32; 3]; 8] = [
+const BIOME_COLORS: [[f32; 3]; 10] = [
     [0.56, 0.77, 0.50],
     [0.66, 0.83, 0.36],
     [0.49, 0.76, 0.33],
@@ -10,9 +10,11 @@ const BIOME_COLORS: [[f32; 3]; 8] = [
     [0.58, 0.72, 0.51],
     [0.61, 0.70, 0.63],
     [0.90, 0.78, 0.47],
-    [0.57, 0.81, 0.39],
+    [0.65, 0.67, 0.80], // Cherry: soft lilac.
+    [0.32, 0.80, 0.76], // Spirit Blossom: turquoise.
+    [0.68, 0.36, 0.44], // Blood Forest: rose-crimson, readable under a closed canopy.
 ];
-pub(crate) static LINEAR_COLORS: std::sync::LazyLock<[[f32; 4]; 8]> =
+pub(crate) static LINEAR_COLORS: std::sync::LazyLock<[[f32; 4]; 10]> =
     std::sync::LazyLock::new(|| {
         BIOME_COLORS.map(|c| Color::srgb(c[0], c[1], c[2]).to_linear().to_f32_array())
     });
@@ -123,15 +125,23 @@ pub(crate) fn update_weather_materials(
 
 /// Shared section corners make the tint continuous across negative coordinates
 /// and independent of the mesh LOD. Only four climate samples per section.
-pub(crate) struct GrassTint(pub [[f32; 3]; 4]);
+pub(crate) struct GrassTint(pub [[f32; 3]; 4], pub [f32; 4]);
 impl GrassTint {
     pub fn new(terrain: &terra_world::TerraGenerator, origin: [i64; 3]) -> Self {
-        Self(std::array::from_fn(|i| {
-            biome_tint(terrain.biome_at(
+        let samples = std::array::from_fn::<_, 4, _>(|i| {
+            terrain.biome_at(
                 origin[0] as f64 + (i % 2) as f64 * 16.0,
                 origin[2] as f64 + (i / 2) as f64 * 16.0,
-            ))
-        }))
+            )
+        });
+        Self(
+            samples.map(biome_tint),
+            samples.map(|sample| {
+                (sample.weights.cherry_forest
+                    + sample.weights.spirit_blossom
+                    + sample.weights.blood_forest) as f32
+            }),
+        )
     }
     pub fn at(&self, position: [f32; 3]) -> [f32; 3] {
         let x = (position[0] / 16.0).clamp(0.0, 1.0);
@@ -144,7 +154,19 @@ impl GrassTint {
     }
     pub fn relative_at(&self, position: [f32; 3]) -> [f32; 3] {
         let tint = self.at(position);
-        std::array::from_fn(|axis| (tint[axis] / LINEAR_COLORS[2][axis]).clamp(0.65, 1.6))
+        let x = (position[0] / 16.0).clamp(0.0, 1.0);
+        let z = (position[2] / 16.0).clamp(0.0, 1.0);
+        let near = self.1[0] + (self.1[1] - self.1[0]) * x;
+        let far = self.1[2] + (self.1[3] - self.1[2]) * x;
+        terra_core::relative_grass_tint(
+            tint,
+            [
+                LINEAR_COLORS[2][0],
+                LINEAR_COLORS[2][1],
+                LINEAR_COLORS[2][2],
+            ],
+            near + (far - near) * z,
+        )
     }
 }
 
@@ -153,7 +175,7 @@ impl GrassTint {
 const TURF_ALBEDO: [f32; 3] = [0.387662, 0.383565, 0.382015];
 const SNOW_ALBEDO: [f32; 3] = [0.94, 0.97, 1.0];
 static SAND_ALBEDO: std::sync::LazyLock<[f32; 3]> = std::sync::LazyLock::new(|| {
-    let c = Color::srgb(238.0 / 255.0, 203.0 / 255.0, 129.0 / 255.0).to_linear();
+    let c = Color::srgb(234.0 / 255.0, 215.0 / 255.0, 181.0 / 255.0).to_linear();
     [c.red, c.green, c.blue]
 });
 
@@ -198,11 +220,14 @@ impl GroundTint {
                     level as f32,
                     (terrain.config().snow_height + (biome.temperature - 0.5) * 16.0) as f32,
                 ],
+                (biome.weights.cherry_forest
+                    + biome.weights.spirit_blossom
+                    + biome.weights.blood_forest) as f32,
             )
         });
         Self {
-            grass: GrassTint(samples.map(|s| s.0)),
-            bands: GrassTint(samples.map(|s| s.1)),
+            grass: GrassTint(samples.map(|s| s.0), samples.map(|s| s.2)),
+            bands: GrassTint(samples.map(|s| s.1), [0.0; 4]),
             origin_y: origin[1] as f32,
         }
     }
@@ -253,8 +278,8 @@ mod tests {
     #[test]
     fn cave_grass_below_sea_level_keeps_its_vegetation_color_instead_of_becoming_a_sandy_bank() {
         let tint = GroundTint {
-            grass: GrassTint([[0.25, 0.62, 0.12]; 4]),
-            bands: GrassTint([[0.0, 8.0, 100.0]; 4]),
+            grass: GrassTint([[0.25, 0.62, 0.12]; 4], [0.0; 4]),
+            bands: GrassTint([[0.0, 8.0, 100.0]; 4], [0.0; 4]),
             origin_y: -32.0,
         };
         assert_eq!(tint.cave_grass_at([8.0, 4.0, 8.0]), [0.25, 0.62, 0.12]);
@@ -274,8 +299,8 @@ mod tests {
     }
     #[test]
     fn tint_interpolation_preserves_shared_edges() {
-        let a = GrassTint([[0.1; 3], [0.3; 3], [0.5; 3], [0.7; 3]]);
-        let b = GrassTint([[0.3; 3], [0.9; 3], [0.7; 3], [0.2; 3]]);
+        let a = GrassTint([[0.1; 3], [0.3; 3], [0.5; 3], [0.7; 3]], [0.0; 4]);
+        let b = GrassTint([[0.3; 3], [0.9; 3], [0.7; 3], [0.2; 3]], [0.0; 4]);
         for z in 0..=16 {
             assert_eq!(a.at([16.0, 4.0, z as f32]), b.at([0.0, 9.0, z as f32]));
         }
@@ -296,7 +321,7 @@ mod tests {
                 assert_eq!(plants.relative_at(point), ground.authored_grass_at(point));
             }
         }
-        let forest = GrassTint([LINEAR_COLORS[2][..3].try_into().unwrap(); 4]);
+        let forest = GrassTint([LINEAR_COLORS[2][..3].try_into().unwrap(); 4], [0.0; 4]);
         assert_eq!(forest.relative_at([8.0, 1.0, 8.0]), [1.0; 3]);
         let left = GrassTint::new(&terrain, [-16, 48, -16]);
         let right = GrassTint::new(&terrain, [0, 48, -16]);
@@ -312,13 +337,47 @@ mod tests {
     }
 
     #[test]
+    fn blossom_forests_recolor_painted_green_turf_without_changing_other_biomes() {
+        let painted_turf = [0.28, 0.46, 0.08];
+        for (index, blossom) in [(2, 0.0), (7, 1.0), (8, 1.0), (9, 1.0)] {
+            let tint = GrassTint(
+                [LINEAR_COLORS[index][..3].try_into().unwrap(); 4],
+                [blossom; 4],
+            )
+            .relative_at([8.0, 1.0, 8.0]);
+            let color = std::array::from_fn::<_, 3, _>(|axis| painted_turf[axis] * tint[axis]);
+            match index {
+                2 => assert_eq!(color, painted_turf),
+                7 => {
+                    assert!(color[0] > color[1] * 1.25, "lilac red: {color:?}");
+                    assert!(color[2] > color[1] * 1.25, "lilac blue: {color:?}");
+                }
+                8 => {
+                    assert!(color[1] > color[0] * 3.0, "turquoise green: {color:?}");
+                    assert!(color[2] > color[0] * 3.0, "turquoise blue: {color:?}");
+                    assert!((color[1] - color[2]).abs() < 0.08);
+                }
+                _ => {
+                    assert!(color[0] > color[1] * 2.5, "crimson red: {color:?}");
+                    assert!(color[0] > color[2] * 3.0, "crimson blue: {color:?}");
+                    let luminance = 0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2];
+                    assert!(
+                        luminance >= 0.20,
+                        "Canopy turf retains visible relief: {color:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn different_surface_materials_share_the_same_blended_top_albedo() {
         let terrain = terra_world::TerraGenerator::new(Default::default()).unwrap();
         let grass = biome_tint(terrain.biome_at(0.0, 0.0));
         let color = ground_color(grass, 0.5, 0.0);
         let tint = GroundTint {
-            grass: GrassTint([grass; 4]),
-            bands: GrassTint([[0.5, 0.0, 100.0]; 4]),
+            grass: GrassTint([grass; 4], [0.0; 4]),
+            bands: GrassTint([[0.5, 0.0, 100.0]; 4], [0.0; 4]),
             origin_y: 0.0,
         };
         for (material, albedo) in [(1, TURF_ALBEDO), (4, *SAND_ALBEDO)] {
@@ -351,8 +410,8 @@ mod tests {
     #[test]
     fn inland_building_blocks_keep_color_and_narrow_riverbeds_stay_sandy() {
         let tint = GroundTint {
-            grass: GrassTint([[0.2, 0.6, 0.1]; 4]),
-            bands: GrassTint([[0.0, 8.0, 112.0]; 4]),
+            grass: GrassTint([[0.2, 0.6, 0.1]; 4], [0.0; 4]),
+            bands: GrassTint([[0.0, 8.0, 112.0]; 4], [0.0; 4]),
             origin_y: 0.0,
         };
         assert_eq!(tint.at([8.0, 30.0, 8.0], 4), [1.0; 3]);
@@ -364,15 +423,15 @@ mod tests {
 #[test]
 fn authored_grass_keeps_original_forest_albedo_and_bounds_other_biome_tints() {
     let tint = GroundTint {
-        grass: GrassTint([LINEAR_COLORS[2][..3].try_into().unwrap(); 4]),
-        bands: GrassTint([[0.0, 22.0, 112.0]; 4]),
+        grass: GrassTint([LINEAR_COLORS[2][..3].try_into().unwrap(); 4], [0.0; 4]),
+        bands: GrassTint([[0.0, 22.0, 112.0]; 4], [0.0; 4]),
         origin_y: 32.0,
     };
     assert_eq!(tint.authored_grass_at([8.0, 0.0, 8.0]), [1.0; 3]);
     for biome in LINEAR_COLORS.iter() {
         let sample = GroundTint {
-            grass: GrassTint([biome[..3].try_into().unwrap(); 4]),
-            bands: GrassTint([[0.0, 22.0, 112.0]; 4]),
+            grass: GrassTint([biome[..3].try_into().unwrap(); 4], [0.0; 4]),
+            bands: GrassTint([[0.0, 22.0, 112.0]; 4], [0.0; 4]),
             origin_y: 32.0,
         };
         assert!(

@@ -10,9 +10,15 @@
   "bevel_width": 0.0,
   "materials": {
     "Host rock": {
-      "texture_pattern": "stone",
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "Salt crystals": {
       "texture_pattern": "mineral",
@@ -37,5 +43,8 @@
   "hardness": 0.9,
   "resistance": 8,
   "required_tool": "pickaxe",
-  "mining_level": 1
+  "mining_level": 1,
+  "textures": {
+    "Host rock": "textures/block_palette/stone.png"
+  }
 }

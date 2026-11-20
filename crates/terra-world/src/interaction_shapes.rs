@@ -191,6 +191,28 @@ fn visit_boxes_with_state(
     }
     let selected =
         override_state.unwrap_or_else(|| journal.object_state(position).unwrap_or_default());
+    if material == terra_core::bile::FLUID
+        || terra_core::roads::is_tar(material) && selected.liquid.is_some()
+    {
+        let height = if material == terra_core::bile::FLUID {
+            selected.liquid.map_or_else(
+                || terra_core::bile::height(selected.facing + 1),
+                |s| terra_core::bile::state_height(s.volume, s.age),
+            )
+        } else {
+            terra_core::roads::tar_fine_height(selected.liquid.unwrap().volume)
+        };
+        visit(ShapeBox {
+            minimum: position.map(|p| p as f64),
+            maximum: [
+                position[0] as f64 + 1.,
+                position[1] as f64 + f64::from(height),
+                position[2] as f64 + 1.,
+            ],
+            hinged: false,
+        });
+        return true;
+    }
     if terra_core::rails::is_rail(material) {
         for mut bounds in crate::rails::cell_boxes(position, material, selected)
             .iter()
@@ -357,7 +379,10 @@ fn visit_boxes_with_state(
         }
         return true;
     }
-    if terra_core::construction::is_slab(material) || terra_core::construction::is_stair(material) {
+    if terra_core::construction::is_slab(material)
+        || terra_core::construction::is_stair(material)
+        || terra_core::roads::is_tar(material)
+    {
         let neighbors = std::array::from_fn(|side| {
             let mut p = position;
             p[side / 2] += if side % 2 == 0 { -1 } else { 1 };
@@ -583,7 +608,7 @@ pub fn raycast_solid(
     )
 }
 
-/// Ignore only liquid source blocks. Aquatic plants and mineral segments remain mineable.
+/// Pass through water and bile, including flowing bile. Aquatic plants and mineral segments remain mineable.
 pub fn raycast_through_water(
     chunks: &ChunkStore,
     journal: &EditJournal,
@@ -613,7 +638,7 @@ fn cast(
     reach: f64,
     options: (bool, bool, crate::props::PropPose),
 ) -> Option<BlockHit> {
-    let (solid_only, ignore_water, pose) = options;
+    let (solid_only, ignore_liquid, pose) = options;
     let length = direction.iter().map(|v| v * v).sum::<f64>().sqrt();
     if !length.is_finite() || length < 1.0e-12 {
         return None;
@@ -703,7 +728,7 @@ fn cast(
                 }
             }
             Some(
-                if ignore_water && material == terra_voxel::MaterialId::FluidWater as u16
+                if ignore_liquid && crate::targeting::displaceable_liquid(material)
                     || solid_only
                         && terra_voxel::MaterialId::from_raw(material)
                             .is_some_and(|material| !material.is_solid())

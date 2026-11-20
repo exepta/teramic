@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "world_id": 205294890893140149,
+  "source": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/worlds/Test",
+  "original_save_unchanged": true,
+  "origin": [
+    4,
+    16,
+    20
+  ],
+  "facing": 0,
+  "confirmation": "enter",
+  "os_event_source": null,
+  "template": "village-house-temperate-v1",
+  "screens": {
+    "saved-construction-preview": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 2246201
+    },
+    "saved-construction-queued": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 2269674
+    }
+  },
+  "workflow": "real saved identity, TAB, HTML template card, selected-site confirmation, authoritative QueueHouse ACK, Save ACK and disk reload"
+}

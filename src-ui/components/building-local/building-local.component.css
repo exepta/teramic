@@ -1,0 +1,48 @@
+.building-local { display: flex; flex-direction: column; width: 100%; min-width: 0; gap: 12px; }
+#building-local h2, #building-local h3, #building-local p, #building-local label { margin: 0; min-width: 0; max-width: 100%; text-wrap: wrap; }
+#building-local h2 { font-family: serif; font-size: 19px; line-height: 25px; color: #eed09b; }
+#building-local h3 { font-family: serif; font-size: 16px; line-height: 21px; color: #f4e3c3; }
+#building-local p { font-size: 12px; line-height: 17px; color: #e8d4b0; }
+#building-local label { font-size: 11px; line-height: 16px; color: #baa78a; }
+.building-heading { min-width: 0; display: flex; flex-direction: row; align-items: center; gap: 10px; }
+.building-heading { flex-wrap: wrap; }
+.building-catalog-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-width: 0; align-items: start; }
+.building-template-list { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+#building-local .building-template-card { width: 100%; min-width: 0; justify-content: flex-start; text-align: left; padding: 12px; gap: 16px; background-color: #302319; }
+#building-local .building-template-card.selected { background-color: #4a3b23; border-color: #d9b46b; }
+#building-local .building-template-card:hover { background-color: #544027; border-color: #dfb46d; }
+.building-template-preview { width: 100px; height: 100px; min-width: 100px; flex-shrink: 0; }
+.building-template-copy { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex-grow: 1; }
+#building-local .building-template-selected { color: #c7d5a1; }
+.building-template-detail-title { display: flex; flex-direction: row; gap: 14px; min-width: 0; align-items: center; }
+.building-template-detail-title > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.building-template-materials { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 0; }
+.building-material-entry { display: grid; grid-template-columns: 28px 1fr auto; min-width: 0; gap: 7px; align-items: center; padding: 5px 7px; background-color: #302319; border: 1px solid #5d4832; border-radius: 3px; }
+.building-material-entry img, .building-job-material img { width: 28px; height: 28px; flex-shrink: 0; }
+#building-local .building-material-count { color: #eed09b; }
+.building-job-material { display: flex; flex-direction: row; gap: 5px; align-items: center; min-width: 0; }
+.building-planning-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; min-width: 0; }
+.building-card { min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid #705138; border-radius: 4px; background-color: #241a14; flex-shrink: 0; box-sizing: border-box; }
+.building-actions, .building-job-heading { min-width: 0; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; }
+#building-local button { display: flex; flex-direction: row; align-items: center; justify-content: center; width: auto; min-width: 0; max-width: 100%; height: auto; min-height: 36px; flex-grow: 0; flex-shrink: 0; padding: 8px 12px; gap: 7px; color: #f2ddba; background-color: #483020; border: 1px solid #977347; border-radius: 3px; font-size: 12px; line-height: 17px; text-wrap: nowrap; box-sizing: border-box; }
+#building-local button::value { width: auto; min-width: 0; max-width: auto; font-size: 12px; line-height: 17px; text-wrap: nowrap; flex-shrink: 0; }
+#building-local button:hover { background-color: #674a29; border-color: #dfb46d; }
+#building-local button:disabled { opacity: 0.45; }
+#building-local .building-primary { background-color: #49512b; border-color: #a39356; }
+#building-local .building-danger { background-color: #62342a; border-color: #a8664c; }
+.building-facing { width: 190px; max-width: 100%; min-width: 0; height: 34px; min-height: 34px; background-color: #302319; color: #f2ddba; border: 1px solid #977347; border-radius: 3px; padding: 6px 9px; font-size: 12px; }
+.building-facing::value, .building-facing::indicator, .building-facing option { color: #f2ddba; font-size: 12px; line-height: 17px; }
+.building-facing::popup, .building-facing option { background-color: #302319; }
+.building-workers { display: flex; flex-direction: column; gap: 6px; min-width: 0; max-height: 300px; overflow-y: auto; padding-right: 8px; }
+.building-worker { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 8px; border-bottom: 1px solid #705138; }
+.building-worker > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.building-materials { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; min-width: 0; }
+#building-local .building-error { color: #efae94; }
+#building-local .building-feedback { color: #c7d5a1; }
+#building-local .building-hint { color: #c8b38f; }
+@media (max-width: 900px) { .building-catalog-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .building-planning-grid { grid-template-columns: 1fr; } }
+@media (max-width: 620px) { .building-template-materials { grid-template-columns: 1fr; } }
+
+#building-local .building-material-enough { color: #c5d79a; }
+#building-local .building-material-short { color: #edb09a; }

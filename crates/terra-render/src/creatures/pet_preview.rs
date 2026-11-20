@@ -21,6 +21,7 @@ struct PetPreviewScene;
 #[derive(Resource, Default)]
 struct Preview {
     id: Option<u64>,
+    appearance: Option<super::Appearance>,
     camera: Option<Entity>,
     frames: u8,
 }
@@ -49,6 +50,7 @@ fn update(
         .map(|t| &t.current);
     let Some(animal) = animal else {
         if state.id.take().is_some() {
+            state.appearance = None;
             for entity in &scene {
                 commands.entity(entity).try_despawn();
             }
@@ -58,7 +60,7 @@ fn update(
         }
         return;
     };
-    if state.id == Some(animal.id) {
+    if state.id == Some(animal.id) && state.appearance == Some(super::Appearance::of(animal)) {
         if state.frames < 4 {
             state.frames += 1;
         } else if let Some(entity) = state.camera
@@ -69,17 +71,13 @@ fn update(
         }
         return;
     }
+    let Some(parts) = models.parts.get(&super::Appearance::of(animal).0) else {
+        target.ready = false;
+        return;
+    };
     for entity in &scene {
         commands.entity(entity).try_despawn();
     }
-    let variant = if animal.kind == super::Kind::Horse {
-        animal.variant
-    } else {
-        0
-    };
-    let Some(parts) = models.parts.get(&(animal.kind, variant)) else {
-        return;
-    };
     if target.image == Handle::default() {
         target.image = images.add(Image::new_target_texture(
             384,
@@ -91,6 +89,7 @@ fn update(
     target.id = Some(animal.id);
     target.ready = false;
     state.id = Some(animal.id);
+    state.appearance = Some(super::Appearance::of(animal));
     state.frames = 0;
     let scale = instance_scale(animal);
     let root = commands
@@ -122,11 +121,7 @@ fn update(
         commands.spawn((
             PetPreviewScene,
             Mesh3d(mesh.clone()),
-            MeshMaterial3d(if matches!(part, model::Part::SpiderEyes) {
-                models.eye_material.clone()
-            } else {
-                models.material.clone()
-            }),
+            MeshMaterial3d(models.material_for(animal.kind, animal.variant, *part)),
             Transform::from_translation(*offset),
             RenderLayers::layer(LAYER),
             ChildOf(root),

@@ -371,23 +371,22 @@ fn verify_gallery(world: &World, index: usize) -> Result<bool, String> {
 
 fn verify_water(world: &mut World, diagnose: bool) -> Result<bool, String> {
     use bevy::camera::primitives::Aabb;
-    // upload_water consumes LoadedSection.water with take(). Its durable output
-    // is the actual named Mesh3d entity at this exact section's origin.
+    // Signed fields now publish reconstructed meshes. Require the current
+    // source field and its actual uploaded geometry at this section's origin.
     let water_meshes: Vec<_> = world
         .query::<(
             &Name,
             &Mesh3d,
             &Transform,
-            &terra_core::miniature::MiniatureMesh,
             Option<&Aabb>,
             Option<&Visibility>,
         )>()
         .iter(world)
-        .filter(|(name, _, _, kind, _, _)| {
-            name.as_str().starts_with("Water ")
-                && matches!(kind, terra_core::miniature::MiniatureMesh::Water)
+        .filter(|(name, _, _, _, _)| {
+            name.as_str().starts_with("Reconstructed fluid 0 ")
+                || name.as_str().starts_with("Natural water body ")
         })
-        .map(|(name, mesh, transform, _, bounds, visibility)| {
+        .map(|(name, mesh, transform, bounds, visibility)| {
             (
                 name.as_str().to_owned(),
                 mesh.0.id(),
@@ -403,6 +402,7 @@ fn verify_water(world: &mut World, diagnose: bool) -> Result<bool, String> {
     let rendered = world.resource::<terra_render::RenderedSections>();
     let terrain_status = world.resource::<terra_render::RenderStatus>();
     let water_status = world.resource::<terra_render::WaterStatus>();
+    let far = world.resource::<terra_render::particle_fluids::FarFluidSections>();
     let mut all_ready = true;
     let mut details = Vec::new();
     for (cell, material, facing) in WET {
@@ -467,7 +467,21 @@ fn verify_water(world: &mut World, diagnose: bool) -> Result<bool, String> {
             section.water_epoch == expected_water_epoch && section.mesh_epoch == expected_mesh_epoch
         });
         let origin = Vec3::from_array(owner.origin().map_err(|e| e.to_string())?.map(|v| v as f32));
-        let expected_name = format!("Water {}, {}", owner.x, owner.z);
+        let field = far.sections.get(&owner);
+        let body = field.is_some_and(|field| field.published_water.is_some());
+        let field_ready = field.is_some_and(|field| {
+            field
+                .published_water
+                .as_ref()
+                .is_some_and(|p| !p.indices.is_empty())
+                || field.fields[0].iter().any(|&value| value > 0.)
+        });
+        let prefix = if body {
+            "Natural water body"
+        } else {
+            "Reconstructed fluid 0"
+        };
+        let expected_name = format!("{prefix} {},{},{}", owner.x, owner.y, owner.z);
         let water_entity =
             water_meshes
                 .iter()
@@ -482,9 +496,16 @@ fn verify_water(world: &mut World, diagnose: bool) -> Result<bool, String> {
                                 && origin.y + bounds.center.y + bounds.half_extents.y >= 20.
                         })
                 });
-        all_ready &= section_ready && terrain_ready && published && water_entity.is_some();
+        // WaterStatus.ready compares every uploaded cache epoch against these
+        // FarFluidSections, so an earlier field mesh cannot satisfy readiness.
+        all_ready &=
+            section_ready && terrain_ready && published && field_ready && water_entity.is_some();
         if diagnose {
-            details.push(format!("cell={cell:?} owner={owner:?} terrain_status_ready={section_ready} terrain_entity_ready={terrain_ready} water_publication_current={published} section_epochs={:?} expected_epochs=({expected_mesh_epoch},{expected_water_epoch}) water_entity={water_entity:?}", section.map(|s|(s.mesh_epoch,s.water_epoch,s.water.as_ref().map(|p|p.indices.len())))));
+            details.push(format!(
+                "cell={cell:?} owner={owner:?} terrain_status_ready={section_ready} terrain_entity_ready={terrain_ready} water_publication_current={published} section_epochs={:?} expected_epochs=({expected_mesh_epoch},{expected_water_epoch}) field_ready={field_ready} field_epoch={:?} water_entity={water_entity:?}",
+                section.map(|s| (s.mesh_epoch, s.water_epoch, s.water.as_ref().map(|p| p.indices.len()))),
+                field.map(|f| f.epoch),
+            ));
         }
     }
     let ready = all_ready
@@ -495,7 +516,7 @@ fn verify_water(world: &mut World, diagnose: bool) -> Result<bool, String> {
         info!(all_ready, water_ready=water_status.ready, water_initial_ready=water_status.initial_ready,
             water_tiles=water_status.visible_tiles, water_triangles=water_status.triangles,
             conditions=?details, uploaded_water_entities=?water_meshes,
-            "Surface wait: exact terrain publication and persistent uploaded water meshes");
+            "Surface wait: exact terrain publication and reconstructed fluid epochs/meshes");
     }
     Ok(ready)
 }

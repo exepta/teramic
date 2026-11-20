@@ -55,7 +55,9 @@ pub fn fluid_motion_at(
     {
         return FluidMotion::default();
     }
-    let surface = global[1] as f64 + cell.height();
+    let Some(surface) = super::flowing_surface_height(chunks, terrain, journal, position) else {
+        return FluidMotion::default();
+    };
     if cell.amount == 0 || position[1] >= surface {
         return FluidMotion::default();
     }
@@ -171,13 +173,17 @@ pub fn falling_fluid_at(
         return false;
     };
     let supplied = chunks.fluid_cell_at(terrain, journal, above, above_block);
-    supplied.amount > 0
+    let connected = supplied.amount > 0
         && current.connected(
-            cell,
+            FluidCell { amount: 8, ..cell },
             &super::space::FluidSpace::at(journal, above, |p| chunks.block_at(p)),
             supplied,
             [0, 1, 0],
-        )
+        );
+    if cell.amount < 8 && connected {
+        return true;
+    }
+    connected
         && [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]]
             .into_iter()
             .any(|direction| {
@@ -245,6 +251,53 @@ mod tests {
     use crate::{streaming::LoadedSection, water::FluidCell};
     use terra_core::WorldConfig;
     use terra_voxel::{BlockSection, MaterialId, SectionPos};
+
+    #[test]
+    fn fractional_vertical_jet_shares_its_rendered_width_and_full_height_with_immersion() {
+        let terrain = TerraGenerator::new(WorldConfig {
+            sea_level: -100.,
+            rivers: false,
+            ..Default::default()
+        })
+        .unwrap();
+        let owner = SectionPos::default();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            owner,
+            LoadedSection {
+                data: BlockSection::empty(owner).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
+        );
+        let mut journal = EditJournal::default();
+        for y in 4..=6 {
+            journal
+                .set_fluid(
+                    [8, y, 8],
+                    FluidCell {
+                        amount: 1,
+                        source: y == 6,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+        }
+        let center = fluid_motion_at(&terrain, &chunks, &journal, [8.5, 5.75, 8.5]);
+        assert!(center.immersion > 0. && center.velocity[1] < 0.);
+        assert_eq!(
+            fluid_motion_at(&terrain, &chunks, &journal, [8.05, 5.75, 8.5]),
+            FluidMotion::default(),
+            "the dry part outside the narrow stream stays dry"
+        );
+        assert_eq!(
+            super::super::flowing_surface_height(&chunks, &terrain, &journal, [8.5, 5.75, 8.5]),
+            Some(6.)
+        );
+    }
 
     #[test]
     fn river_current_scale_is_twenty_percent_stronger_without_changing_canal_baseline() {

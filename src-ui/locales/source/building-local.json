@@ -1,0 +1,402 @@
+[
+  {
+    "source": "Building Local",
+    "de": "Lokales Bauen",
+    "en": "Building Local"
+  },
+  {
+    "source": "Lokales Bauen",
+    "de": "Lokales Bauen",
+    "en": "Building Local"
+  },
+  {
+    "source": "Bauaufträge neu laden",
+    "de": "Bauaufträge neu laden",
+    "en": "Refresh building jobs"
+  },
+  {
+    "source": "Dorfwohnhäuser werden aus echtem Material Stück für Stück gebaut. Handwerker brauchen kein eigenes Arbeitsgebiet.",
+    "de": "Dorfwohnhäuser werden aus echtem Material Stück für Stück gebaut. Handwerker brauchen kein eigenes Arbeitsgebiet.",
+    "en": "Village homes are built piece by piece from real materials. Craftsmen do not need their own work area."
+  },
+  {
+    "source": "1 Handwerker: 30 Min. · 2: 15 Min. · 3: 10 Min. · 4: 5 Min. Reine Arbeitszeit vor Ort; fehlendes Material und Wege pausieren den Fortschritt.",
+    "de": "1 Handwerker: 30 Min. · 2: 15 Min. · 3: 10 Min. · 4: 5 Min. Reine Arbeitszeit vor Ort; fehlendes Material und Wege pausieren den Fortschritt.",
+    "en": "1 craftsman: 30 min · 2: 15 min · 3: 10 min · 4: 5 min. Active work on site; missing materials and travel pause progress."
+  },
+  {
+    "source": "Stadtlager",
+    "de": "Stadtlager",
+    "en": "Town storage"
+  },
+  {
+    "source": "Bereich auswählen und dort Truhen mit Baumaterial aufstellen. Vorhandene Truhen im Bereich werden ebenfalls verwendet.",
+    "de": "Bereich auswählen und dort Truhen mit Baumaterial aufstellen. Vorhandene Truhen im Bereich werden ebenfalls verwendet.",
+    "en": "Select an area and place chests with building materials there. Existing chests inside the area are also used."
+  },
+  {
+    "source": "Gespeicherter Bereich",
+    "de": "Gespeicherter Bereich",
+    "en": "Saved area"
+  },
+  {
+    "source": "Auswahlentwurf",
+    "de": "Auswahlentwurf",
+    "en": "Draft selection"
+  },
+  {
+    "source": "Lagerbereich wählen",
+    "de": "Lagerbereich wählen",
+    "en": "Select storage area"
+  },
+  {
+    "source": "Stadtlager speichern",
+    "de": "Stadtlager speichern",
+    "en": "Save town storage"
+  },
+  {
+    "source": "Einzelnes Wohnhaus",
+    "de": "Einzelnes Wohnhaus",
+    "en": "Single home"
+  },
+  {
+    "source": "Standort am Boden auswählen. Freie Handwerker werden auf höchstens vier Plätze je Haus verteilt.",
+    "de": "Standort am Boden auswählen. Freie Handwerker werden auf höchstens vier Plätze je Haus verteilt.",
+    "en": "Select a location on the ground. Available craftsmen fill up to four places per house."
+  },
+  {
+    "source": "Hausstandort wählen",
+    "de": "Hausstandort wählen",
+    "en": "Select house location"
+  },
+  {
+    "source": "Wohnhaus beauftragen",
+    "de": "Wohnhaus beauftragen",
+    "en": "Order a home"
+  },
+  {
+    "source": "Automatisches Wohngebiet",
+    "de": "Automatisches Wohngebiet",
+    "en": "Automatic residential area"
+  },
+  {
+    "source": "Handwerker wählen geeignete freie Hausplätze in diesem Gebiet. Es werden die vorhandenen Dorfhaus-Vorlagen verwendet.",
+    "de": "Handwerker wählen geeignete freie Hausplätze in diesem Gebiet. Es werden die vorhandenen Dorfhaus-Vorlagen verwendet.",
+    "en": "Craftsmen choose suitable unoccupied house locations in this area using the existing village house templates."
+  },
+  {
+    "source": "Wohngebiet wählen",
+    "de": "Wohngebiet wählen",
+    "en": "Select residential area"
+  },
+  {
+    "source": "Wohngebiet aktivieren",
+    "de": "Wohngebiet aktivieren",
+    "en": "Enable residential area"
+  },
+  {
+    "source": "Automatik stoppen",
+    "de": "Automatik stoppen",
+    "en": "Stop automatic planning"
+  },
+  {
+    "source": "Handwerker",
+    "de": "Handwerker",
+    "en": "Craftsman"
+  },
+  {
+    "source": "Hier Handwerker anmelden oder den Beruf im Arbeitskräfte-Tab auswählen. Baumaterial kommt aus dem Stadtlager.",
+    "de": "Hier Handwerker anmelden oder den Beruf im Arbeitskräfte-Tab auswählen. Baumaterial kommt aus dem Stadtlager.",
+    "en": "Register craftsmen here or select their profession in the Workers tab. Building materials come from town storage."
+  },
+  {
+    "source": "Abmelden",
+    "de": "Abmelden",
+    "en": "Unregister"
+  },
+  {
+    "source": "Als Handwerker anmelden",
+    "de": "Als Handwerker anmelden",
+    "en": "Register as craftsman"
+  },
+  {
+    "source": "Bauaufträge",
+    "de": "Bauaufträge",
+    "en": "Building jobs"
+  },
+  {
+    "source": "Noch keine Bauaufträge.",
+    "de": "Noch keine Bauaufträge.",
+    "en": "No building jobs yet."
+  },
+  {
+    "source": "Dorfwohnhaus",
+    "de": "Dorfwohnhaus",
+    "en": "Village home"
+  },
+  {
+    "source": "Noch benötigtes Material",
+    "de": "Noch benötigtes Material",
+    "en": "Materials still required"
+  },
+  {
+    "source": "Bauauftrag abbrechen",
+    "de": "Bauauftrag abbrechen",
+    "en": "Cancel building job"
+  },
+  {
+    "source": "Handwerker bauen Wohnhäuser über Building Local. Sie benötigen kein eigenes Arbeitsgebiet und verwenden das Stadtlager.",
+    "de": "Handwerker bauen Wohnhäuser über Building Local. Sie benötigen kein eigenes Arbeitsgebiet und verwenden das Stadtlager.",
+    "en": "Craftsmen build homes through Building Local. They do not need their own work area and use town storage."
+  },
+  {
+    "source": "Lokales Bauen: Auswahlmodus",
+    "de": "Lokales Bauen: Auswahlmodus",
+    "en": "Building Local: selection mode"
+  },
+  {
+    "source": "Nach der Auswahl im Bergfried speichern oder beauftragen.",
+    "de": "Nach der Auswahl im Bergfried speichern oder beauftragen.",
+    "en": "After selecting, save or order in the keep."
+  },
+  {
+    "source": "Hausstandort wählen: Linksklick auf den Boden. ESC bricht ab.",
+    "de": "Hausstandort wählen: Linksklick auf den Boden. ESC bricht ab.",
+    "en": "Select house location: left-click the ground. ESC cancels."
+  },
+  {
+    "source": "Stadtlager wählen: erste Ecke am Boden anklicken. ESC bricht ab.",
+    "de": "Stadtlager wählen: erste Ecke am Boden anklicken. ESC bricht ab.",
+    "en": "Select town storage: click the first ground corner. ESC cancels."
+  },
+  {
+    "source": "Stadtlager wählen: zweite Ecke anklicken. Truhen können danach im Bereich stehen.",
+    "de": "Stadtlager wählen: zweite Ecke anklicken. Truhen können danach im Bereich stehen.",
+    "en": "Select town storage: click the second corner. Chests can then be placed inside the area."
+  },
+  {
+    "source": "Wohngebiet wählen: erste Ecke am Boden anklicken. ESC bricht ab.",
+    "de": "Wohngebiet wählen: erste Ecke am Boden anklicken. ESC bricht ab.",
+    "en": "Select residential area: click the first ground corner. ESC cancels."
+  },
+  {
+    "source": "Wohngebiet wählen: zweite Ecke am Boden anklicken. ESC bricht ab.",
+    "de": "Wohngebiet wählen: zweite Ecke am Boden anklicken. ESC bricht ab.",
+    "en": "Select residential area: click the second ground corner. ESC cancels."
+  },
+  {
+    "source": "Baubereich maximal 64 × 32 × 64 Blöcke",
+    "de": "Baubereich maximal 64 × 32 × 64 Blöcke",
+    "en": "Building area must fit within 64 × 32 × 64 blocks"
+  },
+  {
+    "source": "Ungeeigneter Hausstandort",
+    "de": "Ungeeigneter Hausstandort",
+    "en": "Unsuitable house location"
+  },
+  {
+    "source": "Kingdom nicht gefunden",
+    "de": "Kingdom nicht gefunden",
+    "en": "Kingdom not found"
+  },
+  {
+    "source": "Keine Berechtigung für diesen Bauauftrag",
+    "de": "Keine Berechtigung für diesen Bauauftrag",
+    "en": "You do not have permission for this building job"
+  },
+  {
+    "source": "Handwerker nicht verfügbar",
+    "de": "Handwerker nicht verfügbar",
+    "en": "Craftsman unavailable"
+  },
+  {
+    "source": "Handwerker hat bereits einen Auftrag",
+    "de": "Handwerker hat bereits einen Auftrag",
+    "en": "Craftsman already has a job"
+  },
+  {
+    "source": "Baulimit erreicht",
+    "de": "Baulimit erreicht",
+    "en": "Construction limit reached"
+  },
+  {
+    "source": "Bauauftrag wurde geändert. Bitte neu laden",
+    "de": "Bauauftrag wurde geändert. Bitte neu laden",
+    "en": "Building job changed. Please refresh"
+  },
+  {
+    "source": "Baubereich ist nicht geladen",
+    "de": "Baubereich ist nicht geladen",
+    "en": "Building area is not loaded"
+  },
+  {
+    "source": "Hausstandort ist belegt",
+    "de": "Hausstandort ist belegt",
+    "en": "House footprint is occupied"
+  },
+  {
+    "source": "Zuerst das Stadtlager festlegen",
+    "de": "Zuerst das Stadtlager festlegen",
+    "en": "Choose town storage first"
+  },
+  {
+    "source": "Bauauftrag nicht gefunden",
+    "de": "Bauauftrag nicht gefunden",
+    "en": "Building job not found"
+  },
+  {
+    "source": "Ungültige Hausvorlage",
+    "de": "Ungültige Hausvorlage",
+    "en": "Invalid house template"
+  },
+  {
+    "source": "Eingeplant",
+    "de": "Eingeplant",
+    "en": "Queued"
+  },
+  {
+    "source": "Unterwegs zur Baustelle",
+    "de": "Unterwegs zur Baustelle",
+    "en": "Travelling to construction site"
+  },
+  {
+    "source": "Fundament bauen",
+    "de": "Fundament bauen",
+    "en": "Building foundation"
+  },
+  {
+    "source": "Boden verlegen",
+    "de": "Boden verlegen",
+    "en": "Laying floor"
+  },
+  {
+    "source": "Wände aufbauen",
+    "de": "Wände aufbauen",
+    "en": "Building walls"
+  },
+  {
+    "source": "Dach bauen",
+    "de": "Dach bauen",
+    "en": "Building roof"
+  },
+  {
+    "source": "Haus einrichten",
+    "de": "Haus einrichten",
+    "en": "Furnishing home"
+  },
+  {
+    "source": "Baugerüst entfernen",
+    "de": "Baugerüst entfernen",
+    "en": "Removing scaffold"
+  },
+  {
+    "source": "Keine freien Handwerker",
+    "de": "Keine freien Handwerker",
+    "en": "No available craftsmen"
+  },
+  {
+    "source": "Stadtlager benötigt",
+    "de": "Stadtlager benötigt",
+    "en": "Town storage required"
+  },
+  {
+    "source": "Baumaterial fehlt",
+    "de": "Baumaterial fehlt",
+    "en": "Building materials missing"
+  },
+  {
+    "source": "Baustelle nicht geladen",
+    "de": "Baustelle nicht geladen",
+    "en": "Construction site is not loaded"
+  },
+  {
+    "source": "Zugriff auf Baustelle verweigert",
+    "de": "Zugriff auf Baustelle verweigert",
+    "en": "Construction site access denied"
+  },
+  {
+    "source": "Baustelle nicht erreichbar",
+    "de": "Baustelle nicht erreichbar",
+    "en": "Construction site unreachable"
+  },
+  {
+    "source": "Baustelle blockiert",
+    "de": "Baustelle blockiert",
+    "en": "Construction site blocked"
+  },
+  {
+    "source": "Fertiggestellt",
+    "de": "Fertiggestellt",
+    "en": "Completed"
+  },
+  {
+    "source": "Abgebrochen",
+    "de": "Abgebrochen",
+    "en": "Cancelled"
+  },
+  {
+    "source": "Nicht festgelegt",
+    "de": "Nicht festgelegt",
+    "en": "Not set"
+  },
+  {
+    "source": "Bauauftrag bestätigt",
+    "de": "Bauauftrag bestätigt",
+    "en": "Building job confirmed"
+  },
+  {
+    "source": "Keine Serverantwort. Bitte neu laden",
+    "de": "Keine Serverantwort. Bitte neu laden",
+    "en": "No server response. Please refresh"
+  },
+  {
+    "source": "Auf einer Baustelle",
+    "de": "Auf einer Baustelle",
+    "en": "Assigned to a construction site"
+  },
+  {
+    "source": "Arbeitskraft",
+    "de": "Arbeitskraft",
+    "en": "Worker"
+  },
+  {
+    "source": "Handwerker benötigen ein eigenes Kingdom",
+    "de": "Handwerker benötigen ein eigenes Kingdom",
+    "en": "Craftsmen require your own Kingdom"
+  },
+  {
+    "source": "Ausrichtung 0°",
+    "de": "Ausrichtung 0°",
+    "en": "Facing 0°"
+  },
+  {
+    "source": "Ausrichtung 90°",
+    "de": "Ausrichtung 90°",
+    "en": "Facing 90°"
+  },
+  {
+    "source": "Ausrichtung 180°",
+    "de": "Ausrichtung 180°",
+    "en": "Facing 180°"
+  },
+  {
+    "source": "Ausrichtung 270°",
+    "de": "Ausrichtung 270°",
+    "en": "Facing 270°"
+  },
+  {
+    "source": "Als Handwerker angemeldet",
+    "de": "Als Handwerker angemeldet",
+    "en": "Registered as craftsman"
+  },
+  {
+    "source": "Stadtlager voll",
+    "de": "Stadtlager voll",
+    "en": "Town storage full"
+  },
+  {
+    "source": "Mit Baumaterial und einem Bauauftrag errichte ich neue Haeuser.",
+    "de": "Mit Baumaterial und einem Bauauftrag errichte ich neue Haeuser.",
+    "en": "With building materials and a construction order, I build new houses."
+  }
+]

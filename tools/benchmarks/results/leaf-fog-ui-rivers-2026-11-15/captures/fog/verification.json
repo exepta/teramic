@@ -1,0 +1,137 @@
+{
+  "status": "passed",
+  "client_sha256": "eaced7338506d054eebb2f071b6da42718037d9e889c22d52b3b63359d61404c",
+  "config_sha256": {
+    "client.toml": "2b8e9f1c4b551e5a6c22955d91314f2675a4db5a263acbf7ffedaafbc9693f63",
+    "graphics.toml": "8899fa1aaa03ea4b3ff85563902e176994c108e30ab5a691a0186c5d7504e6af",
+    "server.toml": "27e4e5ec800addaeeef3414ec27167a5fcd73cdea12e8c0380f4a62831fc6724",
+    "world.toml": "2ae304abeed5eac7a0e9d01fe332cbce601b8cd6a4e3263f67d2e5c4c5a1013e"
+  },
+  "captures": [
+    {
+      "file": "captures/fog-buried-a.png",
+      "bytes": 2029169,
+      "sha256": "dbaa6a2f7da39e8837f2a47cf1973fb555c32fcb84168cf5992b46622d9336d3"
+    },
+    {
+      "file": "captures/fog-buried-b.png",
+      "bytes": 2029185,
+      "sha256": "cf75d997d1ddb8bea387b4abd39be999ead8fc036e2eb1d3f72b828e5e2f6689"
+    },
+    {
+      "file": "captures/fog-removed.png",
+      "bytes": 2032903,
+      "sha256": "7f7b048e3c14ab084a70d274ac80ff6c6aa3b974eaaecbdd5bb354c4803c3442"
+    },
+    {
+      "file": "captures/spirit-stone-roofed-comparison.png",
+      "bytes": 2109973,
+      "sha256": "61f3b489f1b65df38c247af209d372bcd3d748cf1c122cc18c990db86db9a083"
+    }
+  ],
+  "fixture": {
+    "biomes": false,
+    "captures": 4,
+    "floor_size": [
+      21,
+      21
+    ],
+    "measurements": [
+      {
+        "above_source_material": 0,
+        "ambient_biome_volumes": 0,
+        "drift": [
+          0.6508614420890808,
+          0.3254307210445404
+        ],
+        "generation": 2,
+        "phase": "exposed_on_floor",
+        "radius": 8.0,
+        "sampled_cells": 1681,
+        "source_cell": [
+          16,
+          49,
+          16
+        ],
+        "source_material": 430,
+        "sources": 1,
+        "volumes": 1
+      },
+      {
+        "above_source_material": 1,
+        "ambient_biome_volumes": 0,
+        "drift": [
+          1.4008640050888062,
+          0.7004320025444031
+        ],
+        "generation": 3,
+        "phase": "buried_a",
+        "radius": 8.0,
+        "sampled_cells": 1681,
+        "source_cell": [
+          16,
+          49,
+          16
+        ],
+        "source_material": 430,
+        "sources": 1,
+        "volumes": 1
+      },
+      {
+        "above_source_material": 1,
+        "ambient_biome_volumes": 0,
+        "drift": [
+          2.1539463996887207,
+          1.0769731998443604
+        ],
+        "generation": 3,
+        "phase": "buried_b",
+        "radius": 8.0,
+        "sampled_cells": 1681,
+        "source_cell": [
+          16,
+          49,
+          16
+        ],
+        "source_material": 430,
+        "sources": 1,
+        "volumes": 1
+      },
+      {
+        "above_source_material": 1,
+        "ambient_biome_volumes": 0,
+        "drift": [
+          2.6660616397857666,
+          1.3330308198928833
+        ],
+        "generation": 4,
+        "phase": "removed",
+        "radius": 8.0,
+        "sampled_cells": 0,
+        "source_cell": [
+          16,
+          49,
+          16
+        ],
+        "source_material": 0,
+        "sources": 0,
+        "volumes": 0
+      },
+      {
+        "active_point_lights_near_chamber": 0,
+        "control_stone": 3,
+        "emission": [
+          0,
+          0,
+          0
+        ],
+        "roof": true,
+        "spirit_stone": 308
+      }
+    ],
+    "radius": 8,
+    "scope": "Real edit/render path and public fog state. Stone uses a roofed comparison without local point lights; not a luminance benchmark.",
+    "source_id": 430,
+    "status": "passed"
+  }
+}

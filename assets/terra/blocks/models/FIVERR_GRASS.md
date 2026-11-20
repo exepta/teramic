@@ -1,5 +1,41 @@
 # Fiverr-Grassblock
 
+## Aktive Materialableitung für die Biomreferenzen
+
+`grass.json` verwendet nun `fiverr_grass_reference_base.glb`. Diese zusätzliche
+Datei übernimmt die unten dokumentierte Importbasis unverändert in Geometrie,
+UVs, Tangenten, Indexdaten, Szenen und Materialslots. Nur die Bilder der sieben
+sichtbaren PBR-Materialien werden ersetzt: prozedural erzeugte zusammenhängende
+Erde, Grashalme und dazu passende flache Normalmaps. Das matte ORM und sämtliche
+Materialfaktoren bleiben erhalten. Es gibt weiterhin sieben Materialien und
+24 Bildslots; Clamp/Repeat und die gespiegelten Seiten bleiben unverändert.
+
+Die sechs eigenständigen Albedodateien liegen unter
+`../textures/reference_base/`. Top, Side, gespiegelte Side, Earth und Snow haben
+512×512 Pixel. Nur das vorhandene Nahmodell benötigt wegen seiner unveränderten
+UVs die vier Quadranten in `grass_near.png` mit 1024×1024 Pixeln. Das ist kein
+neuer gemeinsamer Blockatlas. Die fünf Gras-/Erdbilder besitzen jeweils eine
+korrespondierende Normalmap. Das Dirt-Material und seine Bauformen verwenden
+weiterhin denselben `DownLod`-PBR-Slot; Schnee und Schneeschichten teilen eine
+separate Textur.
+
+Der Export lautet:
+
+```sh
+python3 tools/assets/biome_surfaces/base_materials.py --activate
+python3 -m unittest discover -s tools/assets/biome_surfaces -v
+```
+
+Ohne `--activate` schreibt der Generator lediglich eine Vorschau nach
+`/tmp/terra-reference-base-preview`. Das Herkunftsprotokoll
+`fiverr_grass_reference_base.art.json` enthält den SHA256-Fingerprint der
+Importbasis. Tests vergleichen die vollständigen Mesh-/Accessor-/Node-Daten,
+den ursprünglichen Binärpräfix, alle PBR-Faktoren, Bild-/Materialanzahlen und
+die affine Nah-/LOD-Zuordnung aus der ursprünglichen Provenienz.
+`FIVERR/VoxelGrassBlock glb file.glb`, `fiverr_grass_faces.glb` und dessen
+Import-Provenienz wurden dafür nicht geändert. Der folgende Abschnitt
+beschreibt diese weiterhin reproduzierbare Importbasis.
+
 `fiverr_grass_faces.glb` wird aus der unveraenderten Originaldatei
 `FIVERR/VoxelGrassBlock glb file.glb` erzeugt. Das wiederverwendbare Rust-Werkzeug
 liest ein JSON-Rezept und verwendet die bereits vorhandenen glTF- und PNG-APIs.

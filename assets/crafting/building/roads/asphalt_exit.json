@@ -1,0 +1,34 @@
+{
+  "id": "teramic::asphalt_exit",
+  "name": "Asphalt Upper Transition",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 435
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 431
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 431
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 431
+        },
+        "count": 1
+      }
+    ]
+  }
+}

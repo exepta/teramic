@@ -1,0 +1,28 @@
+{
+  "id": "teramic::blue_clay",
+  "name": "Blue Clay",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 324
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "dye": "blue"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

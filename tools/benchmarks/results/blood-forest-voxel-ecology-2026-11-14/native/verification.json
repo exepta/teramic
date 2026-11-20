@@ -1,0 +1,86 @@
+{
+  "status": "passed",
+  "ecology_revision": 5,
+  "fixture_edits": 0,
+  "screens": {
+    "blood-forest-overview.png": {
+      "width": 1920,
+      "height": 1080,
+      "sha256": "a869b4bdf006343f03d9eba08c28ea478133e237e88690025c2dfb18c540dbb7"
+    },
+    "blood-forest-close.png": {
+      "width": 1920,
+      "height": 1080,
+      "sha256": "e11dc633d21fc90e81cdfc03f51e6a5dee51a154d99b3b4853d4dc72b8762a7f"
+    },
+    "picker-blood-forest-overview.png": {
+      "width": 1920,
+      "height": 1080,
+      "sha256": "0a5949b9a0e4d62c4a990d174c83ab6f5417f6bde8aab5d86f3026e66e67fa45"
+    },
+    "blood-props-overview.png": {
+      "width": 1920,
+      "height": 1080,
+      "sha256": "9eea341eea7be802185f442a32d10f0fa08990cbb18eccac6da6800b602d384b"
+    },
+    "blood-props-close.png": {
+      "width": 1920,
+      "height": 1080,
+      "sha256": "63c0e3aea56a68beb7d047eb2e0f78e7ac4da4de54f8a2fe9ffc9424a53c85a1"
+    },
+    "spirit-props-overview.png": {
+      "width": 1920,
+      "height": 1080,
+      "sha256": "1f53054a3f35e15269d96940f4640b4b3c22901282a21f422a8c14eea5d1d88a"
+    },
+    "spirit-props-close.png": {
+      "width": 1920,
+      "height": 1080,
+      "sha256": "1cc96e3c010aecdb488b0b519814082826ef5aed39fc1c67aec7d2ad1a1bb810"
+    },
+    "rock-formations-overview.png": {
+      "width": 1920,
+      "height": 1080,
+      "sha256": "90e6634726dc1ead7f9f1b3bd16ffb64f9efb4038e3baf8cc4ebf00683b9c5e2"
+    },
+    "rock-formations-close.png": {
+      "width": 1920,
+      "height": 1080,
+      "sha256": "a4fa579bfeee7813a8122968838c7c5db6491f138989abe7d065ede3198b8b4d"
+    }
+  },
+  "droplets": {
+    "fixture_edits": 0,
+    "status": "passed",
+    "views": {
+      "close": {
+        "active_frames": 138,
+        "first_animation_time": 8.725237846374512,
+        "last_animation_time": 11.722588539123535,
+        "maximum_pool_capacity": 192,
+        "maximum_scanned_sections": 32,
+        "moving_frames": 137,
+        "observed_seconds": 2.9983461350000002,
+        "peak_candidates": 61,
+        "peak_falling": 58,
+        "peak_splashes": 16,
+        "samples": 181,
+        "water_triangles": 16476
+      },
+      "overview": {
+        "active_frames": 140,
+        "first_animation_time": 1.9845819473266602,
+        "last_animation_time": 8.179244041442871,
+        "maximum_pool_capacity": 192,
+        "maximum_scanned_sections": 32,
+        "moving_frames": 138,
+        "observed_seconds": 6.212607061,
+        "peak_candidates": 81,
+        "peak_falling": 45,
+        "peak_splashes": 14,
+        "samples": 236,
+        "water_triangles": 16476
+      }
+    }
+  }
+}

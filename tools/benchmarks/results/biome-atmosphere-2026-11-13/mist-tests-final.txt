@@ -1,0 +1,29 @@
+    Blocking waiting for file lock on build directory
+   Compiling terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+   Compiling terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+   Compiling terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+   Compiling terra-player v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-player)
+   Compiling terra-render v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-render)
+    Finished `test` profile [optimized + debuginfo] target(s) in 5m 01s
+     Running unittests src/lib.rs (target/debug/deps/terra_render-a651d2683f99ee42)
+
+running 15 tests
+test work_areas::ambient::tests::biome_and_interest_edges_fade_continuously ... ok
+test work_areas::ambient::tests::biome_atmosphere_covers_the_loaded_grove_without_decorations ... ok
+test work_areas::ambient::tests::ambient_blending_reaches_shader_without_changing_contour_density ... ok
+test work_areas::ambient::tests::negative_coordinates_keep_world_anchored_domains_and_fixed_budget ... ok
+test work_areas::tests::animation_is_finite_soft_and_changes_without_rebuilding_geometry ... ok
+test work_areas::ambient::tests::missing_columns_and_other_biomes_never_gain_spirit_fog ... ok
+test work_areas::tests::confirmed_edits_move_ground_contours_but_unknown_voxels_never_create_fake_floors ... ok
+test work_areas::tests::flow_drifts_spatially_and_wraps_without_noise_discontinuities ... ok
+test work_areas::tests::inclusive_negative_areas_produce_only_the_ground_rectangle ... ok
+test work_areas::tests::mist_banks_follow_loaded_ground_with_a_low_ceiling_and_bounded_geometry ... ok
+test work_areas::tests::construction_hiding_overrides_manual_areas_and_keeps_the_same_entities ... ok
+test work_areas::ambient::tests::local_worlds_sample_atmosphere_without_a_client_session_and_pending_replicas_hide_it ... ok
+test work_areas::tests::animation_uploads_advection_to_shared_materials_without_replacing_geometry ... ok
+test work_areas::tests::neighboring_build_claims_remove_the_shared_edge_at_negative_coordinates ... ok
+test work_areas::tests::mist_shader_parses_with_and_without_depth_prepass ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 1104 filtered out; finished in 0.00s
+

@@ -2449,14 +2449,26 @@ fn step(world: &mut World, state: &mut Inspection) -> Result<(), String> {
 }
 
 fn finish(world: &mut World, state: &mut Inspection) {
+    let hud_fps = world
+        .resource::<terra_ui::minimap::MiniMapView>()
+        .fps
+        .clone();
+    let fps = hud_fps
+        .strip_suffix(" FPS")
+        .and_then(|value| value.parse::<f64>().ok());
+    assert!(
+        fps.is_some_and(|value| value.is_finite() && value > 0.),
+        "Native minimap has no live frame rate: {hud_fps}"
+    );
     info!(
+        hud_fps,
         seconds = state.start.elapsed().as_secs_f32(),
         captures = state.captured,
         bypass_samples = state.unsupported_samples,
         bypass_items = state.bypass_probes.len(),
         bypass_overlap = state.bypass_overlap_seen,
         f29_stable = state.f29_verified,
-        f29_sources = 4,
+        f29_sources = 2,
         f29_units = 32,
         queue_items = INFUSER_ITEMS.len(),
         initial_spacing = 0.26,
@@ -2478,7 +2490,7 @@ fn finish(world: &mut World, state: &mut Inspection) {
         wall_torch_placements = ?state.surfaces.torches,
         pipe_material_galleries = ?state.surfaces.galleries,
         waterlogged_surface_views = state.surfaces.water_samples,
-        "Hydraulics native passed: basin swimming, faucet audio, source clicks, actual powered single-item filling/gates, dense bypass passthrough, replenishing pool intake bubbles, real empty/filled glass pipes, stable F29 four-source square, ordinary underwater building, source-preserving glass waterlogging, authoritative horizontal/vertical valve placement and finite glass runout after shutoff, four ordinary wall-torch placements, all pipe-material bends and waterlogged round-part surfaces"
+        "Hydraulics native passed: basin swimming, faucet audio, source clicks, actual powered single-item filling/gates, dense bypass passthrough, replenishing pool intake bubbles, real empty/filled glass pipes, stable F29 two-source square, ordinary underwater building, source-preserving glass waterlogging, authoritative horizontal/vertical valve placement and finite glass runout after shutoff, four ordinary wall-torch placements, all pipe-material bends and waterlogged round-part surfaces"
     );
     state.stage = 255;
     world.write_message(AppExit::Success);
@@ -2889,10 +2901,13 @@ fn observe_f29_pool(world: &World, state: &mut Inspection) -> Result<(), String>
                 return Ok(());
             };
             let water = chunks.fluid_cell_at(terrain, journal, p, material);
-            if water.amount != 8 || !water.source || water.flow != [0; 2] {
+            // Feeding sources retain their identity; receiving cells fill to
+            // the same calm level without manufacturing renewable sources.
+            let expected_source = dx == dz;
+            if water.amount != 8 || water.source != expected_source || water.flow != [0; 2] {
                 if state.f29_verified {
                     return Err(format!(
-                        "F29 square lost its settled source at {p:?}: {water:?}"
+                        "F29 square changed its settled volume/source flags at {p:?}: {water:?}"
                     ));
                 }
                 state.f29_epochs = None;

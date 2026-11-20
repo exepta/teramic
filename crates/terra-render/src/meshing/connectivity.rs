@@ -21,6 +21,30 @@ pub(crate) fn connected_position(mut point: [f32; 3], visible: u8, bevel: f32) -
     point
 }
 
+/// The imported grass cube has a shallow rounded mound around every tile.
+/// A continuous turf surface keeps that rounding only at actual exterior edges;
+/// its leaf/soil relief remains in the authored PBR textures.
+pub(crate) fn connected_turf_top(mut point: [f32; 3], visible: u8, bevel: f32) -> [f32; 3] {
+    let horizontal = 0b11_0011;
+    if visible & horizontal == horizontal {
+        return connected_position(point, visible, bevel);
+    }
+    let exterior = [(0, 0), (0, 1), (2, 4), (2, 5)]
+        .into_iter()
+        .any(|(axis, side)| {
+            visible & (1 << side) != 0
+                && if side % 2 == 0 {
+                    point[axis] <= bevel + 0.00001
+                } else {
+                    point[axis] >= 1.0 - bevel - 0.00001
+                }
+        });
+    if !exterior {
+        point[1] = 1.0;
+    }
+    connected_position(point, visible, bevel)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

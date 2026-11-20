@@ -1,0 +1,32 @@
+   Compiling terra-building-editor v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/building-editor)
+    Finished `test` profile [optimized + debuginfo] target(s) in 20.92s
+     Running unittests src/main.rs (target/debug/deps/terra_building_editor-2be5f0562ee33c38)
+
+running 24 tests
+test document::tests::broken_pairs_outside_bounds_and_lossy_states_are_rejected ... ok
+test document::tests::all_saved_stair_poses_and_mixed_slab_inputs_use_shared_schema_semantics ... ok
+test document::tests::paired_chests_keep_both_cells_and_cost_two_actual_chests ... ok
+test document::tests::supported_slab_state_and_pot_contents_survive_reload ... ok
+test document::tests::saving_into_a_game_catalog_rejects_duplicate_ids_but_allows_replacing_the_original ... ok
+test document::tests::json_files_are_create_only_until_overwrite_is_confirmed ... ok
+test document::tests::new_document_has_no_exported_support_voxels ... ok
+test document::tests::ordinary_native_materials_use_an_implicit_pose_but_invalid_furniture_does_not ... ok
+test document::tests::phases_costs_and_paired_beds_are_exact ... ok
+test editor::tests::editor_styles_and_static_icon_sources_use_real_runtime_parsers ... ok
+test editor::tests::typing_e_in_catalog_search_does_not_close_the_item_catalog ... ok
+test editor::tests::real_local_block_commit_and_removal_update_voxels_and_document ... ok
+test editor::tests::technical_support_and_side_extensions_cannot_be_authored_or_removed ... ok
+test editor::tests::model_foundations_remain_above_the_protected_support_surface ... ok
+test editor::tests::shifted_anchor_moves_real_camera_and_stream_focus_to_the_imported_building ... ok
+test editor::tests::original_filename_and_id_are_preserved_and_save_as_gets_a_new_identity ... ok
+test editor::tests::native_oak_and_spruce_doors_use_real_pairs_and_one_paid_item ... ok
+test editor::tests::native_spruce_basin_placement_roundtrips_its_real_wood_state ... ok
+test document::tests::all_native_carpets_roundtrip_without_an_invented_object_state ... ok
+test editor::tests::imported_house_aabb_fits_real_perspective_below_the_editor_toolbar ... ok
+test editor::tests::resizing_from_settings_preserves_authored_foundations_camera_and_export ... ok
+test document::tests::exact_default_house_can_be_imported_modified_and_reloaded ... ok
+test editor::tests::platform_size_survives_model_import_and_new_document ... ok
+test interface::labels::tests::real_inventory_wood_suffixes_keep_their_identity_and_translate_the_authored_base ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

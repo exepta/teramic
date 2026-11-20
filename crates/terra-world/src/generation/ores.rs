@@ -189,8 +189,10 @@ impl TerraGenerator {
         columns: &[SurfaceColumn],
         blocks: &mut [u16],
     ) {
-        let host =
-            |m| m == 3 || self.config().cave_structure_revision >= 4 && matches!(m, 13 | 57 | 58);
+        let host = |m| {
+            matches!(m, 3 | 308)
+                || self.config().cave_structure_revision >= 4 && matches!(m, 13 | 57 | 58)
+        };
         if !self.config().ores.enabled || !blocks.iter().any(|&m| host(m)) {
             return;
         }

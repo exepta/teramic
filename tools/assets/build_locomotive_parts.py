@@ -9,7 +9,8 @@ import math
 import re
 import base64
 
-from build_castle import BLOCKS, MODELS, RECIPES, ROOT, Mesh
+from build_castle import BLOCKS, MODELS, ROOT, Mesh
+from recipe_paths import recipe_path, write_builtins
 
 
 PARTS = [
@@ -526,13 +527,13 @@ def recipe(material, slug, role):
         'unlock': {'type': 'always'},
     }
     # Keep exactly the established recipe shape/schema used by the existing train kit.
-    template = json.loads((RECIPES / 'train_chassis.json').read_text())
+    template = json.loads(recipe_path('train_chassis').read_text())
     template['id'] = 'teramic::' + slug
     template['name'] = next(name for number, _, name, _ in PARTS if number == material)
     template['pattern']['cells'] = cells
     template['output']['item'] = {'block': material}
     template['output']['count'] = definition['output']['count']
-    (RECIPES / (slug + '.json')).write_text(json.dumps(template, indent=2) + '\n')
+    recipe_path(slug).write_text(json.dumps(template, indent=2) + '\n')
 
 
 def rust_name(slug):
@@ -640,7 +641,7 @@ pub fn base_boxes(material: u16) -> &'static [ShapeBox] {
             assert!(boxes.iter().all(|bounds| bounds.valid_for(definition.id)), "{}", definition.slug);
             let model = crate::asset_directory().join(format!("terra/blocks/models/{}.gltf", definition.slug));
             assert!(model.is_file(), "{}", model.display());
-            assert!(crate::asset_directory().join(format!("crafting/{}.json", definition.slug)).is_file());
+            assert!(crate::asset_directory().join(format!("crafting/transport/trains/{}.json", definition.slug)).is_file());
         }
         for kind in [Kind::Engine, Kind::Wheel, Kind::Rod, Kind::Structure, Kind::Valve, Kind::Gauge, Kind::Tank, Kind::Headlight] {
             assert!(DEFINITIONS.iter().any(|definition| definition.kind == kind));
@@ -708,11 +709,7 @@ pub fn base_boxes(material: u16) -> &'static [ShapeBox] {
 
 
 def update_builtin_recipes():
-    path = ROOT / 'crates/terra-core/src/crafting/builtins.rs'
-    source = re.sub(r'\n\s*// F54_RECIPES_START.*?// F54_RECIPES_END\n', '\n', path.read_text(), flags=re.S)
-    recipes = '\n'.join(f'    include_str!("../../../../assets/crafting/{slug}.json"),' for _, slug, _, _ in PARTS)
-    source = source.replace('[\n', '[\n    // F54_RECIPES_START\n' + recipes + '\n    // F54_RECIPES_END\n', 1)
-    path.write_text(source)
+    write_builtins()
 
 
 def wood_metadata():

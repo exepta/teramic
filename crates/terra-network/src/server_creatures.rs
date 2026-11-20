@@ -7,6 +7,10 @@ pub(super) struct InspectionTargets(pub std::collections::HashMap<terra_core::Pl
 #[cfg(test)]
 #[path = "population_tests.rs"]
 mod population_tests;
+#[path = "server_creatures/worm_encounters.rs"]
+mod worm_encounters;
+#[path = "server_creatures/worm_spit.rs"]
+mod worm_spit;
 
 /// Only doors opened by residents are closed automatically. Player-operated
 /// doors retain their state; paired changes use the normal server transaction.
@@ -194,6 +198,7 @@ pub(super) struct Schedule {
     bee_habitats: std::collections::HashSet<[i64; 2]>,
     spider_habitats: std::collections::HashMap<[i64; 2], f32>,
     ecology_elapsed: f32,
+    spirit_aura_elapsed: f32,
     breeding_elapsed: f32,
     breeding_cursor: Option<u64>,
     bee_breeding_cursor: Option<u64>,
@@ -203,6 +208,21 @@ pub(super) struct Schedule {
     residents: terra_world::creatures::villagers::Residents,
     resident_elapsed: f32,
     resident_doors: ResidentDoors,
+    worm_spits: worm_spit::Projectiles,
+    worm_encounters: worm_encounters::Encounters,
+}
+
+/// The long worm's visible rings can cross the interest boundary before its root.
+fn in_interest(a: &terra_core::creatures::Creature, player: [f64; 3]) -> bool {
+    let extent = if a.kind == CreatureKind::SandWorm {
+        24.0
+    } else {
+        a.size()[0].max(a.size()[2]) * 0.5
+    };
+    distance(player, a.position) <= (ACTIVE_RADIUS + extent).powi(2)
+}
+fn finish_phase(a: &terra_core::creatures::Creature) -> bool {
+    a.kind == CreatureKind::SandWorm && terra_core::creatures::sandworm::committed(a.behavior)
 }
 
 fn habitat_offset(index: usize) -> [i64; 2] {
@@ -453,8 +473,19 @@ fn den_rebuild_request(
 }
 
 fn search_due(a: &terra_core::creatures::Creature, dt: f32, pending_navigation: bool) -> bool {
-    if a.kind == CreatureKind::Stalker {
-        return a.needs.search_in <= dt;
+    if matches!(
+        a.kind,
+        CreatureKind::Butterfly
+            | CreatureKind::SandWorm
+            | CreatureKind::SpiritGloom
+            | CreatureKind::Raven
+            | CreatureKind::BloodWisp
+    ) {
+        // Air steering never performs an expensive ground/food path search.
+        return false;
+    }
+    if a.kind == CreatureKind::Stalker || terra_world::creatures::forest::hostile(a.kind) {
+        return pending_navigation || a.needs.search_in <= dt;
     }
     if a.kind == CreatureKind::Villager {
         return pending_navigation || a.needs.search_in <= dt;
@@ -466,6 +497,13 @@ fn search_due(a: &terra_core::creatures::Creature, dt: f32, pending_navigation: 
                     a.behavior,
                     CreatureBehavior::Hunt | CreatureBehavior::Attack
                 ) && a.needs.search_in <= dt);
+    }
+    if a.kind == CreatureKind::Fish {
+        // Swimming itself needs no graph. Only stopped fish with an expired
+        // retry timer compete for the shared eight-search grant.
+        return a.behavior == CreatureBehavior::Swim
+            && a.needs.search_in <= dt
+            && a.velocity.iter().all(|speed| speed.abs() < 0.05);
     }
     if a.kind.is_aquatic()
         || matches!(
@@ -508,6 +546,20 @@ fn search_due(a: &terra_core::creatures::Creature, dt: f32, pending_navigation: 
     a.needs.goal.is_none() && a.needs.search_in <= dt
 }
 
+fn refresh_spirit_regeneration(vitals: &mut terra_core::SurvivalVitals) {
+    // Never downgrade a potion, add levels, or extend a long buff indefinitely.
+    // This also bounds duration if a data pack changes the effect stacking policy.
+    if vitals
+        .effects
+        .get(terra_core::EffectKind::Regeneration)
+        .is_none_or(|effect| effect.level == 1 && effect.remaining_seconds <= 1.0)
+    {
+        vitals
+            .effects
+            .apply(terra_core::EffectKind::Regeneration, 2.0, 1);
+    }
+}
+
 fn grant_searches(mut eligible: Vec<u64>, cursor: &mut Option<u64>) -> Vec<u64> {
     eligible.sort_unstable();
     eligible.dedup();
@@ -525,7 +577,8 @@ fn grant_searches(mut eligible: Vec<u64>, cursor: &mut Option<u64>) -> Vec<u64> 
 }
 
 #[derive(SystemParam)]
-pub(super) struct SimulationWorld<'w> {
+pub(super) struct SimulationWorld<'w, 's> {
+    defenses: Option<Res<'w, super::villager_defense::Defenses>>,
     mounts: Res<'w, riding::Mounts>,
     inspections: ResMut<'w, InspectionTargets>,
     chunks: ResMut<'w, ChunkStore>,
@@ -533,6 +586,15 @@ pub(super) struct SimulationWorld<'w> {
     journal: ResMut<'w, EditJournal>,
     properties: Res<'w, terra_core::block_properties::BlockPropertiesCatalog>,
     grips: ResMut<'w, stalkers::Grips>,
+    body_impulses: Query<
+        'w,
+        's,
+        (
+            &'static mut avian3d::prelude::LinearVelocity,
+            &'static mut CharacterGrounded,
+        ),
+        With<ServerCharacter>,
+    >,
 }
 
 pub(super) fn tick(
@@ -545,6 +607,7 @@ pub(super) fn tick(
     world: SimulationWorld,
 ) {
     let SimulationWorld {
+        defenses,
         mounts,
         mut inspections,
         mut chunks,
@@ -552,6 +615,7 @@ pub(super) fn tick(
         mut journal,
         properties,
         mut grips,
+        mut body_impulses,
     } = world;
     inspections.0.retain(|uuid, _| {
         peers
@@ -578,8 +642,10 @@ pub(super) fn tick(
         .collect();
     if players.is_empty() {
         grips.retain(|_| false);
+        schedule.worm_spits.clear();
         return;
     }
+    schedule.worm_spits.advance(&mut chunks, &mut journal, dt);
     let vulnerable: Vec<_> = peers
         .iter()
         .filter(|(p, _)| {
@@ -662,14 +728,14 @@ pub(super) fn tick(
             (player[2].floor() as i64).div_euclid(32) + offset[1],
         ];
         if !natural_habitat_enabled(home, config.world.seed.0)
-            || natural.saturating_add(4) > limit
+            || natural >= limit
             || (home[0] as f64 * 32.0 + 16.0 - player[0])
                 .hypot(home[1] as f64 * 32.0 + 16.0 - player[2])
                 > ACTIVE_RADIUS
         {
             continue;
         }
-        terra_world::creatures::spawn_cell(
+        terra_world::creatures::spawn_cell_away_from_players(
             &mut population,
             &Habitat {
                 terrain: &terrain.0,
@@ -677,6 +743,8 @@ pub(super) fn tick(
                 journal: &journal,
             },
             home,
+            &players,
+            limit.saturating_sub(natural),
         );
         natural = natural_near(&population, player);
         if schedule.bee_habitats.len() < terra_core::creatures::MAX_SPAWN_CELLS
@@ -740,6 +808,30 @@ pub(super) fn tick(
                 player[1],
                 limit.saturating_sub(natural),
             );
+            natural = natural_near(&population, player);
+            terra_world::creatures::forest::graves::spawn(
+                &mut population,
+                &Habitat {
+                    terrain: &terrain.0,
+                    chunks: &chunks,
+                    journal: &journal,
+                },
+                home,
+                player[1],
+                limit.saturating_sub(natural),
+            );
+            natural = natural_near(&population, player);
+            terra_world::creatures::spirit::caves::spawn(
+                &mut population,
+                &Habitat {
+                    terrain: &terrain.0,
+                    chunks: &chunks,
+                    journal: &journal,
+                },
+                home,
+                player[1],
+                limit.saturating_sub(natural),
+            );
         }
     }
     let ids: Vec<_> = population
@@ -748,12 +840,46 @@ pub(super) fn tick(
         .filter(|a| {
             a.health > 0.0
                 && !mounts.contains(a.id)
-                && players
-                    .iter()
-                    .any(|p| distance(*p, a.position) <= ACTIVE_RADIUS.powi(2))
+                && (finish_phase(a) || players.iter().any(|p| in_interest(a, *p)))
         })
         .map(|a| a.id)
         .collect();
+    let observation_players: Vec<_> = stalker_players
+        .iter()
+        .map(|p| (p.id, p.position, p.targetable))
+        .collect();
+    let worm_frame =
+        schedule
+            .worm_encounters
+            .frame(time.elapsed_secs(), &observation_players, &population);
+    let mut worm_damage = Vec::new();
+    let mut worm_launches = Vec::new();
+    schedule.spirit_aura_elapsed += dt;
+    if schedule.spirit_aura_elapsed >= 1.0 {
+        schedule.spirit_aura_elapsed %= 1.0;
+        let spirits: Vec<_> = ids
+            .iter()
+            .filter_map(|id| population.animals.get(id))
+            .filter(|a| a.kind == CreatureKind::SpiritGloom)
+            .collect();
+        for (mut peer, _) in peers.iter_mut().take(128) {
+            if !peer.synced
+                || peer.vitals.dead()
+                || peer.game_mode(&config) != terra_core::GameMode::Survival
+            {
+                continue;
+            }
+            let Ok(body) = bodies.get(peer.body) else {
+                continue;
+            };
+            if terra_world::creatures::spirit::regeneration_near(
+                body.translation.to_array().map(f64::from),
+                spirits.iter().copied(),
+            ) {
+                refresh_spirit_regeneration(&mut peer.vitals);
+            }
+        }
+    }
     let mut deaths = Vec::new();
     let prey = terra_world::creatures::bears::PreyIndex::new(
         ids.iter().filter_map(|id| population.animals.get(id)),
@@ -818,7 +944,7 @@ pub(super) fn tick(
                 .iter()
                 .map(|p| distance(*p, a.position))
                 .fold(f64::INFINITY, f64::min);
-            let cadence = if distance < 64.0_f64.powi(2) {
+            let cadence = if finish_phase(a) || distance < 64.0_f64.powi(2) {
                 0.095
             } else {
                 0.195
@@ -854,16 +980,21 @@ pub(super) fn tick(
     let searches = grant_searches(eligible, &mut schedule.search_cursor);
     for (id, elapsed, _) in due.into_iter().take(512) {
         let dt = elapsed.min(0.25);
-        schedule.last_step.insert(id, now);
+        // Keep bounded debt when a busy frame delays a creature. Discarding all
+        // elapsed time after the 250 ms physics cap made distant actions stall.
+        schedule
+            .last_step
+            .insert(id, now - (elapsed - dt).clamp(0.0, 1.0));
+        if defenses
+            .as_ref()
+            .is_some_and(|defenses| defenses.contains(id))
+        {
+            continue;
+        }
         if population.animals.get(&id).is_some_and(|animal| {
             animal.kind == CreatureKind::Villager
-                && !terra_core::creatures::villagers::sleeping(id, phase)
-                && journal
-                    .gameplay()
-                    .jobs
-                    .orders
-                    .values()
-                    .any(|order| order.npc == id && order.enabled)
+                && (terra_world::npc_work::controls_movement(journal.gameplay(), id, phase)
+                    || journal.gameplay().buildings.is_busy(id))
         }) {
             continue;
         }
@@ -910,16 +1041,44 @@ pub(super) fn tick(
             let previous_position = a.position;
             schedule.navigation.begin_tick(id);
             let search = searches.contains(&id);
-            let sleeping = night
-                && (a.kind == CreatureKind::Bee
-                    || terra_world::creatures::ecology::sleep_at(a.id, phase));
+            let climatic_rest = terra_world::creatures::ecology::climate_step(
+                a,
+                &Habitat {
+                    terrain: &terrain.0,
+                    chunks: &chunks,
+                    journal: &journal,
+                },
+                dt,
+            );
+            let sleeping = climatic_rest
+                || night
+                    && (a.kind == CreatureKind::Bee
+                        || terra_world::creatures::ecology::sleep_at(a.id, phase));
             let effect = if a.kind == CreatureKind::Villager {
                 let Schedule {
                     residents,
                     navigation,
+                    worm_encounters,
                     ..
                 } = &mut *schedule;
-                if let Some(door) = residents.step(
+                let guard = worm_encounters.guard_step(
+                    a,
+                    &worm_frame,
+                    &Habitat {
+                        terrain: &terrain.0,
+                        chunks: &chunks,
+                        journal: &journal,
+                    },
+                    owner_uuid,
+                    dt,
+                    search,
+                    navigation,
+                );
+                if let Some(strike) = guard {
+                    if let Some((target, damage)) = strike {
+                        worm_damage.push((target, damage, a.position));
+                    }
+                } else if let Some(door) = residents.step_as(
                     a,
                     &Habitat {
                         terrain: &terrain.0,
@@ -930,6 +1089,7 @@ pub(super) fn tick(
                     dt,
                     search,
                     navigation,
+                    owner_uuid,
                 ) && config.world.game_rules.mob_griefing
                 {
                     resident_doors.insert(door);
@@ -1116,6 +1276,64 @@ pub(super) fn tick(
                     bear_effects.push((id, effect));
                 }
                 terra_world::creatures::Forage::None
+            } else if a.kind == CreatureKind::SandWorm {
+                let (worm_targets, target_ids) = worm_frame.targets(a, &targets);
+                let attack_phase = a.behavior;
+                let effect = terra_world::creatures::sandworm::step_sensed(
+                    a,
+                    &Habitat {
+                        terrain: &terrain.0,
+                        chunks: &chunks,
+                        journal: &journal,
+                    },
+                    &worm_targets,
+                    worm_frame.disturbances.iter().copied(),
+                    dt,
+                );
+                match effect {
+                    terra_world::creatures::bears::Effect::StrikePlayer { index, damage } => {
+                        match target_ids.get(index) {
+                            Some(worm_encounters::Target::Creature(target)) => {
+                                worm_damage.push((*target, damage, a.position))
+                            }
+                            Some(worm_encounters::Target::Player(index)) => {
+                                let impulse = worm_encounters::strike_impulse(attack_phase, a.yaw);
+                                if impulse != Vec3::ZERO {
+                                    worm_launches.push((*index, damage, impulse));
+                                } else {
+                                    bear_effects.push((
+                                        id,
+                                        terra_world::creatures::bears::Effect::StrikePlayer {
+                                            index: *index,
+                                            damage,
+                                        },
+                                    ));
+                                }
+                            }
+                            None => {}
+                        }
+                    }
+                    terra_world::creatures::bears::Effect::None => {}
+                    effect => bear_effects.push((id, effect)),
+                }
+                terra_world::creatures::Forage::None
+            } else if terra_world::creatures::forest::hostile(a.kind) {
+                let effect = terra_world::creatures::forest::step(
+                    a,
+                    &Habitat {
+                        terrain: &terrain.0,
+                        chunks: &chunks,
+                        journal: &journal,
+                    },
+                    &targets,
+                    dt,
+                    search,
+                    Some(&mut schedule.navigation),
+                );
+                if effect != terra_world::creatures::bears::Effect::None {
+                    bear_effects.push((id, effect));
+                }
+                terra_world::creatures::Forage::None
             } else if a.kind == CreatureKind::Bear {
                 let effect = terra_world::creatures::bears::step_with_navigation(
                     a,
@@ -1151,6 +1369,27 @@ pub(super) fn tick(
                     Some(&mut schedule.navigation),
                 )
             };
+            // Contact drag slows physical travel, never attack/burrow clocks or
+            // the hidden end-of-leap re-anchor between its two apertures.
+            if !(a.kind == CreatureKind::SandWorm
+                && previous_position != a.position
+                && a.behavior == CreatureBehavior::Emerge)
+            {
+                let drag = terra_world::viscous::body_contact(
+                    &chunks,
+                    &journal,
+                    previous_position,
+                    a.size(),
+                )
+                .movement_multiplier;
+                if drag < 1.0 {
+                    for axis in [0, 2] {
+                        a.position[axis] = previous_position[axis]
+                            + (a.position[axis] - previous_position[axis]) * f64::from(drag);
+                        a.velocity[axis] *= drag;
+                    }
+                }
+            }
             terra_world::conveyors::carry_creature(
                 a,
                 &Habitat {
@@ -1190,7 +1429,11 @@ pub(super) fn tick(
                     bee.inside = false;
                     bee.carried = 0;
                 }
-                deaths.push((a.position, a.product()));
+                deaths.push((
+                    a.position,
+                    a.product(),
+                    terra_core::creatures::drops::forest_loot(a.kind, a.variant, a.id),
+                ));
             }
         }
     }
@@ -1269,9 +1512,42 @@ pub(super) fn tick(
                     survival::animal_attack(&mut peer, damage, mode);
                 }
             }
+            terra_world::creatures::bears::Effect::SpitBile { origin, velocity } => {
+                schedule.worm_spits.launch(origin, velocity);
+            }
             terra_world::creatures::bears::Effect::None => {}
         }
     }
+    for (index, damage, impulse) in worm_launches {
+        if let Some((uuid, _)) = vulnerable.get(index)
+            && let Some((mut peer, _)) = peers.iter_mut().find(|(p, _)| p.uuid == *uuid)
+        {
+            let mode = peer.game_mode(&config);
+            let before = peer.vitals.health;
+            survival::animal_attack(&mut peer, damage, mode);
+            // Damage protection and creative immunity also protect the motor.
+            // Snapshot reconciliation already carries this real velocity; no
+            // camera displacement or teleport is used to fake a launch.
+            if peer.vitals.health < before
+                && !peer.vitals.dead()
+                && let Ok((mut velocity, mut grounded)) = body_impulses.get_mut(peer.body)
+            {
+                velocity.0.x += impulse.x;
+                velocity.0.z += impulse.z;
+                velocity.0.y = velocity.0.y.max(impulse.y);
+                grounded.0 = false;
+            }
+        }
+    }
+    let separation_ids: Vec<_> = ids
+        .iter()
+        .copied()
+        .filter(|id| {
+            !defenses
+                .as_ref()
+                .is_some_and(|defenses| defenses.contains(*id))
+        })
+        .collect();
     terra_world::creatures::navigation::separate(
         &mut population,
         &Habitat {
@@ -1279,7 +1555,7 @@ pub(super) fn tick(
             chunks: &chunks,
             journal: &journal,
         },
-        &ids,
+        &separation_ids,
         dt,
     );
     let jellies: Vec<_> = ids
@@ -1374,6 +1650,29 @@ pub(super) fn tick(
         },
     );
     journal.gameplay_mut().creatures = population;
+    for (target, damage, attacker) in worm_damage {
+        let original = journal
+            .gameplay()
+            .creatures
+            .animals
+            .get(&target)
+            .filter(|a| a.kind == CreatureKind::SandWorm)
+            .cloned();
+        if train_damage::hurt_creature(journal.gameplay_mut(), target, damage)
+            && let Some(original) = original
+            && let Some(worm) = journal
+                .gameplay_mut()
+                .creatures
+                .animals
+                .get_mut(&target)
+                .filter(|a| a.health > 0.0)
+        {
+            worm.behavior = original.behavior;
+            worm.timer = original.timer;
+            worm.needs.goal = original.needs.goal;
+            terra_core::creatures::sandworm::hit_reaction(worm, attacker);
+        }
+    }
     {
         let state = journal.gameplay_mut();
         let population = &state.creatures;
@@ -1382,7 +1681,12 @@ pub(super) fn tick(
                 && population.animals.get(id).is_some_and(|a| a.health > 0.0)
         });
     }
-    for (position, product) in deaths {
+    for (position, product, loot) in deaths {
+        for stack in loot.into_iter().flatten() {
+            journal
+                .gameplay_mut()
+                .drop_stack(position, stack, [0.0, 1.8, 0.0], 0.35);
+        }
         if let Some(product) = product {
             journal
                 .gameplay_mut()
@@ -1402,7 +1706,7 @@ pub(super) fn tick(
             .creatures
             .animals
             .values()
-            .filter(|a| a.health > 0.0 && distance(position, a.position) < ACTIVE_RADIUS.powi(2))
+            .filter(|a| a.health > 0.0 && in_interest(a, position))
             .collect();
         creatures.sort_unstable_by(|a, b| {
             distance(position, a.position)
@@ -1663,6 +1967,8 @@ pub(super) fn interact(
     }
     let kind = animal.kind;
     let product = animal.product();
+    let forest_loot =
+        terra_core::creatures::drops::forest_loot(animal.kind, animal.variant, animal.id);
     let position = animal.position;
     if feed && kind == CreatureKind::Villager {
         let message = terra_core::creatures::villagers::greeting(
@@ -1786,13 +2092,14 @@ pub(super) fn interact(
             .map_or(1.0, terra_core::ToolKind::attack_damage)
             * peer.vitals.effects.attack_multiplier();
         let dies = animal.health <= damage;
-        let needed = if product.is_none() {
-            0
-        } else if matches!(kind, CreatureKind::Sheep | CreatureKind::Cow) {
-            2
-        } else {
-            1
-        };
+        let needed = forest_loot.iter().flatten().count()
+            + if product.is_none() {
+                0
+            } else if matches!(kind, CreatureKind::Sheep | CreatureKind::Cow) {
+                2
+            } else {
+                1
+            };
         if dies
             && (world.journal.gameplay().drops.len() + needed > terra_core::MAX_WORLD_DROPS
                 || world.journal.gameplay().next_drop > u64::MAX - needed as u64)
@@ -1809,13 +2116,30 @@ pub(super) fn interact(
         }
         if let Some(a) = world.journal.gameplay_mut().creatures.animals.get_mut(&id) {
             a.health = (a.health - damage).max(0.0);
-            a.behavior = if dies {
-                CreatureBehavior::Dead
+            if a.kind == CreatureKind::SandWorm && !dies {
+                terra_core::creatures::sandworm::hit_reaction(a, eye);
             } else {
-                CreatureBehavior::Flee
-            };
-            a.timer = 5.0;
-            a.yaw = ((eye[0] - position[0]).atan2(eye[2] - position[2])) as f32;
+                a.behavior = if dies {
+                    CreatureBehavior::Dead
+                } else {
+                    CreatureBehavior::Flee
+                };
+                a.timer = 5.0;
+                a.yaw = ((eye[0] - position[0]).atan2(eye[2] - position[2])) as f32;
+            }
+        }
+        if kind == CreatureKind::Villager
+            && let Some(defenses) = world.defenses.as_deref_mut()
+        {
+            defenses.provoke(id, peer.uuid, world.journal.gameplay());
+        }
+        if dies {
+            for stack in forest_loot.into_iter().flatten() {
+                world
+                    .journal
+                    .gameplay_mut()
+                    .drop_stack(position, stack, [0.0, 1.8, 0.0], 0.35);
+            }
         }
         if dies && let Some(product) = product {
             world.journal.gameplay_mut().drop_stack(
@@ -1842,4 +2166,26 @@ pub(super) fn interact(
         }
     }
     peer.creature_action_at = Instant::now();
+}
+
+#[cfg(test)]
+mod spirit_aura_tests {
+    use super::refresh_spirit_regeneration;
+    use terra_core::{EffectKind, SurvivalVitals};
+
+    #[test]
+    fn overlapping_glooms_do_not_stack_or_downgrade_potions() {
+        let mut vitals = SurvivalVitals::default();
+        for _ in 0..100 {
+            refresh_spirit_regeneration(&mut vitals);
+        }
+        let effect = vitals.effects.get(EffectKind::Regeneration).unwrap();
+        assert_eq!(effect.level, 1);
+        assert_eq!(effect.remaining_seconds, 2.0);
+        vitals.effects.apply(EffectKind::Regeneration, 30.0, 2);
+        refresh_spirit_regeneration(&mut vitals);
+        let effect = vitals.effects.get(EffectKind::Regeneration).unwrap();
+        assert_eq!(effect.level, 2);
+        assert_eq!(effect.remaining_seconds, 30.0);
+    }
 }

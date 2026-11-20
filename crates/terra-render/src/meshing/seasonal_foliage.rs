@@ -29,7 +29,7 @@ pub(super) fn split_edited_faces_with_planted(
     let (tree, planted) = provenance;
     let mut result: Option<Vec<BlockFace>> = None;
     for (face_index, &face) in faces.iter().enumerate() {
-        if !matches!(face.material, 7..=9 | 132 | 133 | 195) {
+        if !terra_voxel::MaterialId::FOLIAGE.contains(&face.material) {
             if let Some(result) = &mut result {
                 result.push(face);
             }
@@ -202,10 +202,16 @@ mod tests {
             |_| 12.0,
             |_| false,
         );
-        assert_eq!(terra_voxel::MaterialId::FOLIAGE, [7, 8, 9, 132, 133, 195]);
-        assert_eq!(batches[0].foliage_owners.last().unwrap().material, 195);
+        assert_eq!(
+            terra_voxel::MaterialId::FOLIAGE,
+            [7, 8, 9, 132, 133, 195, 310, 311, 312, 406]
+        );
+        assert_eq!(batches[0].foliage_owners.last().unwrap().material, 406);
         assert_eq!(batches[0].foliage_owners.last().unwrap().cell, [15; 3]);
-        assert_eq!(batches[0].colors.len(), 24);
+        assert_eq!(
+            batches[0].colors.len(),
+            terra_voxel::MaterialId::FOLIAGE.len() * 4
+        );
         assert!(
             batches[0]
                 .colors

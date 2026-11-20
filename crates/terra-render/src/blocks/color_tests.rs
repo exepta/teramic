@@ -1,38 +1,56 @@
 #[test]
-fn cube_foliage_palette_retains_green_birch_and_orange_autumn() {
-    use super::definitions::{BlockLibrary, BlockRenderKind, TexturePattern};
-
+fn cube_foliage_uses_distinct_cutout_authored_top_and_side_art_without_double_tint() {
+    use super::definitions::{BlockLibrary, BlockRenderKind};
     let directory = terra_core::asset_directory().join("terra/blocks");
     let library = BlockLibrary::load(&directory).expect("block definitions");
-    for (id, name, expected, pattern) in [
-        (
-            7,
-            "Painted moss canopy",
-            [0.42, 0.68, 0.12, 1.0],
-            TexturePattern::Canopy,
-        ),
-        (
-            8,
-            "Autumn crown",
-            [1.0, 0.35, 0.055, 1.0],
-            TexturePattern::Canopy,
-        ),
-        (
-            9,
-            "Silver crown",
-            [0.62, 0.72, 0.26, 1.0],
-            TexturePattern::BirchCanopy,
-        ),
+    for (id, style) in [
+        (7, "oak"),
+        (8, "autumn"),
+        (9, "birch"),
+        (132, "cherry_pink"),
+        (133, "cherry_white"),
+        (195, "apple"),
+        (310, "spirit_pink"),
+        (311, "spirit_pearl"),
+        (312, "spirit_lavender"),
+        (406, "blood"),
     ] {
-        let block = library
-            .blocks
-            .iter()
-            .find(|block| block.id == id)
-            .expect("foliage");
+        let block = library.blocks.iter().find(|block| block.id == id).unwrap();
         assert_eq!(block.render_kind, BlockRenderKind::Cube);
-        assert_eq!(block.materials[name].base_color, expected);
-        assert!(block.textures.is_empty());
-        assert_eq!(block.materials[name].texture_pattern, Some(pattern));
+        assert!(block.model.is_empty() && block.light.is_none());
+        let cluster = block.foliage_cluster.as_ref().unwrap();
+        assert_eq!(
+            block.materials.len(),
+            3 + usize::from(cluster.needles.is_some())
+        );
+        assert_eq!(cluster.needles.is_some(), id == 7);
+        for (name, sprite) in std::iter::once((&cluster.material, style))
+            .chain(cluster.needles.iter().map(|name| (name, "spruce")))
+        {
+            let material = &block.materials[name];
+            assert_eq!(material.base_color, [1.0; 4]);
+            assert!(material.texture_pattern.is_none());
+            assert_eq!(material.emission, [0.0; 3]);
+            assert_eq!(
+                block.textures[name],
+                format!("textures/foliage/{sprite}_cluster.png")
+            );
+            assert!(directory.join(&block.textures[name]).is_file());
+        }
+        let faces = block.face_materials.as_ref().unwrap();
+        assert_ne!(faces[0], faces[3]);
+        for (side, name) in faces.iter().enumerate() {
+            let material = &block.materials[name];
+            assert_eq!(material.base_color, [1.0; 4]);
+            assert!(material.texture_pattern.is_none());
+            assert_eq!(material.emission, [0.0; 3]);
+            let suffix = if side == 3 { "top" } else { "side" };
+            assert_eq!(
+                block.textures[name],
+                format!("textures/foliage/{style}_{suffix}.png")
+            );
+            assert!(directory.join(&block.textures[name]).is_file());
+        }
     }
 }
 
@@ -46,19 +64,20 @@ fn cube_definitions_preserve_bark_and_use_actual_granular_sand() {
         .find(|block| block.id == 10)
         .expect("bark");
     assert_eq!(bark.materials["Silver bark"].base_color, [1.0; 4]);
-    assert_eq!(
-        bark.materials["Silver bark"].texture_pattern,
-        Some(super::definitions::TexturePattern::BirchBark)
-    );
-    assert!(bark.textures.is_empty());
-    let oak = library.blocks.iter().find(|b| b.id == 6).unwrap();
-    assert_eq!(oak.textures["Twisted tree bark"], "textures/wood.png");
-    let sand = library.blocks.iter().find(|b| b.id == 4).unwrap();
-    assert!(sand.textures.is_empty());
-    assert_eq!(
-        sand.materials["Fine sand"].texture_pattern,
-        Some(super::definitions::TexturePattern::Sand)
-    );
+    for (id, expected) in [(10, "birch_bark"), (6, "oak_bark"), (4, "sand")] {
+        let block = library.blocks.iter().find(|b| b.id == id).unwrap();
+        let face = &block.face_materials.as_ref().unwrap()[0];
+        assert!(block.materials[face].texture_pattern.is_none());
+        assert_eq!(
+            block.textures[face],
+            format!("textures/block_palette/{expected}.png")
+        );
+        assert_eq!(
+            block.materials[face].normal_texture.as_deref(),
+            Some(format!("textures/block_palette/{expected}_normal.png").as_str())
+        );
+        assert!(directory.join(&block.textures[face]).is_file());
+    }
 }
 
 #[test]
@@ -71,13 +90,13 @@ fn tree_assets_use_botanical_and_bark_textures_not_stone() {
             .iter()
             .find(|b| b.id == id)
             .expect("tree block");
-        let expected = if [6, 10].contains(&id) {
-            "textures/wood.png"
-        } else {
-            "textures/canopy-stylized.png"
-        };
         for texture in block.textures.values() {
-            assert_eq!(texture, expected);
+            if [6, 10].contains(&id) {
+                assert!(texture.starts_with("textures/block_palette/"));
+                assert!(texture.contains("oak_") || texture.contains("birch_"));
+            } else {
+                assert!(texture.starts_with("textures/foliage/"));
+            }
             assert!(directory.join(texture).is_file());
         }
         assert!(block.model.is_empty());

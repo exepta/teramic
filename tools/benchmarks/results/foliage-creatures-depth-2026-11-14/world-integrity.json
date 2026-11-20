@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "checked_files": 23,
+  "changed": [],
+  "added": [],
+  "sha256": {
+    "worlds/session.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "worlds/world.toml": "edb2730271c980c929c2905d2ec379a341d6fd0582d3ac2d86512f0175bbbee9",
+    "worlds/.write.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "worlds/level.data": "1314c29794822b792f4e276ec7ca981a7b5c70789ecbe05fefd27fee616c0cfa",
+    "worlds/regions/r.-1.-1.region": "d857773cdcd66a6de752fc3253f9886bfb3b95e84dbf00f9ea545ea7aa101649",
+    "worlds/regions/r.-1.0.region": "dce4bdd9469ca7f0f488f6b573eb611a2ad5d4236643b267061a18f0087a1459",
+    "worlds/regions/r.0.-1.region": "c5837dc8feb63995ef8584d28b62d49548a01559469bf364f35787575ca149d7",
+    "worlds/regions/r.0.0.region": "b81e2a8c4134806d7bc337c97eee438f0492d7f15247b19df06878dbb69fbb31",
+    "worlds/players/3daf7669-97e1-469c-9017-354f4ca07906.data": "96377ac0b009b966f290d449d4a13e08c2ce8f5f16307ac0f93dff12d554f9f0",
+    "worlds/players/298a94bd-5185-4d21-b582-a3a0cc6663f3.data": "fe0bb79e9374bbd6da0dc5c7750e47f4529e833db7f4571af5191034b404d211",
+    "worlds/players/d40a75d3-ba0f-4f75-b632-04d6f1977595.data": "1019cd2447cad1ede1d2904541e2f0c2f1bdcb4e21bef37cb9c10445737a5d77",
+    "worlds/Test/session.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "worlds/Test/world.toml": "5b0006d9145084d77f5f55bfe6eb6859f88dac80e6cf0f2248addc15a749cea2",
+    "worlds/Test/.write.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "worlds/Test/level.data": "98b90ca7037bd483cf8f754850fb7dd68977a105e82e95eafb49d5b301ab55d0",
+    "worlds/Test/regions/r.-1.-2.region": "a187e501b66adacdc1c402921609f54cddacee2b5b4146293437e2c0d916ced0",
+    "worlds/Test/regions/r.0.-2.region": "ade968f2977f78116b138de8d06d2e8205b5c54bc22f2b42d2d912da4666deca",
+    "worlds/Test/regions/r.-1.-1.region": "acd1398d595ffec69984a5e9a442a5b5cb927f3e710ff4ae396c9e6f9c07718a",
+    "worlds/Test/regions/r.-1.0.region": "baa26f58ba1be2507846222d5631d0fe9a278dd3c2afcbb0bb23f77ea697a08e",
+    "worlds/Test/regions/r.0.-1.region": "fd28ec76933aad6ab57a428b8ff54a0f82a1dd5e6551576de4090944ad983bee",
+    "worlds/Test/regions/r.0.0.region": "63bb6229cebb3f83d4b25f4473384cf1ee9df53316aef5c6e5274ed83c72c41a",
+    "worlds/Test/regions/r.1.-2.region": "9073fa2102c347428987639a756ec86bc5ff7948d98871b2b890f78a4cddede6",
+    "worlds/Test/players/3daf7669-97e1-469c-9017-354f4ca07906.data": "b2fa2374b6bdc33dda2cc6ac33b0a399db1c3c26129d8dc4b9c888348dde7023"
+  }
+}

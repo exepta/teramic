@@ -4,7 +4,7 @@ use bevy::input_focus::{FocusCause, InputFocus, tab_navigation::TabGroup};
 use bevy::prelude::*;
 use terra_core::{BiomeKind, GameConfig, GameRules, StructureSettings};
 
-pub(super) const BIOMES: [(Option<BiomeKind>, &str, &str, &str); 9] = [
+pub(super) const BIOMES: [(Option<BiomeKind>, &str, &str, &str); 11] = [
     (None, "random", "Any biome", "dices"),
     (Some(BiomeKind::Plains), "plains", "Plains", "leaf"),
     (Some(BiomeKind::Forest), "forest", "Forest", "trees"),
@@ -32,6 +32,18 @@ pub(super) const BIOMES: [(Option<BiomeKind>, &str, &str, &str); 9] = [
         "cherry-forest",
         "Cherry Forest",
         "flower",
+    ),
+    (
+        Some(BiomeKind::SpiritBlossom),
+        "spirit-blossom",
+        "Spirit Blossom",
+        "flower",
+    ),
+    (
+        Some(BiomeKind::BloodForest),
+        "blood-forest",
+        "Blood Forest",
+        "trees",
     ),
     (
         Some(BiomeKind::Ocean),

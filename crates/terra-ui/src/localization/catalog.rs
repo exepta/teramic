@@ -8,6 +8,8 @@ pub(super) struct Catalog {
     pub exact: BTreeMap<String, String>,
     pub messages: BTreeMap<String, String>,
     pub patterns: Vec<Pattern>,
+    #[serde(default)]
+    pub search: BTreeMap<String, String>,
 }
 
 #[derive(Deserialize)]

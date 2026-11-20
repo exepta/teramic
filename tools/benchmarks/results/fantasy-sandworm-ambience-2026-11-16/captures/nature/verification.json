@@ -1,0 +1,483 @@
+{
+  "status": "passed",
+  "client_sha256": "887e5291c1f8e53817af2744a358d92c9a755a11c9e78d1a6eb4d36536541442",
+  "ecology_revision": 9,
+  "fixture_edits": 0,
+  "captures": [
+    {
+      "file": "captures/reference-cactus-overview.png",
+      "sha256": "a8efd503e7edb094259436fb77537d4550d7dd7aff1c39283a44c52712ab0a61",
+      "bytes": 2261491
+    },
+    {
+      "file": "captures/reference-cactus-close.png",
+      "sha256": "57420c54a5cc6e4ec8c2e2f98884b1e043982f539ad137ff5c2d3f12785bc306",
+      "bytes": 2452733
+    },
+    {
+      "file": "captures/rock-formations-overview.png",
+      "sha256": "c0c7fd374b280d2a96c7efebff5481bb600dac6823bec89d45ad28b7e5f22086",
+      "bytes": 2705077
+    },
+    {
+      "file": "captures/rock-formations-close.png",
+      "sha256": "adfe926330d374de9ec181b362dde0171327f95810c678bb40513161b3e76f31",
+      "bytes": 2754349
+    }
+  ],
+  "cactus": {
+    "birch": null,
+    "cactus": {
+      "bounds": [
+        [
+          -1817,
+          28,
+          -1862
+        ],
+        [
+          -1817,
+          35,
+          -1860
+        ]
+      ],
+      "face_connected": true,
+      "height": 8,
+      "origin": [
+        -1817,
+        28,
+        -1862
+      ],
+      "sand_supported": true,
+      "voxel_count": 12
+    },
+    "captures": {
+      "close": {
+        "camera": [
+          -1813.4000244140625,
+          32.5,
+          -1857.699951171875
+        ],
+        "camera_in_loaded_air": true,
+        "clear_loaded_voxel_sightline": true,
+        "verified_voxel_probes": 14
+      },
+      "overview": {
+        "camera": [
+          -1798.5,
+          44.0,
+          -1839.5
+        ],
+        "camera_in_loaded_air": true,
+        "clear_loaded_voxel_sightline": true,
+        "verified_voxel_probes": 14
+      }
+    },
+    "ecology_revision": 9,
+    "fixture_edits": 0,
+    "scene": "reference-cactus",
+    "seed": 42042,
+    "source_cells": [
+      [
+        [
+          -1817,
+          28,
+          -1862
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          29,
+          -1862
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          30,
+          -1862
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          31,
+          -1862
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          32,
+          -1862
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          32,
+          -1861
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          32,
+          -1860
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          33,
+          -1862
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          33,
+          -1860
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          34,
+          -1862
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          34,
+          -1860
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          35,
+          -1862
+        ],
+        422
+      ],
+      [
+        [
+          -1817,
+          27,
+          -1862
+        ],
+        4
+      ],
+      [
+        [
+          -1817,
+          36,
+          -1862
+        ],
+        0
+      ]
+    ],
+    "status": "passed",
+    "tile": [
+      -57,
+      -59
+    ]
+  },
+  "arch": {
+    "center": [
+      -16,
+      96,
+      -48
+    ],
+    "ecology_revision": 9,
+    "extra": {
+      "bounds": [
+        [
+          -19,
+          94,
+          -55
+        ],
+        [
+          -14,
+          109,
+          -41
+        ]
+      ],
+      "clear_generator_sightlines": true,
+      "fantasy_arch": true,
+      "fixture_edits": 0,
+      "formation_voxels": 188,
+      "material": 3,
+      "open_aperture": [
+        -16,
+        100,
+        -48
+      ],
+      "root_probes": [
+        [
+          [
+            -16,
+            96,
+            -55
+          ],
+          13
+        ],
+        [
+          [
+            -17,
+            94,
+            -42
+          ],
+          3
+        ]
+      ],
+      "span": [
+        6,
+        16,
+        15
+      ],
+      "voxel_probes": [
+        [
+          [
+            -16,
+            96,
+            -55
+          ],
+          13
+        ],
+        [
+          [
+            -17,
+            94,
+            -42
+          ],
+          3
+        ],
+        [
+          [
+            -18,
+            108,
+            -50
+          ],
+          13
+        ],
+        [
+          [
+            -17,
+            108,
+            -50
+          ],
+          13
+        ],
+        [
+          [
+            -18,
+            108,
+            -49
+          ],
+          13
+        ],
+        [
+          [
+            -17,
+            108,
+            -49
+          ],
+          3
+        ],
+        [
+          [
+            -16,
+            108,
+            -49
+          ],
+          3
+        ],
+        [
+          [
+            -17,
+            108,
+            -48
+          ],
+          3
+        ],
+        [
+          [
+            -16,
+            99,
+            -49
+          ],
+          0
+        ],
+        [
+          [
+            -16,
+            99,
+            -48
+          ],
+          0
+        ],
+        [
+          [
+            -16,
+            99,
+            -47
+          ],
+          0
+        ],
+        [
+          [
+            -16,
+            100,
+            -49
+          ],
+          0
+        ],
+        [
+          [
+            -16,
+            100,
+            -48
+          ],
+          0
+        ],
+        [
+          [
+            -16,
+            100,
+            -47
+          ],
+          0
+        ],
+        [
+          [
+            -16,
+            101,
+            -49
+          ],
+          0
+        ],
+        [
+          [
+            -16,
+            101,
+            -48
+          ],
+          0
+        ],
+        [
+          [
+            -16,
+            101,
+            -47
+          ],
+          0
+        ]
+      ]
+    },
+    "fixture_edits": 0,
+    "scene": "rock-formations",
+    "seed": 42042,
+    "source_cells": [
+      [
+        -16,
+        96,
+        -55
+      ],
+      [
+        -17,
+        94,
+        -42
+      ],
+      [
+        -18,
+        108,
+        -50
+      ],
+      [
+        -17,
+        108,
+        -50
+      ],
+      [
+        -18,
+        108,
+        -49
+      ],
+      [
+        -17,
+        108,
+        -49
+      ],
+      [
+        -16,
+        108,
+        -49
+      ],
+      [
+        -17,
+        108,
+        -48
+      ],
+      [
+        -16,
+        99,
+        -49
+      ],
+      [
+        -16,
+        99,
+        -48
+      ],
+      [
+        -16,
+        99,
+        -47
+      ],
+      [
+        -16,
+        100,
+        -49
+      ],
+      [
+        -16,
+        100,
+        -48
+      ],
+      [
+        -16,
+        100,
+        -47
+      ],
+      [
+        -16,
+        101,
+        -49
+      ],
+      [
+        -16,
+        101,
+        -48
+      ],
+      [
+        -16,
+        101,
+        -47
+      ]
+    ]
+  },
+  "scope": "Real generated voxels and loaded probes; pictures show cactus spines and arch geometry. Damage is checked by authoritative tests, not this visual fixture."
+}

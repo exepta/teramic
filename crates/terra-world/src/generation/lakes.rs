@@ -63,7 +63,7 @@ impl TerraGenerator {
             cell[0] as f64 * SPACING + 104.0 + f64::from((seed >> 4) % 48),
             cell[1] as f64 * SPACING + 104.0 + f64::from((seed >> 12) % 48),
         ];
-        if (x - center[0]).abs().max((z - center[1]).abs()) > 68.0 {
+        if (x - center[0]).abs().max((z - center[1]).abs()) > 76.0 {
             return None;
         }
         let cached = self
@@ -83,7 +83,7 @@ impl TerraGenerator {
                 lake
             }
         })?;
-        let sample = lake.sample(x, z);
+        let sample = self.spirit_lake_sample(lake, x, z);
         (sample.distance < sample.radius + super::oases::BANK_REACH).then_some(sample)
     }
     fn build_lake(&self, center: [f64; 2], seed: u32) -> Option<Lake> {

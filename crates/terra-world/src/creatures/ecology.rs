@@ -6,6 +6,62 @@ pub fn sleep_at(id: u64, phase: f64) -> bool {
     let offset = (random(id, 0xbed) % 1000) as f64 / 1000.0;
     phase >= 19.0 / 24.0 + offset * 0.09 || phase < 5.0 / 24.0 + offset * 0.04
 }
+
+/// Live needs feed the existing drinking/foraging AI; bees use their actual
+/// nest-return behavior in cold rain. No terrain sampling or new path searches.
+pub fn climate_step(animal: &mut Creature, habitat: &Habitat, dt: f32) -> bool {
+    if animal.health <= 0.0
+        || !(0.0..=0.25).contains(&dt)
+        || animal.kind == Kind::Villager
+        || animal.kind.is_aquatic()
+    {
+        return false;
+    }
+    let p = animal.position;
+    let Some(surface) = habitat
+        .chunks
+        .surface_column_at(p[0].floor() as i64, p[2].floor() as i64)
+    else {
+        return false;
+    };
+    // Underground inhabitants keep their own cave ecology.
+    if p[1] < surface.height - 4.0 {
+        return false;
+    }
+    let clock = habitat.journal.clock.unwrap_or_default();
+    let climate = crate::weather::ecology::EcologyClimate::sample(
+        &habitat.journal.weather.unwrap_or_default(),
+        surface.biome,
+        p[1],
+        habitat.terrain.config().sea_level,
+        clock.season(habitat.terrain.config().seasons),
+        0.,
+    );
+    if animal.kind == Kind::Bee {
+        return climate.temperature < 8.0 || climate.precipitation > 0.6;
+    }
+    if matches!(
+        animal.kind,
+        Kind::Cow | Kind::Pig | Kind::Sheep | Kind::Horse | Kind::Bear
+    ) {
+        let heat = ((climate.temperature - 20.0) / 15.0).clamp(0.0, 2.0);
+        let cold = ((5.0 - climate.temperature) / 15.0).clamp(0.0, 2.0);
+        animal.needs.water =
+            (animal.needs.water - dt * 0.018 * heat * (1.5 - climate.moisture)).max(0.0);
+        animal.needs.food = (animal.needs.food - dt * 0.009 * cold).max(0.0);
+        // Hungry, thirsty, fleeing or commanded animals keep their priorities.
+        return climate.temperature > 32.0
+            && climate.moisture < 0.25
+            && (0.42..0.64).contains(&clock.phase)
+            && matches!(
+                animal.behavior,
+                Behavior::Rest | Behavior::Wander | Behavior::Sleep
+            )
+            && animal.needs.food > animal.kind.food() * 0.85
+            && animal.needs.water > animal.kind.water() * 0.85;
+    }
+    false
+}
 #[cfg(test)]
 #[path = "ecology_tests.rs"]
 mod tests;

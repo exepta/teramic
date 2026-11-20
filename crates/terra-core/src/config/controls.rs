@@ -39,9 +39,11 @@ pub enum GameAction {
     Dismount,
     DebugMobBounds,
     DebugChunkBorders,
+    Kingdom,
+    BuildMode,
 }
 impl GameAction {
-    pub const ALL: [Self; 32] = [
+    pub const ALL: [Self; 34] = [
         Self::Forward,
         Self::Backward,
         Self::Left,
@@ -74,6 +76,8 @@ impl GameAction {
         Self::Dismount,
         Self::DebugMobBounds,
         Self::DebugChunkBorders,
+        Self::Kingdom,
+        Self::BuildMode,
     ];
     pub fn label(self) -> &'static str {
         match self {
@@ -110,6 +114,8 @@ impl GameAction {
             Self::Dismount => "Dismount",
             Self::DebugMobBounds => "Mob Hitboxes",
             Self::DebugChunkBorders => "Chunk Borders",
+            Self::Kingdom => "Open Kingdom",
+            Self::BuildMode => "Construction Mode",
         }
     }
     pub fn default_binding(self) -> InputBinding {
@@ -123,7 +129,7 @@ impl GameAction {
             Self::Sprint => KeyCode::ControlLeft,
             Self::Precision => KeyCode::AltLeft,
             Self::Place => KeyCode::KeyB,
-            Self::Cursor => KeyCode::Tab,
+            Self::Cursor => KeyCode::Backquote,
             Self::Pause => KeyCode::Escape,
             Self::Flight => KeyCode::KeyF,
             Self::Camera => KeyCode::F5,
@@ -133,6 +139,8 @@ impl GameAction {
             Self::QuickWaypoint => KeyCode::KeyN,
             Self::Dismount => KeyCode::KeyX,
             Self::DebugChunkBorders => KeyCode::F9,
+            Self::Kingdom => KeyCode::KeyK,
+            Self::BuildMode => KeyCode::Tab,
             Self::DebugMobBounds => {
                 return InputBinding::Chord {
                     modifier: KeyCode::F1,
@@ -322,6 +330,13 @@ fn read_bindings<'de, D: serde::Deserializer<'de>>(
     let mut bindings = BTreeMap::<GameAction, InputBinding>::deserialize(deserializer)?;
     // Legacy F bindings remain readable; flight now follows the jump double tap.
     bindings.remove(&GameAction::Flight);
+    // TAB now opens the construction camera. Only migrate the previous cursor
+    // default; unrelated custom bindings keep their keys.
+    if !bindings.contains_key(&GameAction::BuildMode)
+        && bindings.get(&GameAction::Cursor) == Some(&InputBinding::Key(KeyCode::Tab))
+    {
+        bindings.remove(&GameAction::Cursor);
+    }
     // N used to toggle the MiniMap; its old default now opens a quick waypoint.
     // An explicitly rebound MiniMap or any unrelated custom N remains intact.
     if !bindings.contains_key(&GameAction::QuickWaypoint)
@@ -361,6 +376,8 @@ fn read_bindings<'de, D: serde::Deserializer<'de>>(
         bindings.insert(GameAction::Inventory, binding);
     }
     for action in [
+        GameAction::Cursor,
+        GameAction::BuildMode,
         GameAction::DebugOverlay,
         GameAction::ToggleHud,
         GameAction::Chat,
@@ -449,12 +466,80 @@ fn read_bindings<'de, D: serde::Deserializer<'de>>(
             .ok_or_else(|| serde::de::Error::custom("No free chunk border key; add a binding"))?;
         bindings.insert(GameAction::DebugChunkBorders, binding);
     }
+    if !bindings.contains_key(&GameAction::Kingdom) {
+        let binding = [
+            KeyCode::KeyK,
+            KeyCode::KeyL,
+            KeyCode::F10,
+            KeyCode::F8,
+            KeyCode::F7,
+        ]
+        .into_iter()
+        .map(InputBinding::Key)
+        .find(|candidate| !bindings.values().any(|value| value.conflicts(*candidate)))
+        .ok_or_else(|| serde::de::Error::custom("No free kingdom key; add a binding"))?;
+        bindings.insert(GameAction::Kingdom, binding);
+    }
     Ok(bindings)
 }
 
 #[cfg(test)]
 mod migration_tests {
     use super::*;
+    #[test]
+    fn old_default_cursor_tab_becomes_construction_without_losing_custom_bindings() {
+        let mut old = ControlsConfig::default();
+        old.bindings.remove(&GameAction::BuildMode);
+        old.bindings
+            .insert(GameAction::Cursor, InputBinding::Key(KeyCode::Tab));
+        let loaded = ControlsConfig::from_toml(&toml::to_string(&old).unwrap()).unwrap();
+        assert_eq!(
+            loaded.binding(GameAction::BuildMode),
+            InputBinding::Key(KeyCode::Tab)
+        );
+        assert_eq!(
+            loaded.binding(GameAction::Cursor),
+            InputBinding::Key(KeyCode::Backquote)
+        );
+        loaded.validate().unwrap();
+        old.bindings
+            .insert(GameAction::Cursor, InputBinding::Key(KeyCode::Backquote));
+        old.bindings
+            .insert(GameAction::Inventory, InputBinding::Key(KeyCode::Tab));
+        let loaded = ControlsConfig::from_toml(&toml::to_string(&old).unwrap()).unwrap();
+        assert_eq!(
+            loaded.binding(GameAction::Inventory),
+            InputBinding::Key(KeyCode::Tab)
+        );
+        assert_ne!(
+            loaded.binding(GameAction::BuildMode),
+            InputBinding::Key(KeyCode::Tab)
+        );
+        loaded.validate().unwrap();
+    }
+    #[test]
+    fn kingdom_key_is_added_to_old_profiles_without_replacing_a_custom_k_binding() {
+        let mut old = ControlsConfig::default();
+        old.bindings.remove(&GameAction::Kingdom);
+        let loaded = ControlsConfig::from_toml(&toml::to_string(&old).unwrap()).unwrap();
+        assert_eq!(
+            loaded.binding(GameAction::Kingdom),
+            InputBinding::Key(KeyCode::KeyK)
+        );
+        old.bindings
+            .insert(GameAction::Chat, InputBinding::Key(KeyCode::KeyK));
+        let loaded = ControlsConfig::from_toml(&toml::to_string(&old).unwrap()).unwrap();
+        assert_eq!(
+            loaded.binding(GameAction::Chat),
+            InputBinding::Key(KeyCode::KeyK)
+        );
+        assert_eq!(
+            loaded.binding(GameAction::Kingdom),
+            InputBinding::Key(KeyCode::KeyL)
+        );
+        loaded.validate().unwrap();
+    }
+
     #[test]
     fn hud_binding_migrates_without_replacing_an_existing_f2_binding() {
         let mut old = ControlsConfig::default();

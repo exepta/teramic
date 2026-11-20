@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": 426,
+  "name": "Flowering Shrub",
+  "description": "Flowering Shrub, shaped for the regional biome flora.",
+  "creative_category": "nature",
+  "hardness": 0.15,
+  "resistance": 0.4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/flowering_shrub.glb",
+  "textures": {
+    "gold": "textures/flowering_shrub.png",
+    "leaf": "textures/flowering_shrub.png",
+    "leaf_light": "textures/flowering_shrub.png",
+    "petal": "textures/flowering_shrub.png",
+    "pink": "textures/flowering_shrub.png",
+    "stem": "textures/flowering_shrub.png",
+    "wood": "textures/flowering_shrub.png"
+  },
+  "struct_block": true,
+  "collision_boxes": []
+}

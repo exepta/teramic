@@ -361,9 +361,15 @@ fn first_hit(batches: &[MeshBatch], origin: Vec3, direction: Vec3) -> Option<f32
 }
 
 #[test]
-fn all_materials_close_flat_seams_and_four_section_corners() {
+fn solid_surfaces_close_flat_seams_and_four_section_corners() {
     let templates = templates();
     for &material in templates.blocks.keys() {
+        // Foliage has authored gaps and overhanging sheets, not the exact
+        // watertight collision-cell surface required of opaque terrain.
+        // Its geometry, alpha and LOD contracts have separate regressions.
+        if terra_voxel::MaterialId::FOLIAGE.contains(&material) {
+            continue;
+        }
         if terra_voxel::MaterialId::from_raw(material).is_some_and(|id| !id.is_solid()) {
             continue;
         }

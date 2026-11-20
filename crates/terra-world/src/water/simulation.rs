@@ -8,13 +8,15 @@ use crate::{
     streaming::{ChunkStore, WorldAccess, WorldTerrain},
 };
 use bevy::prelude::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use terra_voxel::global_to_section;
 
 const TICK_SECONDS: f64 = 0.1;
 const CELL_BUDGET: usize = 256;
+mod flux;
 mod pools;
 mod river;
+pub(crate) mod sources;
 mod supply;
 
 #[derive(Resource, Debug, Default)]
@@ -71,8 +73,13 @@ impl Sampler<'_> {
     }
     fn natural(&mut self, p: [i64; 3]) -> FluidCell {
         let column = *self.columns.entry([p[0], p[2]]).or_insert_with(|| {
-            self.terrain
-                .water_columns(p[0] as f64 + 0.5, p[2] as f64 + 0.5)
+            self.chunks.surface_column_at(p[0], p[2]).map_or_else(
+                || {
+                    self.terrain
+                        .water_columns(p[0] as f64 + 0.5, p[2] as f64 + 0.5)
+                },
+                |surface| surface.water_columns(),
+            )
         });
         from_columns(column, p[1])
     }
@@ -168,9 +175,17 @@ fn simulate_sampled_step(
     if !terrain.config().water {
         return Ok(result);
     }
-    let work = journal.take_fluid_work(budget.min(4096));
+    let budget = budget.min(4096);
+    let mut work: VecDeque<_> = journal.take_fluid_work(budget).into();
+    let mut visited = HashSet::new();
     let mut resting = pools::Resting::default();
-    for p in work {
+    let mut sources = std::mem::take(&mut journal.fluid_sources);
+    sources.begin_step(&mut sampler, journal);
+    while result.visited < budget {
+        let Some(p) = work.pop_front() else { break };
+        if !visited.insert(p) {
+            continue;
+        }
         result.visited += 1;
         if resting.handled(p) {
             continue;
@@ -182,6 +197,72 @@ fn simulate_sampled_step(
         if !chunks.block_at(p).is_some_and(super::can_hold_fluid) {
             continue;
         }
+        if cell.amount > 0 {
+            // Pending proof and recession still contain real, visible water.
+            result.wetted.push(p);
+        }
+        if cell.amount == 0 {
+            // A live inlet may already have paid the hidden part below a
+            // model's first exposed film. Let its next unit open that film
+            // before retiring an otherwise impossible, unfunded residue.
+            match sources.can_receive(&mut sampler, journal, p) {
+                sources::Support::Connected => {
+                    flux::advance_supplied(&mut sampler, journal, p, &mut result)?;
+                    continue;
+                }
+                sources::Support::Pending(waiting) => {
+                    if let Some(section) = waiting {
+                        journal.sleep_fluid(p, section);
+                    } else {
+                        journal.wake_fluid(p);
+                    }
+                    continue;
+                }
+                sources::Support::Disconnected => {}
+            }
+            if sampler
+                .cell(journal, p)
+                .is_some_and(|cell| cell.amount == 0)
+                && let Some(hidden) = journal.fluid(p).filter(|cell| cell.amount > 0)
+            {
+                let empty = FluidCell::default();
+                pools::preflight(journal, &[(p, empty)])?;
+                result.drained += u64::from(hidden.amount);
+                result.changed |=
+                    journal.set_receded_fluid(p, empty, sampler.natural(p).amount > 0)?;
+                sources.forget(p);
+            }
+            continue;
+        }
+        if cell.amount > 0 && !cell.source {
+            match sources.support(&mut sampler, journal, p) {
+                sources::Support::Connected => {}
+                sources::Support::Pending(waiting) => {
+                    if let Some(section) = waiting {
+                        journal.sleep_fluid(p, section);
+                    } else {
+                        journal.wake_fluid(p);
+                    }
+                    continue;
+                }
+                sources::Support::Disconnected => {
+                    let mut next = cell;
+                    next.amount = next.amount.saturating_sub(1);
+                    next.flow = [0; 2];
+                    // A model's last visible film can require height5. Never
+                    // leave the remaining height4 hidden inside its solid half.
+                    next = sampler.space(journal, p).clamp(next);
+                    pools::preflight(journal, &[(p, next)])?;
+                    result.drained += u64::from(cell.amount - next.amount);
+                    let pin_empty = next.amount == 0 && sampler.natural(p).amount > 0;
+                    result.changed |= journal.set_receded_fluid(p, next, pin_empty)?;
+                    if next.amount == 0 {
+                        sources.forget(p);
+                    }
+                    continue;
+                }
+            }
+        }
         // Empty members must join the same atomic pool step before ordinary
         // finite lateral supply can copy a neighbour's level into them.
         if !river::bank_overflow(&mut sampler, journal, p)
@@ -189,67 +270,18 @@ fn simulate_sampled_step(
         {
             continue;
         }
-        if cell.amount > 0 {
-            result.wetted.push(p);
-        }
         if cell.source {
-            continue;
-        }
-        let Some(down) = adjacent(p, [0, -1, 0]) else {
-            continue;
-        };
-        let Some(below) = sampler.cell(journal, down) else {
-            journal.sleep_fluid(p, global_to_section(down).0);
-            continue;
-        };
-        let (mut wanted, waiting, mut from_source) = supply::incoming(&mut sampler, journal, p);
-        if let Some(ambient) = supply::ambient_construction(&mut sampler, journal, p) {
-            wanted = ambient;
-            from_source = true;
-        }
-        if let Some(section) = waiting {
-            journal.sleep_fluid(p, section);
-            continue;
-        }
-        if below.source && wanted.amount == 0 && sampler.can_drain(journal, p, cell, down) {
-            result.absorbed += u64::from(cell.amount);
-            result.transferred += u64::from(cell.amount);
-            let changed = journal.set_simulated_fluid(p, FluidCell::default())?;
-            if changed {
-                sampler.river_origins.remove(&p);
-            }
-            result.changed |= changed;
-            continue;
-        }
-        let amount = if wanted.amount < cell.amount {
-            cell.amount - 1
+            flux::advance(&mut sampler, journal, p, &mut result)?;
         } else {
-            wanted.amount
-        };
-        let next = sampler
-            .space(journal, p)
-            .clamp(FluidCell { amount, ..wanted });
-        let amount = next.amount;
-        let added = u64::from(amount.saturating_sub(cell.amount));
-        if from_source {
-            result.sourced += added;
-        } else {
-            result.replenished += added;
+            flux::advance_supplied(&mut sampler, journal, p, &mut result)?;
         }
-        result.drained += u64::from(cell.amount.saturating_sub(amount));
-        result.transferred += added;
-        let changed = journal.set_simulated_fluid(p, next)?;
-        if changed {
-            sampler.river_origins.remove(&p);
-        }
-        result.changed |= changed;
-        if amount > 0 {
-            result.wetted.push(p);
-        }
-        if amount > wanted.amount {
+    }
+    for p in work {
+        if !visited.contains(&p) {
             journal.wake_fluid(p);
         }
     }
+    journal.fluid_sources = sources;
     let mut torches = std::collections::BTreeSet::new();
     for &p in &result.wetted {
         for x in -1..=1 {
@@ -277,6 +309,8 @@ mod cascade_tests;
 mod construction_tests;
 #[cfg(test)]
 mod partial_tests;
+#[cfg(test)]
+mod source_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

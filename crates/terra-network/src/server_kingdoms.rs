@@ -143,7 +143,11 @@ fn claim_reach(
     }
 }
 
-fn check_keep(position: [i64; 3], peer: &Peer, world: &ControlWorld) -> Result<(), KingdomError> {
+pub(super) fn check_keep(
+    position: [i64; 3],
+    peer: &Peer,
+    world: &ControlWorld,
+) -> Result<(), KingdomError> {
     if !terra_core::kingdom::valid_location(position) {
         return Err(KingdomError::InvalidLocation);
     }
@@ -159,6 +163,20 @@ fn check_keep(position: [i64; 3], peer: &Peer, world: &ControlWorld) -> Result<(
         .bodies
         .get(peer.body)
         .map_err(|_| KingdomError::OutOfReach)?;
+    if world
+        .journal
+        .gameplay()
+        .kingdoms
+        .territorial_keep(
+            peer.uuid,
+            body.translation
+                .to_array()
+                .map(|v| f64::from(v).floor() as i64),
+        )
+        .is_some_and(|keep| keep.location == position)
+    {
+        return Ok(());
+    }
     let eye = body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
     let center = position.map(|v| v as f64 + 0.5);
     let distance: f64 = (0..3)
@@ -245,6 +263,47 @@ fn apply(
             policy::plan(&action, peer, world, claim_actor, &domains)?
                 .ok_or(KingdomError::InvalidClaim)?
         };
+        if let KingdomOutcome::Founded { id } = outcome
+            && next
+                .get(id)
+                .is_some_and(|kingdom| kingdom.kind == terra_core::kingdom::SettlementKind::Kingdom)
+        {
+            let body = world
+                .bodies
+                .get(peer.body)
+                .map_err(|_| KingdomError::OutOfReach)?;
+            let mut feet = body.translation.to_array().map(f64::from);
+            feet[1] -= f64::from(terra_physics::character::PLAYER_HALF_HEIGHT);
+            let radius = f64::from(terra_physics::character::PLAYER_RADIUS);
+            let height = f64::from(terra_physics::character::PLAYER_HALF_HEIGHT);
+            let players: Vec<_> = world
+                .bodies
+                .iter()
+                .map(|body| {
+                    let p = body.translation.to_array().map(f64::from);
+                    [
+                        [p[0] - radius, p[1] - height, p[2] - radius],
+                        [p[0] + radius, p[1] + height, p[2] + radius],
+                    ]
+                })
+                .collect();
+            let positions = terra_world::kingdom_starter::plan(
+                &terra_world::creatures::Habitat {
+                    terrain: &world.terrain.0,
+                    chunks: &world.chunks,
+                    journal: &world.journal,
+                },
+                position,
+                peer.uuid,
+                feet,
+                &players,
+            )?;
+            world
+                .journal
+                .gameplay_mut()
+                .commit_founding_with_starters(next, id, positions)?;
+            return Ok(outcome);
+        }
         let game = world.journal.gameplay_mut();
         if next.revision != game.kingdoms.revision {
             game.kingdoms = next;
@@ -436,7 +495,8 @@ pub(super) fn edit_allowed(action: EditAction, peer: &Peer, world: &ControlWorld
         EditAction::Farm {
             action:
                 terra_core::farming::FarmingAction::Refill
-                | terra_core::farming::FarmingAction::FillBucket,
+                | terra_core::farming::FarmingAction::FillBucket
+                | terra_core::farming::FarmingAction::FillBileBucket,
             ..
         } => KingdomPermission::Inventories,
         EditAction::ToggleObject { position, .. }

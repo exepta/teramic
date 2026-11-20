@@ -1,0 +1,279 @@
+   Compiling terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+   Compiling terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+   Compiling terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+   Compiling terra-player v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-player)
+   Compiling terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+   Compiling terra-render v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-render)
+   Compiling terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+   Compiling terra-client v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/client)
+   Compiling terra-building-editor v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/building-editor)
+    Finished `test` profile [optimized + debuginfo] target(s) in 14m 40s
+     Running unittests src/main.rs (target/debug/deps/terra_building_editor-27cd95bc1bdc8fdd)
+
+running 24 tests
+test document::tests::all_saved_stair_poses_and_mixed_slab_inputs_use_shared_schema_semantics ... ok
+test document::tests::broken_pairs_outside_bounds_and_lossy_states_are_rejected ... ok
+test document::tests::json_files_are_create_only_until_overwrite_is_confirmed ... ok
+test document::tests::new_document_has_no_exported_support_voxels ... ok
+test document::tests::paired_chests_keep_both_cells_and_cost_two_actual_chests ... ok
+test document::tests::phases_costs_and_paired_beds_are_exact ... ok
+test document::tests::ordinary_native_materials_use_an_implicit_pose_but_invalid_furniture_does_not ... ok
+test document::tests::saving_into_a_game_catalog_rejects_duplicate_ids_but_allows_replacing_the_original ... ok
+test document::tests::supported_slab_state_and_pot_contents_survive_reload ... ok
+test editor::tests::editor_styles_and_static_icon_sources_use_real_runtime_parsers ... ok
+test editor::tests::imported_house_aabb_fits_real_perspective_below_the_editor_toolbar ... ok
+test editor::tests::model_foundations_remain_above_the_protected_support_surface ... ok
+test document::tests::all_native_carpets_roundtrip_without_an_invented_object_state ... ok
+test editor::tests::native_spruce_basin_placement_roundtrips_its_real_wood_state ... ok
+test document::tests::exact_default_house_can_be_imported_modified_and_reloaded ... ok
+test editor::tests::native_oak_and_spruce_doors_use_real_pairs_and_one_paid_item ... ok
+test editor::tests::real_local_block_commit_and_removal_update_voxels_and_document ... ok
+test editor::tests::original_filename_and_id_are_preserved_and_save_as_gets_a_new_identity ... ok
+test editor::tests::technical_support_and_side_extensions_cannot_be_authored_or_removed ... ok
+test editor::tests::shifted_anchor_moves_real_camera_and_stream_focus_to_the_imported_building ... ok
+test editor::tests::typing_e_in_catalog_search_does_not_close_the_item_catalog ... ok
+test editor::tests::platform_size_survives_model_import_and_new_document ... ok
+test editor::tests::resizing_from_settings_preserves_authored_foundations_camera_and_export ... ok
+test interface::labels::tests::real_inventory_wood_suffixes_keep_their_identity_and_translate_the_authored_base ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src/main.rs (target/debug/deps/terra_client-87e26c2bf43d7f15)
+
+running 211 tests
+test avatar_smoke::tests::window_bgra_and_portrait_rgba_validate_the_same_visible_avatar_pixels ... ok
+test biome_smoke::tests::connected_fir_view_rejects_worlds_without_natural_firs ... ok
+test alchemy_smoke::tests::direct_alchemy_setup_does_not_require_the_frontend_menu ... ok
+test biome_smoke::tests::settled_preview_camera_does_not_mark_projection_or_focus_changed_again ... ok
+test biome_smoke::tests::ocean_picker_validates_real_water_bed_and_open_surface ... ok
+test bootstrap::preview_demand::tests::dynamic_requests_stay_bounded_without_starving_fixed_items_or_rgb_dyes ... ok
+test bootstrap::preview_demand::tests::every_fixed_catalog_type_is_requested_only_on_its_visible_page ... ok
+test bootstrap::preview_demand::tests::normal_startup_does_not_request_the_registry_or_hidden_catalog ... ok
+test bootstrap::preview_demand::tests::recipe_station_tabs_request_their_icons_only_while_the_recipe_is_open ... ok
+test bootstrap::preview_demand::tests::target_icons_remain_requested_with_the_inventory_closed ... ok
+test bootstrap::preview_demand::tests::visible_ghosts_and_recipe_items_are_not_lost_or_replaced_by_the_whole_catalog ... ok
+test bootstrap::startup_ui::tests::pinned_ui_icons_use_the_actual_shared_tilt_ui_image_cache ... ok
+test bootstrap::startup_ui::tests::static_ui_texture_catalog_covers_real_hud_and_chrome_assets ... ok
+test bootstrap::startup_ui::tests::ui_icon_preload_is_finite_unique_and_covers_each_supported_runtime_size ... ok
+test bootstrap::tests::a_fresh_persistent_benchmark_initializes_the_existing_manifest_and_save_format ... ok
+test bootstrap::tests::an_existing_persistent_benchmark_keeps_the_complete_saved_world_and_game_mode ... ok
+test bootstrap::tests::benchmark_graphics_are_opt_in_and_keep_non_graphics_client_tuning ... ok
+test bootstrap::tests::benchmark_resolution_contract_requires_the_explicit_benchmark_graphics ... ok
+test bootstrap::tests::benchmark_scenarios_are_explicit_validated_and_bounded ... ok
+test bootstrap::tests::benchmark_ui_requires_the_real_integrated_static_benchmark ... ok
+test bootstrap::tests::benchmark_window_uses_physical_not_dpi_scaled_resolution ... ok
+test bootstrap::tests::initial_fullscreen_benchmark_selects_a_monitor_before_the_window_exists ... ok
+test bootstrap::tests::native_presentation_control_is_explicit_validated_and_inert_in_normal_gameplay ... ok
+test bootstrap::tests::persistent_benchmark_settings_are_explicit_validated_and_do_not_create_files_when_off ... ok
+test bootstrap::tests::persistent_benchmarks_reject_mismatched_paths_and_incompatible_world_entries ... ok
+test bootstrap::tests::user_log_directives_follow_the_upstream_noise_defaults ... ok
+test breeding_smoke::tests::queued_interactions_hold_the_same_aim_until_authoritative_acknowledgement ... ok
+test building_smoke::tests::native_furniture_visibility_accepts_flat_ground_and_low_feet_but_rejects_an_occluding_log ... ok
+test cave_showcase::tests::daylight_portal_fixture_has_real_roof_opening_and_shared_sunlit_ground ... ok
+test cave_showcase::tests::fixture_contains_openings_emitting_blocks_water_and_dark_tunnels ... ok
+test cave_showcase::tests::lod_ceiling_fixture_uses_a_real_distant_underside_without_an_exterior_top_face ... ok
+test construction_mode_smoke::tests::world_crop_rejects_blue_sky_even_with_colorful_ui_and_accepts_actual_ground_channels ... ok
+test creature_audio::acoustics::tests::only_rain_on_already_wet_blocks_adds_contact_water ... ok
+test creature_audio::acoustics::tests::rain_is_sheltered_quiet_indoors_and_silent_in_deep_caves ... ok
+test creature_audio::acoustics::tests::rain_requires_real_nearby_impact_surfaces_and_fades_with_altitude ... ok
+test creature_audio::chests::tests::authoritative_chest_edges_are_once_only_and_streaming_is_silent ... ok
+test creature_audio::chests::tests::double_chest_has_one_sound_when_only_the_other_section_is_loaded ... ok
+test creature_audio::clips::tests::all_textile_colors_keep_soft_wool_contacts_and_fired_pots_keep_hard_contacts ... ok
+test creature_audio::clips::tests::castle_contacts_use_stone_iron_timber_and_snow_foley_without_visual_finish_leaking_into_sound ... ok
+test creature_audio::clips::tests::contact_variation_uses_every_recording_without_repeating_the_previous_take ... ok
+test creature_audio::clips::tests::every_block_routes_to_its_physical_surface_family ... FAILED
+test biome_smoke::tests::connected_fir_view_selects_actual_fir_leaves_and_clear_air_cameras ... ok
+test creature_audio::clips::tests::filtered_logistics_keep_timber_contacts_while_iron_drives_remain_hard ... ok
+test creature_audio::eating::tests::drinking_uses_existing_water_foley_instead_of_chewing ... ok
+test creature_audio::furniture::tests::cough_exposure_follows_the_body_not_a_nearby_cell_or_camera ... ok
+test creature_audio::furniture::tests::listener_window_is_bounded_and_covers_negative_twenty_meter_section_edges ... ok
+test creature_audio::furniture::tests::opening_audio_retains_primary_only_loaded_contract_for_straddling_doors ... ok
+test creature_audio::furniture::tests::opening_audio_tracks_near_loaded_poses_but_ignores_far_unloaded_and_stale_history ... ok
+test creature_audio::furniture::tests::recorded_coughs_use_three_distinct_takes_without_consecutive_repeats ... ok
+test creature_audio::plumbing::tests::taps_pan_scale_with_stage_and_stop_when_closed_dry_distant_removed_or_unloaded ... ok
+test creature_audio::scene::tests::aquatic_movement_is_underwater_only_and_ink_plays_once_per_release ... ok
+test creature_audio::scene::tests::environment_switches_day_birds_to_night_insects_and_suppresses_both_in_caves ... ok
+test creature_audio::scene::tests::independent_swimmers_keep_their_own_strokes_and_do_not_repeat_takes ... ok
+test creature_audio::source::reverb::tests::impulse_has_predelay_audible_tail_and_stable_decay ... ok
+test creature_audio::source::tests::category_changes_also_mute_existing_reverb_tails ... ok
+test creature_audio::source::tests::category_gains_reach_decoder_without_affecting_other_sources ... ok
+test biome_smoke::tests::water_palette_scenes_find_real_generated_water ... ok
+test creature_audio::source::tests::existing_voices_follow_live_category_changes_global_mute_and_revert_without_restarting ... ok
+test creature_audio::source::tests::positional_fire_stops_after_the_last_placed_source_disappears ... ok
+test creature_audio::source::tests::previously_muted_categories_are_silent_from_the_first_immediate_cue_sample ... ok
+test creature_audio::source::tests::faucet_loop_reaches_existing_stereo_decoder_and_fades_after_shutoff_or_mute ... ok
+test creature_audio::source::tests::recorded_mix_is_bounded_filtered_and_live_muting_clears_existing_voices ... ok
+test creature_audio::spiders::tests::spider_and_water_foley_are_bounded_declicked_and_have_distinct_envelopes ... ok
+test creature_audio::source::tests::recorded_rain_has_stereo_detail_without_creating_cues_or_clipping ... ok
+test creature_audio::clips::tests::every_shipped_recording_decodes_and_contains_real_sample_energy ... ok
+test creature_audio::thunder::tests::nearby_thunder_is_not_delayed_behind_a_previous_distant_strike ... ok
+test creature_audio::thunder::tests::thunder_is_finite_deterministic_bounded_and_decays ... ok
+test crusher_audio::source::tests::empty_cranking_never_schedules_mineral_crunches_and_recording_timing_is_not_a_loop ... ok
+test crusher_audio::source::tests::faster_gears_increase_contact_cadence_without_unbounded_voices_or_nonfinite_samples ... ok
+test crusher_audio::source::tests::idle_stream_skips_dsp_clears_voices_and_wakes_across_frame_counter_wrap ... ok
+test crusher_audio::source::tests::mechanical_mix_has_soft_boundaries_finite_energy_and_fades_to_silence ... ok
+test crusher_audio::source::tests::shipped_material_foley_is_real_bounded_and_covers_wood_stone_and_grit ... ok
+test crusher_audio::source::tests::write_crusher_listening_preview ... ignored, writes the explicit six-second manual/crushing/mute listening fixture
+test crusher_audio::tests::nearby_manual_turning_is_audible_without_processable_input_and_bounded ... ok
+test crusher_audio::tests::one_cell_machine_audio_stays_at_the_body_center_for_every_yaw ... ok
+test crusher_audio::tests::running_kinetic_parts_are_audible_in_both_directions_but_stopped_overloaded_and_crushers_are_not ... ok
+test creature_audio::stalker::tests::recorded_breath_has_separate_asymmetric_inhale_and_exhale_without_synthesized_water_or_tones ... ok
+test crusher_audio::tests::source_is_centered_between_both_cells_for_all_facings_at_negative_coordinates ... ok
+test crusher_smoke::tests::fixture_drives_the_configured_place_key_mouse_and_chord_without_crank_shortcuts ... ok
+test crusher_smoke::tests::operator_and_mount_points_follow_every_crusher_orientation ... ok
+test diagnostic_report::tests::gpu_compute_passes_outside_the_view_render_prefix_are_included ... ok
+test diagnostic_report::tests::report_uses_nearest_rank_percentiles_and_arithmetic_mean ... ok
+test diagnostic_report::tests::sampling_excludes_old_cpu_invalid_and_duplicate_readbacks ... ok
+test creature_audio::stalker::tests::stalker_breath_and_scream_have_distinct_finite_energy_and_silent_edges ... ok
+test equipment_smoke::tests::tooltip_scale_probes_use_existing_stages_and_preserve_ten_css_pixels ... ok
+test fiverr_grass_smoke::tests::all_capture_views_frame_both_one_metre_join_patches ... ok
+test fiverr_grass_smoke::tests::fixture_config_is_fresh_flat_and_uses_the_main_terrain_contract ... ok
+test fiverr_grass_smoke::tests::original_glb_loads_through_the_named_reader_with_uvs_tangents_and_pbr_images ... FAILED
+test footsteps::tests::cadence_uses_distance_not_fps_and_never_emits_on_spawn_flight_or_teleport ... ok
+test footsteps::tests::landing_uses_highest_airborne_point_and_does_not_fire_at_spawn_or_teleport ... ok
+test footsteps::tests::real_loaded_support_drives_local_contacts_and_air_does_not ... ok
+test hydraulics_smoke::initial_glass_render_tests::exact_original_nodes_pass_before_remote_gallery_is_loaded ... ok
+test hydraulics_smoke::initial_glass_render_tests::nonempty_duplicate_or_unknown_render_nodes_fail ... ok
+test hydraulics_smoke::initial_glass_render_tests::same_count_cannot_replace_missing_original_with_optional_gallery_node ... ok
+test hydraulics_smoke::input_tests::bypass_power_pause_reanchors_without_hiding_a_resumed_stall ... ok
+test hydraulics_smoke::input_tests::bypass_stop_requires_advanced_server_drop_time ... ok
+test hydraulics_smoke::input_tests::glass_flow_detects_one_pipe_disappearing_even_when_other_pipes_remain_visible ... ok
+test hydraulics_smoke::input_tests::glass_flow_requires_distinct_snapshots_spanning_the_full_observation_window ... ok
+test hydraulics_smoke::input_tests::scripted_holds_follow_default_or_rebound_controls_without_repeating_press_edges ... ok
+test hydraulics_smoke::input_tests::stored_glass_remains_visible_during_backpressure_but_every_pipe_must_really_transfer ... ok
+test equipment_smoke::tests::fixture_visits_every_material_and_dyed_capes_then_removes_only_the_cape ... ok
+test hydraulics_smoke::surfaces::tests::surface_fixture_keeps_four_legal_wall_faces_dry_bends_and_external_sources_separate ... ok
+test hydrology_smoke::distributary::tests::fixture_uses_real_distributaries_and_rejects_changed_split_or_mouth ... ok
+test hydrology_smoke::tunnel_tests::roof_probe_stays_inside_two_metre_portal_cover ... ok
+test inventory_benchmark::tests::closed_inventory_focus_guard_allows_window_focus_but_finds_nested_and_detached_inputs ... ok
+test inventory_benchmark::tests::comparison_requires_real_integrated_ui_and_enough_time_without_a_route ... ok
+test inventory_benchmark::tests::extended_workloads_are_bounded_and_do_not_change_default_player_comparison ... ok
+test inventory_benchmark::tests::summary_is_nearest_rank_and_camera_changes_are_rejected ... ok
+test inventory_benchmark::tests::transition_trace_keeps_three_worst_exact_frames_and_waits_for_pipeline_close ... ok
+test inventory_smoke::preview_tests::active_catalog_images_must_have_the_expected_metadata_and_a_real_handle ... ok
+test inventory_smoke::preview_tests::tools_catalog_checks_its_active_previews_without_requiring_stone_or_unrelated_images ... ok
+test kinetic_smoke::tests::connected_gallery_uses_diagonal_ratios_fractional_rpm_and_a_right_angle_pair ... ok
+test kinetic_smoke::tests::finished_icons_use_nondestructive_gpu_readback_and_strip_row_padding ... ok
+test kinetic_smoke::tests::first_wheel_scoop_contacts_a_real_loaded_source_while_the_next_wheel_is_dry ... ok
+test kinetic_smoke::tests::gallery_crusher_is_one_cell_with_an_adjacent_real_crank ... ok
+test kinetic_smoke::tests::native_spans_use_persistent_ownership_four_wood_profiles_and_one_visual_per_loop ... ok
+test kinetic_smoke::tests::neutral_gallery_detaches_atmosphere_before_disabling_gameplay_view ... ok
+test kinetic_smoke::tests::neutral_gallery_mutes_only_world_lights_and_preserves_preview_lighting ... ok
+test kinetic_smoke::tests::releasing_preview_meshes_is_not_machine_asset_growth ... ok
+test main_diagnostics::system_bodies::tests::exact_bodies_retain_conditions_order_and_deferred_commands ... ok
+test main_diagnostics::tests::instrumentation_brackets_schedules_without_changing_their_order ... ok
+test main_diagnostics::tests::style_interval_encloses_application_and_releases_afterward ... ok
+test main_diagnostics::tests::text_content_and_layout_intervals_are_separate_and_release_afterward ... ok
+test main_diagnostics::tests::ui_interval_encloses_existing_reactivity_and_releases_afterward ... ok
+test materials_smoke::castle::tests::gallery_has_all_castle_identities_and_connected_full_depth_arch_pairs ... ok
+test materials_smoke::castle::tests::window_review_has_real_glass_comparison_and_six_clear_placement_examples ... ok
+test materials_smoke::tests::chunk_border_capture_enables_only_its_dedicated_group_and_cleans_up_afterward ... ok
+test materials_smoke::tests::filled_pots_use_real_registered_blocks_supported_textiles_and_exact_journal_contents ... ok
+test materials_smoke::tests::material_fixture_places_every_registered_id_on_its_platform ... ok
+test materials_smoke::tests::material_gallery_uses_real_opening_states_and_both_door_halves ... ok
+test materials_smoke::tests::one_extra_detail_capture_frames_all_four_pots_and_their_carpet_samples ... ok
+test materials_smoke::tests::overview_fits_the_complete_expanding_platform_at_square_or_wider_aspects ... ok
+test materials_smoke::tests::slow_preview_setup_does_not_consume_the_bounded_full_capture_sequence ... ok
+test materials_smoke::tests::specialty_rows_follow_the_registry_without_overwriting_materials_and_stay_on_the_platform ... ok
+test materials_smoke::tests::winter_shapes_follow_the_pots_with_real_saved_snow_and_no_occupied_cap_cells ... ok
+test memory_hints::tests::malformed_or_out_of_bounds_smoke_hints_are_rejected ... ok
+test memory_hints::tests::production_ignores_even_invalid_smoke_hints ... ok
+test memory_hints::tests::smoke_hints_bound_the_requested_allocation_block_range ... ok
+test memory_hints::tests::smoke_without_an_override_keeps_the_performance_default ... ok
+test menu_smoke::pointer_tests::release_uses_fixture_position_after_native_mouse_location_changes ... ok
+test mixer_smoke::tests::integrated_setup_without_frontend_menu_still_configures_and_captures_gameplay ... ok
+test performance_edits::tests::all_operations_remain_in_the_two_fixture_cells_at_negative_coordinates ... ok
+test performance_edits::tests::rapid_edit_mode_is_explicit_and_keeps_water_defaults_and_limits ... ok
+test performance_edits::tests::rapid_edits_reserve_a_cleanup_interval_before_the_benchmark_ends ... ok
+test performance_edits::tests::rapid_edits_wait_for_a_server_granted_source_stack_before_hotbar_selection ... ok
+test performance_edits::tests::rapid_ground_accepts_only_unchanged_blocks_or_natural_grass_to_dirt_decay ... ok
+test performance_route::tests::a_spawn_below_a_tree_canopy_reaches_a_loaded_free_column_before_ascending ... ok
+test performance_route::tests::an_unchanged_flight_speed_does_not_invalidate_the_world_configuration ... ok
+test performance_route::tests::flight_speed_override_preserves_the_comparison_default_and_tests_real_saved_speed ... ok
+test performance_route::tests::injected_gameplay_bindings_retain_held_input_without_repeated_edges ... ok
+test performance_route::tests::route_delay_is_finite_bounded_and_optional ... ok
+test performance_route::tests::route_repeats_identical_outbound_and_return_targets_every_two_minutes ... ok
+test performance_route::tests::runtime_sweeps_require_loaded_cells_and_respect_the_real_shared_collider ... ok
+test performance_route::tests::the_ascent_approach_routes_around_a_wall_without_cutting_its_corner ... ok
+test performance_route::tests::unknown_columns_and_out_of_radius_openings_are_not_treated_as_safe ... ok
+test performance_route::tests::waiting_for_the_route_does_not_freeze_the_benchmark_scenario_early ... ok
+test performance_route::walk::tests::grounded_route_remains_unstarted_until_real_scene_readiness ... ok
+test performance_soak::tests::descriptor_estimates_handle_volume_mips_compressed_blocks_and_unknown_formats ... ok
+test performance_soak::tests::image_aggregation_separates_cpu_data_descriptors_and_font_atlas_overlap ... ok
+test performance_soak::tests::rss_parsing_requires_the_resident_field_and_does_not_overflow ... ok
+test performance_soak::tests::telemetry_accepts_meshes_whose_cpu_vertex_data_has_been_extracted ... ok
+test performance_soak::tests::wall_time_percentiles_use_nearest_rank_without_allocating_a_second_window ... ok
+test pet_commands_smoke::glyph_tests::actual_glyph_positions_are_checked_independently_of_the_ui_node_box ... ok
+test sessions::tests::chunk_progress_waits_for_every_vertical_section_including_negative_coordinates ... ok
+test sessions::tests::failed_startup_stays_on_the_loading_gate_and_reports_the_error_even_after_catalog_finishes ... ok
+test sessions::tests::pending_startup_preload_defers_world_and_network_start_but_cancel_and_quit_still_work ... ok
+test sessions::tests::session_start_waits_for_static_ui_icons_and_fonts_as_well_as_item_previews ... ok
+test sessions::tests::startup_barrier_is_absent_for_headless_and_finished_or_demand_only_clients ... ok
+test sessions::tests::startup_fade_uses_real_frame_time_and_blocks_launch_until_its_last_frame ... ok
+test sessions::tests::startup_paths_keep_real_filenames_and_shorten_unicode_without_breaking_characters ... ok
+test sessions::tests::startup_progress_is_finite_and_clears_after_preloading_instead_of_becoming_world_work ... ok
+test sessions::tests::world_reveal_holds_one_hundred_percent_then_eases_monotonically_to_gameplay ... ok
+test smoke_test::scope_timeline::tests::snapshot_failure_completes_the_pending_trace_instead_of_blocking_exit ... ok
+test smoke_test::scope_timeline::tests::waits_two_frames_and_freezes_the_original_sampling_window_once ... ok
+test smoke_test::tests::benchmark_resolution_compares_physical_pixels_independently_of_dpi ... ok
+test smoke_test::tests::constrained_initial_window_gets_settle_time_but_never_starts_sampling ... ok
+test smoke_test::tests::intentional_gui_resizes_and_client_only_benchmarks_have_no_resolution_contract ... ok
+test smoke_test::tests::resize_or_missing_primary_window_invalidates_an_active_benchmark ... ok
+test status_effect_smoke::tests::all_effect_commands_protect_the_player_before_applying_damage ... ok
+test status_effect_smoke::tests::native_stages_include_each_effect_and_end_cleared ... ok
+test taming_smoke::tests::captures_reject_a_stale_rendered_card_even_after_logical_ownership_changes ... ok
+test taming_smoke::tests::feeding_waits_for_both_replicated_snapshots_without_relaxing_exact_consumption ... ok
+test taming_smoke::tests::fixture_exit_waits_for_two_consecutive_screenshot_free_frames ... ok
+test taming_smoke::tests::fixture_food_and_identity_use_the_real_registered_taming_rules ... ok
+test taming_smoke::tests::prepared_cows_respect_saved_creature_validation_limits ... ok
+test task_pools::tests::malformed_smoke_caps_are_rejected ... ok
+test task_pools::tests::production_ignores_even_invalid_smoke_overrides ... ok
+test task_pools::tests::smoke_caps_only_compute_workers_and_preserves_io_and_async ... ok
+test task_pools::tests::smoke_without_an_override_retains_every_default ... ok
+test train_audio::tests::recordings_decode_and_the_bounded_stereo_mix_has_audible_finite_output ... ok
+test train_audio::tests::stopped_unpowered_trains_are_silent_and_unpowered_coasting_keeps_the_rail_sound ... ok
+test ui_audio::tests::category_sliders_never_change_ui_feedback_but_master_and_mute_do ... ok
+test ui_audio::tests::short_ui_cues_decode_with_quiet_faded_boundaries ... ok
+test water_audio::scene::tests::a_still_water_surface_never_plays_river_or_waterfall_roar ... ok
+test water_audio::scene::tests::dry_world_does_not_create_emitters ... ok
+test water_audio::scene::tests::hearing_origin_is_the_player_head_and_attenuation_is_spatial ... ok
+test water_audio::scene::tests::liquid_spans_are_cached_per_listener_emitter_cell_not_per_frame ... ok
+test water_audio::scene::tests::nearby_water_remains_audible_and_occlusion_queries_are_bounded ... ok
+test water_audio::scene::tests::rock_roof_and_unloaded_cells_attenuate_water_while_open_paths_do_not ... ok
+test water_audio::scene::tests::water_cache_preserves_lower_cell_fallback_and_invalidates_dry_results ... ok
+test water_audio::scene::tests::waterfall_audio_requires_real_loaded_falling_cells_and_is_quieter_than_legacy_roar ... ok
+test water_audio::source::tests::audio_settings_reach_the_decoder_and_silence_each_category ... ok
+test water_audio::source::tests::brook_has_less_high_frequency_energy_than_waterfall_roar ... ok
+test water_audio::source::tests::disabling_soundscape_fades_to_silence ... ok
+test water_audio::source::tests::underwater_reduces_high_frequencies_and_peak_is_bounded ... ok
+test water_contacts::tests::body_entry_scales_with_impact_and_fish_never_bubble ... ok
+test waterfall_smoke::capture_tests::exit_waits_for_preview_jobs_and_in_flight_screenshots ... ok
+test web_constructions_smoke::tests::neutral_gallery_removes_probe_generators_before_disabling_the_original_atmosphere_view ... ok
+test hydrology_smoke::tunnel_tests::native_portal_fixture_has_real_air_and_roof_with_caves_and_trees ... ok
+test daylight_smoke::tests::fixture_torches_commit_loaded_voxels_and_invalidate_the_previous_mesh_epoch ... ok
+test biome_smoke::tests::landscape_gallery_selects_real_surface_and_finite_views_for_each_form ... ok
+
+failures:
+
+---- creature_audio::clips::tests::every_block_routes_to_its_physical_surface_family stdout ----
+
+thread 'creature_audio::clips::tests::every_block_routes_to_its_physical_surface_family' (1069569) panicked at apps/client/src/creature_audio/clips.rs:452:9:
+assertion `left == right` failed
+  left: 306
+ right: 324
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- fiverr_grass_smoke::tests::original_glb_loads_through_the_named_reader_with_uvs_tangents_and_pbr_images stdout ----
+
+thread 'fiverr_grass_smoke::tests::original_glb_loads_through_the_named_reader_with_uvs_tangents_and_pbr_images' (1069633) panicked at apps/client/src/fiverr_grass_smoke.rs:601:35:
+called `Result::unwrap()` on an `Err` value: "No such file or directory (os error 2)"
+
+
+failures:
+    creature_audio::clips::tests::every_block_routes_to_its_physical_surface_family
+    fiverr_grass_smoke::tests::original_glb_loads_through_the_named_reader_with_uvs_tangents_and_pbr_images
+
+test result: FAILED. 208 passed; 2 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.65s
+
+error: test failed, to rerun pass `-p terra-client --bin terra-client`

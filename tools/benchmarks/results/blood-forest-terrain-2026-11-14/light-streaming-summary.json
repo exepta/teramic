@@ -1,0 +1,285 @@
+{
+  "measurement": "Read-only extraction from existing native run; no new native run",
+  "frame_definition": "PostUpdate observer ordinal, not elapsed milliseconds or a GPU-present timestamp",
+  "limitations": [
+    "Distant batch first_frame observes a nonhidden mesh, not fragment visibility or first presented pixels.",
+    "Stage zero local count includes every selected height; same-floor filtering applies only from stage one.",
+    "Initial local PBR appears at observer frame 125\u2013145, not frame 3.",
+    "Later stage deltas use first loaded lamp observation in that stage as baseline, not an exact movement event timestamp.",
+    "No timed moving approach or before/after native comparison was captured.",
+    "Peak pending counts are sampled after processing; zero does not prove no transient intra-frame queue."
+  ],
+  "scenes": [
+    {
+      "scenario": "cemetery",
+      "inspection_status": "passed",
+      "source": "target/grave-sites/run.1eQyOU/captures/cemetery-inspection.json",
+      "sha256": "d346ff2520e82fc7de289d48fca34ae61912a1cdc4d0df9a526714f290e6dba4",
+      "seed": 42042,
+      "structures_revision": 10,
+      "fixture_edits": 0,
+      "stages": [
+        {
+          "distant_sources": 384,
+          "first_distant_batch_frame": 3,
+          "first_loaded_lamp_frame": 2,
+          "first_same_floor_local_light_frame": 145,
+          "furthest_source_m": 118.94010925292969,
+          "loaded_sections": 3179,
+          "local_same_floor_count": 12,
+          "peak_pending_sections": 0,
+          "stage": 0,
+          "loaded_to_distant_observer_frames": 1,
+          "loaded_to_local_observer_frames": 143
+        },
+        {
+          "distant_sources": 384,
+          "first_distant_batch_frame": 891,
+          "first_loaded_lamp_frame": 891,
+          "first_same_floor_local_light_frame": 891,
+          "furthest_source_m": 118.712890625,
+          "loaded_sections": 3179,
+          "local_same_floor_count": 10,
+          "peak_pending_sections": 0,
+          "stage": 1,
+          "loaded_to_distant_observer_frames": 0,
+          "loaded_to_local_observer_frames": 0
+        }
+      ],
+      "discovery": {
+        "cached_sections": 3179,
+        "discovered_emitters": 2765,
+        "fast_rejections": 2751,
+        "pending_sections": 0,
+        "selections": 109,
+        "source_scans": 428
+      },
+      "lighting": {
+        "close": {
+          "cave_blend": 0.0,
+          "exposure_ev100": 13.699999809265137,
+          "local_light_count": 12,
+          "actual_same_floor_count": 10,
+          "pool_budget": 12,
+          "any_volumetric": false,
+          "any_shadow_maps": false
+        },
+        "overview": {
+          "cave_blend": 0.0,
+          "exposure_ev100": 13.699999809265137,
+          "local_light_count": 12,
+          "actual_same_floor_count": 0,
+          "pool_budget": 12,
+          "any_volumetric": false,
+          "any_shadow_maps": false
+        }
+      }
+    },
+    {
+      "scenario": "grave-knight",
+      "inspection_status": "passed",
+      "source": "target/grave-sites/run.1eQyOU/captures/grave-knight-inspection.json",
+      "sha256": "6b63d132d0206a451cb076849a884e2051be76f49dad78b77516e1f1381aa067",
+      "seed": 42042,
+      "structures_revision": 10,
+      "fixture_edits": 0,
+      "stages": [
+        {
+          "distant_sources": 384,
+          "first_distant_batch_frame": 3,
+          "first_loaded_lamp_frame": 2,
+          "first_same_floor_local_light_frame": 141,
+          "furthest_source_m": 116.65654754638672,
+          "loaded_sections": 3182,
+          "local_same_floor_count": 12,
+          "peak_pending_sections": 0,
+          "stage": 0,
+          "loaded_to_distant_observer_frames": 1,
+          "loaded_to_local_observer_frames": 139
+        },
+        {
+          "distant_sources": 384,
+          "first_distant_batch_frame": 890,
+          "first_loaded_lamp_frame": 890,
+          "first_same_floor_local_light_frame": 892,
+          "furthest_source_m": 117.52871704101562,
+          "loaded_sections": 3182,
+          "local_same_floor_count": 5,
+          "peak_pending_sections": 0,
+          "stage": 1,
+          "loaded_to_distant_observer_frames": 0,
+          "loaded_to_local_observer_frames": 2
+        }
+      ],
+      "discovery": {
+        "cached_sections": 3182,
+        "discovered_emitters": 2908,
+        "fast_rejections": 2699,
+        "pending_sections": 0,
+        "selections": 110,
+        "source_scans": 501
+      },
+      "lighting": {
+        "close": {
+          "cave_blend": 1.0,
+          "exposure_ev100": 6.451562881469727,
+          "local_light_count": 12,
+          "actual_same_floor_count": 5,
+          "pool_budget": 12,
+          "any_volumetric": false,
+          "any_shadow_maps": false
+        },
+        "overview": {
+          "cave_blend": 0.0,
+          "exposure_ev100": 13.699999809265137,
+          "local_light_count": 12,
+          "actual_same_floor_count": 0,
+          "pool_budget": 12,
+          "any_volumetric": false,
+          "any_shadow_maps": false
+        }
+      }
+    },
+    {
+      "scenario": "grave-priestess",
+      "inspection_status": "passed",
+      "source": "target/grave-sites/run.1eQyOU/captures/grave-priestess-inspection.json",
+      "sha256": "923cd6dd5f9b948bc10990feb3ee8822cdd30761c6c5e5ea770082009e60f75f",
+      "seed": 42042,
+      "structures_revision": 10,
+      "fixture_edits": 0,
+      "stages": [
+        {
+          "distant_sources": 384,
+          "first_distant_batch_frame": 3,
+          "first_loaded_lamp_frame": 2,
+          "first_same_floor_local_light_frame": 125,
+          "furthest_source_m": 114.86396026611328,
+          "loaded_sections": 3179,
+          "local_same_floor_count": 12,
+          "peak_pending_sections": 0,
+          "stage": 0,
+          "loaded_to_distant_observer_frames": 1,
+          "loaded_to_local_observer_frames": 123
+        },
+        {
+          "distant_sources": 384,
+          "first_distant_batch_frame": 888,
+          "first_loaded_lamp_frame": 888,
+          "first_same_floor_local_light_frame": 893,
+          "furthest_source_m": 73.60706329345703,
+          "loaded_sections": 3179,
+          "local_same_floor_count": 10,
+          "peak_pending_sections": 0,
+          "stage": 1,
+          "loaded_to_distant_observer_frames": 0,
+          "loaded_to_local_observer_frames": 5
+        }
+      ],
+      "discovery": {
+        "cached_sections": 3179,
+        "discovered_emitters": 2838,
+        "fast_rejections": 2769,
+        "pending_sections": 0,
+        "selections": 111,
+        "source_scans": 414
+      },
+      "lighting": {
+        "close": {
+          "cave_blend": 1.0,
+          "exposure_ev100": 6.451562881469727,
+          "local_light_count": 12,
+          "actual_same_floor_count": 10,
+          "pool_budget": 12,
+          "any_volumetric": false,
+          "any_shadow_maps": false
+        },
+        "overview": {
+          "cave_blend": 0.0,
+          "exposure_ev100": 13.699999809265137,
+          "local_light_count": 12,
+          "actual_same_floor_count": 0,
+          "pool_budget": 12,
+          "any_volumetric": false,
+          "any_shadow_maps": false
+        }
+      }
+    },
+    {
+      "scenario": "grave-scholar",
+      "inspection_status": "passed",
+      "source": "target/grave-sites/run.1eQyOU/captures/grave-scholar-inspection.json",
+      "sha256": "8503d04c90129d3ea361ee24376499a211630b143f72696a63ec81e0c71f26e6",
+      "seed": 42042,
+      "structures_revision": 10,
+      "fixture_edits": 0,
+      "stages": [
+        {
+          "distant_sources": 384,
+          "first_distant_batch_frame": 3,
+          "first_loaded_lamp_frame": 2,
+          "first_same_floor_local_light_frame": 143,
+          "furthest_source_m": 112.94898223876953,
+          "loaded_sections": 3179,
+          "local_same_floor_count": 12,
+          "peak_pending_sections": 0,
+          "stage": 0,
+          "loaded_to_distant_observer_frames": 1,
+          "loaded_to_local_observer_frames": 141
+        },
+        {
+          "distant_sources": 384,
+          "first_distant_batch_frame": 893,
+          "first_loaded_lamp_frame": 893,
+          "first_same_floor_local_light_frame": 894,
+          "furthest_source_m": 118.4145278930664,
+          "loaded_sections": 3179,
+          "local_same_floor_count": 4,
+          "peak_pending_sections": 0,
+          "stage": 1,
+          "loaded_to_distant_observer_frames": 0,
+          "loaded_to_local_observer_frames": 1
+        }
+      ],
+      "discovery": {
+        "cached_sections": 3179,
+        "discovered_emitters": 3612,
+        "fast_rejections": 2641,
+        "pending_sections": 0,
+        "selections": 115,
+        "source_scans": 547
+      },
+      "lighting": {
+        "close": {
+          "cave_blend": 1.0,
+          "exposure_ev100": 6.451562881469727,
+          "local_light_count": 12,
+          "actual_same_floor_count": 4,
+          "pool_budget": 12,
+          "any_volumetric": false,
+          "any_shadow_maps": false
+        },
+        "overview": {
+          "cave_blend": 0.0,
+          "exposure_ev100": 13.699999809265137,
+          "local_light_count": 12,
+          "actual_same_floor_count": 0,
+          "pool_budget": 12,
+          "any_volumetric": false,
+          "any_shadow_maps": false
+        }
+      }
+    }
+  ],
+  "asset_audit": {
+    "source": "tools/benchmarks/results/block-graphics-light-loading-2026-11-14/assets-after.json",
+    "sha256": "bd3efd472644a8b164cf0079f50d087c56ed0ca9c19e7e6690091d793ad8e21f",
+    "max_block_id": 399,
+    "definitions": 399,
+    "models": 245,
+    "triangles": 319494,
+    "definition_errors": 0,
+    "geometry_errors": 0,
+    "geometry_warnings": 0
+  }
+}

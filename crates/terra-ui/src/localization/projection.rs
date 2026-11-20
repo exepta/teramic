@@ -153,7 +153,12 @@ fn preserved(root: &str, path: &str, field: &str) -> bool {
     if root == "MultiplayerHud" && field == "name" {
         return true;
     }
-    if root == "KingdomView" && matches!(field, "name" | "parent_name" | "founder") {
+    if matches!(root, "KingdomView" | "KingdomResourcesView")
+        && matches!(field, "name" | "parent_name" | "founder")
+    {
+        return true;
+    }
+    if root == "BuildModeView" && path.is_empty() && field == "title" {
         return true;
     }
     if root == "FullMapView"
@@ -243,7 +248,7 @@ pub(super) fn localize(
                     continue;
                 }
                 let custom_metadata = (custom_item
-                    && matches!(field.as_str(), "name" | "description"))
+                    && matches!(field.as_str(), "name" | "description" | "label"))
                     || (custom_details
                         && matches!(field.as_str(), "detail_name" | "detail_description"));
                 let protected = preserved(root, path, field)

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::grave_lantern_post",
+  "name": "Grave Lantern Post",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 369
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 349
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 193
+        },
+        "count": 1
+      }
+    ]
+  }
+}

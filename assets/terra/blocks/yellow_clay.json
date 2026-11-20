@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": 327,
+  "name": "Yellow Clay",
+  "description": "Yellow Clay for colorful walls, floors and ornamental patterns.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "yellow_clay": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "yellow_clay": "textures/yellow_clay.png"
+  },
+  "face_materials": [
+    "yellow_clay",
+    "yellow_clay",
+    "yellow_clay",
+    "yellow_clay",
+    "yellow_clay",
+    "yellow_clay"
+  ]
+}

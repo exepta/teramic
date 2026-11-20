@@ -136,16 +136,16 @@ pub(crate) fn apply(
                 .insert((Msaa::Sample4, bevy::light::ShadowFilteringMethod::Gaussian));
         }
     }
+    let range = f32::from(config.client.view_distance.max(1)) * 16.0;
     let (enabled, size, cascades) = match graphics.shadow_quality {
         ShadowQuality::Off => (false, 512, 1),
         ShadowQuality::Low => (true, 512, 1),
-        ShadowQuality::Medium => (true, 1024, 3),
-        ShadowQuality::High => (true, 2048, 4),
+        ShadowQuality::Medium => (true, 1024, if range <= 128.0 { 2 } else { 3 }),
+        ShadowQuality::High => (true, 2048, if range <= 256.0 { 3 } else { 4 }),
     };
     if shadow_map.size != size {
         shadow_map.size = size;
     }
-    let range = f32::from(config.client.view_distance.max(1)) * 16.0;
     for (mut light, mut cascade) in &mut sun {
         light.shadow_maps_enabled = enabled;
         *cascade = CascadeShadowConfigBuilder {
@@ -161,9 +161,9 @@ pub(crate) fn apply(
 
 pub(crate) fn shadow_distance(range: f32, quality: ShadowQuality) -> f32 {
     range.min(match quality {
-        ShadowQuality::Off | ShadowQuality::Low => 160.0,
-        ShadowQuality::Medium => 256.0,
-        ShadowQuality::High => 512.0,
+        ShadowQuality::Off | ShadowQuality::Low => 96.0,
+        ShadowQuality::Medium => 192.0,
+        ShadowQuality::High => 256.0,
     })
 }
 
@@ -172,10 +172,10 @@ mod tests {
     use super::*;
     #[test]
     fn shadow_cascades_follow_view_distance_with_a_bounded_quality_budget() {
-        assert_eq!(shadow_distance(320.0, ShadowQuality::High), 320.0);
-        assert_eq!(shadow_distance(512.0, ShadowQuality::High), 512.0);
-        assert_eq!(shadow_distance(320.0, ShadowQuality::Medium), 256.0);
-        assert_eq!(shadow_distance(320.0, ShadowQuality::Low), 160.0);
+        assert_eq!(shadow_distance(320.0, ShadowQuality::High), 256.0);
+        assert_eq!(shadow_distance(512.0, ShadowQuality::High), 256.0);
+        assert_eq!(shadow_distance(320.0, ShadowQuality::Medium), 192.0);
+        assert_eq!(shadow_distance(320.0, ShadowQuality::Low), 96.0);
         assert_eq!(shadow_distance(64.0, ShadowQuality::High), 64.0);
     }
 
@@ -245,8 +245,8 @@ mod tests {
         for (quality, enabled, size, count) in [
             (ShadowQuality::Off, false, 512, 1),
             (ShadowQuality::Low, true, 512, 1),
-            (ShadowQuality::Medium, true, 1024, 3),
-            (ShadowQuality::High, true, 2048, 4),
+            (ShadowQuality::Medium, true, 1024, 2),
+            (ShadowQuality::High, true, 2048, 3),
             (ShadowQuality::Low, true, 512, 1),
         ] {
             let mut graphics = app.world_mut().resource_mut::<GraphicsConfig>();
@@ -333,6 +333,23 @@ mod tests {
                     - (crate::scene::SURFACE_EXPOSURE - 1.5_f32.log2()))
                 .abs()
                     < 1e-5
+            );
+        }
+        app.world_mut()
+            .resource_mut::<GraphicsConfig>()
+            .shadow_quality = ShadowQuality::High;
+        for (view, count) in [(16, 3), (32, 4)] {
+            app.world_mut()
+                .resource_mut::<GameConfig>()
+                .client
+                .view_distance = view;
+            app.update();
+            let cascades = app.world().get::<CascadeShadowConfig>(sun).unwrap();
+            assert_eq!(cascades.bounds.len(), count);
+            assert!((cascades.bounds.last().copied().unwrap() - 256.0).abs() < 0.001);
+            assert_eq!(
+                app.world().resource::<DirectionalLightShadowMap>().size,
+                2048
             );
         }
         let night = crate::scene::daylight::Daylight::at(0.0);

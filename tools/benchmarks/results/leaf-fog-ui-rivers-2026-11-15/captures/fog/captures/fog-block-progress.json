@@ -1,0 +1,93 @@
+{
+  "above_source": [
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0
+  ],
+  "access": "Local",
+  "ambient_volumes": 0,
+  "base": 48,
+  "drift": [
+    3.284043073654175,
+    1.6420215368270874
+  ],
+  "eye": [
+    16.5,
+    53.099998474121094,
+    23.5
+  ],
+  "first_mismatches": [],
+  "focus": [
+    16.5,
+    53.099998474121094,
+    23.5
+  ],
+  "fog_sources": 0,
+  "fog_volumes": 0,
+  "generation": 5,
+  "mismatches": 0,
+  "plan_blocks": 1192,
+  "radius": 8.0,
+  "render_pending_jobs": 0,
+  "render_ready": true,
+  "sampled_cells": 0,
+  "sections": [
+    {
+      "block_revision": 484,
+      "journal_mesh_epoch": 580,
+      "loaded": true,
+      "may_contain_source": false,
+      "rendered_mesh_epoch": 580,
+      "section": [
+        0,
+        3,
+        0
+      ]
+    },
+    {
+      "block_revision": 508,
+      "journal_mesh_epoch": 606,
+      "loaded": true,
+      "may_contain_source": false,
+      "rendered_mesh_epoch": 606,
+      "section": [
+        0,
+        3,
+        1
+      ]
+    },
+    {
+      "block_revision": 528,
+      "journal_mesh_epoch": 628,
+      "loaded": true,
+      "may_contain_source": false,
+      "rendered_mesh_epoch": 628,
+      "section": [
+        1,
+        3,
+        0
+      ]
+    },
+    {
+      "block_revision": 558,
+      "journal_mesh_epoch": 656,
+      "loaded": true,
+      "may_contain_source": false,
+      "rendered_mesh_epoch": 656,
+      "section": [
+        1,
+        3,
+        1
+      ]
+    }
+  ],
+  "source_journal": 0,
+  "source_material": 0,
+  "stage": 7
+}

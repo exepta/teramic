@@ -1,0 +1,11 @@
+.kingdom-resources { position: absolute; top: 12px; width: 344px; display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; color: #f2dfbc; background-color: #241a14ed; border: 1px solid #a7864f; border-radius: 4px; z-index: 117; pointer-events: none; box-sizing: border-box; }
+.kingdom-resource-heading { display: flex; flex-direction: row; gap: 7px; align-items: center; min-width: 0; }
+.kingdom-resource-heading icon { width: 16px; height: 16px; color: #d3b77b; }
+.kingdom-resource-heading p { margin: 0; min-width: 0; font-size: 12px; line-height: 17px; color: #eed29b; text-wrap: wrap; }
+.kingdom-resource-rows { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; min-width: 0; }
+.kingdom-resource { display: flex; flex-direction: row; gap: 4px; align-items: center; min-width: 0; }
+.kingdom-resource img { width: 25px; height: 25px; flex-shrink: 0; }
+.kingdom-resource > div { min-width: 0; display: flex; flex-direction: column; }
+.kingdom-resource p { margin: 0; color: #f3dfb8; font-size: 12px; line-height: 16px; text-wrap: wrap; }
+.kingdom-resource label, .kingdom-resource-status { margin: 0; min-width: 0; color: #bda789; font-size: 10px; line-height: 14px; text-wrap: wrap; }
+@media (max-width: 1200px) { .kingdom-resource-rows { grid-template-columns: repeat(2, 1fr); } }

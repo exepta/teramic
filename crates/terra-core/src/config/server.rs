@@ -16,6 +16,8 @@ pub struct PlayerPermissions {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ServerConfig {
+    /// Explicit server policy; omission preserves the saved world's PvP gamerule.
+    pub pvp: Option<bool>,
     /// Explicit dedicated-server policy overrides the saved world's kingdom settings.
     pub kingdom_rules: Option<crate::kingdom::KingdomRules>,
     /// None uses the saved world's limit, including integrated singleplayer worlds.
@@ -38,6 +40,7 @@ pub struct ServerConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
+            pvp: None,
             kingdom_rules: None,
             natural_mob_limit: None,
             save_directory: None,

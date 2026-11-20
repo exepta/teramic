@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 320,
+  "name": "Lily Pad",
+  "description": "A low green leaf for the calm waters of Spirit Blossom.",
+  "creative_category": "nature",
+  "hardness": 0.3,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/lily_pad.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

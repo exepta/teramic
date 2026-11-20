@@ -15,8 +15,24 @@ use terra_world::{
     },
 };
 
+#[path = "materials_smoke_bodies.rs"]
+mod bodies;
 #[path = "materials_smoke_castle.rs"]
 mod castle;
+#[path = "materials_smoke_flow.rs"]
+mod flow;
+#[path = "fog_block_smoke.rs"]
+mod fog_block;
+#[path = "materials_smoke_foliage.rs"]
+mod foliage;
+#[path = "materials_smoke_particles.rs"]
+mod particles;
+#[path = "materials_smoke_reference.rs"]
+mod reference_palette;
+#[path = "materials_smoke_roads.rs"]
+mod roads;
+#[path = "materials_smoke_tar.rs"]
+mod tar;
 
 const COMPLETE_STAGE: u8 = 16;
 const SETUP_TIMEOUT: Duration = Duration::from_secs(120);
@@ -46,6 +62,38 @@ struct MaterialsSmoke {
 
 pub(crate) fn install(app: &mut App) {
     if !std::env::args().any(|arg| arg == "--smoke-test-materials") {
+        return;
+    }
+    if std::env::var_os("TERRA_FLOW_INSPECT").is_some() {
+        flow::install(app);
+        return;
+    }
+    if std::env::var_os("TERRA_WATER_BODIES_INSPECT").is_some() {
+        bodies::install(app);
+        return;
+    }
+    if std::env::var_os("TERRA_PARTICLE_INSPECT").is_some() {
+        particles::install(app);
+        return;
+    }
+    if std::env::var_os("TERRA_FOG_BLOCK_INSPECT").is_some() {
+        fog_block::install(app);
+        return;
+    }
+    if std::env::var_os("TERRA_FOLIAGE_INSPECT").is_some() {
+        foliage::install(app);
+        return;
+    }
+    if std::env::var_os("TERRA_ROADS_INSPECT").is_some() {
+        roads::install(app);
+        return;
+    }
+    if std::env::var_os("TERRA_REFERENCE_PALETTE_INSPECT").is_some() {
+        reference_palette::install(app);
+        return;
+    }
+    if std::env::var_os("TERRA_TAR_INSPECT").is_some() {
+        tar::install(app);
         return;
     }
     let now = Instant::now();

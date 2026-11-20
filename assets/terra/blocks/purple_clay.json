@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": 332,
+  "name": "Purple Clay",
+  "description": "Purple Clay for colorful walls, floors and ornamental patterns.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "purple_clay": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "purple_clay": "textures/purple_clay.png"
+  },
+  "face_materials": [
+    "purple_clay",
+    "purple_clay",
+    "purple_clay",
+    "purple_clay",
+    "purple_clay",
+    "purple_clay"
+  ]
+}

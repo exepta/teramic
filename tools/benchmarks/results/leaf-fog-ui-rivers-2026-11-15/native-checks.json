@@ -1,0 +1,47 @@
+{
+  "client_sha256": "8d1b5d8c119465e339477a1a5f9e9693b484aa1cbf9cfbccab252aedf10f9738",
+  "foliage_textures_sha256": {
+    "assets/terra/blocks/textures/foliage/apple_cluster.png": "d01b9f3cdc03d940b1d4c0536c6e5a84e91ff5d777072fbce654d78837ed34f1",
+    "assets/terra/blocks/textures/foliage/apple_side.png": "19796cb720a8f05149ad22d8eea79849812fb1a79d2b3f7dd29eab775545d845",
+    "assets/terra/blocks/textures/foliage/apple_top.png": "98e44978fcbf95bc1cf5d20f9a6e087033f7982000652085a0ceee92fa75ee1e",
+    "assets/terra/blocks/textures/foliage/autumn_cluster.png": "8118e47f430b992559a045f5c04db90116076ddd783b33fad74fb49b781e219b",
+    "assets/terra/blocks/textures/foliage/autumn_side.png": "8db9e7224a81e960e30b8e8ddf188b59e6abf1d44759fe3298f50e2d0b2aa0d6",
+    "assets/terra/blocks/textures/foliage/autumn_top.png": "1e5760b9b165610dd0c1a196233b9bffbd52a6757a59a5284c22e17b9123e9d3",
+    "assets/terra/blocks/textures/foliage/birch_cluster.png": "1c7bbb877177fa0068025ec26a668d9ee043f7496b74774e20adc52e1152322a",
+    "assets/terra/blocks/textures/foliage/birch_side.png": "0ea08814bb6095f9ac3ae5981caeca2a06a5c48dfc17991286c10ce57c3d9eac",
+    "assets/terra/blocks/textures/foliage/birch_top.png": "600d40033ef76edfc47fc30f831d7ecb983f10b6b0631dcc338faf3d3e3be4cb",
+    "assets/terra/blocks/textures/foliage/blood_cluster.png": "87cc6e422ca9011a155507e614e7874abf3f80c787a33365b91844995c2062ab",
+    "assets/terra/blocks/textures/foliage/blood_side.png": "110eada8362fe4a411af22d8bf80907c1deafb917633b3290a05fd9efc41a900",
+    "assets/terra/blocks/textures/foliage/blood_top.png": "06cfa230091657ead2a92a88e07d45d918b4f5e9564bd755b7b4e2ba9564a2ce",
+    "assets/terra/blocks/textures/foliage/cherry_pink_cluster.png": "dfef66d45e64bbcc4482ee86cb4ec14214038aac64079acdc9b7494e3d559688",
+    "assets/terra/blocks/textures/foliage/cherry_pink_side.png": "0c66405212f1d17366d36433c3780579aa1347e76b19115b8e4cf8e0a6ce39c8",
+    "assets/terra/blocks/textures/foliage/cherry_pink_top.png": "b0b587a686e405d5663717184eabccef1ee93ed60a567f99191f3a287e9723a7",
+    "assets/terra/blocks/textures/foliage/cherry_white_cluster.png": "31df0d988783c8e1f7236cd793926b0a391e01c353c762bdd6446a64344bddfb",
+    "assets/terra/blocks/textures/foliage/cherry_white_side.png": "e3f1dc872597029a30e1026454b3c556cfea5994f936a3cd8d72c6146985651c",
+    "assets/terra/blocks/textures/foliage/cherry_white_top.png": "8ee82d522031b5e7778fcde58868183fb4c8c7b5f41f3678d66487948f6861fe",
+    "assets/terra/blocks/textures/foliage/oak_cluster.png": "2b93523c9ea2bfa5cc594e00ed7f87079cb66f9bce527e8ffa42a991241351f6",
+    "assets/terra/blocks/textures/foliage/oak_side.png": "be9fff56e66d513b98678473af420d4ddfd5e8b0123febc15167c70b02e6e2b3",
+    "assets/terra/blocks/textures/foliage/oak_top.png": "086e04691f553a2412879375957109826f2106359a1b9cf1558b70f3611fbb36",
+    "assets/terra/blocks/textures/foliage/spirit_lavender_cluster.png": "534ae37b0617e44d6f63994c711be7212c1b27bf834136b473714ee704c5447d",
+    "assets/terra/blocks/textures/foliage/spirit_lavender_side.png": "155cd7eb13201699376972b2b2eb1579e658d47e41d0e8f2d3ff1fb1fa05d02d",
+    "assets/terra/blocks/textures/foliage/spirit_lavender_top.png": "17adb07463be5fc81005b3e2b1f917462a8970d0cf869c0ffbfd64c99d3816dd",
+    "assets/terra/blocks/textures/foliage/spirit_pearl_cluster.png": "88c88130c61b76edecf5d52c2df2f1c762c906c2194f47d08da08e4ce148c87c",
+    "assets/terra/blocks/textures/foliage/spirit_pearl_side.png": "f9cf3fad159e1c16d34b8bda387b77990879257bf7d07cb106980bcc111ae70a",
+    "assets/terra/blocks/textures/foliage/spirit_pearl_top.png": "38a8506536b9a1ff8c59ace70a833ac7858732910cd22bc45eef73a4b11fd845",
+    "assets/terra/blocks/textures/foliage/spirit_pink_cluster.png": "ed1f0ddc360ee0c1a23531a5ee625352cb7864a5eecf4b1b213b9a02bca5ddaa",
+    "assets/terra/blocks/textures/foliage/spirit_pink_side.png": "e4ab8f348224e989403a59546ec0543d67d544574ae895ec2c039a1dfa7d4ae3",
+    "assets/terra/blocks/textures/foliage/spirit_pink_top.png": "60257a892f85ccf00047e1af1407909dd2a88785b44e0408ad91c6a6cceeb56a",
+    "assets/terra/blocks/textures/foliage/spruce_cluster.png": "c4c9244599577c655c9080138119c629b23762359cc18b174497e9ca7f8a90c3"
+  },
+  "runs": [
+    {
+      "name": "native-fog",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-fog-block.sh"
+      ],
+      "exit_code": 1,
+      "seconds": 180.87
+    }
+  ]
+}

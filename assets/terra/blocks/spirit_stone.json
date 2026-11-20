@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 308,
+  "name": "Spirit Stone",
+  "description": "Lilac stone with natural cyan mineral veins.",
+  "creative_category": "terrain",
+  "hardness": 1.4,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "spirit_stone": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "spirit_stone": "textures/spirit_stone.png"
+  },
+  "face_materials": [
+    "spirit_stone",
+    "spirit_stone",
+    "spirit_stone",
+    "spirit_stone",
+    "spirit_stone",
+    "spirit_stone"
+  ],
+  "surface": "rock"
+}

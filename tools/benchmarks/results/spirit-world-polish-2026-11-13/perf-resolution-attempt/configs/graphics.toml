@@ -1,0 +1,12 @@
+width = 1920
+height = 1080
+window_mode = "windowed"
+render_distance = 5
+fov = 55.0
+vsync = false
+fps_limit = 0
+shadow_quality = "high"
+water_reflections = true
+weather = "clear"
+weather_intensity = 0.0
+debug_overlay = false

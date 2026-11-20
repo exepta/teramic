@@ -1,0 +1,21 @@
+{
+  "center": [
+    -2867,
+    29,
+    -4040
+  ],
+  "ecology_revision": 5,
+  "extra": {
+    "material": 316
+  },
+  "fixture_edits": 0,
+  "scene": "spirit-props",
+  "seed": 42042,
+  "source_cells": [
+    [
+      -2867,
+      29,
+      -4040
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::overgrown_grave_stone",
+  "name": "Overgrown Stone",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 342
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 341
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "block": 54
+        },
+        "count": 1
+      }
+    ]
+  }
+}

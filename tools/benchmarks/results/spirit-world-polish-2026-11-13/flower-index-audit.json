@@ -1,0 +1,50 @@
+{
+  "scope": "Six untextured flower models only; same float32 triangle positions and material assignments; analytic smooth normals",
+  "unchanged_json_png_files_including_mtime": 1328,
+  "models": [
+    {
+      "model": "glowing_spirit_flowers",
+      "vertices_before": 3816,
+      "vertices_after": 1332,
+      "triangles": 1704,
+      "float32_triangle_geometry_sha256": "83457413fe9a04e70f81e93efc0244ddb19a205eeaf09005a5807e48456ae41c"
+    },
+    {
+      "model": "blossom_bush",
+      "vertices_before": 9024,
+      "vertices_after": 2400,
+      "triangles": 4016,
+      "float32_triangle_geometry_sha256": "930d840c07133688e5a3232c670215fe6c4dcec9efb9d33d248ba1702f343dbe"
+    },
+    {
+      "model": "spirit_lantern_post",
+      "vertices_before": 3504,
+      "vertices_after": 1848,
+      "triangles": 1576,
+      "float32_triangle_geometry_sha256": "1944a65e9f1c4c28d8b4afbf248687692de20a5aab8a83579cd6c9342a9b72cc"
+    },
+    {
+      "model": "lotus_flower",
+      "vertices_before": 2748,
+      "vertices_after": 1092,
+      "triangles": 1240,
+      "float32_triangle_geometry_sha256": "a0f383d147c59c8b5a3ff9f80fb96b4549cb98bdc08598e1a30c35601cc898e9"
+    },
+    {
+      "model": "hanging_blossom_lantern",
+      "vertices_before": 3216,
+      "vertices_after": 1560,
+      "triangles": 1444,
+      "float32_triangle_geometry_sha256": "aff27cf1899007ff4c9215b3b892c9ce702dd721e09c352ba5bcd5931ca01d0e"
+    },
+    {
+      "model": "petal_ground_cover",
+      "vertices_before": 7560,
+      "vertices_after": 1764,
+      "triangles": 3360,
+      "float32_triangle_geometry_sha256": "5268e8dddaae10685aa032081bb02bd8a3ed31f92bec183a4d0e05abd0ef3b02"
+    }
+  ],
+  "geometry_regression_tests": "10 passed, including analytic normal direction, finite orthonormal tangent frames, outward winding, bounds, index ranges, textured-material rejection",
+  "idempotence": "Six flower models reproduced byte-identically in a temporary directory without modifying live assets"
+}

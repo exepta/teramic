@@ -8512,6 +8512,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "terra-building-editor"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "serde",
+ "serde_json",
+ "terra-core",
+ "terra-network",
+ "terra-physics",
+ "terra-player",
+ "terra-render",
+ "terra-ui",
+ "terra-voxel",
+ "terra-world",
+ "tilt-ui",
+ "tilt-ui-build",
+]
+
+[[package]]
 name = "terra-client"
 version = "0.1.0"
 dependencies = [
@@ -8594,6 +8613,7 @@ name = "terra-render"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "naga",
  "serde",
  "serde_json",
  "terra-core",

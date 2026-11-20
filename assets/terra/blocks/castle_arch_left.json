@@ -12,7 +12,10 @@
   "resistance": 12,
   "required_tool": "pickaxe",
   "mining_level": 1,
-  "textures": {},
+  "textures": {
+    "stone_1": "textures/block_palette/stone.png",
+    "arch_join": "textures/block_palette/stone.png"
+  },
   "collision_boxes": [
     {
       "minimum": [
@@ -413,26 +416,26 @@
   ],
   "materials": {
     "stone_1": {
-      "texture_pattern": "stone",
       "base_color": [
         0.97,
         0.97,
         0.97,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     },
     "arch_join": {
-      "texture_pattern": "stone",
       "base_color": [
         0.99,
         0.99,
         0.99,
         1
       ],
-      "roughness": 0.99,
-      "reflectance": 0.08
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/stone_normal.png"
     }
   }
 }

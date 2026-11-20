@@ -73,6 +73,18 @@ pub(crate) struct SideCap {
     pub height: f32,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct FoliageClusterMaterials {
+    pub leaves: usize,
+    pub needles: Option<usize>,
+}
+
+impl FoliageClusterMaterials {
+    pub(crate) fn slots(self) -> impl Iterator<Item = usize> {
+        std::iter::once(self.leaves).chain(self.needles)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct PropMaterials {
     pub crop: usize,
@@ -98,12 +110,16 @@ pub(crate) struct TemplateSet {
     pub animated_chests: bool,
     pub block_details: terra_core::BlockDetailConfig,
     pub blocks: HashMap<u16, BlockTemplate>,
+    /// Explicit cube PBR normal maps need the same tangent frame as imported art.
+    pub normal_mapped_materials: std::collections::HashSet<usize>,
     /// Tileable PBR cube fallback for authored face-group terrain, shared by every section.
     pub cube_lods: HashMap<u16, BlockTemplate>,
     /// Opaque authored cubes validated by the loader; only these can replace detail shadows.
     pub opaque_cube_lods: std::collections::HashSet<u16>,
     pub frame_materials: HashMap<u16, usize>,
     pub ore_materials: HashMap<u16, usize>,
+    /// Authored complete sprays; far/low geometry keeps ordinary face materials.
+    pub foliage_clusters: HashMap<u16, FoliageClusterMaterials>,
     pub prop_materials: PropMaterials,
     pub item_materials: ItemMaterials,
     pub torch_palette: HashMap<usize, [f32; 4]>,
@@ -219,5 +235,21 @@ impl TemplateSet {
             .get(&15)
             .is_some_and(|block| block.face_materials.contains(&slot))
             || self.frame_materials.get(&15) == Some(&slot)
+    }
+
+    pub(crate) fn bile_material(&self, slot: usize) -> bool {
+        self.blocks
+            .get(&terra_core::bile::FLUID)
+            .is_some_and(|block| block.face_materials.contains(&slot))
+    }
+
+    pub(crate) fn fog_material(&self, slot: usize) -> bool {
+        [399, terra_core::fog_blocks::MATERIAL]
+            .into_iter()
+            .any(|id| {
+                self.blocks
+                    .get(&id)
+                    .is_some_and(|block| block.face_materials.contains(&slot))
+            })
     }
 }

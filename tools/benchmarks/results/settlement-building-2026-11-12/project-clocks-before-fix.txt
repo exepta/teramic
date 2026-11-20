@@ -1,0 +1,19 @@
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Finished `test` profile [optimized + debuginfo] target(s) in 25.71s
+     Running unittests src/lib.rs (target/debug/deps/terra_world-241b0ee1f61de9ef)
+
+running 1 test
+
+thread 'building_jobs::tests::five_onsite_projects_each_earn_the_full_elapsed_work_time' (316) panicked at crates/terra-world/src/building_jobs/tests.rs:1181:9:
+project1 earned1.600000023841858s instead of2s
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test building_jobs::tests::five_onsite_projects_each_earn_the_full_elapsed_work_time ... FAILED
+
+failures:
+
+failures:
+    building_jobs::tests::five_onsite_projects_each_earn_the_full_elapsed_work_time
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1342 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p terra-world --lib`

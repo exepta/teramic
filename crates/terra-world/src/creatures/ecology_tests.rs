@@ -70,6 +70,62 @@ fn animal(kind: Kind, p: [f64; 3]) -> Creature {
         needs: CreatureNeeds::full(kind),
     }
 }
+
+#[test]
+fn cached_seasonal_climate_changes_real_animal_needs_and_bee_nest_priority() {
+    let (terrain, mut chunks, mut journal) = fixture();
+    let column = crate::SectionGenerator::new(terrain.clone())
+        .prepare_column([0, 0], false)
+        .unwrap();
+    let height = column.surface_at(4, 4).unwrap().height;
+    chunks.set_prepared_column_for_test([0, 0], Some(std::sync::Arc::new(column)));
+    let p = [4.5, height + 1., 4.5];
+    let mut weather = terra_core::WorldWeather::default();
+    weather.set_pattern(terra_core::WeatherPattern::Clear);
+    weather.advance(30., 1);
+    journal.weather = Some(weather);
+    let mut cow = animal(Kind::Cow, p);
+    let mut bee = animal(Kind::Bee, p);
+    journal.clock = Some(terra_core::WorldClock {
+        day: 7,
+        ..Default::default()
+    });
+    let food = cow.needs.food;
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    assert!(!climate_step(&mut bee, &h, 0.2));
+    for _ in 0..100 {
+        climate_step(&mut cow, &h, 0.2);
+    }
+    assert_eq!(cow.needs.food, food);
+    journal.clock.as_mut().unwrap().day = 21;
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    assert!(
+        climate_step(&mut bee, &h, 0.2),
+        "Cold bees must return to their nest"
+    );
+    for _ in 0..100 {
+        climate_step(&mut cow, &h, 0.2);
+    }
+    assert!(
+        cow.needs.food < food - 0.05,
+        "Winter increases real forage demand"
+    );
+    let mut cave_cow = animal(Kind::Cow, [p[0], height - 8., p[2]]);
+    let initial = cave_cow.needs;
+    assert!(!climate_step(&mut cave_cow, &h, 0.2));
+    assert_eq!(
+        cave_cow.needs, initial,
+        "Surface seasons must not leak into cave ecology"
+    );
+}
 #[test]
 fn flight_detours_around_a_trunk_without_landing_or_entering_solids() {
     let (terrain, mut chunks, journal) = fixture();

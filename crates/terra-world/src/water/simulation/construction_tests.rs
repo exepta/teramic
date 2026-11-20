@@ -175,7 +175,7 @@ fn slab_ring(chunks: &mut ChunkStore, journal: &mut EditJournal, origin: [i64; 3
 }
 
 #[test]
-fn finite_half_height_water_stays_inside_the_solid_half_of_a_slab_ring_across_xyz_sections_and_reload()
+fn source_fed_half_height_water_stays_inside_the_solid_half_of_a_slab_ring_across_sections_and_reload()
  {
     for origin in [[15, 16, 15], [-1, -16, -1]] {
         let (terrain, mut chunks, mut journal) = fixture(origin);
@@ -192,7 +192,7 @@ fn finite_half_height_water_stays_inside_the_solid_half_of_a_slab_ring_across_xy
                     cell,
                     FluidCell {
                         amount: 4,
-                        source: false,
+                        source: cell == interior[0],
                         flow: [0; 2],
                     },
                 )
@@ -216,7 +216,13 @@ fn finite_half_height_water_stays_inside_the_solid_half_of_a_slab_ring_across_xy
         advance(&terrain, &chunks, &mut restored, 64);
         assert_eq!(restored.fluid_cells().collect::<BTreeMap<_, _>>(), before);
         assert_eq!(amount(&restored), 16);
-        assert!(restored.fluid_cells().all(|(_, fluid)| !fluid.source));
+        assert_eq!(
+            restored
+                .fluid_cells()
+                .filter(|(_, fluid)| fluid.source)
+                .count(),
+            1
+        );
     }
 }
 
@@ -318,7 +324,9 @@ fn source_water_fills_connected_fence_gaps_and_the_air_behind_them_at_one_height
             put(&mut chunks, &mut journal, fence, 90, 0);
         }
         let behind = [origin[0] + 2, origin[1], origin[2]];
-        advance(&terrain, &chunks, &mut journal, 64);
+        // This basin includes34 ordinary cells. One source has to pay every
+        // height increment before its distant rear surface reaches equilibrium.
+        advance(&terrain, &chunks, &mut journal, 320);
         for fence in fences {
             let water = chunks.fluid_cell_at(&terrain, &journal, fence, 90);
             assert_eq!(water.amount, 8);

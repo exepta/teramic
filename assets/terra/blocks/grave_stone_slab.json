@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 344,
+  "name": "Stone Floor Slab",
+  "description": "Stone Floor Slab for cemetery paths and crypt floors.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/grave_stone_slab.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/grave_stone_slab.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.25,
+        1
+      ]
+    }
+  ]
+}

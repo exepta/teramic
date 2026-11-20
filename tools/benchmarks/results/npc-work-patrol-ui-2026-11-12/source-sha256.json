@@ -1,0 +1,22 @@
+{
+  "apps/client/src/npc_work_direct_smoke.rs": "e4dc6a9aa999155f30d6d65ec86e4005d3c7636267ee310c62c464dbc9edd641",
+  "crates/terra-core/src/kingdom/remote.rs": "89c52701a1a56cf3ad1d15152dec7e22f4aaf4f9a0a960f085870fe00420c7bf",
+  "crates/terra-network/src/server_npc_work.rs": "734229c112d92ec5d004e7b031b2bb65787d25bd0db6f79e71bfb506432f82b0",
+  "crates/terra-network/src/server_kingdoms.rs": "187d55502ca9e3a0dba14376f9478860ba1d7b86b1a8750e48e523110b21fc64",
+  "crates/terra-player/src/interaction/mining.rs": "bd8ce8ad5e895c3385c1eebf3e78cda3356917e68b6d7383608ed14b745d231b",
+  "crates/terra-render/src/scene/caves/lights/distant.rs": "79964d9ed99c036042d9e95f79259be65926fcabb236c9bd0869372ba09058c0",
+  "crates/terra-render/src/scene/caves/lights/updates.rs": "a5d45541c5da828906b2bf49476aad7583a1322527f4dc56e0eef1d17107e65f",
+  "crates/terra-world/src/creatures/villagers/patrol.rs": "1abaad5cf9f92b4e36c34533120c001ffa70aa5031284740a1e6f1ea2cc92c74",
+  "crates/terra-world/src/creatures/support.rs": "f938a982099723cb60cfa01a81b15edea4837dc37662c25d1d626b18010f7b28",
+  "crates/terra-ui/src/npc_work.rs": "cdf41a4c3d8f1a0e1876ba250ef670e9fc797eeb97262d0028dddbb994939f2c",
+  "crates/terra-ui/src/npc_work/direct.rs": "311c2e11ee0b89f0fe9876410bfd82dcc1952be1d4461dd36f8c30d576776281",
+  "crates/terra-ui/src/frames/labels.rs": "38bc875e0520dd6fa11be8da3e8c24d1332693b5b9adfbc828aa51d75dd253c0",
+  "crates/terra-ui/src/kingdom.rs": "d68e7a565a9cff74c125d65e957526eb1046ff905efa5920636b341e10fdb38b",
+  "src-ui/components/npc-work-dialog/npc-work-dialog.component.html": "f042823bd97302c5041c4a82fe779f020d77f5cf1ffe573336278eaacb70f6df",
+  "src-ui/components/npc-work-dialog/npc-work-dialog.component.css": "ad490f7863896f0ebfc9b0eba8af0050805b43206b112df90686956615af2831",
+  "src-ui/components/npc-work-panel/npc-work-panel.component.html": "52f62707136d69be5130192661ce0f3b33dbe8366c51265a520018a4ada8b06d",
+  "src-ui/components/npc-work-panel/npc-work-panel.component.css": "d29a5a9d6e7fe306f7196632f8a4413a6c995a5db55a5a00b642835cfc7226b9",
+  "src-ui/components/kingdom-menu/kingdom-menu.component.css": "b6577a64f38bb2211df87f8574b91f8ea3aca6fd92927862d5e4997c41987839",
+  "src-ui/styles/responsive-surfaces.css": "0976698c590a54e2ebabcd0bff7f50b7bdc26430fe1afa5d2d57c3a304db7994",
+  "tools/benchmarks/run-npc-direct.sh": "0dd459653502ee976ff6e3588c157eb4a2035ac40037f4fd25566942e571cc6e"
+}

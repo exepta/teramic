@@ -1,0 +1,12 @@
+{
+  "apps/client/src/saved_construction_smoke.rs": "7cf279cd740125b8d83e27569fa4c5f070416e58b2a499f808bd965b909ddc00",
+  "apps/client/src/bootstrap.rs": "d26474f815a9efeca4326581bbcf8914e1453b4647709b51b85bc4b8dc5ffd48",
+  "apps/client/src/main.rs": "011074a1945badeeddecfaddfc1e0c84e5dd12e390d6901ca6695faf1b9c7e17",
+  "apps/server/examples/inspect_building_world.rs": "302965407f31d33ecd8c0192bcb707c7def775bafe0f1653847ca1f6107c538d",
+  "tools/benchmarks/run-saved-construction.sh": "5306b35d965dcebf9cdbbc60a9b744b4721d3b1761f363dd7a712a6bc4154061",
+  "crates/terra-world/src/building_jobs/planning.rs": "c65a27c3f31ce99b08c99e47eef959d6ea5cdb6cc461d457d1c4164e1c3253d4",
+  "crates/terra-world/src/building_jobs/simulation.rs": "28f981370fb4dd8b83db08bc1dea4bd9ac774e359b3270e152175553297a4613",
+  "crates/terra-world/src/building_jobs/tests.rs": "1e6913edd79379476ee85dc2afd18a8e94ae0a8892e353ee8888ae0a2fa2cd71",
+  "crates/terra-world/src/building_jobs/tests/sites.rs": "94280eee8d61ad77f5a1ecfdf5b8e5c165c1de48e4e1893124857a49cd423000",
+  "crates/terra-world/src/building_jobs/tests/prepared_ground.rs": "2e0cdec973cade2e1644618b22c52ad7ba7f1661ade64f55103e00fe8cd976d7"
+}

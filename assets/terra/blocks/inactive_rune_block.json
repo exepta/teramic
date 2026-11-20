@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": 398,
+  "name": "Inactive Rune Block",
+  "description": "Ancient runes lie dark on the surface of this stone.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "inactive_rune_block": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "inactive_rune_block": "textures/inactive_rune_block.png"
+  },
+  "face_materials": [
+    "inactive_rune_block",
+    "inactive_rune_block",
+    "inactive_rune_block",
+    "inactive_rune_block",
+    "inactive_rune_block",
+    "inactive_rune_block"
+  ]
+}

@@ -459,7 +459,7 @@ impl DetailTileSnapshot {
             height: (position[1] + 1).clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16,
             water_depth: depth,
             known: true,
-            canopy: matches!(material, 7..=9 | 132 | 133),
+            canopy: terra_voxel::MaterialId::FOLIAGE.contains(&material),
             ..Default::default()
         };
         if let Some(surface) = self

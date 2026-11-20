@@ -1,0 +1,57 @@
+   Compiling terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel)
+   Compiling terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+   Compiling terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+   Compiling terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+   Compiling terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+   Compiling terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+   Compiling terra-player v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-player)
+   Compiling terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+   Compiling terra-render v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-render)
+   Compiling terra-client v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/client)
+   Compiling terra-building-editor v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/building-editor)
+error[E0425]: cannot find value `is_chest` in module `terra_core::containers`
+  --> crates/terra-world/src/building_jobs/resources.rs:54:54
+   |
+54 |                 .is_some_and(terra_core::containers::is_chest)
+   |                                                      ^^^^^^^^ not found in `terra_core::containers`
+
+error[E0425]: cannot find function `is_chest` in module `terra_core::containers`
+  --> crates/terra-world/src/building_jobs/resources.rs:88:62
+   |
+88 |             .is_some_and(|material| !terra_core::containers::is_chest(material))
+   |                                                              ^^^^^^^^ not found in `terra_core::containers`
+
+error[E0425]: cannot find function `is_chest` in module `terra_core::containers`
+    --> crates/terra-world/src/building_jobs/simulation.rs:1041:36
+     |
+1041 |         if terra_core::containers::is_chest(c.material)
+     |                                    ^^^^^^^^ not found in `terra_core::containers`
+
+error[E0425]: cannot find value `is_chest` in module `terra_core::containers`
+  --> crates/terra-world/src/building_jobs/supplies.rs:17:58
+   |
+17 |                     .is_some_and(terra_core::containers::is_chest)
+   |                                                          ^^^^^^^^ not found in `terra_core::containers`
+
+error[E0425]: cannot find value `is_chest` in module `terra_core::containers`
+   --> crates/terra-world/src/edits/automation.rs:185:50
+    |
+185 |             .is_some_and(terra_core::containers::is_chest)
+    |                                                  ^^^^^^^^ not found in `terra_core::containers`
+
+error[E0425]: cannot find function `is_chest` in module `terra_core::containers`
+   --> crates/terra-world/src/edits/automation.rs:285:36
+    |
+285 |         if terra_core::containers::is_chest(material) {
+    |                                    ^^^^^^^^ not found in `terra_core::containers`
+
+error[E0425]: cannot find value `is_chest` in module `terra_core::containers`
+   --> crates/terra-world/src/edits/automation.rs:374:50
+    |
+374 |             .is_some_and(terra_core::containers::is_chest)
+    |                                                  ^^^^^^^^ not found in `terra_core::containers`
+
+For more information about this error, try `rustc --explain E0425`.
+error: could not compile `terra-world` (lib test) due to 7 previous errors
+warning: build failed, waiting for other jobs to finish...

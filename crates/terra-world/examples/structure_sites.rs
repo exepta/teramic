@@ -20,7 +20,12 @@ fn population(terrain: &TerraGenerator, region: [i64; 2]) -> String {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let seeds = [42042, 1337, 99173];
+    let royal_only = std::env::var_os("TERRA_ROYAL_ONLY").is_some();
+    let seeds: &[u64] = if royal_only {
+        &[42042]
+    } else {
+        &[42042, 1337, 99173]
+    };
     let base = if let Some(path) = std::env::var_os("TERRA_STRUCTURE_CONFIG") {
         let loaded = WorldConfig::load(path)?;
         println!(
@@ -35,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         WorldConfig::default()
     };
-    for seed in seeds {
+    for &seed in seeds {
         let mut config = base.clone();
         config.seed.0 = seed;
         let terrain = TerraGenerator::new(config)?;
@@ -66,12 +71,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             continue;
         }
-        let mut found = [false; 7];
+        let mut found = [royal_only; 9];
+        if royal_only {
+            found[5] = false;
+            found[6] = false;
+        }
         let started = std::time::Instant::now();
-        'regions: for radius in 0_i64..=12 {
+        'regions: for radius in 0_i64..=if royal_only { 64 } else { 12 } {
             for z in -radius..=radius {
                 for x in -radius..=radius {
                     if radius > 0 && x.abs() != radius && z.abs() != radius {
+                        continue;
+                    }
+                    if royal_only && terrain.royal_site_candidate([x, z]).is_none() {
                         continue;
                     }
                     let Some(site) = terrain.structure_site([x, z]) else {
@@ -85,6 +97,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         (StructureKind::Mine, _) => 4,
                         (StructureKind::Kingdom, _) => 5,
                         (StructureKind::Outpost, _) => 6,
+                        (StructureKind::Cemetery, _) => 7,
+                        (StructureKind::GraveDungeon, _) => 8,
                     };
                     if !found[index] {
                         println!(

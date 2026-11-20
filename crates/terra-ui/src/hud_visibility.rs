@@ -81,6 +81,7 @@ fn passive_root(id: Option<&ElementId>, classes: Option<&ElementClasses>, chat_o
             | "rail-build-hint"
             | "train-driver-hud"
             | "train-blueprint-hint"
+            | "work-area-overlay"
             | "mini-map"
             | "survival-hud"
             | "survival-hit"
@@ -307,8 +308,12 @@ mod tests {
     #[test]
     fn f2_hides_train_telemetry_and_build_hints_but_keeps_the_workshop_interactive() {
         let mut app = app();
-        let passive = ["train-driver-hud", "train-blueprint-hint"]
-            .map(|id| node(app.world_mut(), id, Visibility::Inherited));
+        let passive = [
+            "train-driver-hud",
+            "train-blueprint-hint",
+            "work-area-overlay",
+        ]
+        .map(|id| node(app.world_mut(), id, Visibility::Inherited));
         let workshop = node(
             app.world_mut(),
             "train-workshop-panel",

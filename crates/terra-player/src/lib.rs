@@ -3,10 +3,13 @@ pub mod camera;
 pub mod interaction;
 mod plugin;
 pub use camera::{
-    CameraInputState, CameraLook, CameraPerspective, CaptureRequest, ControllerMode, PlayerBody,
-    PlayerControllerStatus, PlayerGrounded, PlayerIdentity, PlayerInputBlock, TerraCamera,
+    CameraInputState, CameraLook, CameraPerspective, CaptureRequest, ConstructionCamera,
+    ControllerMode, PlayerBody, PlayerControllerStatus, PlayerGrounded, PlayerIdentity,
+    PlayerInputBlock, TerraCamera,
 };
-pub use interaction::{TargetBlock, TargetCreature, TargetTrain, TargetWorld, WorldTarget};
+pub use interaction::{
+    TargetBlock, TargetCreature, TargetTrain, TargetWorld, WorldInteractionBlock, WorldTarget,
+};
 pub use plugin::{PlayerSet, TerraPlayerPlugin};
 pub use terra_physics::character::CharacterPresentation;
 pub use terra_physics::character::{PLAYER_EYE_OFFSET, PLAYER_HALF_HEIGHT, PLAYER_RADIUS};

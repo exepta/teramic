@@ -1,0 +1,68 @@
+    Checking terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel)
+    Checking selectors v0.22.0
+    Checking fontdb v0.23.0
+    Checking terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+    Checking cssparser v0.37.0
+    Checking html5ever v0.25.2
+    Checking svgtypes v0.16.1
+    Checking type-map v0.5.1
+    Checking servo_arc v0.4.3
+    Checking roxmltree v0.21.1
+    Checking tilt-ui-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/tilt-us/tilt-ui/crates/tilt-ui-core)
+    Checking simplecss v0.2.2
+    Checking imagesize v0.14.0
+    Checking zune-core v0.5.3
+    Checking weezl v0.1.12
+    Checking unicode-bidi v0.3.18
+    Checking unicode-vo v0.1.0
+    Checking xmlwriter v0.1.0
+    Checking base64 v0.22.1
+    Checking quick-error v2.0.1
+    Checking pico-args v0.5.0
+    Checking color_quant v1.1.0
+    Checking data-url v0.3.2
+    Checking usvg v0.47.0
+    Checking gif v0.14.2
+    Checking image-webp v0.2.4
+    Checking zune-jpeg v0.5.15
+    Checking selectors v0.40.0
+    Checking intl-memoizer v0.5.3
+    Checking kuchiki v0.8.1
+    Checking tiny-skia v0.12.0
+    Checking terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Checking intl_pluralrules v7.0.2
+    Checking fluent-langneg v0.13.1
+    Checking fluent-syntax v0.12.0
+    Checking quick-xml v0.42.0
+    Checking rgb v0.8.53
+    Checking pollster v0.4.0
+    Checking self_cell v1.3.0
+    Checking fluent-bundle v0.16.0
+    Checking rfd v0.17.2
+    Checking resvg v0.47.0
+    Checking tilt-ui-html v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/tilt-us/tilt-ui/crates/tilt-ui-html)
+    Checking tilt-ui-css v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/tilt-us/tilt-ui/crates/tilt-ui-css)
+    Checking regex v1.13.1
+    Checking tilt-ui-icons v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/tilt-us/tilt-ui/crates/tilt-ui-icons)
+    Checking tilt-ui-runtime v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/tilt-us/tilt-ui/crates/tilt-ui-runtime)
+warning: function `add_blade` is never used
+  --> crates/terra-world/src/props/visual/geometry.rs:48:15
+   |
+48 | pub(super) fn add_blade(
+   |               ^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `terra-world` (lib) generated 1 warning
+    Checking terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+    Checking terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+    Checking terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+    Checking tilt-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/tilt-us/tilt-ui/crates/tilt-ui)
+   Compiling terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+    Checking terra-player v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-player)
+    Checking terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+    Checking terra-render v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-render)
+    Checking terra-building-editor v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/building-editor)
+    Checking terra-client v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/client)
+warning: `terra-world` (lib test) generated 1 warning (1 duplicate)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 55.65s

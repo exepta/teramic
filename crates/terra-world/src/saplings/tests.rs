@@ -1,6 +1,50 @@
 use super::*;
 use crate::streaming::{BlockEditRequest, LoadedSection, commit_block_edit};
 use terra_voxel::{BlockSection, SectionPos};
+
+mod leaf_drops;
+
+#[test]
+fn idle_growth_does_not_invalidate_chunk_or_journal_resources_between_checks() {
+    #[derive(Resource, Default)]
+    struct Mutations(Vec<(bool, bool)>);
+
+    fn observe(
+        chunks: Res<ChunkStore>,
+        journal: Res<EditJournal>,
+        mut observed: ResMut<Mutations>,
+    ) {
+        observed.0.push((chunks.is_changed(), journal.is_changed()));
+    }
+
+    let mut app = App::new();
+    app.init_resource::<Time>()
+        .init_resource::<WorldAccess>()
+        .init_resource::<ChunkStore>()
+        .init_resource::<EditJournal>()
+        .init_resource::<Mutations>()
+        .insert_resource(WorldTerrain(
+            crate::TerraGenerator::new(terra_core::WorldConfig::default()).unwrap(),
+        ))
+        .add_systems(Update, (tick, observe).chain());
+    // Resource insertion is a real change; the following frames must be idle.
+    app.update();
+    for _ in 0..12 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(500));
+        app.update();
+    }
+    let observed = &app.world().resource::<Mutations>().0;
+    assert_eq!(observed[0], (true, true));
+    assert!(
+        observed[1..]
+            .iter()
+            .all(|changes| *changes == (false, false)),
+        "Idle growth spuriously restarted renderer selection: {observed:?}"
+    );
+}
+
 fn fixture(species: TreeSpecies, id: u64) -> (ChunkStore, EditJournal, WorldProp) {
     let support = [15, 15, 15];
     let mut chunks = ChunkStore::default();
@@ -183,7 +227,13 @@ fn removal_retires_sapling_and_replaced_player_wood_survives_planted_tree_fellin
     assert!(plant(&mut chunks, &mut journal, prop, actor).unwrap());
     ready(&mut journal, 401);
     assert!(grow(&mut chunks, &mut journal, 401).unwrap());
-    let root = journal.gameplay().trees.get(401).unwrap().root;
+    let tree = journal.gameplay().trees.get(401).unwrap();
+    let root = tree.root;
+    let expected_saplings = tree
+        .leaves
+        .iter()
+        .filter(|cell| leaf_drop_roll(tree.global(**cell)))
+        .count() as u16;
     assert!(crate::tree_felling::eligible(&chunks, &journal, root));
     let plan = crate::tree_felling::Plan::prepare(&chunks, &journal, root).unwrap();
     let protected = plan.wood_positions().find(|p| *p != root).unwrap();
@@ -229,7 +279,7 @@ fn removal_retires_sapling_and_replaced_player_wood_survives_planted_tree_fellin
             .filter(|d| d.stack.item == terra_core::ItemKind::Prop(TreeSpecies::Birch.sapling()))
             .map(|d| d.stack.count)
             .sum::<u16>(),
-        1
+        expected_saplings
     );
     let (mut chunks, mut journal, prop) = fixture(TreeSpecies::Cherry, 402);
     assert!(plant(&mut chunks, &mut journal, prop, actor).unwrap());
@@ -900,4 +950,66 @@ fn planting_reports_local_soil_water_space_and_foreign_ground_cover_without_remo
     );
     assert!(!plant(&mut chunks, &mut journal, prop, actor).unwrap());
     assert!(!journal.prop_removed(grass.section, grass.id));
+}
+
+#[test]
+fn planted_birches_follow_saved_ecology_and_mature_cells_survive_reload() {
+    let mut historical = None;
+    for revision in 0..=7 {
+        let (mut chunks, mut journal, prop) = fixture(TreeSpecies::Birch, 42042);
+        assert!(plant(&mut chunks, &mut journal, prop, PlayerUuid::from_u128(1)).unwrap());
+        ready(&mut journal, 42042);
+        assert!(grow_with_ecology(&mut chunks, &mut journal, 42042, revision).unwrap());
+        let record = journal.gameplay().trees.get(42042).unwrap().clone();
+        assert!(record.valid());
+        let cells = (record.wood.clone(), record.leaves.clone());
+        assert_eq!(
+            cells,
+            shape_with_ecology(TreeSpecies::Birch, 42042, revision)
+        );
+        if revision == 0 {
+            historical = Some(cells.clone());
+        } else if revision < 7 {
+            assert_eq!(Some(&cells), historical.as_ref());
+        } else {
+            assert_ne!(Some(&cells), historical.as_ref());
+            let width = |min: i8, max: i8| {
+                let xs: Vec<_> = record
+                    .wood
+                    .iter()
+                    .chain(&record.leaves)
+                    .filter(|p| (min..=max).contains(&p[1]))
+                    .map(|p| p[0])
+                    .collect();
+                i16::from(*xs.iter().max().unwrap()) - i16::from(*xs.iter().min().unwrap()) + 1
+            };
+            assert!(width(0, 2) > width(4, 6));
+            assert!(width(9, 30) >= width(4, 6) * 3);
+            assert!(record.leaves.iter().all(|p| !(4..=6).contains(&p[1])));
+        }
+        let encoded = serde_json::to_string(&record).unwrap();
+        let restored: TreeRecord = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(record, restored);
+        // An already generated tree never re-runs geometry, even if a caller
+        // requests a different revision after reload.
+        assert!(!grow_with_ecology(&mut chunks, &mut journal, 42042, 7).unwrap());
+        assert_eq!(journal.gameplay().trees.get(42042), Some(&restored));
+        for (positions, material) in [(&restored.wood, 10), (&restored.leaves, 9)] {
+            for p in positions {
+                assert_eq!(journal.block(restored.global(*p)), Some(material));
+                assert_eq!(chunks.block_at(restored.global(*p)), Some(material));
+            }
+        }
+    }
+    for species in [
+        TreeSpecies::Oak,
+        TreeSpecies::Spruce,
+        TreeSpecies::Cherry,
+        TreeSpecies::Apple,
+    ] {
+        assert_eq!(
+            shape_with_ecology(species, 731, 6),
+            shape_with_ecology(species, 731, 7)
+        );
+    }
 }

@@ -4,6 +4,45 @@ use terra_core::creatures::{
 };
 
 #[test]
+fn stopped_fish_request_only_expired_budgeted_detours() {
+    let mut fish = Creature {
+        id: creature_id([0, 0], 0).unwrap(),
+        kind: CreatureKind::Fish,
+        home: [0, 0],
+        position: [8.0, 5.0, 8.0],
+        velocity: [0.0; 3],
+        yaw: 0.0,
+        health: CreatureKind::Fish.health(),
+        behavior: CreatureBehavior::Swim,
+        timer: 3.0,
+        age: 10.0,
+        variant: 0,
+        needs: CreatureNeeds::full(CreatureKind::Fish),
+    };
+    fish.needs.search_in = 0.0;
+    assert!(search_due(&fish, 0.1, false));
+    fish.velocity[1] = -0.2;
+    assert!(
+        !search_due(&fish, 0.1, false),
+        "unblocked diving needs no graph search"
+    );
+    fish.velocity = [0.0; 3];
+    fish.needs.search_in = 2.0;
+    assert!(!search_due(&fish, 0.1, false));
+    fish.needs.search_in = 0.0;
+    fish.behavior = CreatureBehavior::Stranded;
+    assert!(!search_due(&fish, 0.1, false));
+    fish.behavior = CreatureBehavior::Swim;
+    let eligible = (0..24)
+        .filter(|&id| {
+            fish.id = id;
+            search_due(&fish, 0.1, false)
+        })
+        .collect();
+    assert_eq!(grant_searches(eligible, &mut None).len(), 8);
+}
+
+#[test]
 fn snapshot_ecology_prioritizes_every_visible_birth_bee_without_exceeding_its_budget() {
     use terra_core::creatures::{
         bee_id, breeding,
@@ -529,6 +568,8 @@ fn land_detours_request_a_budget_even_with_an_existing_food_or_water_goal() {
         assert!(!search_due(&creature, 0.1, true));
         creature.kind = CreatureKind::Fish;
         creature.behavior = CreatureBehavior::Swim;
+        // Free swimmers need no search; stationary fish now share the budget.
+        creature.velocity = [0.2, 0.0, 0.0];
         assert!(!search_due(&creature, 0.1, true));
     }
 }
@@ -621,4 +662,44 @@ fn caps_are_local_and_exclude_owned_dead_and_far_away_animals() {
         .unwrap()
         .health = 0.0;
     assert_eq!(natural_near(&population, [650.0, 0.0, 0.0]), 0);
+}
+
+#[test]
+fn visible_worm_anatomy_has_an_interest_margin_and_started_cycles_finish_beyond_it() {
+    let mut worm = Creature {
+        id: creature_id([0, 0], 0).unwrap(),
+        kind: CreatureKind::SandWorm,
+        home: [0, 0],
+        position: [164.0, 1.0, 0.0],
+        velocity: [0.0; 3],
+        yaw: 0.0,
+        health: 42.0,
+        behavior: CreatureBehavior::Leap,
+        timer: 2.0,
+        age: 1.0,
+        variant: 0,
+        needs: CreatureNeeds::full(CreatureKind::SandWorm),
+    };
+    assert!(
+        in_interest(&worm, [0.0, 1.0, 0.0]),
+        "visible rings must not freeze when their anchor crosses 150 m"
+    );
+    worm.position[0] = 230.0;
+    assert!(!in_interest(&worm, [0.0, 1.0, 0.0]));
+    for phase in [
+        CreatureBehavior::Tremor,
+        CreatureBehavior::Leap,
+        CreatureBehavior::Emerge,
+        CreatureBehavior::Attack,
+        CreatureBehavior::Spit,
+        CreatureBehavior::Retreat,
+    ] {
+        worm.behavior = phase;
+        assert!(
+            finish_phase(&worm),
+            "{phase:?} finishes despite lost interest"
+        );
+    }
+    worm.behavior = CreatureBehavior::Burrowed;
+    assert!(!finish_phase(&worm));
 }

@@ -1,0 +1,60 @@
+    Checking terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+    Checking terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Checking terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+    Checking terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+    Checking terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+    Checking terra-player v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-player)
+    Checking terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+    Checking terra-render v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-render)
+    Checking terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+error[E0277]: can't compare `[u16; 9]` with `[{integer}; 6]`
+   --> crates/terra-render/src/meshing/seasonal_foliage.rs:205:9
+    |
+205 |         assert_eq!(terra_voxel::MaterialId::FOLIAGE, [7, 8, 9, 132, 133, 195]);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no implementation for `[u16; 9] == [{integer}; 6]`
+    |
+    = help: the trait `PartialEq<[{integer}; 6]>` is not implemented for `[u16; 9]`
+    = help: the following other types implement trait `PartialEq<Rhs>`:
+              `&[B; M]` implements `PartialEq<heapless::vec::Vec<A, N>>`
+              `&[B]` implements `PartialEq<heapless::vec::Vec<A, N>>`
+              `&[T]` implements `PartialEq<UniqueEntityEquivalentVec<U>>`
+              `&[T]` implements `PartialEq<[U; N]>`
+              `&[T]` implements `PartialEq<allocator_api2::stable::vec::Vec<U, A>>`
+              `&[T]` implements `PartialEq<std::vec::Vec<U, A>>`
+              `&[u8; N]` implements `PartialEq<ByteStr>`
+              `&[u8; N]` implements `PartialEq<ByteString>`
+            and 54 others
+
+    Checking terra-building-editor v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/building-editor)
+    Checking terra-client v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/client)
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `terra-render` (lib test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error[E0004]: non-exhaustive patterns: `terra_core::creatures::CreatureKind::Butterfly`, `terra_core::creatures::CreatureKind::SpiritGloom` and `terra_core::creatures::CreatureKind::SpiritFox` not covered
+   --> apps/client/src/footsteps.rs:192:32
+    |
+192 |             let walker = match track.current.kind {
+    |                                ^^^^^^^^^^^^^^^^^^ patterns `terra_core::creatures::CreatureKind::Butterfly`, `terra_core::creatures::CreatureKind::SpiritGloom` and `terra_core::creatures::CreatureKind::SpiritFox` not covered
+    |
+note: `terra_core::creatures::CreatureKind` defined here
+   --> crates/terra-core/src/creatures.rs:24:1
+    |
+ 24 | pub enum CreatureKind {
+    | ^^^^^^^^^^^^^^^^^^^^^
+...
+ 47 |     Butterfly,
+    |     --------- not covered
+ 48 |     SpiritGloom,
+    |     ----------- not covered
+ 49 |     SpiritFox,
+    |     --------- not covered
+    = note: the matched value is of type `terra_core::creatures::CreatureKind`
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern, a match arm with multiple or-patterns as shown, or multiple match arms
+    |
+212 ~                 | CreatureKind::LargeSpider => continue,
+213 ~                 terra_core::creatures::CreatureKind::Butterfly | terra_core::creatures::CreatureKind::SpiritGloom | terra_core::creatures::CreatureKind::SpiritFox => todo!(),
+    |
+
+For more information about this error, try `rustc --explain E0004`.
+error: could not compile `terra-client` (bin "terra-client") due to 1 previous error
+error: could not compile `terra-client` (bin "terra-client" test) due to 1 previous error

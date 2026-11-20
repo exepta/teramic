@@ -1,5 +1,8 @@
 //! Local voxel graph navigation. No static navmesh becomes stale after block edits.
 pub mod caves;
+mod ground;
+#[cfg(test)]
+mod ground_tests;
 use super::{Creature, Habitat, Kind, distance};
 use std::collections::{BinaryHeap, HashMap, VecDeque};
 use terra_core::creatures::intentions::{CreatureIntent, IntentReason};
@@ -28,8 +31,55 @@ pub struct Navigation {
     horse_probes: HashMap<u64, f64>,
     intentions: HashMap<u64, CreatureIntent>,
     escapes: HashMap<u64, ([f64; 3], f64)>,
+    sightings: HashMap<u64, ([f64; 3], f64)>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GroundRouteState {
+    Unplanned,
+    Following,
+    AwaitingSearch,
+    Blocked,
+    Arrived,
 }
 impl Navigation {
+    pub(super) fn see_enemy(&mut self, a: &Creature, position: [f64; 3]) {
+        if self.sightings.len() < terra_core::creatures::MAX_CREATURES
+            || self.sightings.contains_key(&a.id)
+        {
+            self.sightings.insert(a.id, (position, a.age + 4.0));
+        }
+    }
+    pub(super) fn remembered_enemy(&mut self, a: &Creature) -> Option<[f64; 3]> {
+        let &(position, until) = self.sightings.get(&a.id)?;
+        if a.age >= until || distance(a.position, position) > 48.0_f64.powi(2) {
+            self.sightings.remove(&a.id);
+            None
+        } else {
+            Some(position)
+        }
+    }
+    /// Drop cached paths after a changed goal, permission or real door transaction.
+    pub fn invalidate(&mut self, id: u64) {
+        self.routes.remove(&id);
+        self.surface_routes.remove(&id);
+    }
+    pub fn ground_state(&self, id: u64, age: f64) -> GroundRouteState {
+        let Some(route) = self.routes.get(&id) else {
+            return GroundRouteState::Unplanned;
+        };
+        if route.arrived {
+            GroundRouteState::Arrived
+        } else if !route.ground_blocked {
+            GroundRouteState::Unplanned
+        } else if !route.points.is_empty() {
+            GroundRouteState::Following
+        } else if route.expires <= age {
+            GroundRouteState::AwaitingSearch
+        } else {
+            GroundRouteState::Blocked
+        }
+    }
     pub fn begin_tick(&mut self, id: u64) {
         self.intentions.remove(&id);
     }
@@ -75,19 +125,19 @@ impl Navigation {
     }
     /// A blocked land animal requests a bounded graph search on a later budgeted tick.
     pub fn needs_search(&self, id: u64, age: f64) -> bool {
-        self.routes
+        self.routes.get(&id).is_some_and(|route| {
+            route.ground_blocked && route.points.is_empty() && route.expires <= age
+        }) || self
+            .surface_routes
             .get(&id)
-            .is_some_and(|route| route.ground_blocked && route.expires <= age)
-            || self
-                .surface_routes
-                .get(&id)
-                .is_some_and(|route| route.blocked && route.expires <= age)
+            .is_some_and(|route| route.blocked && route.expires <= age)
     }
     pub(super) fn forget(&mut self, id: u64) {
         self.routes.remove(&id);
         self.surface_routes.remove(&id);
         self.horse_probes.remove(&id);
         self.escapes.remove(&id);
+        self.sightings.remove(&id);
     }
     pub(super) fn escape_via(&mut self, id: u64, position: [f64; 3], age: f64) {
         if self.escapes.len() < terra_core::creatures::MAX_CREATURES {
@@ -142,6 +192,19 @@ struct Route {
     last_progress: [f64; 3],
     progress_at: f64,
     stuck_since: f64,
+    arrived: bool,
+}
+
+/// Horizontal proximity alone cannot finish a route on another floor or across a
+/// last wall/gap. Arrival requires the actual body and the requested standing Y.
+pub(super) fn ground_arrived(a: &Creature, h: &Habitat, target: [f64; 3], tolerance: f64) -> bool {
+    valid_point(a.position)
+        && valid_point(target)
+        && tolerance.is_finite()
+        && (0.0..=2.0).contains(&tolerance)
+        && (a.position[0] - target[0]).hypot(a.position[2] - target[2]) <= tolerance
+        && (a.position[1] - target[1]).abs() <= 0.125
+        && ground::edge(h, a.position, target, a.size(), &|_| true).is_some()
 }
 
 fn traversable(h: &Habitat, start: [f64; 3], end: [f64; 3], kind: Kind) -> bool {
@@ -178,23 +241,39 @@ pub(super) fn ground_waypoint(
     search: bool,
     navigation: Option<&mut Navigation>,
 ) -> Option<[f64; 3]> {
-    if !valid_point(a.position) || !valid_point(target) {
+    ground_waypoint_with_access(a, h, target, search, navigation, |_| true)
+}
+
+pub(super) fn ground_waypoint_with_access(
+    a: &Creature,
+    h: &Habitat,
+    target: [f64; 3],
+    search: bool,
+    navigation: Option<&mut Navigation>,
+    allowed: impl Fn([f64; 3]) -> bool,
+) -> Option<[f64; 3]> {
+    if !valid_point(a.position) || !valid_point(target) || !a.age.is_finite() {
         if let Some(nav) = navigation {
-            nav.forget(a.id);
+            nav.invalidate(a.id);
         }
         return None;
     }
+    let arrived = ground_arrived(a, h, target, 0.12) && allowed(a.position) && allowed(target);
     let Some(nav) = navigation else {
-        return search
+        return (!arrived && search)
             .then(|| {
-                path(h, a.position, target, a.kind, a.size())
+                ground::search(h, a.position, target, a.size(), &allowed)
+                    .points
                     .front()
                     .copied()
             })
             .flatten();
     };
-    if nav.routes.len() >= terra_core::creatures::MAX_CREATURES {
+    if nav.routes.len() >= terra_core::creatures::MAX_CREATURES && !nav.routes.contains_key(&a.id) {
         nav.routes.retain(|_, route| route.expires > a.age);
+        if nav.routes.len() >= terra_core::creatures::MAX_CREATURES {
+            return None;
+        }
     }
     let route = nav.routes.entry(a.id).or_insert_with(|| Route {
         target,
@@ -204,7 +283,28 @@ pub(super) fn ground_waypoint(
         last_progress: a.position,
         progress_at: a.age,
         stuck_since: a.age,
+        arrived: false,
     });
+    if distance(route.target, target) > 0.35_f64.powi(2)
+        || (route.target[1] - target[1]).abs() > 0.125
+    {
+        route.target = target;
+        route.points.clear();
+        route.expires = 0.0;
+        route.last_progress = a.position;
+        route.progress_at = a.age;
+        route.stuck_since = a.age;
+        route.arrived = false;
+    }
+    if arrived {
+        route.target = target;
+        route.points.clear();
+        route.ground_blocked = false;
+        route.arrived = true;
+        route.expires = a.age + 0.8;
+        return None;
+    }
+    route.arrived = false;
     if distance(route.last_progress, a.position) > 0.08_f64.powi(2) {
         route.last_progress = a.position;
         route.progress_at = a.age;
@@ -219,31 +319,31 @@ pub(super) fn ground_waypoint(
     while route
         .points
         .front()
-        .is_some_and(|p| distance(*p, a.position) < 0.08)
+        .is_some_and(|point| distance(*point, a.position) < 0.14_f64.powi(2))
     {
         route.points.pop_front();
     }
-    if distance(route.target, target) > 2.25 {
-        route.points.clear();
-        route.expires = 0.0;
-    } else if had_points && route.points.is_empty() {
+    if had_points && route.points.is_empty() {
         route.expires = 0.0;
     }
+    // Recheck the full next edge, not just its endpoint. Edits and section
+    // eviction can obstruct its middle while the waypoint itself stays clear.
     if route
         .points
         .front()
-        .is_some_and(|p| h.ground_sized(*p, a.size(), f64::from(a.yaw)).is_none())
+        .is_some_and(|point| ground::edge(h, a.position, *point, a.size(), &allowed).is_none())
     {
         route.points.clear();
         route.expires = 0.0;
     }
     if search && route.expires <= a.age {
-        route.points = path(h, a.position, target, a.kind, a.size());
+        route.points = ground::search(h, a.position, target, a.size(), &allowed).points;
         route.target = target;
         route.expires = a.age + if route.points.is_empty() { 0.8 } else { 2.0 };
     }
     route.points.front().copied()
 }
+
 fn path(
     h: &Habitat,
     start: [f64; 3],
@@ -254,10 +354,13 @@ fn path(
     if !valid_point(start) || !valid_point(target) {
         return VecDeque::new();
     }
+    if !kind.is_flying() && !kind.is_aquatic() {
+        return ground::search(h, start, target, size, &|_| true).points;
+    }
     let _scope = terra_core::profiling::ScopeTimer::new("creatures.navigation.path");
     #[cfg(test)]
     testing::record_path();
-    let flying = kind == Kind::Bee || kind.is_aquatic();
+    let flying = kind.is_flying() || kind.is_aquatic();
     let spacing = if flying { 0.65 } else { 1.0 };
     let mut nodes = vec![(start, 0usize, 0u32)];
     let mut visited = HashMap::from([([0i32; 3], 0usize)]);
@@ -366,6 +469,7 @@ pub(super) fn fly_cached(
             last_progress: a.position,
             progress_at: a.age,
             stuck_since: a.age,
+            arrived: false,
         });
         let had_points = !route.points.is_empty();
         while route
@@ -393,6 +497,7 @@ pub(super) fn fly_cached(
                 last_progress: a.position,
                 progress_at: a.age,
                 stuck_since: a.age,
+                arrived: false,
             };
         }
         route.points.front().copied()
@@ -456,6 +561,7 @@ pub fn separate(
         }
     }
     for id in ids {
+        let owner = pop.owners.get(id).copied();
         let Some(a) = pop.animals.get_mut(id).filter(|a| {
             !a.kind.is_spider()
                 && !matches!(
@@ -477,7 +583,7 @@ pub fn separate(
                         bins.get(&[center[0] + x, center[1] + y, center[2] + z])
                     {
                         for &(other, p, kind, width) in neighbors.iter().take(32) {
-                            if other == a.id || (kind == Kind::Bee) != (a.kind == Kind::Bee) {
+                            if other == a.id || kind.is_flying() != a.kind.is_flying() {
                                 continue;
                             }
                             let radius = if a.kind == Kind::Bee {
@@ -509,12 +615,19 @@ pub fn separate(
             let proposed = [proposed[0], a.position[1], proposed[2]];
             h.clear_swimmer_rotated(proposed, a.size(), f64::from(a.yaw))
                 .then_some(proposed)
-        } else if a.kind == Kind::Bee {
+        } else if a.kind.is_flying() {
             traversable(h, a.position, proposed, a.kind).then_some(proposed)
         } else {
             h.ground_sized(proposed, a.size(), f64::from(a.yaw))
         };
         if let Some(next) = next {
+            if let Some(owner) = owner
+                && a.kind == Kind::Villager
+                && (next[0] != a.position[0] || next[2] != a.position[2])
+                && !super::villagers::patrol::permits_idle_push(a, h, owner, next)
+            {
+                continue;
+            }
             a.position = next;
         }
     }
@@ -703,6 +816,7 @@ mod progress_tests {
                 last_progress: a.position,
                 progress_at: 0.0,
                 stuck_since: 0.0,
+                arrived: false,
             },
         );
         testing::reset_path_calls();

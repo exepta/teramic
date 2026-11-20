@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": 422,
+  "name": "Desert Cactus",
+  "description": "A branching desert cactus with solid ivory thorns. Touching its sides or crown injures creatures and survival players.",
+  "creative_category": "nature",
+  "hardness": 0.5,
+  "resistance": 0.4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "cactus_side": "textures/cactus_side.png",
+    "cactus_top": "textures/cactus_top.png",
+    "cactus_bottom": "textures/cactus_bottom.png"
+  },
+  "materials": {
+    "cactus_side": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91
+    },
+    "cactus_top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91
+    },
+    "cactus_bottom": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91
+    }
+  },
+  "face_materials": [
+    "cactus_side",
+    "cactus_side",
+    "cactus_bottom",
+    "cactus_top",
+    "cactus_side",
+    "cactus_side"
+  ]
+}

@@ -38,6 +38,10 @@ pub(super) struct State {
 }
 
 impl State {
+    pub(super) fn pending_len(&self) -> usize {
+        self.pending.len()
+    }
+
     pub(super) fn clear_pending(&mut self) {
         self.pending.clear();
         self.overflow = false;
@@ -98,6 +102,9 @@ pub(super) fn collect(cache: &mut Lamps, chunks: &ChunkStore, messages: &Message
     if let Some(messages) = &messages.published {
         for event in published.read(messages) {
             queue_neighbors(pending, overflow, event.position, true);
+            // Illumination must be eligible in the same frame as new geometry,
+            // including a neighbor that exposes a previously enclosed source.
+            urgent = true;
         }
     }
     if let Some(messages) = &messages.removed {
@@ -224,7 +231,9 @@ pub(super) fn refresh(
         } else if let Some(distance) =
             distance(position, focus).filter(|distance| *distance <= limit)
         {
-            if journal.revision(position) > 0 {
+            if journal.revision(position) > 0
+                || source_free_section(position, chunks, journal, definitions)
+            {
                 immediate.push((position, replace));
             } else {
                 discoveries.push((position, replace, distance));

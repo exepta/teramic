@@ -990,4 +990,64 @@ mod tests {
         app.insert_resource(EditJournal::default());
         assert!(current(&mut app, anchor).is_none());
     }
+    #[test]
+    fn ornate_crypt_chest_opens_real_authoritative_single_inventory() {
+        let config = GameConfig::default();
+        let mut app = App::new();
+        app.insert_resource(terra_world::streaming::WorldTerrain(
+            terra_world::TerraGenerator::new(config.world.clone()).unwrap(),
+        ))
+        .insert_resource(terra_core::WorldClock::new(config.world.time))
+        .init_resource::<terra_core::WorldWeather>()
+        .insert_resource(config)
+        .init_resource::<terra_core::crafting::RecipeBook>()
+        .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
+        .init_resource::<ConnectedProfiles>()
+        .init_resource::<riding::Mounts>();
+        let position = [-1, 1, -1];
+        let (section, local) = terra_voxel::global_to_section(position);
+        let material = terra_core::grave_blocks::ORNATE_CHEST;
+        let mut data = terra_voxel::BlockSection::empty(section).unwrap();
+        data.set_block(local, material).unwrap();
+        let mut journal = EditJournal::default();
+        journal.record(position, material).unwrap();
+        journal
+            .set_object_state(
+                position,
+                Some(terra_world::edits::BlockObjectState {
+                    facing: 2,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+        let mut inventory = terra_core::Inventory::default();
+        assert_eq!(inventory.insert(terra_core::ItemKind::Block(337), 12), 0);
+        journal.set_container(position, inventory.clone()).unwrap();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            section,
+            terra_world::streaming::LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        app.insert_resource(chunks).insert_resource(journal);
+        let opened = current(&mut app, position).unwrap();
+        assert_eq!(opened.anchor, position);
+        assert_eq!(opened.halves.len(), 1);
+        assert_eq!(opened.halves[0].inventory, inventory);
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&section)
+            .unwrap()
+            .data
+            .set_block(local, 0)
+            .unwrap();
+        assert!(current(&mut app, position).is_none());
+    }
 }

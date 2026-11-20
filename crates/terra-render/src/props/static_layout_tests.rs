@@ -67,6 +67,7 @@ fn unsafe_incomplete_or_animated_payloads_are_kept_unchanged() {
         |batch| {
             batch.staged = Some(StagedMesh {
                 handle: Handle::default(),
+                liquid: None,
                 bounds: None,
                 rooted: false,
                 damp: false,

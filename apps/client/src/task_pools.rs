@@ -5,6 +5,13 @@ pub(crate) fn options(
     requested: Option<&str>,
 ) -> Result<TaskPoolOptions, &'static str> {
     let mut options = TaskPoolOptions::default();
+    if !smoke_test {
+        // Leave logical CPUs available to desktop, audio and graphics driver.
+        options.max_total_threads =
+            interactive_budget(std::thread::available_parallelism().map_or(1, usize::from));
+        options.compute.max_threads = 4;
+        return Ok(options);
+    }
     let Some(requested) = requested.filter(|_| smoke_test) else {
         return Ok(options);
     };
@@ -15,6 +22,10 @@ pub(crate) fn options(
         .filter(|&threads| threads > 0)
         .ok_or("TERRA_COMPUTE_THREADS expects a positive integer in smoke tests")?;
     Ok(options)
+}
+
+fn interactive_budget(available: usize) -> usize {
+    available.saturating_sub(2).clamp(1, 10)
 }
 
 #[cfg(test)]
@@ -47,7 +58,11 @@ mod tests {
     fn production_ignores_even_invalid_smoke_overrides() {
         for requested in [None, Some("8"), Some("0"), Some("invalid"), Some("")] {
             let actual = options(false, requested).unwrap();
-            assert_options(&actual, TaskPoolOptions::default().compute.max_threads);
+            assert_eq!(
+                actual.max_total_threads,
+                interactive_budget(std::thread::available_parallelism().map_or(1, usize::from))
+            );
+            assert_eq!(actual.compute.max_threads, 4);
         }
     }
 

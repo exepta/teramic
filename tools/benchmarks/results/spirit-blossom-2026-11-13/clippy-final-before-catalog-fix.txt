@@ -1,0 +1,18 @@
+    Blocking waiting for file lock on build directory
+    Checking terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+   Compiling terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+    Checking terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+    Checking terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+    Checking terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+error: the borrowed expression implements the required traits
+  --> crates/terra-storage/src/spirit_revision_tests.rs:83:44
+   |
+83 |     let mut legacy = toml::Value::try_from(&WorldManifest::new(saved.clone())).unwrap();
+   |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: change this to: `WorldManifest::new(saved.clone())`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.97.0/index.html#needless_borrows_for_generic_args
+   = note: `-D clippy::needless-borrows-for-generic-args` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::needless_borrows_for_generic_args)]`
+
+error: could not compile `terra-storage` (lib test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

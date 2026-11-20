@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 374,
+  "name": "Skeleton Remains",
+  "description": "Skeleton Remains for furnishing ancient graves and crypt chambers.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/skeleton_remains.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

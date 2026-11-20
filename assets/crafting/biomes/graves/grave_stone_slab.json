@@ -1,0 +1,22 @@
+{
+  "id": "teramic::grave_stone_slab",
+  "name": "Stone Floor Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 344
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 337
+        },
+        "count": 3
+      }
+    ]
+  }
+}

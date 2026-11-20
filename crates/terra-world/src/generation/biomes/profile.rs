@@ -8,6 +8,8 @@ pub struct BiomeWeights {
     pub mushroom_park: f64,
     pub cliffted_desert: f64,
     pub cherry_forest: f64,
+    pub spirit_blossom: f64,
+    pub blood_forest: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -30,7 +32,7 @@ pub struct TerrainProfile {
 pub use terra_core::BiomeKind;
 
 impl BiomeWeights {
-    pub fn values(self) -> [f64; 8] {
+    pub fn values(self) -> [f64; 10] {
         [
             self.ocean,
             self.plains,
@@ -40,8 +42,37 @@ impl BiomeWeights {
             self.mushroom_park,
             self.cliffted_desert,
             self.cherry_forest,
+            self.spirit_blossom,
+            self.blood_forest,
         ]
     }
+    pub(super) fn from_values(values: [f64; 10]) -> Self {
+        let [
+            ocean,
+            plains,
+            forest,
+            desert,
+            highland,
+            mushroom_park,
+            cliffted_desert,
+            cherry_forest,
+            spirit_blossom,
+            blood_forest,
+        ] = values;
+        Self {
+            ocean,
+            plains,
+            forest,
+            desert,
+            highland,
+            mushroom_park,
+            cliffted_desert,
+            cherry_forest,
+            spirit_blossom,
+            blood_forest,
+        }
+    }
+
     /// Only for diagnostics; generation always blends every weight.
     pub fn dominant(self) -> BiomeKind {
         let mut best = 0;
@@ -60,6 +91,8 @@ impl BiomeWeights {
             BiomeKind::MushroomPark,
             BiomeKind::ClifftedDesert,
             BiomeKind::CherryForest,
+            BiomeKind::SpiritBlossom,
+            BiomeKind::BloodForest,
         ][best]
     }
 }
@@ -86,16 +119,23 @@ impl BiomeSample {
         for value in &mut values[1..] {
             *value *= land / selected;
         }
-        self.weights = BiomeWeights {
-            ocean: values[0],
-            plains: values[1],
-            forest: values[2],
-            desert: values[3],
-            highland: values[4],
-            mushroom_park: values[5],
-            cliffted_desert: values[6],
-            cherry_forest: values[7],
-        };
+        self.weights = BiomeWeights::from_values(values);
+        self
+    }
+
+    /// Disjoint thermal eligibility leaves a continuous temperate buffer. Lost
+    /// mountain/desert cover becomes lowland rather than jumping to the opposite extreme.
+    pub(crate) fn with_thermal_buffers(mut self) -> Self {
+        let cold = 1.0 - super::smoothstep(0.28, 0.40, self.temperature);
+        let hot = super::smoothstep(0.60, 0.72, self.temperature);
+        let w = &mut self.weights;
+        let lost = w.highland * (1.0 - cold) + (w.desert + w.cliffted_desert) * (1.0 - hot);
+        w.highland *= cold;
+        w.desert *= hot;
+        w.cliffted_desert *= hot;
+        let forest = super::smoothstep(0.30, 0.70, self.humidity);
+        w.forest += lost * forest;
+        w.plains += lost * (1.0 - forest);
         self
     }
 
@@ -126,6 +166,8 @@ impl BiomeSample {
                 + w.mushroom_park * mushroom_park
                 + w.cliffted_desert * desert
                 + w.cherry_forest * forest
+                + w.spirit_blossom * forest
+                + w.blood_forest * forest
         };
         TerrainProfile {
             elevation: blend(-40.0, 6.0, 12.0, 10.0, 18.0, 9.0) + w.cliffted_desert * 22.0,

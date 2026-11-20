@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "screens": {
+    "spirit": [
+      "spirit-creatures-0.png",
+      "spirit-creatures-1.png",
+      "spirit-creatures-2.png",
+      "spirit-creatures-3.png"
+    ],
+    "villagers": [
+      "villagers-0.png",
+      "villagers-1.png",
+      "villagers-2.png",
+      "villagers-3.png",
+      "villagers-4.png"
+    ]
+  }
+}

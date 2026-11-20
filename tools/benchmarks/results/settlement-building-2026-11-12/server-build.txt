@@ -1,0 +1,29 @@
+   Compiling ctrlc v3.5.2
+   Compiling terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel)
+   Compiling bevy_app v0.20.0
+   Compiling bevy_time v0.20.0
+   Compiling bevy_input v0.20.0
+   Compiling bevy_log v0.20.0
+   Compiling bevy_diagnostic v0.20.0
+   Compiling lightyear_core v0.31.0
+   Compiling bevy_transform v0.20.0
+   Compiling bevy_internal v0.20.0
+   Compiling lightyear_link v0.31.0
+   Compiling bevy v0.20.0
+   Compiling lightyear_connection v0.31.0
+   Compiling terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+   Compiling lightyear_transport v0.31.0
+   Compiling aeronet_io v0.22.0-rc.1
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+   Compiling lightyear_messages v0.31.0
+   Compiling bevy_transform_interpolation v0.6.0
+   Compiling avian3d v0.8.0
+   Compiling lightyear_sync v0.31.0
+   Compiling lightyear_udp v0.31.0
+   Compiling lightyear_netcode v0.31.0
+   Compiling lightyear v0.31.0
+   Compiling terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+   Compiling terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+   Compiling terra-storage v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-storage)
+   Compiling terra-server v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/server)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 2m 15s

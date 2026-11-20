@@ -148,6 +148,7 @@ fn prepared_columns_match_uncached_generation_and_never_cache_edits() {
 fn ocean_desert_and_forest_profiles_generate_distinct_wide_regions() {
     let terrain = TerraGenerator::new(WorldConfig {
         landscape_revision: 4,
+        blood_forest_revision: 0,
         sea_level: 22.0,
         rivers: true,
         biome_definitions: Some(terra_core::BiomeDefinitions::default()),

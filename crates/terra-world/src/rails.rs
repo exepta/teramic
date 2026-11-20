@@ -109,6 +109,7 @@ pub fn object_state_with_wood(
         secondary: cell != piece.anchor,
         wood,
         rail_curve: piece.curve,
+        liquid: None,
     }
 }
 

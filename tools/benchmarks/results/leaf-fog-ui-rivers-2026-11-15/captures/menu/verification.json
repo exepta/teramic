@@ -1,0 +1,294 @@
+{
+  "status": "passed",
+  "client_sha256": "eaced7338506d054eebb2f071b6da42718037d9e889c22d52b3b63359d61404c",
+  "cases": {
+    "1920x1080": {
+      "requested_resolution": [
+        1920,
+        1080
+      ],
+      "actual_resolution": [
+        1920,
+        1080
+      ],
+      "captures": [
+        {
+          "file": "1920x1080/captures/main-menu-de.png",
+          "sha256": "d1985ae60f62a7660f060ecd689c18052a0fecb192568c2216b545da9b4e271c"
+        },
+        {
+          "file": "1920x1080/captures/gameplay-de.png",
+          "sha256": "60aeb6e9608b99c51fd3afa896f61c0041ff0492efe7629408a16ec0aa7bd0a9"
+        },
+        {
+          "file": "1920x1080/captures/gameplay-en.png",
+          "sha256": "441a55bea6f9279212f0ffd8a30ba2547d0e0eb15a3ae8d9f91f092ea575d96b"
+        },
+        {
+          "file": "1920x1080/captures/main-menu-en.png",
+          "sha256": "608db3cf59ab48dde39987f56dda688bc9969e57d623e9a06d7a5cf8c2e4c4d7"
+        }
+      ],
+      "measurements": [
+        {
+          "buttons": [
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 71.0,
+                  "text": "Audio"
+                }
+              ],
+              "id": "audio",
+              "width_px": 229.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 122.0,
+                  "text": "Steuerung"
+                }
+              ],
+              "id": "controls",
+              "width_px": 229.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 59.0,
+                  "text": "Spiel"
+                }
+              ],
+              "id": "gameplay-options",
+              "width_px": 229.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 76.0,
+                  "text": "Grafik"
+                }
+              ],
+              "id": "graphics",
+              "width_px": 229.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 146.0,
+                  "text": "Mehrspieler"
+                }
+              ],
+              "id": "multiplayer-options",
+              "width_px": 229.0
+            }
+          ],
+          "language": "de",
+          "single_line_setting_titles": 6,
+          "status": "passed"
+        },
+        {
+          "buttons": [
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 71.0,
+                  "text": "Audio"
+                }
+              ],
+              "id": "audio",
+              "width_px": 223.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 101.0,
+                  "text": "Controls"
+                }
+              ],
+              "id": "controls",
+              "width_px": 223.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 119.0,
+                  "text": "Gameplay"
+                }
+              ],
+              "id": "gameplay-options",
+              "width_px": 223.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 107.0,
+                  "text": "Graphics"
+                }
+              ],
+              "id": "graphics",
+              "width_px": 223.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 140.0,
+                  "text": "Multiplayer"
+                }
+              ],
+              "id": "multiplayer-options",
+              "width_px": 223.0
+            }
+          ],
+          "language": "en",
+          "single_line_setting_titles": 6,
+          "status": "passed"
+        }
+      ]
+    },
+    "960x640": {
+      "requested_resolution": [
+        960,
+        640
+      ],
+      "actual_resolution": [
+        960,
+        641
+      ],
+      "captures": [
+        {
+          "file": "960x640/captures/main-menu-de.png",
+          "sha256": "3df0df2e4f7b3382b16f5fd74b32ff210e3b2336cddc0b011203680040530165"
+        },
+        {
+          "file": "960x640/captures/gameplay-de.png",
+          "sha256": "04da6186473fcdba6dfff170c137870402789e43816e879c07b4d0979da6ba9b"
+        },
+        {
+          "file": "960x640/captures/gameplay-en.png",
+          "sha256": "2f4d3de02c08263c32837e1e4196a24fde7d154d33b7875a612f69a5419a78ba"
+        },
+        {
+          "file": "960x640/captures/main-menu-en.png",
+          "sha256": "e16cee9431819dd03f340178b2cda430903ecc35ab941e88419bc3da83695ad9"
+        }
+      ],
+      "measurements": [
+        {
+          "buttons": [
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 37.0,
+                  "text": "Audio"
+                }
+              ],
+              "id": "audio",
+              "width_px": 126.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 64.0,
+                  "text": "Steuerung"
+                }
+              ],
+              "id": "controls",
+              "width_px": 126.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 31.0,
+                  "text": "Spiel"
+                }
+              ],
+              "id": "gameplay-options",
+              "width_px": 126.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 40.0,
+                  "text": "Grafik"
+                }
+              ],
+              "id": "graphics",
+              "width_px": 126.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 76.0,
+                  "text": "Mehrspieler"
+                }
+              ],
+              "id": "multiplayer-options",
+              "width_px": 126.0
+            }
+          ],
+          "language": "de",
+          "single_line_setting_titles": 6,
+          "status": "passed"
+        },
+        {
+          "buttons": [
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 37.0,
+                  "text": "Audio"
+                }
+              ],
+              "id": "audio",
+              "width_px": 122.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 53.0,
+                  "text": "Controls"
+                }
+              ],
+              "id": "controls",
+              "width_px": 122.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 62.0,
+                  "text": "Gameplay"
+                }
+              ],
+              "id": "gameplay-options",
+              "width_px": 122.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 56.0,
+                  "text": "Graphics"
+                }
+              ],
+              "id": "graphics",
+              "width_px": 122.0
+            },
+            {
+              "captions": [
+                {
+                  "glyph_width_px": 73.0,
+                  "text": "Multiplayer"
+                }
+              ],
+              "id": "multiplayer-options",
+              "width_px": 122.0
+            }
+          ],
+          "language": "en",
+          "single_line_setting_titles": 6,
+          "status": "passed"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,1 @@
+Standalone Building Editor passed: real voxel placement/removal, inventory catalog, house JSON import/save/reload, overwrite and language; ten screenshots

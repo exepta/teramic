@@ -1,0 +1,88 @@
+[
+  {
+    "name": "fmt",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 8.65
+  },
+  {
+    "name": "check",
+    "command": [
+      "cargo",
+      "check",
+      "--workspace",
+      "--all-targets"
+    ],
+    "exit_code": 0,
+    "seconds": 1.16
+  },
+  {
+    "name": "clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--workspace",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 49.17
+  },
+  {
+    "name": "tests",
+    "command": [
+      "cargo",
+      "test",
+      "--workspace",
+      "--no-fail-fast",
+      "--",
+      "--skip",
+      "original_glb_loads_through_the_named_reader_with_uvs_tangents_and_pbr_images"
+    ],
+    "exit_code": 101,
+    "seconds": 532.43
+  },
+  {
+    "name": "build",
+    "command": [
+      "cargo",
+      "build",
+      "-p",
+      "terra-client",
+      "-p",
+      "terra-server",
+      "-p",
+      "terra-building-editor"
+    ],
+    "exit_code": 0,
+    "seconds": 248,
+    "log": "final-build.log"
+  },
+  {
+    "name": "network-timeout-recheck",
+    "command": [
+      "target/debug/deps/terra_network-a1e09f5684698869",
+      "--exact",
+      "tests::invalid_movement_is_disconnected_without_affecting_the_other_player",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "log": "final-network-timeout-recheck.log"
+  },
+  {
+    "name": "network-suite-recheck",
+    "command": [
+      "target/debug/deps/terra_network-a1e09f5684698869",
+      "--test-threads=4"
+    ],
+    "exit_code": 0,
+    "log": "final-network-suite-recheck.log"
+  }
+]

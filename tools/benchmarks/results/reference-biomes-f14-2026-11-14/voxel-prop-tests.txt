@@ -1,0 +1,10 @@
+test_all_eighteen_shipped_models_are_bounded_axis_aligned_voxel_surfaces (test_geometry.VoxelPropTests.test_all_eighteen_shipped_models_are_bounded_axis_aligned_voxel_surfaces) ... ok
+test_arch_opening_is_preserved_and_mushroom_light_is_exposed (test_geometry.VoxelPropTests.test_arch_opening_is_preserved_and_mushroom_light_is_exposed) ... ok
+test_overlapping_solids_have_only_the_union_boundary (test_geometry.VoxelPropTests.test_overlapping_solids_have_only_the_union_boundary) ... ok
+test_thin_diagonal_vines_are_face_connected_and_small_centres_survive (test_geometry.VoxelPropTests.test_thin_diagonal_vines_are_face_connected_and_small_centres_survive) ... ok
+test_touching_cells_remove_their_shared_face_even_between_materials (test_geometry.VoxelPropTests.test_touching_cells_remove_their_shared_face_even_between_materials) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.147s
+
+OK

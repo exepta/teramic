@@ -24,10 +24,13 @@ struct Inspection {
     requested: usize,
     captured: usize,
     failed: bool,
+    model_only: bool,
 }
 
 pub(crate) fn install(app: &mut App) {
-    if !std::env::args().any(|arg| arg == "--smoke-test-spiders") {
+    let model_only = std::env::var_os("TERRA_SPIDER_MODEL_INSPECT").is_some()
+        && std::env::args().any(|arg| arg == "--smoke-test-creatures");
+    if !model_only && !std::env::args().any(|arg| arg == "--smoke-test-spiders") {
         return;
     }
     app.init_resource::<ReplicatedCreatures>()
@@ -38,6 +41,7 @@ pub(crate) fn install(app: &mut App) {
             requested: 0,
             captured: 0,
             failed: false,
+            model_only,
         })
         .add_systems(PostStartup, setup)
         .add_systems(
@@ -52,6 +56,7 @@ fn setup(
     mut animals: ResMut<ReplicatedCreatures>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    inspection: Res<Inspection>,
 ) {
     for (index, kind) in [Kind::SmallSpider, Kind::MediumSpider, Kind::LargeSpider]
         .into_iter()
@@ -81,6 +86,9 @@ fn setup(
                 playback: Default::default(),
             },
         );
+    }
+    if inspection.model_only {
+        return;
     }
     let silk = materials.add(StandardMaterial {
         perceptual_roughness: 0.95,
@@ -147,6 +155,7 @@ fn setup(
 
 fn run(world: &mut World) {
     let stage = world.resource::<Inspection>().captured;
+    let model_only = world.resource::<Inspection>().model_only;
     if world.resource::<Inspection>().failed
         || world.resource::<Inspection>().start.elapsed() > Duration::from_secs(90)
     {
@@ -154,14 +163,27 @@ fn run(world: &mut World) {
         world.write_message(AppExit::error());
         return;
     }
-    if stage >= 9 {
-        info!(
-            "Spider visual fixture passed: three body sizes front/side, articulated wall/ceiling/descending poses and ten actual web mesh templates; model-only fixture"
-        );
+    if stage >= if model_only { 4 } else { 9 } {
+        if model_only {
+            info!(
+                "Spider model gallery passed: three sizes; overview, small front, medium front, large elevated side; real cached meshes and animation"
+            );
+        } else {
+            info!(
+                "Spider visual fixture passed: three body sizes front/side, articulated wall/ceiling/descending poses and ten actual web mesh templates; model-only fixture"
+            );
+        }
         world.write_message(AppExit::Success);
         return;
     }
-    let eye = if stage < 6 {
+    let eye = if model_only {
+        match stage {
+            0 => Vec3::new(10.0, 36.0, 9.0),
+            1 => Vec3::new(4.18, 32.20, 19.48),
+            2 => Vec3::new(10.65, 32.9, 17.6),
+            _ => Vec3::new(20.5, 35.8, 16.0),
+        }
+    } else if stage < 6 {
         let index = stage / 2;
         let size = [0.15, 0.68, 1.8][index];
         let target = Vec3::new(
@@ -182,7 +204,14 @@ fn run(world: &mut World) {
     } else {
         Vec3::new(8.0, 35.8, 40.5)
     };
-    let target = if stage < 6 {
+    let target = if model_only {
+        match stage {
+            0 => Vec3::new(10.0, 32.6, 20.0),
+            1 => Vec3::new(4.0, 32.08, 20.0),
+            2 => Vec3::new(10.0, 32.39, 20.0),
+            _ => Vec3::new(16.0, 32.96, 20.0),
+        }
+    } else if stage < 6 {
         Vec3::new(
             4.0 + (stage / 2) as f32 * 6.0,
             32.0 + [0.08, 0.39, 0.96][stage / 2],
@@ -224,6 +253,14 @@ fn run(world: &mut World) {
         };
         track.previous = track.current.clone();
         track.received = Instant::now();
+    }
+    if model_only {
+        for mut body in world
+            .query_filtered::<&mut Transform, With<terra_player::PlayerBody>>()
+            .iter_mut(world)
+        {
+            body.translation = eye - Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
+        }
     }
     for mut camera in world
         .query_filtered::<&mut Transform, With<terra_player::TerraCamera>>()

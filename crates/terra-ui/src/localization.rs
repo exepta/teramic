@@ -90,6 +90,14 @@ pub(crate) struct SearchText<'w> {
 }
 
 impl SearchText<'_> {
+    pub(crate) fn terms(&self, source: &str) -> String {
+        self.projection
+            .as_ref()
+            .and_then(|p| p.catalog.as_ref())
+            .and_then(|c| c.search.get(source))
+            .cloned()
+            .unwrap_or_else(|| source.to_owned())
+    }
     pub(crate) fn available(&self) -> bool {
         self.projection
             .as_ref()
@@ -116,8 +124,32 @@ impl SearchText<'_> {
     }
 
     pub(crate) fn matches(&self, query: &str, source: &str) -> bool {
-        source.to_lowercase().contains(query) || self.text(source).to_lowercase().contains(query)
+        search_matches(
+            &normalize_search(&format!("{}\n{}", self.terms(source), self.text(source))),
+            &normalize_search(query),
+        )
     }
+}
+
+pub(crate) fn normalize_search(text: &str) -> String {
+    let mut result = String::with_capacity(text.len());
+    for ch in text.chars().flat_map(char::to_lowercase) {
+        match ch {
+            'ä' | 'á' | 'à' | 'â' => result.push('a'),
+            'ö' | 'ó' | 'ò' | 'ô' => result.push('o'),
+            'ü' | 'ú' | 'ù' | 'û' => result.push('u'),
+            'é' | 'è' | 'ê' => result.push('e'),
+            'ß' => result.push_str("ss"),
+            '\u{0300}'..='\u{036f}' => {}
+            c if c.is_alphanumeric() || matches!(c, ':' | '_') => result.push(c),
+            _ => result.push(' '),
+        }
+    }
+    result
+}
+
+pub(crate) fn search_matches(terms: &str, query: &str) -> bool {
+    query.split_whitespace().all(|word| terms.contains(word))
 }
 
 #[cfg(test)]

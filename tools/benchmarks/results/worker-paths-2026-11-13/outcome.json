@@ -1,0 +1,57 @@
+{
+  "simulation_hz": 10,
+  "simulated_seconds": 8400,
+  "jobs": {
+    "1": {
+      "initial": {
+        "seconds": 0.0,
+        "job": 1,
+        "state": "Travelling",
+        "step": 6,
+        "total": 907
+      },
+      "first_observed_complete": {
+        "seconds": 3660.0,
+        "job": 1,
+        "state": "Complete",
+        "step": 907,
+        "total": 907
+      },
+      "final": {
+        "seconds": 8400.0,
+        "job": 1,
+        "state": "Complete",
+        "step": 907,
+        "total": 907
+      }
+    },
+    "2": {
+      "initial": {
+        "seconds": 0.0,
+        "job": 2,
+        "state": "Waiting(NoWorkers)",
+        "step": 0,
+        "total": 832
+      },
+      "first_observed_complete": {
+        "seconds": 7300.0,
+        "job": 2,
+        "state": "Complete",
+        "step": 832,
+        "total": 832
+      },
+      "final": {
+        "seconds": 8400.0,
+        "job": 2,
+        "state": "Complete",
+        "step": 832,
+        "total": 832
+      }
+    }
+  },
+  "world_tests_passed": 1399,
+  "building_tests_subset": 60,
+  "ignored_opt_in_benchmarks": 5,
+  "headless_tests_passed": 2,
+  "source_world_unchanged": true
+}

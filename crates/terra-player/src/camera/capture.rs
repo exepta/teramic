@@ -58,12 +58,33 @@ pub(crate) fn update_capture(
     mut focused: MessageReader<WindowFocused>,
     mut requests: MessageReader<CaptureRequest>,
     mut pending_capture: Local<bool>,
-    (blocked, session): (
+    (blocked, session, construction): (
         Res<PlayerInputBlock>,
         Option<Res<terra_network::client::ClientSession>>,
+        Option<Res<super::ConstructionCamera>>,
     ),
 ) {
     state.just_captured = false;
+    if construction.is_some_and(|camera| camera.active) {
+        // Construction owns a free pointer. Panel resume events can arrive in
+        // PreUpdate, before its Update system restores PlayerInputBlock.
+        // Discard these intents instead of replaying them after construction.
+        focused.clear();
+        requests.clear();
+        *pending_capture = false;
+        state.initial_capture_pending = false;
+        state.captured = false;
+        state.suppress_motion = true;
+        for (_, _, mut cursor) in &mut windows {
+            if cursor.grab_mode != CursorGrabMode::None {
+                cursor.grab_mode = CursorGrabMode::None;
+            }
+            if !cursor.visible {
+                cursor.visible = true;
+            }
+        }
+        return;
+    }
     if !state.accept_input {
         focused.clear();
         requests.clear();

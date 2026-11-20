@@ -1,11 +1,14 @@
 id = 1
 seed = 42042
 generator_version = 5
-ecology_revision = 4
-structures_revision = 9
+ecology_revision = 11
+landscape_revision = 9
+spirit_blossom_revision = 2
+blood_forest_revision = 1
+structures_revision = 10
 structure_border_gap = 16
 # New worlds opt in; existing saves retain their own river revision and toggle.
-river_terrain_revision = 4
+river_terrain_revision = 7
 rivers = true
 base_height = 16.0
 hill_amplitude = 12.0

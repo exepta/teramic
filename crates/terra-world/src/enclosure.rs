@@ -14,7 +14,7 @@ pub fn sample(
 ) -> Enclosure {
     if !position.iter().all(|v| v.is_finite())
         || !surface_height.is_finite()
-        || surface_height <= position[1] + 3.0
+        || surface_height <= position[1] + 1.0
     {
         return Enclosure {
             complete: true,
@@ -25,24 +25,40 @@ pub fn sample(
     if block(origin).is_none() {
         return Enclosure::default();
     }
-    let mut roofs = 0;
+    let mut coverage = 0.0;
     let mut distance = 0.0;
     let mut complete = true;
     // Include high chambers while keeping probes within the world's vertical span.
     let roof_steps =
         (surface_height.ceil().min(356.0) + 2.0 - origin[1] as f64).clamp(1.0, 486.0) as i64;
-    for x in [-2, 0, 2] {
-        for z in [-2, 0, 2] {
+    // A fixed world-space quadratic kernel gives continuous coverage across a
+    // mouth. A camera-relative integer fan jumped whenever it crossed a cell.
+    let axis = |value: f64| {
+        let grid = value / 4.0;
+        let base = grid.floor() as i64;
+        let t = (grid - grid.floor()) as f32;
+        [
+            ((base - 1) * 4, 0.5 * (1.0 - t).powi(2)),
+            (base * 4, 0.5 + t - t * t),
+            ((base + 1) * 4, 0.5 * t * t),
+        ]
+    };
+    for (x, wx) in axis(position[0]) {
+        for (z, wz) in axis(position[2]) {
+            let weight = wx * wz;
+            if weight <= 0.0 {
+                continue;
+            }
             for y in 1..=roof_steps {
-                let Some(material) = block([origin[0] + x, origin[1] + y, origin[2] + z]) else {
+                let Some(material) = block([x, origin[1] + y, z]) else {
                     complete = false;
                     continue;
                 };
                 if terra_voxel::MaterialId::from_raw(material)
                     .is_some_and(terra_voxel::MaterialId::is_opaque)
                 {
-                    roofs += 1;
-                    distance += y as f32;
+                    coverage += weight;
+                    distance += y as f32 * weight;
                     break;
                 }
             }
@@ -50,11 +66,14 @@ pub fn sample(
     }
     Enclosure {
         complete,
-        cave: (roofs as f32 / 8.0).min(1.0),
-        ceiling: if roofs == 0 {
+        cave: {
+            let depth = ((surface_height - position[1] - 1.0) / 6.0).clamp(0.0, 1.0) as f32;
+            coverage.clamp(0.0, 1.0) * depth * depth * (3.0 - 2.0 * depth)
+        },
+        ceiling: if coverage == 0.0 {
             0.0
         } else {
-            distance / roofs as f32
+            distance / coverage
         },
     }
 }
@@ -62,6 +81,22 @@ pub fn sample(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn mouth_coverage_changes_continuously_in_both_directions() {
+        let roof = |p: [i64; 3]| Some(if p[0] < 0 && p[1] == 20 { 3 } else { 0 });
+        let mut previous = sample([-8.0, 0.0, 0.0], 40.0, roof).cave;
+        assert_eq!(previous, 1.0);
+        for step in -799..=800 {
+            let x = f64::from(step) / 100.0;
+            let next = sample([x, 0.0, 0.0], 40.0, roof);
+            assert!(next.complete);
+            assert!(next.cave <= previous + 0.00001);
+            assert!((next.cave - previous).abs() < 0.006);
+            previous = next.cave;
+        }
+        assert_eq!(previous, 0.0);
+    }
+
     #[test]
     fn trees_and_missing_chunks_are_not_caves_but_tall_loaded_roofs_are() {
         assert_eq!(sample([0.5, 3.0, 0.5], 50.0, |_| None).cave, 0.0);

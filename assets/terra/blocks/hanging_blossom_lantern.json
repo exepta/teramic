@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 321,
+  "name": "Hanging Blossom Lantern",
+  "description": "A blossom paper lantern with a wooden cap and pink tassel.",
+  "creative_category": "decoration",
+  "hardness": 1.4,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/hanging_blossom_lantern.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      1,
+      0.76,
+      0.43
+    ],
+    "intensity": 900,
+    "range": 13,
+    "falloff": "soft_core",
+    "flicker": 0.035,
+    "cave_intensity": 0.6,
+    "shadows": false
+  }
+}

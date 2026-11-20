@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 322,
+  "name": "Petal Ground Cover",
+  "description": "Loose pink and pearl petals scattered over the ground.",
+  "creative_category": "nature",
+  "hardness": 0.3,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/petal_ground_cover.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

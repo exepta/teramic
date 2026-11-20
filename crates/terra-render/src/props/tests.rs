@@ -86,7 +86,7 @@ fn botanical_detail_is_deterministic_with_bounded_lod_cost() {
             (
                 PropKind::Grass,
                 [
-                    984 + usize::from(variant < 128 && variant % 8 % 3 == 2) * 184,
+                    832 + usize::from(variant < 128 && variant % 8 % 3 == 2) * 184,
                     160,
                     32,
                 ],

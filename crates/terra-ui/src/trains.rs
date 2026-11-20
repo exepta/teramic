@@ -377,8 +377,11 @@ fn playing(world: &World) -> bool {
 }
 fn other_panel(world: &World) -> bool {
     world
-        .get_resource::<crate::inventory::InventoryState>()
-        .is_some_and(|panel| panel.blocks_input())
+        .get_resource::<crate::npc_work::WorkUiState>()
+        .is_some_and(|work| work.blocks_input())
+        || world
+            .get_resource::<crate::inventory::InventoryState>()
+            .is_some_and(|panel| panel.blocks_input())
         || world
             .get_resource::<crate::chat::ChatState>()
             .is_some_and(|panel| panel.blocks_input())

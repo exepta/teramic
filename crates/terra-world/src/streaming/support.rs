@@ -148,14 +148,14 @@ pub(super) fn loaded(
     position: terra_voxel::SectionPos,
 ) {
     let mut work = Vec::new();
-    // Old sections may contain foliage selected per voxel, leaving gaps within
-    // a hanging chain. Inspect only newly arrived data, never the entire world.
+    // Old sections may contain foliage selected before the final terrain CSG,
+    // or gaps within a hanging chain. Inspect only newly arrived data.
     // A missing neighbouring section remains unknown and is not persisted away.
     if let Some(section) = chunks.loaded.get(&position)
         && let Ok(origin) = position.origin()
     {
         for (index, &material) in section.data.blocks().iter().enumerate() {
-            if !matches!(material, 54 | 55) && !terra_core::lantern::is_part(material) {
+            if !matches!(material, 50 | 54 | 55 | 56) && !terra_core::lantern::is_part(material) {
                 continue;
             }
             let p = [
@@ -167,9 +167,10 @@ pub(super) fn loaded(
                 work.push(p);
                 continue;
             }
+            let neighbor = if matches!(material, 54 | 55) { 1 } else { -1 };
             if !chunks
-                .block_at([p[0], p[1] + 1, p[2]])
-                .is_some_and(|m| matches!(m, 54 | 55))
+                .block_at([p[0], p[1] + neighbor, p[2]])
+                .is_some_and(|m| m == material || matches!((material, m), (54 | 55, 54 | 55)))
                 && unsupported(chunks, p, material)
             {
                 work.push(p);
@@ -180,6 +181,13 @@ pub(super) fn loaded(
             for x in 0..16 {
                 let p = [origin[0] + x, origin[1] - 1, origin[2] + z];
                 if let Some(material) = chunks.block_at(p).filter(|m| matches!(m, 54 | 55))
+                    && unsupported(chunks, p, material)
+                {
+                    work.push(p);
+                }
+                // A rooted aquatic chain may have arrived before its floor.
+                let p = [origin[0] + x, origin[1] + 16, origin[2] + z];
+                if let Some(material) = chunks.block_at(p).filter(|m| matches!(m, 50 | 56))
                     && unsupported(chunks, p, material)
                 {
                     work.push(p);

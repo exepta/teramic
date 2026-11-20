@@ -1,0 +1,36 @@
+{
+  "client_sha256": "8d1b5d8c119465e339477a1a5f9e9693b484aa1cbf9cfbccab252aedf10f9738",
+  "runs": [
+    {
+      "name": "native-forest",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-voxel-creatures.sh",
+        "forest"
+      ],
+      "exit_code": 0,
+      "seconds": 18.86
+    },
+    {
+      "name": "native-foliage",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-foliage-creatures.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 32.09
+    },
+    {
+      "name": "native-biomes",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-reference-biomes.sh",
+        "reference-birch",
+        "picker-forest",
+        "picker-cherry-forest"
+      ],
+      "exit_code": 0,
+      "seconds": 34.65
+    }
+  ]
+}

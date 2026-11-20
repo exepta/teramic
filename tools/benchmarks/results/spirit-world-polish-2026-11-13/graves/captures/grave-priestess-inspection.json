@@ -1,0 +1,514 @@
+{
+  "bounds": [
+    [
+      3222,
+      -2,
+      5923
+    ],
+    [
+      3274,
+      50,
+      5978
+    ]
+  ],
+  "center": [
+    3248,
+    32,
+    5952
+  ],
+  "close_eye": [
+    3251.5,
+    2.4000000953674316,
+    5957.5
+  ],
+  "entrance": [
+    3248,
+    32,
+    5932
+  ],
+  "fixture_edits": 0,
+  "levels": [
+    [
+      3238,
+      24,
+      5950
+    ],
+    [
+      3258,
+      16,
+      5950
+    ],
+    [
+      3238,
+      8,
+      5950
+    ],
+    [
+      3258,
+      0,
+      5950
+    ]
+  ],
+  "lighting": {
+    "close": {
+      "camera": [
+        3251.5,
+        2.4000000953674316,
+        5957.5
+      ],
+      "cave_blend": 1.0,
+      "exposure_ev100": 6.451562881469727,
+      "local_lights": [
+        {
+          "distance_to_camera_m": 5.185341835021973,
+          "intensity_lumens": 17336.068359375,
+          "position": [
+            3256.4560546875,
+            3.517899751663208,
+            5958.537109375
+          ],
+          "range_m": 28.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 8.306780815124512,
+          "intensity_lumens": 723.779296875,
+          "position": [
+            3252.455322265625,
+            0.5179997682571411,
+            5965.5341796875
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 8.686074256896973,
+          "intensity_lumens": 16642.619140625,
+          "position": [
+            3256.53759765625,
+            3.486189126968384,
+            5964.4921875
+          ],
+          "range_m": 28.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 9.171025276184082,
+          "intensity_lumens": 17315.98046875,
+          "position": [
+            3242.456787109375,
+            3.5177552700042725,
+            5958.53857421875
+          ],
+          "range_m": 28.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 9.621891975402832,
+          "intensity_lumens": 694.4153442382812,
+          "position": [
+            3246.52392578125,
+            0.4922062158584595,
+            5965.51123046875
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 10.225239753723145,
+          "intensity_lumens": 3500.7109375,
+          "position": [
+            3261.543701171875,
+            0.48213842511177063,
+            5957.46240234375
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 10.917817115783691,
+          "intensity_lumens": 3624.58447265625,
+          "position": [
+            3261.48974609375,
+            0.5020272731781006,
+            5961.47509765625
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 11.416062355041504,
+          "intensity_lumens": 16645.51171875,
+          "position": [
+            3242.5390625,
+            3.485521078109741,
+            5964.4892578125
+          ],
+          "range_m": 28.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 11.741795539855957,
+          "intensity_lumens": 3500.7109375,
+          "position": [
+            3261.543701171875,
+            8.482138633728027,
+            5957.46240234375
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 12.970609664916992,
+          "intensity_lumens": 3471.03759765625,
+          "position": [
+            3261.542236328125,
+            0.4839770197868347,
+            5965.482421875
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 14.09160327911377,
+          "intensity_lumens": 3467.858642578125,
+          "position": [
+            3237.5390625,
+            0.4854848086833954,
+            5957.4892578125
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 14.651495933532715,
+          "intensity_lumens": 3567.547119140625,
+          "position": [
+            3237.522705078125,
+            0.48919305205345154,
+            5961.4560546875
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        }
+      ],
+      "pool_budget": 12
+    },
+    "overview": {
+      "camera": [
+        3288.0,
+        67.0,
+        5899.0
+      ],
+      "cave_blend": 0.0,
+      "exposure_ev100": 13.699999809265137,
+      "local_lights": [
+        {
+          "distance_to_camera_m": 37.6020393371582,
+          "intensity_lumens": 115205.078125,
+          "position": [
+            3288.498779296875,
+            29.483564376831055,
+            5901.486328125
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 37.68885803222656,
+          "intensity_lumens": 113850.28125,
+          "position": [
+            3291.544677734375,
+            29.510000228881836,
+            5900.54443359375
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 37.698307037353516,
+          "intensity_lumens": 113348.5859375,
+          "position": [
+            3289.53955078125,
+            29.499080657958984,
+            5902.53173828125
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 37.79963302612305,
+          "intensity_lumens": 113510.3828125,
+          "position": [
+            3289.544677734375,
+            29.5059871673584,
+            5903.54150390625
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 37.94331741333008,
+          "intensity_lumens": 113994.6875,
+          "position": [
+            3292.5205078125,
+            29.489089965820312,
+            5895.50830078125
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 37.99508285522461,
+          "intensity_lumens": 118063.8828125,
+          "position": [
+            3285.46240234375,
+            29.48456382751465,
+            5904.45703125
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 38.081275939941406,
+          "intensity_lumens": 115064.8984375,
+          "position": [
+            3289.53515625,
+            29.516193389892578,
+            5905.54150390625
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 38.1317138671875,
+          "intensity_lumens": 119543.3125,
+          "position": [
+            3294.460205078125,
+            29.500585556030273,
+            5901.46728515625
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 38.26164627075195,
+          "intensity_lumens": 116224.9921875,
+          "position": [
+            3289.52197265625,
+            29.51796531677246,
+            5906.5322265625
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 38.46333312988281,
+          "intensity_lumens": 113426.6953125,
+          "position": [
+            3293.5439453125,
+            29.50431251525879,
+            5905.53955078125
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 38.593875885009766,
+          "intensity_lumens": 1519965.875,
+          "position": [
+            3296.492431640625,
+            29.514667510986328,
+            5895.5048828125
+          ],
+          "range_m": 13.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 38.69636535644531,
+          "intensity_lumens": 117118.9296875,
+          "position": [
+            3296.509765625,
+            29.517532348632812,
+            5894.521484375
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        }
+      ],
+      "pool_budget": 12
+    }
+  },
+  "loot": [
+    {
+      "inventory": {
+        "cursor": null,
+        "revision": 3,
+        "slots": [
+          {
+            "count": 5,
+            "item": {
+              "mineral": "raw_iron"
+            }
+          },
+          {
+            "count": 5,
+            "item": {
+              "mineral": "coal"
+            }
+          },
+          {
+            "count": 5,
+            "item": {
+              "block": 43
+            }
+          }
+        ]
+      },
+      "position": [
+        3255,
+        24,
+        5961
+      ]
+    },
+    {
+      "inventory": {
+        "cursor": null,
+        "revision": 3,
+        "slots": [
+          {
+            "count": 6,
+            "item": {
+              "mineral": "raw_iron"
+            }
+          },
+          {
+            "count": 6,
+            "item": {
+              "mineral": "coal"
+            }
+          },
+          {
+            "count": 6,
+            "item": {
+              "block": 43
+            }
+          }
+        ]
+      },
+      "position": [
+        3255,
+        16,
+        5961
+      ]
+    },
+    {
+      "inventory": {
+        "cursor": null,
+        "revision": 3,
+        "slots": [
+          {
+            "count": 2,
+            "item": {
+              "mineral": "raw_iron"
+            }
+          },
+          {
+            "count": 2,
+            "item": {
+              "mineral": "coal"
+            }
+          },
+          {
+            "count": 2,
+            "item": {
+              "block": 43
+            }
+          }
+        ]
+      },
+      "position": [
+        3255,
+        8,
+        5961
+      ]
+    },
+    {
+      "inventory": {
+        "cursor": null,
+        "revision": 3,
+        "slots": [
+          {
+            "count": 3,
+            "item": {
+              "mineral": "raw_iron"
+            }
+          },
+          {
+            "count": 3,
+            "item": {
+              "mineral": "coal"
+            }
+          },
+          {
+            "count": 3,
+            "item": {
+              "block": 43
+            }
+          }
+        ]
+      },
+      "position": [
+        3255,
+        0,
+        5961
+      ]
+    }
+  ],
+  "name": "Maelis",
+  "native_views": [
+    "overview",
+    "close"
+  ],
+  "overview_eye": [
+    3288.0,
+    67.0,
+    5899.0
+  ],
+  "region": [
+    8,
+    15
+  ],
+  "route_points": 264,
+  "scenario": "grave-priestess",
+  "seed": 42042,
+  "spirit_blossom_revision": 2,
+  "status": "passed",
+  "structures_revision": 9,
+  "variant": "Priestess",
+  "verified_voxel_probes": 1062
+}

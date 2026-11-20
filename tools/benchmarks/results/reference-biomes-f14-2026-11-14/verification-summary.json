@@ -1,0 +1,17 @@
+{
+  "workspace_tests": {
+    "passed": 5128,
+    "failed": 0,
+    "ignored": 10,
+    "filtered": 1,
+    "test_targets": 26,
+    "status": "passed"
+  },
+  "python_tests_passed": 32,
+  "biome_scenes_passed": 12,
+  "biome_pngs": 16,
+  "mob_scenes_passed": 6,
+  "mob_pngs": 43,
+  "native_mob_client_matches_current_binary": true,
+  "worlds_unchanged": true
+}

@@ -1,0 +1,13 @@
+{
+  "id": "sand_worm",
+  "title": "Sand Worm",
+  "health": 120.0,
+  "food": 0.0,
+  "water": 0.0,
+  "size": [2.0, 3.2, 2.5],
+  "speed": 5.2,
+  "group_size": 1,
+  "sleeps": false,
+  "combat": { "damage": 6.0, "aggro_radius": 40.0, "reach": 2.8, "cooldown": 1.6 },
+  "spawn": { "biomes": ["desert", "cliffted_desert"] }
+}

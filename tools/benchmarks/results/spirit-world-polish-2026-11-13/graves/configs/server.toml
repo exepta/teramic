@@ -1,0 +1,3 @@
+natural_mob_limit = 0
+lan_discovery = false
+require_verified_accounts = false

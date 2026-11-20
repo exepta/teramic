@@ -7,6 +7,50 @@ use terra_world::{
 };
 
 #[test]
+fn natural_ice_provenance_survives_real_region_save_and_restores_exact_source_height() {
+    let root = std::env::temp_dir().join(format!("terra-seasonal-ice-{}", PlayerUuid::new_v4()));
+    let world = WorldId(17231);
+    let mut journal = EditJournal::default();
+    for (p, amount) in [([-1, 7, -1], 8), ([16, 7, 16], 5)] {
+        journal.record(p, 49).unwrap();
+        journal
+            .set_object_state(
+                p,
+                Some(terra_world::edits::BlockObjectState {
+                    facing: amount,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+    }
+    let built = [1, 7, 1];
+    journal.record(built, 49).unwrap();
+    save_edits(&root, world, &journal).unwrap();
+    let mut restored = load_edits(&root, world).unwrap();
+    for (p, amount) in [([-1, 7, -1], 8), ([16, 7, 16], 5)] {
+        assert_eq!(restored.block(p), Some(49));
+        assert_eq!(restored.object_state(p).unwrap().facing, amount);
+        restored.record(p, 0).unwrap();
+        assert_eq!(
+            restored.fluid(p),
+            Some(FluidCell {
+                amount,
+                source: true,
+                flow: [0, 0]
+            })
+        );
+    }
+    assert_eq!(restored.block(built), Some(49));
+    assert!(restored.object_state(built).is_none());
+    save_edits(&root, world, &restored).unwrap();
+    let thawed = load_edits(&root, world).unwrap();
+    assert_eq!(thawed.fluid([-1, 7, -1]).unwrap().amount, 8);
+    assert_eq!(thawed.fluid([16, 7, 16]).unwrap().amount, 5);
+    assert_eq!(thawed.block(built), Some(49));
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn formed_pool_sources_and_depleted_finite_pool_quantities_survive_real_cross_region_save_reload() {
     let root = std::env::temp_dir().join(format!("terra-pool-sources-{}", PlayerUuid::new_v4()));
     let world = WorldId(17229);

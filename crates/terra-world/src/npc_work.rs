@@ -2,6 +2,8 @@
 mod actions;
 mod lumberjack;
 mod movement;
+mod planting;
+mod station;
 #[cfg(test)]
 mod tests;
 
@@ -28,8 +30,75 @@ const SCAN_BUDGET: usize = 64;
 #[derive(Default)]
 pub struct WorkRuntime {
     navigation: Navigation,
+    suspended: BTreeSet<u64>,
     cursor: usize,
     scans: BTreeMap<u64, usize>,
+    door_requests: BTreeMap<[i64; 3], WorkerDoorRequest>,
+    travel: BTreeMap<u64, movement::Travel>,
+    stations: BTreeMap<u64, station::StationSearch>,
+    planting: BTreeMap<u64, planting::PlantSearch>,
+    tree_attempts: BTreeMap<u64, ([i64; 3], [f64; 3], f64)>,
+    tree_failures: BTreeMap<u64, Vec<([i64; 3], f64)>>,
+}
+
+/// Server applies these through the ordinary paired-opening transaction after the work tick.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct WorkerDoorRequest {
+    pub npc: u64,
+    pub owner: terra_core::PlayerUuid,
+    pub position: [i64; 3],
+}
+
+/// Wooden world doors only; train cab/iron openings are never operated by workers.
+pub const fn worker_openable_door(material: u16) -> bool {
+    matches!(material, 65..=67 | 139)
+}
+
+impl WorkRuntime {
+    /// Transient locomotion ownership while an NPC defends itself. Saved work
+    /// orders, tools and partial trees remain intact until the NPC resumes.
+    pub fn set_suspended(&mut self, ids: impl IntoIterator<Item = u64>) {
+        let next: std::collections::BTreeSet<_> = ids
+            .into_iter()
+            .filter(|id| *id > 0)
+            .take(terra_core::creatures::MAX_CREATURES)
+            .collect();
+        // Defense can relocate an actor. Discard only transient locomotion and
+        // pending opening requests; saved work and tree reservations survive.
+        for id in self.suspended.symmetric_difference(&next) {
+            self.navigation.invalidate(*id);
+            self.navigation.begin_tick(*id);
+            self.travel.remove(id);
+            self.door_requests.retain(|_, request| request.npc != *id);
+        }
+        self.suspended = next;
+    }
+    pub fn drain_door_requests(&mut self) -> impl Iterator<Item = WorkerDoorRequest> {
+        std::mem::take(&mut self.door_requests).into_values()
+    }
+}
+
+/// Productive work owns locomotion until it is truly out of targets. Waiting
+/// for tools, a station or a partial tree remains a concrete job, not leisure.
+pub fn controls_movement(game: &terra_core::GameplayState, npc: u64, phase: f64) -> bool {
+    !villagers::sleeping(npc, phase)
+        && game
+            .jobs
+            .orders
+            .values()
+            .any(|order| order.npc == npc && order.enabled)
+        && !game
+            .jobs
+            .workers
+            .get(&npc)
+            .is_some_and(idle_without_targets)
+}
+
+fn idle_without_targets(worker: &WorkerState) -> bool {
+    worker.status == WorkStatus::Waiting(WaitReason::NoTargets)
+        && worker.target.is_none()
+        && worker.tree.is_none()
+        && worker.work_seconds == 0.0
 }
 
 /// Call at 10 Hz. At most sixteen workers and 64 candidate cells per worker are visited.
@@ -42,6 +111,7 @@ pub fn tick(
     dt: f32,
     runtime: &mut WorkRuntime,
 ) {
+    runtime.door_requests.clear();
     if !dt.is_finite()
         || !(0.001..=0.25).contains(&dt)
         || !phase.is_finite()
@@ -55,6 +125,27 @@ pub fn tick(
         return;
     }
     runtime.scans.retain(|id, _| jobs.orders.contains_key(id));
+    runtime
+        .tree_attempts
+        .retain(|id, _| jobs.orders.contains_key(id));
+    runtime
+        .tree_failures
+        .retain(|id, _| jobs.orders.contains_key(id));
+    runtime.travel.retain(|id, _| {
+        jobs.orders
+            .values()
+            .any(|order| order.npc == *id && order.enabled)
+    });
+    runtime.stations.retain(|id, _| {
+        jobs.orders
+            .get(id)
+            .is_some_and(|order| order.enabled && order.kind == WorkKind::Lumberjack)
+    });
+    runtime.planting.retain(|id, _| {
+        jobs.orders
+            .get(id)
+            .is_some_and(|o| o.enabled && o.kind == WorkKind::Lumberjack)
+    });
     let enabled: BTreeSet<_> = jobs
         .orders
         .values()
@@ -62,7 +153,7 @@ pub fn tick(
         .map(|o| o.npc)
         .collect();
     for (npc, worker) in &mut jobs.workers {
-        if !enabled.contains(npc) {
+        if !runtime.suspended.contains(npc) && !enabled.contains(npc) {
             worker.status = WorkStatus::Paused;
             worker.target = None;
             worker.work_seconds = 0.0;
@@ -75,7 +166,8 @@ pub fn tick(
         let id = ordered[(runtime.cursor + offset) % ordered.len()];
         let order = jobs.orders[&id].clone();
         // A worker follows its highest-priority enabled assignment only.
-        if !visited.insert(order.npc)
+        if runtime.suspended.contains(&order.npc)
+            || !visited.insert(order.npc)
             || ordered
                 .iter()
                 .take_while(|&&other| other != id)
@@ -106,6 +198,8 @@ pub fn tick(
             worker.work_seconds = 0.0;
         } else {
             let age = npc.age;
+            let was_idle = idle_without_targets(&worker);
+            let idle_motion = (npc.velocity, npc.behavior);
             step(
                 chunks,
                 journal,
@@ -118,16 +212,22 @@ pub fn tick(
                 dt,
                 runtime,
             );
-            if npc.age == age {
-                crate::creatures::work_rest(
-                    &mut npc,
-                    &Habitat {
-                        terrain,
-                        chunks,
-                        journal,
-                    },
-                    dt,
-                );
+            if was_idle && idle_without_targets(&worker) {
+                // Ordinary residents move before this scanner on the server.
+                // A fruitless scan must not turn their walk into a frozen pose.
+                npc.velocity = idle_motion.0;
+                npc.behavior = idle_motion.1;
+            }
+            if npc.age == age && !idle_without_targets(&worker) {
+                let habitat = Habitat {
+                    terrain,
+                    chunks,
+                    journal,
+                };
+                let size = npc.size();
+                crate::creatures::work_rest_with_access(&mut npc, &habitat, dt, |p| {
+                    movement::position_allowed(&habitat, &order, p, size)
+                });
             }
         }
         jobs.workers.insert(order.npc, worker);
@@ -174,6 +274,11 @@ fn step(
         wait(worker, npc, WaitReason::MissingMaterial);
         return;
     }
+    if order.kind == WorkKind::Lumberjack
+        && !station::ready(chunks, journal, terrain, order, npc, worker, dt, runtime)
+    {
+        return;
+    }
     // Collect one bounded felling batch before walking back to storage. A free
     // bag slot guarantees the next real drop fits at least partially; a full bag
     // still unloads immediately instead of deadlocking behind pending drops.
@@ -211,7 +316,7 @@ fn step(
             worker,
             order.storage,
             dt,
-            &mut runtime.navigation,
+            runtime,
             true,
         ) {
             match actions::deliver(journal, order, worker) {
@@ -322,7 +427,7 @@ fn step(
             worker,
             order.storage,
             dt,
-            &mut runtime.navigation,
+            runtime,
             true,
         ) {
             match actions::supply(
@@ -360,16 +465,7 @@ fn step(
         return;
     }
     if movement::approach(
-        chunks,
-        journal,
-        terrain,
-        order,
-        npc,
-        worker,
-        cell,
-        dt,
-        &mut runtime.navigation,
-        false,
+        chunks, journal, terrain, order, npc, worker, cell, dt, runtime, false,
     ) {
         worker.status = WorkStatus::Working;
         worker.work_seconds += dt;
@@ -482,6 +578,6 @@ fn wait(worker: &mut WorkerState, npc: &mut Creature, reason: WaitReason) {
     worker.status = WorkStatus::Waiting(reason);
     worker.target = None;
     worker.work_seconds = 0.0;
-    npc.velocity = [0.0; 3];
+    npc.velocity = [0.0, npc.velocity[1].min(0.0), 0.0];
     npc.behavior = CreatureBehavior::Rest;
 }

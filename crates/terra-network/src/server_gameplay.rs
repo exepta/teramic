@@ -83,6 +83,7 @@ pub(super) struct MiningState {
     tool: Option<terra_core::ItemKind>,
     target: MiningTarget,
     command: EditCommand,
+    contact: Option<([f64; 3], [f32; 2])>,
     started: Instant,
     pulse: Instant,
     reported: Instant,
@@ -128,6 +129,7 @@ fn command(target: MiningTarget, look: [f32; 2], journal: &EditJournal) -> EditC
 
 pub(super) fn intent(
     intent: MiningIntent,
+    point: Option<[f64; 3]>,
     peer: &mut Peer,
     sender: &mut MessageSender<ServerControl>,
     world: &mut ControlWorld,
@@ -149,7 +151,11 @@ pub(super) fn intent(
         }
         return;
     }
-    let part = validation::mined_slab(command(target, intent.look, &world.journal), peer, world);
+    let look = point.map_or(intent.look, |p| {
+        validation::block_look_at(p, intent.look, peer, world)
+    });
+    let contact = point.map(|p| (p, intent.look));
+    let part = validation::mined_slab(command(target, look, &world.journal), peer, world);
     let now = Instant::now();
     let continuing = peer.mining.as_ref().is_some_and(|m| {
         m.target == target
@@ -162,11 +168,8 @@ pub(super) fn intent(
         peer.mining = None;
     }
     let command = peer.mining.as_ref().map_or_else(
-        || command(target, intent.look, &world.journal),
-        |m| EditCommand {
-            look: intent.look,
-            ..m.command
-        },
+        || command(target, look, &world.journal),
+        |m| EditCommand { look, ..m.command },
     );
     let valid = validation::check(command, peer, world);
     if valid != EditOutcome::Applied {
@@ -214,6 +217,7 @@ pub(super) fn intent(
             tool,
             target,
             command,
+            contact,
             started: now,
             pulse: now,
             reported: now,
@@ -232,7 +236,8 @@ pub(super) fn intent(
         })));
     } else if let Some(mining) = peer.mining.as_mut() {
         mining.pulse = now;
-        mining.command.look = intent.look;
+        mining.command.look = look;
+        mining.contact = contact;
     }
     peer.look = intent.look;
 }
@@ -258,7 +263,9 @@ pub(super) fn tick(
             continue;
         }
         if let Some(mut mining) = peer.mining.take() {
-            mining.command.look = peer.look;
+            mining.command.look = mining.contact.map_or(peer.look, |(point, look)| {
+                validation::block_look_at(point, look, &peer, &world)
+            });
             let valid = validation::check(mining.command, &peer, &world);
             if now.duration_since(mining.pulse) > Duration::from_millis(350)
                 || valid != EditOutcome::Applied

@@ -1,0 +1,7 @@
+{
+  "item": {
+    "tool": "bile_bucket"
+  },
+  "name": "Galle Bucket",
+  "description": "Corrosive Galle. Flows four blocks from its source at half water speed, damaging creatures and players."
+}

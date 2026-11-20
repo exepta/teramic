@@ -1,0 +1,28 @@
+{
+  "id": "teramic::crypt_wall_torch",
+  "name": "Crypt Wall Torch",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 370
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 340
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 40
+        },
+        "count": 1
+      }
+    ]
+  }
+}

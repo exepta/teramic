@@ -47,7 +47,22 @@ pub(crate) fn item_category(item: ItemKind, declared: Option<&str>) -> String {
         ItemKind::Block(_) | ItemKind::WoodenBlock { .. } | ItemKind::TintedBlock { .. } => {
             "building"
         }
-        ItemKind::Stick | ItemKind::Mineral(_) | ItemKind::Dye(_) => "materials",
+        ItemKind::BloodBerry
+        | ItemKind::CrimsonMushroom
+        | ItemKind::ThornTwig
+        | ItemKind::BloodCrystal
+        | ItemKind::DarkSap
+        | ItemKind::BloodLeaf
+        | ItemKind::BloodSpore
+        | ItemKind::BloodSlimeGel
+        | ItemKind::Bone
+        | ItemKind::Bitumen
+        | ItemKind::GloomEssence
+        | ItemKind::LightSplitter
+        | ItemKind::RoadAggregate
+        | ItemKind::Stick
+        | ItemKind::Mineral(_)
+        | ItemKind::Dye(_) => "materials",
         ItemKind::Animal(_) => "animal_materials",
         ItemKind::Tool(_)
         | ItemKind::WornTool { .. }
@@ -139,7 +154,20 @@ pub(crate) fn load_creative_categories(
             | ItemKind::Flower(_)
             | ItemKind::Animal(_)
             | ItemKind::Apple
-            | ItemKind::AppleCore => item_categories.contains_key(&definition.icon),
+            | ItemKind::AppleCore
+            | ItemKind::BloodBerry
+            | ItemKind::CrimsonMushroom
+            | ItemKind::ThornTwig
+            | ItemKind::BloodCrystal
+            | ItemKind::DarkSap
+            | ItemKind::BloodLeaf
+            | ItemKind::BloodSpore
+            | ItemKind::BloodSlimeGel
+            | ItemKind::Bone
+            | ItemKind::Bitumen
+            | ItemKind::GloomEssence
+            | ItemKind::LightSplitter
+            | ItemKind::RoadAggregate => item_categories.contains_key(&definition.icon),
         };
         if !valid_category_id(&definition.id)
             || !seen.insert(definition.id.clone())

@@ -1,0 +1,2 @@
+Isolated terrain settlement run: /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/terrain-settlements/run.s7oGyA
+Terrain-following outpost and kingdom passed: generated voxels, occupied beds and four native captures

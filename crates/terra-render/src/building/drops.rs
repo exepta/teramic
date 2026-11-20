@@ -102,7 +102,7 @@ impl DropModels {
 pub(super) struct DropAssets<'w> {
     meshes: ResMut<'w, Assets<Mesh>>,
     models: ResMut<'w, DropModels>,
-    water: Option<Res<'w, crate::water::material::WaterAssets>>,
+    water: Option<Res<'w, crate::particle_fluids::HydraulicMaterials>>,
     foliage: Option<Res<'w, crate::foliage::FoliageAssets>>,
     leaf_materials: Option<Res<'w, Assets<crate::foliage::LeafMaterial>>>,
     materials: ResMut<'w, Assets<StandardMaterial>>,
@@ -141,6 +141,21 @@ impl DropAssets<'_> {
             }
             ItemKind::Dust(kind) => crate::previews::dust_batches(kind, templates),
             ItemKind::Crop(kind) => crate::previews::crop_batches(kind, templates),
+            ItemKind::BloodBerry
+            | ItemKind::CrimsonMushroom
+            | ItemKind::ThornTwig
+            | ItemKind::BloodCrystal
+            | ItemKind::DarkSap
+            | ItemKind::BloodLeaf
+            | ItemKind::BloodSpore
+            | ItemKind::BloodSlimeGel
+            | ItemKind::Bone
+            | ItemKind::Bitumen
+            | ItemKind::GloomEssence
+            | ItemKind::LightSplitter
+            | ItemKind::RoadAggregate => {
+                crate::previews::forest_items::batches(item, templates.item_materials.opaque)
+            }
             ItemKind::Apple | ItemKind::AppleCore => {
                 crate::previews::apple_batches(item == ItemKind::AppleCore, templates)
             }
@@ -285,13 +300,13 @@ impl DropAssets<'_> {
             if let Some((layers, kind)) = &layers {
                 child.insert((layers.clone(), *kind));
             }
-            if let Some(water) = self.water.as_ref().filter(|_| {
+            if let Some(water) = self.water.as_ref().and_then(|water| {
                 blocks
                     .templates
                     .as_ref()
-                    .is_some_and(|t| t.water_material(*slot))
+                    .and_then(|t| water.for_slot(t, *slot))
             }) {
-                child.insert(MeshMaterial3d(water.0.clone()));
+                child.insert(MeshMaterial3d(water));
             } else if let Some(material) = self
                 .models
                 .foliage

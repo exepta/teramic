@@ -1,0 +1,2 @@
+Isolated biome atmosphere run: /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/biome-atmosphere/run.hjCyyY
+Spirit and Cherry native atmosphere, animation and close ground views passed

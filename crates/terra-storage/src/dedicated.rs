@@ -59,7 +59,13 @@ impl DedicatedStore {
         }
         // Saved terrain always wins over a newer global template; no retrogen.
         result.landscape_revision = saved.as_ref().map_or_else(
-            || requested.landscape_revision.max(1),
+            || {
+                if requested.landscape_revision == 0 {
+                    WorldConfig::CURRENT_LANDSCAPE_REVISION
+                } else {
+                    requested.landscape_revision
+                }
+            },
             |world| world.landscape_revision,
         );
         if let Some(saved) = &saved {
@@ -79,19 +85,29 @@ impl DedicatedStore {
             .map_or(requested.rivers, |world| world.rivers);
         // Existing saves own this contract, even when a new template defaults to 1.
         result.ocean_revision = saved.as_ref().map_or(1, |world| world.ocean_revision);
-        result.ecology_revision = saved.as_ref().map_or(4, |world| world.ecology_revision);
+        result.ecology_revision = saved.as_ref().map_or(11, |world| world.ecology_revision);
+        result.blood_forest_revision = saved
+            .as_ref()
+            .map_or(1, |world| world.blood_forest_revision);
+        result.spirit_blossom_revision = saved
+            .as_ref()
+            .map_or(2, |world| world.spirit_blossom_revision);
         result.cave_structure_revision = saved
             .as_ref()
             .map_or(8, |world| world.cave_structure_revision);
-        result.structures_revision = saved.as_ref().map_or(9, |world| world.structures_revision);
+        result.structures_revision = saved.as_ref().map_or(10, |world| world.structures_revision);
         result.structure_border_gap = saved
             .as_ref()
             .map_or(requested.structure_border_gap, |world| {
                 world.structure_border_gap
             });
-        result.river_terrain_revision = saved
-            .as_ref()
-            .map_or(4, |world| world.river_terrain_revision);
+        result.river_terrain_revision = saved.as_ref().map_or_else(
+            || match requested.river_terrain_revision {
+                0 => WorldConfig::CURRENT_RIVER_TERRAIN_REVISION,
+                revision => revision,
+            },
+            |world| world.river_terrain_revision,
+        );
         if let Some(saved) = &saved {
             result.cave_biomes = saved.cave_biomes.clone();
         }
@@ -203,7 +219,7 @@ mod tests {
             ..Default::default()
         };
         let created = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
-        assert_eq!(created.structures_revision, 9);
+        assert_eq!(created.structures_revision, 10);
         assert_eq!(created.structure_border_gap, 7);
         let (store, mut journal) = DedicatedStore::open(&root, &created).unwrap();
         journal.record([-1, 20, -1], 3).unwrap();
@@ -291,7 +307,7 @@ mod tests {
         assert!(resolved.ores.enabled);
         assert_eq!(resolved.ores.revision, 1);
         assert_eq!(resolved.geology_revision, 4);
-        assert_eq!(resolved.landscape_revision, 1);
+        assert_eq!(resolved.landscape_revision, 9);
         assert_eq!(resolved.sea_level, 8.0);
         assert_eq!(
             resolved.biome_definitions,
@@ -300,8 +316,8 @@ mod tests {
         assert!(!resolved.rivers);
         assert_eq!(resolved.ocean_revision, 1);
         assert_eq!(resolved.cave_structure_revision, 8);
-        assert_eq!(resolved.structures_revision, 9);
-        assert_eq!(resolved.river_terrain_revision, 4);
+        assert_eq!(resolved.structures_revision, 10);
+        assert_eq!(resolved.river_terrain_revision, 7);
         assert_eq!(resolved.seed, requested.seed);
         assert_eq!(resolved.generator_version, requested.generator_version);
         let (store, mut journal) = DedicatedStore::open(&root, &resolved).unwrap();
@@ -319,7 +335,7 @@ mod tests {
 
     #[test]
     fn landscape_revision_survives_new_templates_restart_and_saved_rule_changes() {
-        for revision in 0..=5 {
+        for revision in 0..=9 {
             let root = fresh_directory();
             let mut biome_definitions = BiomeDefinitions::default();
             biome_definitions.entries[terra_core::BiomeKind::Plains as usize]
@@ -458,7 +474,7 @@ mod tests {
                 ..Default::default()
             };
             let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
-            assert_eq!(resolved.landscape_revision, 1);
+            assert_eq!(resolved.landscape_revision, 9);
             assert_eq!(resolved.rivers, rivers);
             let (store, _) = DedicatedStore::open(&root, &resolved).unwrap();
             drop(store);
@@ -490,7 +506,10 @@ mod tests {
                 ..Default::default()
             };
             let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
-            assert_eq!(resolved.landscape_revision, revision.max(1));
+            assert_eq!(
+                resolved.landscape_revision,
+                if revision == 0 { 9 } else { revision }
+            );
             assert_eq!(resolved.sea_level, expected);
             let (store, _) = DedicatedStore::open(&root, &resolved).unwrap();
             drop(store);
@@ -629,7 +648,7 @@ mod tests {
     }
     #[test]
     fn saved_ecology_revisions_preserve_legacy_manifests_and_player_edits() {
-        for revision in 0..=4 {
+        for revision in 0..=10 {
             let root = fresh_directory();
             let saved = WorldConfig {
                 ecology_revision: revision,
@@ -650,7 +669,7 @@ mod tests {
                 save_toml(&manifest, &path).unwrap();
             }
             let requested = WorldConfig {
-                ecology_revision: 4,
+                ecology_revision: 11,
                 ..saved.clone()
             };
             let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
@@ -665,7 +684,7 @@ mod tests {
 
     #[test]
     fn river_erosion_does_not_reinterpret_legacy_waterfalls_or_player_edits() {
-        for revision in 0..=4 {
+        for revision in 0..=5 {
             let root = fresh_directory();
             let saved = WorldConfig {
                 river_terrain_revision: revision,
@@ -689,7 +708,7 @@ mod tests {
                 save_toml(&legacy, &manifest).unwrap();
             }
             let requested = WorldConfig {
-                river_terrain_revision: 4,
+                river_terrain_revision: 6,
                 ..saved.clone()
             };
             let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();

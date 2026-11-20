@@ -27,6 +27,7 @@ pub(crate) struct CaveSettings {
     pub parameters: Vec4,
     pub world_from_view: Mat4,
     pub underwater: Vec4,
+    pub waterline: Vec4,
     pub scattering: Vec4,
     pub ink: Vec4,
     pub smoke: Vec4,
@@ -38,6 +39,7 @@ impl Default for CaveSettings {
             parameters: Vec4::ZERO,
             world_from_view: Mat4::IDENTITY,
             underwater: Vec4::ZERO,
+            waterline: Vec4::ZERO,
             scattering: Vec4::ZERO,
             ink: Vec4::ZERO,
             smoke: Vec4::ZERO,
@@ -149,7 +151,9 @@ fn draw(
     // The same optional pass serves caves, underwater optics and short ink hits.
     // Dry outdoor views and Low water quality without ink have no extra pass.
     if settings.parameters.x <= 0.001
+        && settings.parameters.z <= 0.001
         && settings.underwater.x <= 0.001
+        && settings.waterline.y <= 0.001
         && settings.ink.x <= 0.001
         && settings.smoke.x <= 0.001
     {

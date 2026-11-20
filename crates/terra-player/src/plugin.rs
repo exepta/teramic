@@ -22,8 +22,10 @@ pub struct TerraPlayerPlugin;
 impl Plugin for TerraPlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CameraPerspective>()
+            .init_resource::<crate::ConstructionCamera>()
             .init_resource::<ControllerMode>()
             .init_resource::<PlayerInputBlock>()
+            .init_resource::<crate::WorldInteractionBlock>()
             .init_resource::<PlayerControllerStatus>()
             .init_resource::<WalkIntent>()
             .add_message::<CaptureRequest>()
@@ -41,6 +43,8 @@ impl Plugin for TerraPlayerPlugin {
             .init_resource::<crate::interaction::VesselMotion>()
             .add_message::<terra_network::client::MiningRequest>()
             .add_message::<terra_network::client::PropPlaceRequest>()
+            .add_message::<terra_network::client::ChestPlaceRequest>()
+            .add_message::<terra_network::client::TreeHarvestRequest>()
             .add_message::<terra_network::client::FarmToolRequest>()
             .add_message::<terra_network::client::ObjectRotateRequest>()
             .add_message::<terra_network::client::ConveyorConnectRequest>()
@@ -70,6 +74,7 @@ impl Plugin for TerraPlayerPlugin {
                     crate::camera::perspective::toggle,
                     follow_player_camera,
                     crate::camera::perspective::boom,
+                    crate::camera::damage::update,
                 )
                     .chain()
                     .in_set(PlayerSet::Movement)

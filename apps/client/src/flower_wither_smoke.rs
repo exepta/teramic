@@ -109,6 +109,7 @@ fn setup(world: &mut World) {
         settings.radius = 0;
         settings.vertical_radius = 0;
         settings.max_jobs = 0;
+        settings.meshes = false;
     }
     world.resource_mut::<ChunkFocus>().0 = [8.0, 33.0, 18.0];
     let clock = season_clock(world, Season::Spring);

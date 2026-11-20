@@ -22,6 +22,10 @@ pub enum FarmingAction {
     Harvest,
     FillBucket,
     EmptyBucket,
+    MakePath,
+    PourTar,
+    FillBileBucket,
+    EmptyBileBucket,
 }
 
 #[cfg(test)]

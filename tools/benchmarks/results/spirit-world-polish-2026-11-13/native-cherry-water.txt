@@ -1,0 +1,111 @@
+2026-11-13T21:35:38.564066Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.5-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-13T21:35:39.018585Z  INFO terra_client::bootstrap: Smoke-test compute worker cap; IO and async policies are unchanged compute_thread_cap=6 compute_threads=6 async_threads=4 io_threads=4
+2026-11-13T21:35:39.042034Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-13T21:35:39.042073Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-13T21:35:39.048048Z  INFO bevy_winit::system: Creating new window TERAMIC (189v0)
+2026-11-13T21:35:40.728599Z  INFO terra_client::biome_smoke: Native biome fixture uses generated terrain scene="cherry-brook" anchor=Vec3(-2103.5, 24.139349, -3247.5) eye=Vec3(-2092.5, 37.975136, -3229.5)
+2026-11-13T21:35:40.769133Z  INFO terra_ui::settings: Applied window presentation policy mode=Mailbox
+2026-11-13T21:35:40.776091Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-11-13T21:35:40.860301Z  INFO terra_render::weather::surfaces: Terrain wet material GPU binding mode legacy_smoke_control=false bindless=true
+2026-11-13T21:35:40.943024Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-11-13T21:35:40.943261Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-11-13T21:35:40.952708Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 112, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.952737Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/ornate_grave_stone.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.952748Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/pink_blossom_leaves.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.952754Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/cracked_grave_slab.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952761Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=0
+2026-11-13T21:35:40.952768Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_column.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952774Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 107, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.952781Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_column_base.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952788Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/spirit_blossom_dirt.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.952794Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 113, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.952800Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_spike_trap.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952806Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/soul_brazier.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952812Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 99, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.952818Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_brick.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.952832Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 100, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.952847Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/active_rune_block.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.952853Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_wall_niche.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952859Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/spirit_blossom_log_end.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.952866Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 102, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.952872Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 108, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.952879Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/red_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.952885Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-belt-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T21:35:40.952892Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/black_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.952898Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/ornate_grave_slab.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952904Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/dark_gray_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.952910Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/grave_relief_wall.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952917Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_candles.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952923Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/white_blossom_leaves.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.952929Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/pink_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.952936Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/overgrown_grave_stone.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.952942Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/inactive_rune_block.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.952949Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/blue_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.952955Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_capital.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952961Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/sarcophagus_closed.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952968Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/gravestone_large.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952974Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/sarcophagus_open.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.952980Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 101, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.952990Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 97, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.952999Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/gravestone_small.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953010Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/bordered_grave.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953020Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_arrow_trap.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953029Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/spirit_blossom_grass_bottom.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.953039Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/gravestone_medium.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953048Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/moss_grave_stone.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953058Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/dark_grave_stone.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953066Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/purple_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953073Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/glowing_lantern_stone.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.953079Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/lime_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953086Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_arch.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953092Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 96, generation: 0} mip_levels=1 rebound_materials=1
+2026-11-13T21:35:40.953098Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/spirit_blossom_grass.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.953105Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T21:35:40.953111Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/grave_cross.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953117Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/mystic_mist_block.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953124Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 94, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-13T21:35:40.953131Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-11-13T21:35:40.953137Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/grave_stone.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953152Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/mossy_crypt_arch.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953167Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 110, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.953174Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/grave_urn.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953180Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/lavender_blossom_leaves.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.953190Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/gray_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953200Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-iron-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T21:35:40.953206Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_lever.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953212Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/mosaic_grave_slab.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953218Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 111, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.953224Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/green_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953231Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/spirit_stone.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.953237Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/yellow_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953243Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/inscribed_grave_slab.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953249Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/cross_relief.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953255Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/cracked_grave_stone.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953261Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/blossom_petal_block.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.953267Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/spirit_blossom_log.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.953273Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/white_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953280Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 98, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.953289Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/orange_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953297Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 103, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.953303Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.953310Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-11-13T21:35:40.953316Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 105, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.953323Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 95, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-13T21:35:40.953329Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_wall_switch.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953335Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/turquoise_clay.png mip_levels=8 rebound_materials=1
+2026-11-13T21:35:40.953341Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/spirit_blossom_grass_side.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.953350Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 106, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.953358Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/spirit_blossom_planks.png mip_levels=7 rebound_materials=1
+2026-11-13T21:35:40.953365Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/ornate_crypt_column.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953371Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/skull_relief.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953377Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 109, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.953383Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 104, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.953389Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/crypt_pressure_plate.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953395Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 114, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T21:35:40.953401Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/grave_stone_slab.png mip_levels=8 rebound_materials=0
+2026-11-13T21:35:40.953408Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-oak-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T21:35:41.006164Z  INFO terra_render::blocks::loading: Block template library ready blocks=399 materials=1090
+2026-11-13T21:35:50.909061Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/biome-atmosphere/run.hjCyyY/cherry-water/cherry-brook-overview.png
+2026-11-13T21:35:50.909588Z  INFO terra_client::biome_smoke: Native biome fixture loading progress scene="cherry-brook" stage=0 focus=[-2092.5, 37.975135803222656, -3229.5] generation=Ready loaded=1089 wanted=1089 generation_jobs=0 terrain_ready=true terrain_jobs=0 terrain_columns=0 terrain_error=None terrain_unconsumed=0 first_unconsumed=None water_ready=true water_initial_ready=true props_ready=true prop_jobs=0 prop_error=None
+2026-11-13T21:35:56.236029Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/biome-atmosphere/run.hjCyyY/cherry-water/cherry-brook-close.png
+2026-11-13T21:35:56.236952Z  INFO terra_client::biome_smoke: Native biome fixture passed: generated feature uploaded and two views captured scene="cherry-brook"

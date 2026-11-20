@@ -187,7 +187,7 @@ pub(super) fn update(animal: &mut Creature, habitat: &Habitat, dt: f32, search: 
         let available = match goal.kind {
             NeedKind::Water => water_at(habitat, goal.position),
             NeedKind::Food => prop.is_some(),
-            NeedKind::Tree | NeedKind::Shelter => false,
+            NeedKind::Tree | NeedKind::Shelter | NeedKind::AttackAim => false,
         };
         if !available
             || animal.needs.search_in <= 0.0

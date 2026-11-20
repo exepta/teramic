@@ -8,25 +8,54 @@
   "bevel_width": 0.0,
   "materials": {
     "Autumn crown": {
-      "texture_pattern": "canopy",
       "base_color": [
-        1.0,
-        0.35,
-        0.055,
-        1.0
-      ]
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "Autumn crown_top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "leaf_cluster": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
     }
   },
   "face_materials": [
     "Autumn crown",
     "Autumn crown",
     "Autumn crown",
-    "Autumn crown",
+    "Autumn crown_top",
     "Autumn crown",
     "Autumn crown"
   ],
   "hardness": 0.3,
   "resistance": 0.5,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Autumn crown": "textures/foliage/autumn_side.png",
+    "Autumn crown_top": "textures/foliage/autumn_top.png",
+    "leaf_cluster": "textures/foliage/autumn_cluster.png"
+  },
+  "foliage_cluster": {
+    "material": "leaf_cluster"
+  }
 }

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": 330,
+  "name": "Gray Clay",
+  "description": "Gray Clay for colorful walls, floors and ornamental patterns.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "gray_clay": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "gray_clay": "textures/gray_clay.png"
+  },
+  "face_materials": [
+    "gray_clay",
+    "gray_clay",
+    "gray_clay",
+    "gray_clay",
+    "gray_clay",
+    "gray_clay"
+  ]
+}

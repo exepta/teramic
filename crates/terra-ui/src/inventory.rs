@@ -169,6 +169,7 @@ struct InventoryContext<'w, 's> {
     fullmap: Option<Res<'w, crate::minimap::fullmap::FullMapState>>,
     pets: Option<Res<'w, crate::pets::PetMenuState>>,
     kingdom: Option<Res<'w, crate::kingdom::KingdomMenuState>>,
+    npc_work: Option<Res<'w, crate::npc_work::WorkUiState>>,
     trains: Option<Res<'w, crate::trains::TrainUiState>>,
     view: Query<
         'w,
@@ -182,6 +183,10 @@ struct InventoryContext<'w, 's> {
 impl InventoryContext<'_, '_> {
     fn available(&self) -> bool {
         !self.settings.open
+            && !self
+                .npc_work
+                .as_ref()
+                .is_some_and(|work| work.blocks_input())
             && !self
                 .trains
                 .as_ref()
@@ -223,7 +228,9 @@ pub(crate) fn install(app: &mut App) {
         .add_message::<terra_network::client::ObjectInteractionRequest>()
         .add_systems(
             PreUpdate,
-            block_opening_frame.after(bevy::input::InputSystems),
+            block_opening_frame
+                .after(bevy::input::InputSystems)
+                .after(crate::npc_work::NpcWorkInputSet),
         )
         .add_systems(
             PreUpdate,
@@ -448,6 +455,13 @@ pub(crate) fn item_label(item: ItemKind, palette: &BlockPalette) -> String {
     view::item_metadata(item, palette).0
 }
 
+pub(crate) fn editor_item_metadata(
+    item: ItemKind,
+    palette: &BlockPalette,
+) -> (String, String, String) {
+    view::item_metadata(item, palette)
+}
+
 pub(crate) fn preview_key(item: ItemKind) -> String {
     match item {
         ItemKind::FilledWateringCan { tool, .. } | ItemKind::WornTool { tool, .. } => {
@@ -475,7 +489,20 @@ pub(crate) fn preview_key(item: ItemKind) -> String {
         | ItemKind::WaterBottle
         | ItemKind::Potion(_)
         | ItemKind::Apple
-        | ItemKind::AppleCore => {
+        | ItemKind::AppleCore
+        | ItemKind::BloodBerry
+        | ItemKind::CrimsonMushroom
+        | ItemKind::ThornTwig
+        | ItemKind::BloodCrystal
+        | ItemKind::DarkSap
+        | ItemKind::BloodLeaf
+        | ItemKind::BloodSpore
+        | ItemKind::BloodSlimeGel
+        | ItemKind::Bone
+        | ItemKind::Bitumen
+        | ItemKind::GloomEssence
+        | ItemKind::LightSplitter
+        | ItemKind::RoadAggregate => {
             format!("Item preview {}", item.identifier())
         }
     }
@@ -707,7 +734,7 @@ fn block_opening_frame(
             .and_then(|p| context.chunks.as_ref()?.block_at(p))
             .is_some_and(|material| {
                 matches!(material, 28 | 29 | 59 | 99 | 152 | 156..=157 | 159..=162 | 216)
-                    || terra_core::profession_stations::is_station(material)
+                    || terra_core::profession_stations::is_depot(material)
             }))
     {
         blocked.0 = true;
@@ -764,7 +791,7 @@ fn station_target(
         return None;
     };
     let material = context.chunks.as_ref()?.block_at(hit.position)?;
-    (terra_core::profession_stations::is_station(material)
+    (terra_core::profession_stations::is_depot(material)
         || matches!(
             material,
                 28
@@ -1147,7 +1174,7 @@ fn keyboard(
                         closing: false,
                     });
                 }
-                Some(material) if terra_core::profession_stations::is_station(material) => {
+                Some(material) if terra_core::profession_stations::is_depot(material) => {
                     actions.write(InventoryAction::OpenChest(position));
                 }
                 Some(29 | 59 | 99 | 152 | 156..=157 | 159..=162 | 216) => {
@@ -1355,7 +1382,20 @@ impl InventorySelection<'_> {
                 | ItemKind::WaterBottle
                 | ItemKind::Potion(_)
                 | ItemKind::Apple
-                | ItemKind::AppleCore => None,
+                | ItemKind::AppleCore
+                | ItemKind::BloodBerry
+                | ItemKind::CrimsonMushroom
+                | ItemKind::ThornTwig
+                | ItemKind::BloodCrystal
+                | ItemKind::DarkSap
+                | ItemKind::BloodLeaf
+                | ItemKind::BloodSpore
+                | ItemKind::BloodSlimeGel
+                | ItemKind::Bone
+                | ItemKind::Bitumen
+                | ItemKind::GloomEssence
+                | ItemKind::LightSplitter
+                | ItemKind::RoadAggregate => None,
             })
             .unwrap_or(self.palette.choices.len());
         if self.palette.selected != selected {
@@ -2171,12 +2211,25 @@ fn item_id(item: ItemKind) -> String {
         | ItemKind::WaterBottle
         | ItemKind::Potion(_)
         | ItemKind::Apple
-        | ItemKind::AppleCore => {
+        | ItemKind::AppleCore
+        | ItemKind::BloodBerry
+        | ItemKind::CrimsonMushroom
+        | ItemKind::ThornTwig
+        | ItemKind::BloodCrystal
+        | ItemKind::DarkSap
+        | ItemKind::BloodLeaf
+        | ItemKind::BloodSpore
+        | ItemKind::BloodSlimeGel
+        | ItemKind::Bone
+        | ItemKind::Bitumen
+        | ItemKind::GloomEssence
+        | ItemKind::LightSplitter
+        | ItemKind::RoadAggregate => {
             format!("item-{}", item.identifier().trim_start_matches("teramic::"))
         }
     }
 }
-fn available_items(
+pub(crate) fn available_items(
     mode: GameMode,
     inventory: &terra_core::Inventory,
     palette: &BlockPalette,
@@ -2187,6 +2240,7 @@ fn available_items(
             .iter()
             .filter(|choice| {
                 !terra_core::castle::retired_item(choice.id)
+                    && terra_core::construction::obtainable(choice.id)
                     && !matches!(choice.id, 197..=201 | 204..=205)
             })
             .map(|choice| ItemKind::Block(choice.id))
@@ -2241,6 +2295,7 @@ fn catalog_item(item: ItemKind) -> bool {
     !matches!(item.block_material(), Some(61..=64 | 95))
         && item.block_material().is_none_or(|material| {
             !terra_core::textiles::is_dyed(material)
+                && terra_core::construction::obtainable(material)
                 && !terra_core::castle::retired_item(material)
                 && !matches!(material, 197..=201 | 204..=205)
         })

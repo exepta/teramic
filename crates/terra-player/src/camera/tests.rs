@@ -178,6 +178,114 @@ fn capture_app(blocked: bool, focused: bool) -> (App, Entity) {
 }
 
 #[test]
+fn construction_owns_the_cursor_despite_panel_resume_and_never_replays_stale_capture() {
+    use bevy::window::{CursorGrabMode, CursorOptions, WindowFocused};
+    let (mut app, window) = capture_app(true, true);
+    let mut time = Time::<()>::default();
+    time.advance_by(Duration::from_secs(1));
+    app.insert_resource(time)
+        .init_resource::<ConstructionCamera>()
+        .init_resource::<GameConfig>()
+        .insert_resource(ControllerMode::Fly)
+        .insert_resource(ChunkFocus([4.0, 16.0, 22.0]))
+        .init_resource::<AccumulatedMouseMotion>()
+        .add_systems(Update, move_camera.after(update_capture));
+    let pose = Transform::from_xyz(4.0, 16.0, 22.0).with_rotation(Quat::from_rotation_y(0.25));
+    let camera = app.world_mut().spawn((TerraCamera, pose)).id();
+
+    // Keep a real pending capture from a blocked panel before entering.
+    app.world_mut().write_message(CaptureRequest(true));
+    app.update();
+    assert!(!app.world().resource::<CameraInputState>().captured);
+    app.world_mut().resource_mut::<ConstructionCamera>().active = true;
+    app.world_mut().resource_mut::<PlayerInputBlock>().0 = false;
+    {
+        let mut input = app.world_mut().resource_mut::<CameraInputState>();
+        input.captured = true;
+        input.initial_capture_pending = true;
+        input.suppress_motion = false;
+        assert!(
+            input.accept_input,
+            "exercise normal input, not benchmark bypass"
+        );
+    }
+    {
+        let mut cursor = app.world_mut().get_mut::<CursorOptions>(window).unwrap();
+        cursor.grab_mode = CursorGrabMode::Locked;
+        cursor.visible = false;
+    }
+    app.world_mut()
+        .resource_mut::<AccumulatedMouseMotion>()
+        .delta = Vec2::new(100.0, -75.0);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyW);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::Backquote);
+    app.world_mut()
+        .resource_mut::<ButtonInput<MouseButton>>()
+        .press(MouseButton::Left);
+    app.world_mut().write_message(WindowFocused {
+        window,
+        focused: true,
+    });
+    for frame in 0..3 {
+        if frame == 1 {
+            // Repair actual window state even if the logical capture is already off.
+            assert!(!app.world().resource::<CameraInputState>().captured);
+            let mut cursor = app.world_mut().get_mut::<CursorOptions>(window).unwrap();
+            cursor.grab_mode = CursorGrabMode::Locked;
+            cursor.visible = false;
+        }
+        // Model another panel's release, even after its block was cleared.
+        app.world_mut().write_message(CaptureRequest(true));
+        app.update();
+        let input = app.world().resource::<CameraInputState>();
+        assert!(input.accept_input);
+        assert!(!input.captured && !input.just_captured && !input.capture_ready());
+        assert!(!input.initial_capture_pending && input.suppress_motion);
+        let cursor = app.world().get::<CursorOptions>(window).unwrap();
+        assert_eq!(cursor.grab_mode, CursorGrabMode::None);
+        assert!(cursor.visible);
+        assert_eq!(*app.world().get::<Transform>(camera).unwrap(), pose);
+        assert_eq!(
+            app.world().get::<FlightMotion>(camera).unwrap().velocity,
+            Vec3::ZERO
+        );
+    }
+
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset_all();
+    app.world_mut()
+        .resource_mut::<ButtonInput<MouseButton>>()
+        .reset_all();
+    app.world_mut().resource_mut::<ConstructionCamera>().active = false;
+    app.update();
+    assert!(!app.world().resource::<CameraInputState>().captured);
+    assert_eq!(*app.world().get::<Transform>(camera).unwrap(), pose);
+    assert!(app.world().get::<CursorOptions>(window).unwrap().visible);
+
+    // A new explicit resume still captures, preserving the one-frame input gate.
+    app.world_mut().write_message(CaptureRequest(true));
+    app.update();
+    let input = app.world().resource::<CameraInputState>();
+    assert!(input.captured && input.just_captured);
+    assert!(!input.capture_ready());
+    assert_eq!(*app.world().get::<Transform>(camera).unwrap(), pose);
+    assert_eq!(
+        app.world().get::<CursorOptions>(window).unwrap().grab_mode,
+        CursorGrabMode::Locked
+    );
+    app.world_mut()
+        .resource_mut::<AccumulatedMouseMotion>()
+        .delta = Vec2::ZERO;
+    app.update();
+    assert!(app.world().resource::<CameraInputState>().capture_ready());
+}
+
+#[test]
 fn joining_a_focused_world_captures_after_loading_unblocks_without_another_click() {
     use bevy::window::{CursorGrabMode, CursorOptions};
     let (mut app, window) = capture_app(true, true);

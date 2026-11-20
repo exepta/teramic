@@ -28,7 +28,7 @@ pub const DOOR_CLOSE_CLIP: usize = 81;
 pub const COUGH_CLIPS: [usize; 3] = [82, 84, 85];
 pub const FURNACE_CLIP: usize = 83;
 pub const STALKER_AIRWAY_CLIP: usize = 86;
-pub const PATHS: [&str; 87] = [
+pub const PATHS: [&str; 91] = [
     "animals/sheep-bleat.wav",
     "animals/sheep-bleat-2.wav",
     "animals/cow-moo.wav",
@@ -116,6 +116,10 @@ pub const PATHS: [&str; 87] = [
     "player/cough-2.wav",
     "player/cough-3.wav",
     "animals/stalker-airway.wav",
+    "environment/wind-ambience.wav",
+    "environment/crows.wav",
+    "environment/ocean-surf.wav",
+    "environment/woodland-birds.wav",
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -154,36 +158,146 @@ impl Surface {
             Some(SmithStation | ArmyStation | RailwayStation | MineStation | BishopStation) => {
                 Self::Stone
             }
-            Some(Grass) => Self::Grass,
+            Some(Grass | SpiritBlossomGrass | BloodGrass | BloodMoss) => Self::Grass,
+            Some(DeadGrass) => Self::Grass,
+            Some(
+                BlueClay | RedClay | GreenClay | YellowClay | WhiteClay | BlackClay | GrayClay
+                | DarkGrayClay | PurpleClay | PinkClay | LimeClay | TurquoiseClay | OrangeClay
+                | CryptHeraldicBanner | CryptTornBanner | CryptCurtain | CryptCandles | CryptBooks,
+            ) => Self::Dirt,
+            Some(OrnateCryptChest | CryptWallTorch) => Self::Wood,
+            Some(
+                ThornBush
+                | HangingIvy
+                | GraveMoss
+                | DarkMushrooms
+                | GlowingPurpleMushrooms
+                | BlossomingVines,
+            ) => Self::Leaves,
+            Some(SoulCrystalSmall | SoulCrystalLarge | BloodCrystalBlock | BloodCrystalPillar) => {
+                Self::Glass
+            }
             Some(Sand) => Self::Sand,
             Some(
-                Dirt | Farmland | Path | Clay | Mud | MushroomStem | PurpleMushroomCap
-                | RedMushroomCap | YellowMushroomCap | GreenMushroomCap | BlueMushroomCap
-                | WhiteMushroomCap | Conveyor | TrainSeat,
+                Dirt
+                | Farmland
+                | Path
+                | Clay
+                | Mud
+                | MushroomStem
+                | PurpleMushroomCap
+                | RedMushroomCap
+                | YellowMushroomCap
+                | GreenMushroomCap
+                | BlueMushroomCap
+                | WhiteMushroomCap
+                | Conveyor
+                | TrainSeat
+                | SpiritBlossomDirt
+                | BloodDirt
+                | CrimsonMycelium
+                | BloodFungalBlock
+                | BloodGlowMushroomBlock
+                | GiantBloodMushroom
+                | WetTar
+                | Bile
+                | StrawBlock,
             ) => Self::Dirt,
             Some(Snow | SnowLayer | CastleSnowWall) => Self::Snow,
             Some(material) if terra_core::rails::is_rail(material as u16) => Self::Wood,
             Some(
-                Wood | WeatheredWood | OakPlanks | BirchPlanks | SprucePlanks | Workbench | Chest
-                | SpruceLog | Torch | OakDoor | BirchDoor | SpruceDoor | OakWindow | BirchWindow
-                | SpruceWindow | OakBed | BirchBed | SpruceBed | HandCrank | CherryLog
-                | CherryPlanks | CherryDoor | CherryWindow | WoodenGear | WoodenShaft | WaterWheel
-                | WoodenLargeGear | ItemHopper | ItemImporter | GearboxHorizontal | GearboxVertical
-                | Mixer | FilteredFunnel | BeltMerger | FilteredTunnel | BeltDistributor | Campfire
-                | WoodPipe | Basin | HoldBlock | CastleTimberWall | TrainCargo
-                | TrainAssemblyStation,
+                Wood
+                | WeatheredWood
+                | OakPlanks
+                | BirchPlanks
+                | SprucePlanks
+                | Workbench
+                | Chest
+                | SpruceLog
+                | Torch
+                | OakDoor
+                | BirchDoor
+                | SpruceDoor
+                | OakWindow
+                | BirchWindow
+                | SpruceWindow
+                | OakBed
+                | BirchBed
+                | SpruceBed
+                | HandCrank
+                | CherryLog
+                | CherryPlanks
+                | CherryDoor
+                | CherryWindow
+                | WoodenGear
+                | WoodenShaft
+                | WaterWheel
+                | WoodenLargeGear
+                | ItemHopper
+                | ItemImporter
+                | GearboxHorizontal
+                | GearboxVertical
+                | Mixer
+                | FilteredFunnel
+                | BeltMerger
+                | FilteredTunnel
+                | BeltDistributor
+                | Campfire
+                | WoodPipe
+                | Basin
+                | HoldBlock
+                | CastleTimberWall
+                | TrainCargo
+                | TrainAssemblyStation
+                | SpiritBlossomLog
+                | SpiritBlossomPlanks
+                | HangingBlossomLantern
+                | BloodwoodLog
+                | BloodwoodPlanks
+                | BloodRoots
+                | Cactus,
             ) => Self::Wood,
             Some(Gravel | Ballast | BallastStairs | BallastSlab) => Self::Gravel,
             Some(Glass | GlassPipe | Ice | SaltCrystal | IceCrystal) => Self::Glass,
             Some(
-                Leaves | AutumnLeaves | SilverLeaves | CherryLeaves | WhiteCherryLeaves
-                | AppleLeaves | Seagrass | CaveVine | CaveMushroom,
+                Leaves
+                | AutumnLeaves
+                | SilverLeaves
+                | CherryLeaves
+                | WhiteCherryLeaves
+                | AppleLeaves
+                | Seagrass
+                | CaveVine
+                | CaveMushroom
+                | BlossomPetalBlock
+                | PinkBlossomLeaves
+                | WhiteBlossomLeaves
+                | LavenderBlossomLeaves
+                | GlowingSpiritFlowers
+                | BlossomBush
+                | LotusFlower
+                | LilyPad
+                | PetalGroundCover
+                | BloodLeaves
+                | BloodMushrooms
+                | BloodThornBush
+                | BloodFlower
+                | HangingBloodVines
+                | BloodFern
+                | MeadowDaisies
+                | Lupine
+                | ForestFern
+                | FloweringShrub
+                | AlpineHeather
+                | DesertShrub
+                | ShoreReeds,
             ) => Self::Leaves,
             Some(CaveRoot) => Self::Wood,
             Some(DripstoneTip | terra_voxel::MaterialId::FlowerPot) => Self::Stone,
             Some(
                 Air
                 | Stone
+                | DriedTar
                 | Sandstone
                 | SmoothStone
                 | MossyStone
@@ -318,29 +432,33 @@ impl ContactVariation {
 pub type Bank = Arc<Vec<Vec<f32>>>;
 pub const THUNDER_CLIP: usize = PATHS.len();
 
+fn recording(root: &std::path::Path, name: &str) -> Result<Vec<f32>, String> {
+    let path = root.join(name);
+    let data = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    if data.len() > 4_000_000 {
+        return Err(format!("Oversized recording: {name}"));
+    }
+    let audio = AudioSource { bytes: data.into() };
+    let decoder = <AudioSource as Decodable>::Decoder::try_from(Cursor::new(audio))
+        .map_err(|e| format!("Invalid recording {name}: {e}"))?;
+    if decoder.channels().get() != 1 || decoder.sample_rate().get() != 24_000 {
+        return Err(format!("Recording must be mono 24000 Hz: {name}"));
+    }
+    let clip: Vec<f32> = decoder.take(24_000 * 60 + 1).collect();
+    if clip.len() < 240
+        || clip.len() > 24_000 * 60
+        || clip.iter().any(|s| !s.is_finite() || s.abs() > 1.0)
+    {
+        return Err(format!("Invalid recording samples: {name}"));
+    }
+    Ok(clip)
+}
+
 pub fn load() -> Result<Bank, String> {
     let root = terra_core::asset_directory().join("audio");
     let mut clips = Vec::new();
     for name in PATHS {
-        let path = root.join(name);
-        let data = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-        if data.len() > 4_000_000 {
-            return Err(format!("Oversized recording: {name}"));
-        }
-        let audio = AudioSource { bytes: data.into() };
-        let decoder = <AudioSource as Decodable>::Decoder::try_from(Cursor::new(audio))
-            .map_err(|e| format!("Invalid recording {name}: {e}"))?;
-        if decoder.channels().get() != 1 || decoder.sample_rate().get() != 24_000 {
-            return Err(format!("Recording must be mono 24000 Hz: {name}"));
-        }
-        let clip: Vec<f32> = decoder.take(24_000 * 60 + 1).collect();
-        if clip.len() < 240
-            || clip.len() > 24_000 * 60
-            || clip.iter().any(|s| !s.is_finite() || s.abs() > 1.0)
-        {
-            return Err(format!("Invalid recording samples: {name}"));
-        }
-        clips.push(clip);
+        clips.push(recording(&root, name)?);
     }
     clips.push(super::thunder::synthesize());
     for (start, duration, cutoff, gain) in [
@@ -371,6 +489,10 @@ pub fn load() -> Result<Bank, String> {
     clips.push(super::stalker::scratch(&clips[53], &clips[72]));
     clips.push(super::stalker::scream());
     clips.push(super::stalker::breath(&clips[STALKER_AIRWAY_CLIP], true));
+    let leaves = recording(&root, "environment/leaves.wav")?;
+    super::ambience::append(&mut clips, &leaves);
+    super::worm::append(&mut clips);
+    super::worm::export(&clips)?;
     Ok(Arc::new(clips))
 }
 
@@ -449,6 +571,34 @@ mod tests {
         expected.push(Stone); // Steel rail builder scoop and frame.
         // Station contacts follow their authored timber counters or masonry/metal bases.
         expected.extend([Wood, Stone, Wood, Stone, Stone, Stone, Wood, Stone, Wood]);
+        // Spirit turf, earth, stone, petals, three canopies, timber and ornaments.
+        expected.extend([
+            Grass, Dirt, Stone, Leaves, Leaves, Leaves, Leaves, Wood, Wood, Stone, Leaves, Leaves,
+            Stone, Leaves, Leaves, Wood, Leaves, Stone,
+        ]);
+        expected.extend([Dirt; 13]); // Colored raw clay.
+        expected.extend([Stone; 22]); // Grave masonry through the carved wall niche.
+        expected.extend([Dirt; 3]); // Banners and curtain.
+        expected.extend([Stone; 8]); // Graves, sarcophagi and the lantern post.
+        expected.extend([
+            Wood, Dirt, Stone, Stone, Stone, Stone, Stone, Wood, Dirt, Stone, Stone,
+        ]);
+        expected.push(Grass); // Dry grass, followed by six soft vegetation props.
+        expected.extend([Leaves; 6]);
+        expected.extend([Stone; 7]); // Plates, gates and decorative mechanisms.
+        expected.extend([Glass, Glass, Stone, Stone, Stone]); // Crystals and rune/mist stone.
+        // Blood terrain, wood, foliage, fungal props, hard bone/ruins and crystals (400–421).
+        expected.extend([
+            Grass, Dirt, Stone, Stone, Wood, Wood, Leaves, Dirt, Grass, Glass, Dirt, Dirt, Leaves,
+            Leaves, Leaves, Leaves, Wood, Stone, Leaves, Dirt, Stone, Glass,
+        ]);
+        expected.push(Wood); // Solid cactus stem (422).
+        expected.extend([Leaves; 7]); // Soft authored regional flora (423–429).
+        expected.push(Stone); // Solid fog stone (430).
+        expected.extend([Stone; 6]); // Asphalt surfaces and the stone road curb (431–436).
+        expected.extend([Dirt, Stone, Dirt, Stone]); // Wet tar, dry road, liquid Galle and its solid block (437–440).
+        expected.extend([Stone; 7]); // Sidewalk block and its six edge profiles (441–447).
+        expected.push(Dirt); // Straw muffles footsteps (448).
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1
@@ -579,7 +729,10 @@ mod tests {
     #[test]
     fn every_shipped_recording_decodes_and_contains_real_sample_energy() {
         let clips = load().unwrap();
-        assert_eq!(clips.len(), PATHS.len() + 18);
+        assert_eq!(
+            clips.len(),
+            PATHS.len() + 18 + super::super::ambience::DERIVED + super::super::worm::COUNT
+        );
         for (name, clip) in PATHS.iter().zip(clips.iter()) {
             let rms = (clip.iter().map(|s| s * s).sum::<f32>() / clip.len() as f32).sqrt();
             assert!(rms > 0.001 && rms < 0.5, "{name}: {rms}");

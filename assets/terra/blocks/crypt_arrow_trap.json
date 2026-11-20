@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 394,
+  "name": "Wall Arrow Trap",
+  "description": "An ornamental wall arrow trap for crypt entrances and dungeon chambers.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_arrow_trap.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/crypt_arrow_trap.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.1,
+        0,
+        0.62
+      ],
+      "maximum": [
+        0.9,
+        1,
+        0.95
+      ]
+    }
+  ]
+}

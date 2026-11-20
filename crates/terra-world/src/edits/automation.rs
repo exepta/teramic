@@ -13,7 +13,8 @@ fn orient_export(journal: &mut EditJournal) {
 
 fn chest_targets(journal: &EditJournal, chest: Cell) -> Vec<Cell> {
     let mut targets = vec![chest];
-    if let Some(state) = journal.object_state(chest)
+    if journal.block(chest) == Some(29)
+        && let Some(state) = journal.object_state(chest)
         && let Some(peer) = state.peer
         && journal.block(peer) == Some(29)
         && journal.object_state(peer).is_some_and(|other| {
@@ -179,7 +180,10 @@ impl EditJournal {
         if !filter.valid() {
             return Err("Invalid automation filter".into());
         }
-        if self.block(source) != Some(29) {
+        if !self
+            .block(source)
+            .is_some_and(terra_core::containers::is_chest)
+        {
             return self.eject_machine_output_filtered(source, position, filter);
         }
         if !self.gameplay().can_drop() {
@@ -278,7 +282,7 @@ impl EditJournal {
             return Ok(false);
         }
         let material = self.block(target).unwrap_or(0);
-        if material == 29 {
+        if terra_core::containers::is_chest(material) {
             return self.import_drop_to_chest_count(target, drop_id, limit);
         }
         if logistics::input_slots(material) == 0
@@ -365,7 +369,10 @@ impl EditJournal {
         drop_id: u64,
         limit: u16,
     ) -> Result<bool, String> {
-        if self.block(chest) != Some(29) {
+        if !self
+            .block(chest)
+            .is_some_and(terra_core::containers::is_chest)
+        {
             return Ok(false);
         }
         let Some(index) = self.gameplay().drops.iter().position(|d| d.id == drop_id) else {
@@ -474,6 +481,39 @@ mod tests {
         };
         journal.set_container(source, inventory).unwrap();
     }
+    #[test]
+    fn ornate_chest_automation_round_trip_is_lossless_and_stays_single_cell() {
+        let mut journal = EditJournal::default();
+        let chest = [-1, 2, -1];
+        let neighbor = [0, 2, -1];
+        let item = ItemKind::Block(3);
+        for (position, material, count) in [
+            (chest, terra_core::grave_blocks::ORNATE_CHEST, 8),
+            (neighbor, 29, 11),
+        ] {
+            journal.record(position, material).unwrap();
+            journal
+                .set_object_state(position, Some(BlockObjectState::default()))
+                .unwrap();
+            let mut contents = Inventory::default();
+            contents.insert(item, count);
+            journal.set_container(position, contents).unwrap();
+        }
+        assert!(
+            journal
+                .eject_inventory_output(chest, [-0.5, 2.0, 0.5])
+                .unwrap()
+        );
+        assert_eq!(journal.container_at(chest).unwrap().count(item), 7);
+        assert_eq!(journal.container_at(neighbor).unwrap().count(item), 11);
+        let drop = journal.gameplay().drops[0].id;
+        assert!(journal.import_drop_to_inventory(chest, drop).unwrap());
+        assert!(journal.gameplay().drops.is_empty());
+        assert_eq!(journal.container_at(chest).unwrap().count(item), 8);
+        assert_eq!(journal.object_state(chest).unwrap().peer, None);
+        assert_eq!(journal.container_at(neighbor).unwrap().count(item), 11);
+    }
+
     #[test]
     fn output_to_belt_to_chest_preserves_items_and_survives_reload() {
         let mut journal = EditJournal::default();

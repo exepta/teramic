@@ -1,6 +1,49 @@
 use super::*;
 
 #[test]
+fn seagrass_stalks_meet_exactly_across_negative_vertical_section_seams() {
+    for coarse in [false, true] {
+        let seam = |position: [i64; 3], profile: Profile, height: f32| {
+            let mut points = std::collections::BTreeSet::new();
+            visit(50, position, profile, coarse, |triangle, _| {
+                for p in triangle {
+                    if (p[1] - height).abs() < 1e-6 {
+                        points.insert((
+                            (p[0] * 1_000_000.0).round() as i32,
+                            (p[2] * 1_000_000.0).round() as i32,
+                        ));
+                    }
+                }
+            });
+            points
+        };
+        let lower = seam(
+            [-17, -17, -1],
+            Profile {
+                below: 0,
+                above: 2,
+                hanging: false,
+            },
+            1.0,
+        );
+        let upper = seam(
+            [-17, -16, -1],
+            Profile {
+                below: 1,
+                above: 1,
+                hanging: false,
+            },
+            0.0,
+        );
+        assert!(!lower.is_empty());
+        assert_eq!(
+            lower, upper,
+            "every metre must grow from the same rooted stalks"
+        );
+    }
+}
+
+#[test]
 fn hanging_plants_need_a_contiguous_loaded_ceiling_chain_not_a_distant_rock() {
     let start = [-17, -17, -1];
     let mut cells = std::collections::HashMap::from([

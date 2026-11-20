@@ -1,5 +1,5 @@
-use super::{Kind, Part, shape};
-use crate::players::model::Builder;
+use super::{Kind, Part, eyes, shape};
+use crate::creatures::model::voxel::Builder;
 use bevy::prelude::*;
 
 const CREAM: [f32; 3] = [0.91, 0.85, 0.72];
@@ -77,7 +77,13 @@ pub(super) fn parts(kind: Kind) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
             [0.021, 0.013, 0.006],
             muzzle.map(|v| v * 0.75),
         )?;
-        eyes(&mut head, side, face)?;
+        shape::rounded(
+            &mut head,
+            [side * 0.145, 0.105, -0.222],
+            [0.12, 0.13, 0.08],
+            0.012,
+            face.map(|v| v * 0.8),
+        )?;
         ears(&mut head, side, kind, coat)?;
         if kind == Kind::Cow {
             shape::segment(
@@ -149,21 +155,17 @@ pub(super) fn parts(kind: Kind) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
             }
         }
     }
-    let mut lids = Builder::default();
-    for side in [-1.0, 1.0] {
-        shape::rounded(
-            &mut lids,
-            [side * 0.145, 0.036, -0.241],
-            [0.104, 0.105, 0.028],
-            0.012,
-            face,
-        )?;
-        lids.voxel([side * 0.145, 0.014, -0.259], [0.08, 0.009, 0.008], DARK)?;
-    }
+    let eye_specs = [-1.0, 1.0].map(|side| eyes::Eye {
+        center: Vec3::new(side * 0.145, 0.105, -0.267),
+        width: 0.10,
+        side: 0.0,
+        skin: face,
+    });
+    let (head, lids) = eyes::attach(head.finish()?, &eye_specs)?;
     let mut output = vec![
         (Part::Body, Vec3::ZERO, body.finish()?),
-        (Part::Head, head_at, head.finish()?),
-        (Part::Eyelids, head_at, lids.finish()?),
+        (Part::Head, head_at, head),
+        (Part::Eyelids, head_at, lids),
     ];
     for x in [-1.0, 1.0] {
         for z in [-1.0, 1.0] {
@@ -247,38 +249,6 @@ pub(super) fn parts(kind: Kind) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
         tail.finish()?,
     ));
     Ok(output)
-}
-
-fn eyes(head: &mut Builder, side: f32, face: [f32; 3]) -> Result<(), String> {
-    shape::rounded(
-        head,
-        [side * 0.145, 0.036, -0.202],
-        [0.10, 0.11, 0.038],
-        0.012,
-        face.map(|v| v * 0.80),
-    )?;
-    head.voxel(
-        [side * 0.145, 0.034, -0.226],
-        [0.072, 0.074, 0.016],
-        [0.93, 0.88, 0.73],
-    )?;
-    shape::rounded(
-        head,
-        [side * 0.15, 0.033, -0.237],
-        [0.048, 0.061, 0.016],
-        0.007,
-        [0.12, 0.095, 0.07],
-    )?;
-    head.voxel(
-        [side * 0.15 - 0.012, 0.049, -0.248],
-        [0.016, 0.018, 0.006],
-        [1.0, 0.97, 0.88],
-    )?;
-    head.voxel(
-        [side * 0.145, 0.09, -0.215],
-        [0.085, 0.016, 0.026],
-        face.map(|v| v * 0.8),
-    )
 }
 
 fn ears(head: &mut Builder, side: f32, kind: Kind, coat: [f32; 3]) -> Result<(), String> {

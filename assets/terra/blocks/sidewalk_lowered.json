@@ -1,0 +1,243 @@
+{
+  "schema_version": 1,
+  "id": 447,
+  "name": "Lowered Sidewalk",
+  "description": "Carved fantasy paving with fine joints and moss in sheltered seams.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0.015,
+  "hardness": 1.6,
+  "resistance": 5,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "materials": {
+    "Surface": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/street/paving_normal.png"
+    },
+    "Deck": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/street/paving_normal.png"
+    }
+  },
+  "textures": {
+    "Surface": "textures/street/paving.png",
+    "Deck": "textures/street/decks/sidewalk_lowered.png"
+  },
+  "face_materials": [
+    "Surface",
+    "Surface",
+    "Surface",
+    "Deck",
+    "Surface",
+    "Surface"
+  ],
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0.0
+      ],
+      "maximum": [
+        1,
+        0.1328125,
+        0.0625
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.0625
+      ],
+      "maximum": [
+        1,
+        0.140625,
+        0.125
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.125
+      ],
+      "maximum": [
+        1,
+        0.1484375,
+        0.1875
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.1875
+      ],
+      "maximum": [
+        1,
+        0.15625,
+        0.25
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.25
+      ],
+      "maximum": [
+        1,
+        0.1640625,
+        0.3125
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.3125
+      ],
+      "maximum": [
+        1,
+        0.171875,
+        0.375
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.375
+      ],
+      "maximum": [
+        1,
+        0.1796875,
+        0.4375
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.4375
+      ],
+      "maximum": [
+        1,
+        0.1875,
+        0.5
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.5
+      ],
+      "maximum": [
+        1,
+        0.1953125,
+        0.5625
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.5625
+      ],
+      "maximum": [
+        1,
+        0.203125,
+        0.625
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.625
+      ],
+      "maximum": [
+        1,
+        0.2109375,
+        0.6875
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.6875
+      ],
+      "maximum": [
+        1,
+        0.21875,
+        0.75
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.75
+      ],
+      "maximum": [
+        1,
+        0.2265625,
+        0.8125
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.8125
+      ],
+      "maximum": [
+        1,
+        0.234375,
+        0.875
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.875
+      ],
+      "maximum": [
+        1,
+        0.2421875,
+        0.9375
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.9375
+      ],
+      "maximum": [
+        1,
+        0.25,
+        1.0
+      ]
+    }
+  ]
+}

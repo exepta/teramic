@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": 390,
+  "name": "Wall Switch",
+  "description": "An ornamental wall switch for crypt entrances and dungeon chambers.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_wall_switch.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/crypt_wall_switch.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.26,
+        0,
+        0.28
+      ],
+      "maximum": [
+        0.74,
+        0.12,
+        0.72
+      ]
+    },
+    {
+      "minimum": [
+        0.3,
+        0.12,
+        0.43
+      ],
+      "maximum": [
+        0.7,
+        0.66,
+        0.88
+      ]
+    }
+  ]
+}

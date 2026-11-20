@@ -83,6 +83,11 @@ pub struct StreamingSettings {
     pub max_jobs: usize,
     pub meshes: bool,
 }
+
+/// Frontends may reveal a nearby playable world before streaming a distant view.
+/// The requested graphics distance stays intact; this only limits current work.
+#[derive(Resource, Default, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StreamingRadiusLimit(pub Option<u8>);
 pub struct LoadedSection {
     pub data: BlockSection,
     /// CPU output consumed by terra-render. Dedicated servers do not request it.

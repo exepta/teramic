@@ -6,7 +6,9 @@ mod domains;
 #[cfg(test)]
 mod permission_tests;
 mod permissions;
+mod remote;
 mod rules;
+mod starter;
 mod territory;
 use crate::PlayerUuid;
 pub use bots::*;
@@ -15,6 +17,7 @@ pub use domains::*;
 pub use permissions::*;
 pub use rules::KingdomRules;
 use serde::{Deserialize, Serialize};
+pub use starter::*;
 use std::{collections::BTreeSet, fmt};
 
 pub const MAX_KINGDOMS: usize = 256;
@@ -124,6 +127,7 @@ pub enum KingdomError {
     SettlementTerritoryForbidden,
     ParentTerritoryInUse,
     SettlementLevelInherited,
+    StarterAreaUnavailable,
 }
 
 impl fmt::Display for KingdomError {
@@ -133,6 +137,7 @@ impl fmt::Display for KingdomError {
             Self::NameTaken => "An active kingdom already uses this name.",
             Self::InvalidIdentity => "A valid player identity is required.",
             Self::InvalidLocation => "The Bergfried location is outside the world bounds.",
+            Self::StarterAreaUnavailable => "Founding requires room for eighteen residents on loaded, dry, reachable ground near the Bergfried.",
             Self::CapacityReached => "The kingdom or member limit has been reached.",
             Self::AlreadyMember => "You already belong to an active kingdom.",
             Self::NotMember => "This player is not a member of the kingdom.",

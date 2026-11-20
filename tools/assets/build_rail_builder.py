@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Author the locomotive's three-meter-wide clearing and track-laying attachment."""
 import json
-from build_castle import Mesh, BLOCKS, MODELS, RECIPES
+from build_castle import Mesh, BLOCKS, MODELS
+from recipe_paths import recipe_path
 from build_locomotive_parts import palette, cylinder
 
 slug = 'train_rail_builder'
@@ -29,4 +30,4 @@ mesh.export(slug)
 cells=[{'item':{'mineral':'iron_ingot'},'count':1}]*9
 cells[4]={'item':{'block':196},'count':1}
 cells[7]={'item':{'block':29},'count':1}
-(RECIPES/(slug+'.json')).write_text(json.dumps(dict(id='teramic::'+slug,name='Lok-Freiräumer und Gleisleger',station='workbench',output={'item':{'block':296},'count':1},pattern={'kind':'shaped','width':3,'height':3,'cells':cells}),indent=2)+'\n')
+recipe_path(slug).write_text(json.dumps(dict(id='teramic::'+slug,name='Lok-Freiräumer und Gleisleger',station='workbench',output={'item':{'block':296},'count':1},pattern={'kind':'shaped','width':3,'height':3,'cells':cells}),indent=2)+'\n')

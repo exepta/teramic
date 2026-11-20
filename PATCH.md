@@ -7642,3 +7642,1289 @@ Workspace-Check, striktes Clippy, Client-/Server-/Galerie-Build und
 Headless-Smoke-Test bestanden. Native Aufnahmen bestaetigen Sprachwechsel,
 Profilspeicherung, Menueposition und die neun GLBs.
 [Pruefbericht](tools/benchmarks/results/f61-f72-stations-2026-11-11/README.md).
+
+## 235. Sichere Lokale NPC-Wege Und Einmalige Kingdom-Startbevoelkerung
+
+F49 prueft reale Landkanten und Koerperformen durchgehend, einschliesslich
+Stufen, niedriger Decken, veraenderter Hindernisse und fehlender Sections.
+Die lokale Suche behaelt ihr Budget von 96 Knoten, unterscheidet Etagen und
+behandelt nahe Hoehenziele mit einer vorwaerts validierten Suche von oben.
+Gecachte aktive Wege erzeugen keine dauernden Suchanfragen; Zielwechsel,
+Blockaden und fehlender Fortschritt loesen begrenzte Neuplanung aus.
+
+Arbeitskraefte verwenden stabile erreichbare Arbeitsseiten und pruefen echten
+Stand sowie Interaktionssicht vor Arbeit oder Lieferung. Fehlende Wege,
+ungeladene Bereiche und verweigerte Rechte werden entsprechend gemeldet.
+Holztueren werden erst durch die normale Servertransaktion nach erneuter
+Besitz-, Auftrags-, Entfernungs- und Rechtepruefung geoeffnet. Die bestehende
+Tuerverwaltung schliesst nach freier Passage; Eisen-/Fuehrerhaustueren bleiben
+von automatischen Anforderungen ausgeschlossen.
+
+F80 erzeugt bei neuer Kingdom-Gruendung atomar drei Schwertkaempfer, zwei
+Bogenschuetzen, drei Lanzentraeger und zehn zuweisbare Arbeitslose. Eine begrenzte
+Suche prueft geladenen trockenen Naturboden, erreichbare Wege, Claims und
+Belegung. Gebauter Boden darf zum Weg gehoeren. Die 18 NPCs gehoeren dem Gruender
+und sind ueber einen dauerhaften Beleg mit dem Kingdom verbunden. Eigene IDs
+werden auch nach Tod, Entfernen oder Aufloesung nicht erneut vergeben.
+
+Index ID23 erhaelt diese Belege; bestehende Kingdoms werden ohne nachtraegliche
+NPC-Vergabe aus ID22 und aelteren Speichertypen geladen. Client und Server
+verwenden gemeinsam Protokoll136. Die neue Platzmangelmeldung ist auf Deutsch
+und Englisch vorhanden. F78/F79 und globale Transportwege bleiben offen.
+Bedienung, Grenzen und reproduzierbarer nativer Gründungs-/Reload-Test stehen
+in [Navigation und Gruendung](docs/navigation-and-founding.md).
+
+Abnahme: 4717 Workspace-Library-/Binary-Tests erfolgreich, zehn bestehende
+ignoriert und ausschliesslich die bereits fehlende Original-FIVERR-GLB-Abnahme
+ausgefiltert. Formatierung, Workspace-Check, striktes Clippy, Doctest-Phase und
+Client-/Server-Build bestanden. Nativer uinput-Lauf bestaetigt dieselben 18 IDs,
+Rollen und Besitzer nach Save/Reload; Headless-Server ohne Display mit 27 Sections
+gestartet. [Pruefbericht](tools/benchmarks/results/f49-f80-navigation-2026-11-12/README.md).
+
+## 236. Direkte NPC-Arbeit, Wachenpatrouillen Und Kingdom-Komfort
+
+Rechtsklick auf eine zivile Arbeitskraft oeffnet ihren Arbeitsauftrag und neun
+private Inventarplaetze. Inventarinhalte bleiben lesend; Versorgung erfolgt
+ueber das echte Auftragslager. Gebiet und Lager lassen sich im Weltmodus mit
+eigener HUD-Anzeige waehlen. Bewegung bleibt aktiv, Weltedits sind gesperrt;
+ESC kehrt ohne Entwurfsverlust zurueck. Speichern und Pausieren verwenden die
+vorhandenen Servertransaktionen. Private Antworten pruefen Besitz, Rechte,
+Entfernung, Leben und geladene NPC-Zellen laufend; verweigerte Inspektionen
+erscheinen als Fehlermeldung.
+
+Eigene unbeschaeftigte Schwert-, Bogen- und Lanzensoldaten patrouillieren
+automatisch in geladenen Build-Claims ihres Reichs. Explizite Auftraege und
+vorhandene Bett-/Versorgungsschichten behalten Vorrang. Navigation, Tueren,
+Crowd-Separation und Overlap-Recovery nach Terrainaenderungen beachten die
+Baugrenzen. Die Startsoldaten benoetigen dafuer keine generierte Bewohnerstelle.
+
+K oeffnet den eigenen Bergfried innerhalb der aktuellen eigenen Gebietsclaims,
+auch bei entferntem oder ungeladenem Bergfried. Der Server prueft die reale
+Spielerposition, Mitgliedschaft und Aktionsrechte; fremde/ungebundene Bergfriede
+behalten ihre Nahinteraktion. Alte Tastenprofile erhalten konfliktfreie
+Belegungen. Der Kingdom-Dialog nutzt mehr Fensterflaeche, scrollbaren Inhalt
+und freie Rahmenabstaende. Gezielte Umbrueche und Mindestbreiten halten lange
+deutsche Beschriftungen in ihren Controls.
+
+Leere Himmels-Sections verbrauchen kein Lampen-Entdeckungsbudget mehr. Eine
+begrenzte transparente Mesh-Batch zeigt echte geladene Lichtquellen bis zur
+Renderreichweite, mit Tiefentest und weichen Uebergaengen. Der vorhandene
+Nahlicht-/Schattenpool bleibt begrenzt. Zufriedenheit und Siedlungsstatistiken
+sind als F81 geplant. Neue UI-Texte sind auf Deutsch/Englisch vorhanden;
+Client und Server verwenden gemeinsam Protokoll137, ohne neue Save-Migration.
+
+Bedienung und Grenzen: [NPC-Interaktion und Kingdom](docs/npc-interaction-and-kingdom.md).
+
+Abnahme: 4750 Workspace-Tests erfolgreich, zehn bestehende ignoriert und nur der
+fehlende Original-FIVERR-GLB-Test ausgefiltert. Formatierung, Check, striktes Clippy,
+Doctest-Phase und beide Binaerbuilds bestanden. Nativer NPC-/Kingdom-Lauf mit sieben
+DE/EN-Aufnahmen, Sprachgalerie mit vier weiteren Aufnahmen und Headless-Serverstart
+mit 27 Sections erfolgreich. [Pruefbericht](tools/benchmarks/results/npc-work-patrol-ui-2026-11-12/README.md).
+
+## 237. Textabhaengige Buttons Und Holzfaeller Mit Berufsstation
+
+Aktionsbuttons verwenden automatische Inhaltsbreite statt festen Breiten oder
+kuenstlichem Auffuellen. Symbol und Beschriftung bleiben horizontal und
+einzeilig; Aktionszeilen umbrechen erst bei Platzmangel. NPC-Auswahl, Kingdom,
+Settings-/Dialogfooter sowie betroffene Zug-/Wegpunktaktionen sind angepasst.
+Die native Galerie prueft echte Caption-Grenzen und textabhaengige Breiten.
+
+Neue Holzfaellerauftraege verlangen eine reale Holzfaeller-Station im Arbeitsgebiet
+oder in der begrenzten Lagerumgebung. Erst der physische Stationsbesuch vergibt
+den Beruf. Die vorhandene produktive Simulation holt Aexte, faellt zugeordnete
+Baeume, sammelt echte Drops, liefert und pflanzt passende Setzlinge nach. Verlorene
+Stationen halten die Arbeit an, ohne Inventare oder Teilbaeume zu verwerfen.
+Berufswechsel erneuern sichtbare Avatare und Portraits; das dauerhafte Geschlecht
+bleibt von der Berufs-ID getrennt. Beide Geschlechter besitzen passende Modelle.
+
+Normales, nicht zurueckgegebenes Laub liefert mit 20 Prozent Wahrscheinlichkeit
+einen Setzling. Direkter Abbau, Gleisraeumung, verzoegertes Kronenaufraeumen und
+Holzfaeller verwenden denselben stabilen Koordinatenwurf mit Avalanche-Mischung.
+Zugeordnete Baeume behalten ihre Art, einschliesslich Fichten und historischer
+Kronenmaterialien. Holz gibt keinen garantierten Gratis-Setzling mehr.
+
+Der neue Wartegrund ist auf Deutsch und Englisch verfuegbar. Client und Server
+verwenden Protokoll138; bestehende Speicherfelder bleiben unveraendert.
+Bedienung: [Holzfaeller, Stationen und Setzlinge](docs/lumberjack-stations-and-drops.md).
+
+Abnahme: 4763 Workspace-Tests bestanden, zehn bestehende ignoriert und nur der
+fehlende externe Original-FIVERR-GLB-Test ausgefiltert. Formatierung, Workspace-Check,
+striktes Clippy, Doctest-Pruefung und beide Binaerbuilds erfolgreich. Neun native
+NPC-/Stationsaufnahmen bestaetigen dynamische Captionbreiten, Stationsanforderung,
+echten Besuch und erneuerten weiblichen Berufsavatar; vier weitere DE/EN-Aufnahmen
+pruefen Settings und Sprachspeicherung. Headless-Server mit 27 Sections erfolgreich.
+[Pruefbericht](tools/benchmarks/results/lumberjack-stations-2026-11-12/README.md).
+
+## 238. Stationsversorgung, Untatige Villager Und Materialbasierter Hausbau
+
+Holzfaeller verwenden die besuchte Berufsstation auch als wirkliche Quelle fuer
+Aexte und passende Setzlinge, wenn dieser Vorrat im zugewiesenen Ausgabelager
+fehlt. Die Arbeitskraft laeuft zum Vorrat; Ertraege gehen weiterhin zum
+Ausgabelager. Rechte und Transportgrenzen bleiben wirksam. Eine begrenzte
+Wiederholpause fuer noch nicht begonnene unerreichbare Baeume verhindert, dass
+ein einzelner unguenstiger Stamm alle anderen Arbeitsziele blockiert.
+
+Eigene untatige zivile Villager wandern tagsueber in geladenen Build-Claims ihres
+Reichs. Auch Arbeiter ohne Arbeitsziele duerfen umherlaufen, waehrend ihre
+begrenzte Suche weitergeht. Konkrete Arbeit, Baustellen, Befehle und die bestehende
+Bett-/Nachtlogik behalten Vorrang. Der Bergfried zeigt bei Auswahl einer
+Arbeitskraft deren neun private Inventarplaetze. Eigene NPCs im selben Reich
+bleiben auch aus der Entfernung verwaltbar, solange der Spieler im eigenen
+beanspruchten Gebiet steht; Besitz und Rechte werden weiter vom Server geprueft.
+
+Der neue Tab **Lokales Bauen / Building Local** verwaltet Handwerker ohne eigenes
+Arbeitsgebiet, einen Stadtlagerbereich mit echten gefuellten Truhen, manuelle
+Hausplaetze und ein optionales automatisch beplantes Wohngebiet. Die erste
+Vorlage entspricht dem bestehenden eingerichteten Dorfwohnhaus. Hoechstens vier
+Handwerker je Haus holen begrenzte Materialmengen, laufen zu erreichbaren
+Arbeitsseiten und setzen wirkliche Bloecke in Bauphasen. Bezahlte temporaere
+Gerueste werden spaeter abgebaut und ihr Material zurueckgelagert. Materialmangel,
+versperrte Wege, belegte Plaetze, fehlende Rechte, Unload und volle Lager pausieren
+die entsprechende Arbeit mit sichtbarem Wartegrund. Ein Abbruch laesst bereits
+gebaute Hausteile erhalten.
+
+Ein, zwei, drei beziehungsweise vier anwesende Handwerker benoetigen 30, 15, 10
+beziehungsweise 5 Minuten aktive Echtzeit. Laufwege und Wartezeiten kommen hinzu;
+Offline-Zeit und beschleunigte Tageszeit erzeugen keinen Baufortschritt.
+Lager-, Wohngebiets- und Hausauswahl verwenden einen eigenen HUD-Modus mit
+ESC-Abbruch und sperren Weltedits. Die ausgewaehlten Entwuerfe werden erst durch
+die jeweilige Speicher-/Auftragsaktion uebernommen. Natuerliche Buttonbreiten
+und horizontale Symbol-/Textanordnung bleiben erhalten.
+
+Client und Server verwenden gemeinsam **Protokoll 139**. **ID24** speichert die
+Bauplaene, Stadtlagerbereiche, Handwerkerlisten und ihre echten Inventare und
+uebernimmt ID23 sowie aeltere Indizes. Clients erhalten kompakte Bauanzeigen.
+Die separate visuelle App fuer versionierte JSON-Gebaeudevorlagen ist als **F82**
+in der TODO erfasst. Bedienung und Grenzen:
+[Handwerker und lokaler Hausbau](docs/settlement-building.md).
+
+**Abnahme:** 4800 Library-/Binary-Tests und vier Integrationstests bestanden;
+Dokumentationstest-Ziele, Formatierung, Cargo-Check und Clippy mit `-D warnings`
+sind erfolgreich. Zehn bestehende Tests bleiben ignoriert, der bekannte
+Original-GLB-Test ist wegen `FIVERR/VoxelGrassBlock glb file.glb` ausgefiltert.
+Alle vier Hausausrichtungen erreichen nach jeweils 832 echten Bauschritten
+mit Materialbilanz, Ruecklieferung und wiederhergestelltem Zwischenstand `Complete`.
+Client und Server wurden separat gebaut; der Server laeuft ohne Display und
+enthaelt keine Render-/Windowing-/UI-Abhaengigkeiten. Die native Bau-Abnahme
+prueft echte Lagerauswahl, Materialtransfer, Claim, Hausauftrag, Handwerker,
+erste Nicht-Air-Blockplatzierung und bestaetigte Pause mit fuenf DE/EN-Aufnahmen.
+[Nachweise und Wiederholung](tools/benchmarks/results/settlement-building-2026-11-12/README.md).
+Die Nachweise der Phasen 235 bis 237 bleiben historische Pruefstaende.
+
+## 239. Arbeitswege, JSON-Vorlagen, Gebietsanzeige Und Verteidigung
+
+Arbeiter unterscheiden eine noch laufende Wegsuche von einer wirklich blockierten
+Route und pruefen weitere erreichbare Standseiten. Praezise letzte Schritte
+beachten die Zielhoehe. Unsichere Terrassenkanten werden physisch stabilisiert;
+anschliessend fuehrt der begrenzte Pathfinder ueber tatsaechliche Stufen. Fehlende
+Chunks und Rechte bleiben eigene Wartegruende. Holzfaeller pflanzen jetzt auch
+auf anfangs baumlosen geeigneten Flaechen aus wirklichen Stations-/Lagervorraeten.
+Baumart, Abstand, Reservierungen, Wachstum und Materialbilanz bleiben erhalten.
+
+Alle 487 endlichen Rezepte liegen in Unterordnern von `assets/crafting/`, darunter
+40 getrennte Ofen-/Brecher-/Braurezepte. Loader, eingebettete Definitionen und
+Generatoren verwenden die neuen Pfade. Neue Hausauftraege laden die vollstaendige
+Default-Datei `assets/buildings/templates/village/residential.json`: 390 atomare
+Schritte, 392 Zellen und 17 Materialarten. Ungueltige Vorlagen werden abgelehnt;
+bestehende Auftraege behalten ihre gespeicherten Plaene. Der visuelle Editor
+bleibt F82.
+
+Gespeicherte Arbeits-, Lager- und Wohngebiete sowie Hausanker lassen sich im
+Arbeitsdialog und im Bau-Tab einblenden. Farbige Weltlinien und eine DE/EN-Legende
+bleiben nach dem Schliessen sichtbar; HUD-Ausblenden und Sitzungsende greifen
+auch hier. Entwuerfe werden nicht als bestaetigte Gebiete dargestellt.
+
+Nach einem akzeptierten Treffer verteidigt sich der getroffene Bewohner gegen
+seinen wirklichen Angreifer. Nur der Gruender seines eigenen aktiven Reichs ist
+ausgenommen. Verfolgung, Sichtlinie, Reichweite, Ruestung, Spawn-Schutz und
+Schlagabstand werden serverseitig geprueft. Verteidigung pausiert Arbeit und
+Bau, erhaelt Inventare/Fortschritt und verwirft beim Wechsel veraltete Laufwege.
+Die ausdrueckliche `pvp`-Option in `configs/server.toml` steuert den vorhandenen
+autoritativen Spielerkampf auch in gespeicherten Welten. Ohne Vorgabe gilt die
+gespeicherte Weltregel. Keine neuen Dependencies, Protokoll139 und ID24 bleiben
+unveraendert. [Bedienung und Grenzen](docs/workers-areas-and-pvp.md).
+
+**Abnahme:** 4.839 Library-/Binary-Tests und vier Integrationstests bestanden,
+darunter 1.350 Welt-Tests und der echte Zwei-Client-PvP-Pakettest. Formatierung,
+Workspace-Check, striktes Clippy, Doctest-Ziele, getrennte Builds und der
+Headless-Start mit 27 Sections sind erfolgreich. Die native Baupruefung besteht
+mit sechs DE/EN-Aufnahmen einschliesslich sichtbarem gespeicherten 3D-Bereich;
+neun weitere Aufnahmen pruefen die direkte NPC-Arbeit. Zehn bestehende Tests
+bleiben ignoriert; nur der bekannte fehlende Original-FIVERR-GLB-Test ist
+ausgefiltert. [Protokolle, Aufnahmen und Wiederholung](tools/benchmarks/results/workers-areas-defense-2026-11-12/README.md).
+
+
+## 240. Bergfried-Ansichten Und Echte Bauvorlagenauswahl
+
+Der Bergfried verwendet sechs eigene Komponenten fuer Allgemein, Mitglieder,
+Diplomatie, Gebaeude, Arbeitskraefte und Armee im bestehenden braun-goldenen
+UI-Stil. Listen und Detailbereiche nutzen den verfuegbaren Platz; Aktionsbuttons
+behalten ihre natuerliche Textbreite und kompakte Ansichten scrollen innerhalb
+des Rahmens. Angezeigte Mitglieder, Beziehungen, Siedlungszahlen und geladene
+Soldaten stammen aus dem wirklichen Spielzustand, ohne erfundene Kriegshistorien.
+Deutsch und Englisch sind angebunden.
+
+Gebaeude zeigt einen serverseitig geprueften JSON-Katalog mit auswaehlbaren
+Vorlagen, schematischer Planvorschau und der genauen permanenten Materialliste.
+Dorfwohnhaus und Fichtenhuette besitzen unterschiedliche reale Plaene und Kosten.
+Manuelle Auftraege sowie automatische Wohngebiete verwenden die gewaehlte ID;
+ein reiner Vorschauwechsel aendert keine laufenden Auftraege. Standortabhaengige
+Bodenvorbereitung und bezahlte Gerueste stehen nach Planung im Auftragsbedarf.
+Neue Vorlagen lassen sich im bestehenden begrenzten JSON-Schema ergaenzen.
+
+Protokoll 140 uebertraegt die Katalogmetadaten und Auswahl. Speicherindex ID25
+migriert ID24 explizit und erhaelt Inventare, Baufortschritt und gespeicherte
+Plaene. Bestehende Auftraege laufen auch nach Entfernen ihrer Quelldatei weiter;
+fehlende automatische Vorlagen werden nicht stillschweigend ersetzt.
+[Bedienung, Asset-Schema und Grenzen](docs/keep-and-building-templates.md).
+
+
+**Abnahme Phase 240:** 4.874 Tests bestanden, darunter 1.353 Welt-Tests,
+acht vollstaendige Hausbauten in vier Ausrichtungen und der echte
+Zwei-Client-Vorlagentest. Formatierung, Workspace-Check, striktes Clippy,
+Doctest-Ziele, getrennte Builds und Headless-Start bestehen. Zwoelf native
+DE/EN-Aufnahmen pruefen die sechs Tabs, echte Auswahlklassen und Materialvorschau;
+sechs weitere pruefen den Bauablauf bis Platzierung und Pause. Zehn bestehende
+Tests bleiben ignoriert; nur der bekannte fehlende Original-FIVERR-GLB-Test ist
+ausgefiltert. [Protokolle und Aufnahmen](tools/benchmarks/results/keep-templates-2026-11-13/README.md).
+
+
+## 241. Stadtlager, TAB-Baumodus, benachbarte Truhen und F82
+
+Eigene Bau-Chunks zeigen links neben der Minimap die autoritativ bestaetigten
+Stadtlagerbestaende fuer Holz, Stein, Eisen und Kohle. Vorlagen zeigen genaue
+Gegenstaende als vorhanden / benoetigt. Die abgeloeste Top-down-Kamera erlaubt
+Planen, Drehen, orange Voxelvorschau, echte Handwerkerauftraege und bestehende
+NPC-Inventar-/Arbeitsdialoge, ohne die Spielfigur zu verschieben. Sichtweite und
+Nebel beruecksichtigen die Kamerahoehe. Creative-Auftraege des Reichseigentuemers
+brauchen weder Lager noch Material, erzeugen aber keine Inventarstapel.
+Einzel- und Doppeltruhen blockieren neue Nachbarn nicht; Shift unterscheidet
+getrennte Platzierung von gezieltem Verbinden an einer passenden freien Seite.
+
+**F82:** `terra-building-editor` ist eine eigene Desktop-App mit leerer Welt,
+schwebender 9x9-Bauhilfe, wirklichem Inventarkatalog und gemeinsamer
+objektbewusster Platzierung. ESC bietet Fortsetzen, Optionen, JSON laden,
+Speichern und Beenden. Der Dateibrowser validiert Importe, erzeugt genaue
+Materiallisten und Bauphasen und verlangt eine ausdrueckliche Bestaetigung vor
+atomarem Ueberschreiben. Unterordner in `assets/buildings/` bilden Kategorien;
+berechtigte Manager laden den Katalog ohne Neustart neu. Schema-1-Grenzen werden
+konkret gemeldet. Protokoll 141 und Speicherindex ID26 erhalten bestehende
+Plaene und migrieren eingefrorene ID24-/ID25-Spielstaende.
+
+[Bedienung](docs/construction-mode-and-editor.md),
+[Editor](apps/building-editor/README.md),
+[Truhenregeln](docs/chest-placement.md),
+[Abnahme und Reproduktion](tools/benchmarks/results/construction-editor-2026-11-13/README.md).
+
+
+Abnahme Phase 241: 4.941 Tests bestanden, darunter 629 Netzwerk-, 1.368 Welt-
+und 21 Editor-Tests. Format, Check, striktes Clippy, Doctest-Ziele, getrennte
+Client-/Server-/Editor-Builds und Headless-Start mit 27 Sections bestehen.
+Zwoelf native Aufnahmen pruefen Baukatalog, echte orange Vorschau, NPC-Dialog,
+Creative-Auftrag samt bestaetigtem Save/Reload und den kompletten Editor-Import-
+/Exportpfad. Zehn bestehende Tests bleiben ignoriert; nur die bekannte fehlende
+externe Original-GLB-Fixture ist ausgefiltert. Der erste Creative-Auftrag ohne
+Lager legt seinen Siedlungseintrag atomar mit an und bleibt speicherbar.
+
+
+## 242. Geschuetzte, vergroesserbare Struct-Bauhilfe im Building Editor
+
+Die Editor-Bauhilfe verwendet den vorhandenen StructureStone-Block (ID43)
+auf einer eigenen Ebene Y=-3 unter dem echten Fundament Y=-2. Abbau, Ersetzen
+und seitliches Erweitern dieser technischen Ebene werden vor jeder Mutation
+abgewiesen. Workspace-Konfiguration und Modell sind getrennt; die Bauhilfe
+landet weder im JSON noch in Materialkosten. Importierte Fundamente bleiben
+vollstaendig erhalten.
+
+ESC > Optionen bietet 9x9, 17x17, 25x25 und 33x33. Die sofortige Anpassung
+bewahrt Kamera, Modell, Dateiname und Dirty-Status; die Groesse bleibt bei
+Laden und neuen Dokumenten innerhalb der Sitzung erhalten. Streaming und
+Sichtweite wachsen passend mit. Schema, Protokoll und Vorlagenlimits bleiben
+unveraendert. Regressionen pruefen echte Platzierungsabweisung, atomare
+Mehrfach-Edits, alle Groessen, ungueltige Werte, Import/Neuanlegen und
+unveraenderten JSON-Roundtrip einschliesslich Materialbilanz.
+
+
+Abnahme Phase 242: 24 Editor-Tests sowie Format, Workspace-Check, striktes
+Workspace-Clippy und eigener Build bestanden. Der echte Dropdown-Eintrag
+vergroessert die Flaeche; erneutes Speichern ergibt dieselbe JSON-Datei und
+Materialliste. [Pruefbericht und Aufnahmen](tools/benchmarks/results/editor-platform-2026-11-13/README.md).
+
+
+## 243. Vorlagenplatzierung und weiche Gebietsgrenzen im Baumodus
+
+Eine aktive orange Bauvorlage priorisiert den Boden statt den Bewohnerdialog.
+NPCs und Tiere reservieren keine Bauvorlagenflaeche. Freigeraeumte Luft und eine
+natuerliche Gelaendestufe werden korrekt akzeptiert; die Stufe wird durch reale,
+gespeicherte Handwerker-Vorbereitungsschritte eingeebnet. Gebaeude, Baeume,
+Spielerbloecke und Wasser bleiben geschuetzt. Bei wirklichem Blockbau bleiben
+Koerperkollisionen aktiv, damit kein Bewohner eingemauert wird.
+
+Der Baumodus zeigt bestaetigte eigene Arbeits-/Lager-/Wohngebiete und Baupositionen
+automatisch. Die aeussere Bau-Chunk-Grenze erscheint rot, ohne gemeinsame innere
+Chunk-Kanten. H blendet alle Gebiete ein/aus, ohne die manuelle Auswahl zu verlieren;
+Dialoge und F1-H werden beruecksichtigt. Fuenf wiederverwendete Mesh-/Materialgruppen
+zeichnen weiche, bodennahe, pulsierende Konturen statt hoher Drahtkaesten.
+Die Anzeige verwendet geladenes Terrain, begrenzte Arbeit und hoechstens vier
+Geometrieaktualisierungen pro Sekunde. Hintergrundabfragen ueberschreiben weder
+offene NPC-Inventare noch wartende Bauauftragsantworten.
+
+Abnahme Phase 243: 4.958 Tests bestanden, einschliesslich sechs neuer
+Bauplatz-/Terrassenregressionen, 630 Netzwerk-, 1.374 Welt-, 1.102 Renderer-
+und 655 UI-Tests. Format, Workspace-Check, striktes Clippy, Doctest-Ziele,
+getrennte Client-/Server-Builds und Headless-Start mit 27 Sections bestehen.
+Sechs native Aufnahmen pruefen echte Platzierung, NPC-Dialog, Save/Reload,
+automatische Gebiete, Animation und H ohne neue Mesh-Entities. Zehn bestehende
+Tests bleiben ignoriert; die bekannte fehlende externe Original-GLB-Fixture
+ist ausgefiltert. [Pruefbericht und Aufnahmen](tools/benchmarks/results/construction-areas-2026-11-13/README.md).
+
+
+## 244. Hausplatzierung auf gespeichertem Baugrund der echten Testwelt
+
+Die echte Welt Test reproduzierte zwei im flachen Abnahmelauf fehlende Faelle:
+gespeicherte Erde/Gras unter dem Haus wurde pauschal als Hindernis behandelt,
+natuerliche Stufen ueber einen Block ebenfalls. Journalisierte Erde/Gras gelten
+nun nur unter der Fuss-/Ankerebene als vorbereitbarer Baugrund. Der Arbeitsring
+bleibt dort unangetastet; echte Floor-/Foundation-Zellen werden gezielt ersetzt.
+Unveraendertes natuerliches Terrain bis vier Bloecke hoch wird durch gespeicherte
+Arbeitsschritte eingeebnet. Laufzeitpruefung und Planung verwenden dieselbe Regel;
+Bauwerke, andere gesetzte Bloecke, Baeume, Objekte und Wasser bleiben geschuetzt.
+
+Abnahme: alle 1.381 Welttests bestanden, davon sieben neue Regressionen mit
+vollstaendigem bezahltem/Creative-Bau und Materialbilanz. Format, Check und
+striktes Clippy fuer alle Workspace-Targets, getrennte Client-/Server-Builds
+und Headless-Start bestehen. Der native Client platziert per echtem Boden-
+Mausklick ein Dorfwohnhaus bei [16,16,24] in einer Kopie des wirklichen Saves,
+bestaetigt den Auftrag serverseitig und prueft Save/Reload. Original-Pruefsummen
+sind unveraendert. [Pruefbericht und Aufnahmen](tools/benchmarks/results/construction-real-save-2026-11-13/README.md).
+
+
+## 245. Cursor-Eigentum und klare Bau-Bestaetigung
+
+Versteckte UI-Rechtecke fangen keine Bauklicks mehr ab. Ein spaeter
+Bergfried-Resume konnte beim Baumodus-Einstieg die Maus fuer einen Frame
+wieder sperren; aktive Konstruktion verwirft nun Capture-Anforderungen und
+erzwingt einen freien, sichtbaren Cursor. Regressionen pruefen diesen
+normalen Eingabepfad mit accept_input=true und widerspruechliche Fensterzustaende.
+
+Eingabe/Enter und die Schaltflaeche Vorlage platzieren bestaetigen denselben
+ausgewaehlten Ort wie der Weltklick und verhindern doppelte Anfragen.
+Die gemeinsame Planungsdiagnostik nennt bei Ablehnungen den ersten konkreten
+Block oder reservierenden Auftrag, ohne Schutzregeln oder Wire-Formate zu aendern.
+
+Abnahme: 44 Bau-, 657 UI- und 122 Spieler-/Kameratests, Format, Check/Clippy
+aller Targets, Builds und Headless-Start bestehen. Drei echte Client-Laeufe
+pruefen OS-Gelaendeklick und OS-Schaltflaechenklick bei [4,16,22] sowie
+Eingabe bei [4,16,20], jeweils mit autoritativer Bestaetigung und Save/Reload.
+Original-Pruefsummen bleiben gleich. Die genaue Koordinate aus House.png ist
+ohne HUD-Angabe noch nicht bestaetigt. [Pruefbericht](tools/benchmarks/results/construction-input-2026-11-13/README.md).
+
+## 246. Handwerker setzen blockierte Baustellen fort
+
+Die echte Testwelt reproduzierte einen stehenden Handwerker bei Schritt 6/907:
+Die Aushubreihenfolge verlangte einen verdeckten Erdblock, waehrend ein
+zurueckgesetzter Suchzeitgeber den Wartegrund dauerhaft als Unterwegs anzeigte.
+Neue und gespeicherte Plaene oeffnen Terrassen von oben; bei verdeckten
+Steilraendern bearbeitet der Handwerker zunaechst eine physisch sichtbare
+Aushubzelle derselben kostenlosen Phase. Unterstuetzte Zwischenpositionen
+an Kanten behalten Sicht-, Reichweiten-, Koerper- und Gebietspruefungen.
+
+Suchwiederholung und Stillstandserkennung verwenden getrennte Zeitgeber.
+Blockierte Baustellen- und Lagerwege melden NoPath und versuchen spaeter
+erneut. Bereits extern geleerte Aushubzellen werden ohne Material- oder
+Arbeitszeitgewinn uebersprungen. Erneut vorhandene Erde an exakt zuvor von
+diesem Auftrag ausgehobenen Zellen wird mit echter Bewegung und Arbeitszeit
+vor der vorgesehenen Platzierung entfernt. Stein, Truhen und andere Objekte
+bleiben Hindernisse; fertige Bauarbeit und bezahlte Schritte bleiben erhalten.
+
+Ein CPU-Replay einer isolierten Kopie des aktuellen Spielstands baut den
+ersten Auftrag bis 907/907 und anschliessend den zweiten bis 832/832 fertig.
+Die Originaldateien behalten ihre Pruefsummen. Netzwerk- und Speicherformat
+bleiben erhalten. [Pruefbericht](tools/benchmarks/results/worker-paths-2026-11-13/README.md).
+
+Abnahme: 1399 Welt-Tests (darunter 60 Bautests), zwei Headless-Tests, Format,
+Workspace-Check und striktes Clippy aller Targets sowie getrennte Client-/Server-Builds
+bestehen. Fuenf vorhandene opt-in CPU-Mikrobenchmarks bleiben ignoriert.
+
+## 247. Spirit Blossom und bewegter Gebietsnebel
+
+F35 folgt nun den Spirit-Blossom-Referenzen: neuntes weich gemischtes Biom,
+moosige violette Terrassen und rosa/weisse/lavendelfarbene Bluetenbaeume.
+18 einzelne JSON-/GLB-Definitionen mit eigenen PNGs und sechs Rezepten
+ergaenzen Gestein, Erde, Holz, Laub, Laternen, Blumen, Lotus, Seerosen,
+Bluetenboden und Schrein. Wasserpflanzen folgen dem echten Wasserstand;
+Hoehleneingaenge und Flussdurchgaenge bleiben von Dekorationen frei.
+
+F37/F38 ergaenzen sieben Schmetterlinge, zwei freundliche Geisterlichter
+mit begrenzter Regenerationsaura und einen Geisterfuchs. Bestehende
+serverseitige Spawn-, KI-, Speicher- und Replikationswege werden verwendet.
+Skelettkrieger aus F39 bleiben offen.
+
+Gebietskonturen verwenden bewegte dreidimensionale Nebeldichte mit acht
+Raymarch-Proben, weichen Raendern und Tiefenpruefung. Fuenf bestehende
+Anzeigegruppen und H bleiben erhalten. Bis zu zwoelf lokale Spirit-Nebelbaenke
+entstehen an geladenen Laternenpfosten und Schreinen.
+
+Ein leerer Setzlings-Wachstumsauftrag markiert die Welt nicht mehr jeden Frame
+als geaendert. Damit koennen Renderer-Auswahlqueues auch bei vielen geladenen
+Sections abschliessen. Reservierte Hoehleneingaenge bleiben in neuen Spirit-Welten
+auch ohne verbundene Hydrologie frei von nachtraeglichen Hoehlenpilzen.
+
+Neue Welten erhalten Spirit-Revision 1; gespeicherte Altwelten behalten 0.
+Das gilt auch beim Dedicated-Neustart mit einer neueren globalen Konfiguration.
+Protokoll 142 uebertraegt neun Biome; TRMAP004 liest alte Karten weiterhin.
+[Funktionsumfang](docs/spirit-blossom.md),
+[Abnahme](tools/benchmarks/results/spirit-blossom-2026-11-13/README.md).
+
+Abnahme: 5.019 bestandene Tests, Format, Workspace-Check und striktes Clippy
+aller Targets sowie getrennte Client-/Server-Builds und Headless-Start.
+Zehn vorhandene Tests bleiben ignoriert; ein externer GLB-Test ist wegen der
+fehlenden Datei `FIVERR/VoxelGrassBlock glb file.glb` explizit ausgefiltert.
+Zwoelf native Aufnahmen pruefen Biom, Kreaturen und animierte Baugebiete;
+die neun Originaldateien der Testwelt behalten ihre Pruefsummen.
+
+## 248. Spirit-Biomnebel und neue Grasfarben
+
+Spirit-Nebel verteilt sich ueber geladene Biomspalten statt einzelne Laternen
+und Schreine einzuhuellen. Breite, ueberlappende Volumen bewegen ihre Dichte
+und blenden an Biom- sowie Sichtbereichsgrenzen aus. Die Arbeit ist auf
+121 Spaltenproben alle 0,5 Sekunden begrenzt; die Beleuchtung bleibt erhalten.
+Lokale und Multiplayer-Welten verwenden dieselbe WorldAccess-Freigabe.
+
+Spirit-Gras ist oben und seitlich tuerkis. Kirschwald-Grasoberseiten und
+Grashalme sind leicht lila; normale Biome behalten ihre bisherige Farbregel.
+Minimap und echte Biomauswahlfotos sind aktualisiert. Die bestehende schmale
+gruene Seitenfranse des kombinierten Gras-/Erdatlas bleibt erhalten.
+
+Sechs native Aufnahmen bestaetigen Grasfarben und bewegten Biomnebel. Die
+Original-Testwelt bleibt unveraendert. Details und Testprotokolle:
+[Abnahme](tools/benchmarks/results/biome-atmosphere-2026-11-13/README.md).
+
+## 249. Modellpflege, günstigerer Nebel und Geistwald-Grabstätten
+
+Der komplette ausgelieferte GLTF/GLB-Katalog wurde geprüft. 22 bisher scharfkantige
+Möbel- und Propmodelle erhalten geometrische Fasen; runde Kreaturenkörper
+feinere Konturen. Vorhandene Figuren- und Rüstungsdetails bleiben erhalten. Neue Friedhofsmodelle ergänzen 76 einzelne
+Blockdefinitionen und Texturen. 39 Rezepte, deutsche/englische Bezeichnungen und
+eine echte verzierte Lagertruhe sind integriert. Bestehende Terrainanschlüsse
+bleiben geschlossen. Die Schalter-, Tor- und Fallenmodelle sind Dekorationen,
+kein neu implementiertes Schaltkreis- oder Schadenssystem.
+
+Ein terrainfolgendes Nebelvolumen mit sechs Strahlproben ersetzt die vielen
+überlappenden Geistwaldvolumen. Kirschwald bekommt rosa Ferne und Wasser;
+Geistwaldwasser ist türkis mit hellen weißlichen Anteilen. Alle neuen Lampen
+verwenden bestehende begrenzte Lichtpools ohne volumetrische Lichter.
+
+Neue Welten verwenden Spirit-Revision 2: trockenes inneres Relief +20 %, in der
+festen Drei-Seed-Stichprobe +39,00 % Wasserfläche. Die Geistwald-Standorte
+enthalten Friedhöfe und deterministisch benannte Grabgewölbe mit drei bzw. vier
+Ebenen, echten Treppen, Gängen und gefüllten Truhen. Alte Weltrevisionen bleiben
+unverändert. Details: [Geistwald-Erweiterung](docs/spirit-world-polish.md).
+
+Die Blütenmodelle nutzen geglättete Normalen und gemeinsame Vertices bei identischer
+Dreiecksgeometrie. Kryptalaternen und Kerzen beleuchten die großen Kammern innerhalb
+der vorhandenen Lichtbudgets. Im festen 1080p-Vergleich benötigt der transparente
+Renderdurchgang rund 68 % weniger GPU-Zeit; mit finalen Modellen wurden etwa 222
+statt 180 FPS gemessen. Das ist eine Szenenmessung, keine allgemeine FPS-Garantie.
+
+Abnahme: 5.046 Workspace-Tests erfolgreich, danach 1.332 Client-/Renderertests für
+die Kryptabeleuchtung sowie 54 Modellladetests und zehn Python-Geometrietests.
+Client, Server und Building-Editor bauen; Check, Clippy und Formatprüfung sind grün.
+Alle vier Grabstätten, Biomatmosphäre, Modellgalerien, Editor und Headless-Server
+wurden nativ geprüft. Eine externe, nicht vorhandene GLB-Testdatei ist ausdrücklich
+ausgenommen. Ergebnisse, Grenzen und Aufnahmen: [Prüfbericht](tools/benchmarks/results/spirit-world-polish-2026-11-13/README.md).
+
+## 250. Terrainfolgende Strukturen, unterschiedliche Dungeons und Blood Forest
+
+Strukturrevision 10 ersetzt große gemeinsame Sockel durch örtliche, begrenzte
+Fundamente. Friedhofswege und Einfriedungen folgen dem Gelände; Dorfhäuser,
+Königreiche und Außenposten wählen ihre Höhen je Gebäude. Ungeeignete Steilhänge
+werden verworfen. Die drei Grabvarianten erhalten elf unterschiedliche
+Etagenpläne mit tatsächlichen Räumen, schmalen Verbindungsgängen, Treppen und
+gefüllten Truhen. Natürliches Gestein zwischen diesen Raumhüllen bleibt bestehen.
+Gespeicherte Strukturrevisionen 0–9 bleiben unverändert.
+
+Die Lampensuche verwirft nachweislich leere Terrainabschnitte günstig, verarbeitet
+veröffentlichte Quellen zeitnah und berücksichtigt die tatsächlichen JSON-Lichter
+im entfernten Lichtbatch. Die bestehenden begrenzten PBR-Pools bleiben erhalten.
+Zwei fehlerhafte konkave Wappenpolygone wurden ohne Änderung ihrer Kontur
+repariert; der bestehende Modellkatalog besteht den Geometrieaudit.
+
+Blutwaldrevision 1 ergänzt ein zehntes, weich gemischtes Biom mit verzweigtem
+Blutholz, rotem Laub, 22 einzelnen Block-/Propdefinitionen samt GLBs und Texturen,
+neun Gegenständen, Pflanzen-/Kreaturenbeute und Blutholzbrettern. Rot absorbierendes
+Wasser bewegt sich optisch langsamer; eine neue Flüssigkeitsphysik ist damit nicht
+verbunden. Ein begrenzter gemeinsamer Tropfenpool animiert Wachstum, Fall und
+Auftreffen unter tatsächlichem Blutlaub. Blatt-/Rindentexturen haben ruhige
+Burgunder- und warme rotbraune Muster.
+
+Normale Skelette, Schwertkämpfer und gepanzerte Wächter sowie Raben, freundliche
+Blutschleime, Blutlauerer, Blutirrlichter und Dornenwächter verwenden die vorhandene
+autoritative Simulation und Speicherung. Glooms und sieben Schmetterlingsvarianten
+haben neu aufgebaute animierte Modelle. Skelette können außerdem auf geeigneten
+geladenen Kryptaböden im Geistwald erscheinen. Ein eigenständiger Boss-/Wellen-
+manager und Fernkampf sind nicht enthalten.
+
+Protokoll 144, Kartenformat TRMAP005 mit Lesepfaden für TRMAP001–004; neue Welten
+aktivieren das Biom, alte Weltverträge behalten ihre Revision. Die Biomauswahl
+verwendet eine echte native Aufnahme. Deutsch/Englisch sind aktualisiert.
+Client, Server und Gebäude-Editor bauen; Format, Workspace-Check und striktes
+Clippy sind erfolgreich. Die finale Workspace-Suite besteht 5.089 Tests;
+zehn vorhandene Tests sind ignoriert, der Test einer fehlenden externen GLB-Datei
+ist explizit ausgefiltert. 33 native Aufnahmen, Headless-Start und Messgrenzen
+und die unveränderten 13 Originaldateien der Testwelt sind dokumentiert:
+[Prüfbericht](tools/benchmarks/results/blood-forest-terrain-2026-11-14/README.md).
+[Bedienung und Grenzen](docs/blood-forest.md),
+[Strukturentscheidungen](docs/structure-terrain-revision-10.md).
+
+## 251. Voxelartige Biom-Props, hellerer Blutwald und natürliche Felsgruppen
+
+18 Blut-/Geistwald-Props verwenden klar gestufte Mikrovoxel-Geometrie mit
+achsenparallelen Außenflächen. Verdeckte Flächen entfallen; benachbarte ebene
+Flächen werden verbunden. Die Modelle benötigen zusammen 9.204 statt 23.193
+Dreiecke. IDs, ursprüngliche Platzierungsflächen und vorhandene Collider bleiben
+bestehen; die Mikrovoxels werden nicht zu einzelnen Laufzeitobjekten.
+
+Eine hellere Rosen-/Karmin- und Mauvepalette macht Blutwaldlaub, Boden, Rinde und
+Wasser lesbarer. Zusätzliche saisonale Verfärbung des Blutlaubs ist behoben;
+Sonnenenergie, Belichtung und feste Darstellungsbudgets werden nicht erhöht.
+Die Biomauswahl verwendet eine neue tatsächliche Aufnahme.
+
+Ecology5 verteilt kleine Pflanzen in lockeren Gruppen mit freien Bereichen.
+Große Props halten mindestens zwölf Meter Ankerabstand. Gelegentliche Felsgruppen
+bestehen aus echten abbaubaren Weltblöcken mit unregelmäßigem Grundriss und
+örtlicher Geländeeinbettung. Wasser, Höhleneingänge, Baumbelegung und erzeugte
+Bauflächen bleiben geschützt. Neue Welten verwenden Revision5; bestehende
+Revisionen0–4 behalten ihre bisherige Verteilung. Kein neues Wire-Layout oder
+Dependency-Upgrade.
+
+5.093 Workspace-Tests und 21 Python-Geometrieprüfungen sind erfolgreich.
+Zehn vorhandene Tests bleiben ignoriert, die bekannte fehlende externe GLB-Fixture
+ist ausdrücklich ausgefiltert. Client, Server und Gebäude-Editor bauen;
+Workspace-Check, striktes Clippy und Formatprüfung sind grün. Neun native
+Aufnahmen prüfen die tatsächliche Ecology5-Generation. Die zehn Originaldateien
+der Testwelt bleiben unverändert.
+[Naturgeneration](docs/natural-features.md),
+[Prüfbericht und Aufnahmen](tools/benchmarks/results/blood-forest-voxel-ecology-2026-11-14/README.md).
+
+## 252. Gelenk-Voxelmodelle, regionale Flora und Klimaökologie
+
+Bewohner und Kreaturen erhalten gestufte dreidimensionale Außenflächen je
+Gelenkteil. Verdeckte Flächen entfallen, benachbarte gleichfarbige Flächen werden
+verbunden. Vorhandene Gelenke, Animationen, Varianten und Spiel-Hitboxen bleiben
+erhalten. Die Modelle werden gemeinsam zwischengespeichert; es entstehen weder
+Entities je Modellzelle noch abbaubare Terrain-Mobs.
+[Modellaufbau und Grenzen](docs/voxel-creature-models.md).
+
+Neue Welten verwenden Ecology6. Regionale Blumen-, Farn-, Heide-, Schilf- und
+Strauchgruppen folgen den vorhandenen Lichtungs- und Freiraumfeldern. Die neuen
+Materialien 422–429 ergänzen diese Flora und Kakteen aus echten Weltblöcken:
+zwei bis acht Blöcke hohe Stämme, optional verbundene Arme, nur auf geeignetem
+Sand mit Abstand zu Bäumen und Bauwerken. Eichen, Birken, Kirsch-, Spirit- und
+Bloodwoodbäume besitzen unterscheidbare verzweigte Kronen. Section-Generierung,
+direkte Materialabfragen und gespeicherte Spieleränderungen verwenden dieselben
+Zellen. Gespeicherte Ökologierevisionen 0–5 bleiben unverändert; Gelände- und
+Wasserhöhen werden nicht neu geschrieben.
+
+Gemeinsame Grundmaterialien erhalten feinere Erd-, Stein-, Sand-, Schnee-,
+Holz- und Blattmuster. 32 Spirit-/Blood-PNGs enthalten direkt berechnete Details
+in 256×256 Pixeln statt hochskalierter Ausgangsbilder. Passende Terrain-Cubes
+verwenden begrenzte Oberflächendetails nach innen; ihre Anschlusskanten bleiben
+geschlossen. Einzelne Texturen und Blockdefinitionen bleiben austauschbar.
+[Flora, Materialien und Revisionsvertrag](docs/biome-flora-ecology-6.md).
+
+F14 bindet vorhandenes Graswachstum und Tierbedürfnisse an Temperatur,
+Feuchtigkeit, Höhenlage und Jahreszeit. Frost und Trockenheit unterbrechen
+Wachstum, Wärme erhöht bei geeigneten Landtieren den Wasserbedarf, Kälte den
+Nahrungsbedarf; Bienen reagieren mit ihrem bestehenden Ruhe-/Nestpfad.
+Die autoritative Simulation arbeitet mit begrenzten Budgets in geladenen
+Bereichen und fordert dafür keine zusätzlichen Chunks an.
+
+Ruhendes natürliches Oberflächenwasser kann bei anhaltendem Frost zu markiertem
+Natureis werden und bei Wärme wieder auftauen. Der Herkunftsmarker bewahrt die
+ursprüngliche Quellwassermenge auch bei manuellem Eisabbau. Spielerbauten,
+endliches Fließwasser und gefüllte Tanks werden nicht nachträglich als natürliche
+Reservoirs behandelt. Der gemeinsame Spieler-Motor erhält auf Eis auslaufenden
+Schwung für Server, Prediction und Replay; dies ist keine allgemeine Rutschphysik
+für NPCs oder Fahrzeuge. Alte unmarkierte Eisblöcke bleiben bestehen.
+Protokoll 145 grenzt neue Material-IDs und die Eis-Metadatenbedeutung gegen ältere
+Clients ab. [Klima, Wachstum und Eis](docs/climate-growth-ice.md).
+
+5.128 Workspace-Tests und 32 Python-Assetprüfungen sind erfolgreich.
+Formatprüfung, Workspace-Check und striktes Clippy sind grün; Client, Server
+und Gebäude-Editor bauen. Zehn vorhandene Tests bleiben ignoriert, die fehlende
+externe Original-GLB-Fixture ist ausdrücklich ausgefiltert. F14 ist aus den
+offenen Aufgaben entfernt; die gestalterische Abnahme A01 bleibt offen.
+Zwölf finale native Biomszenen prüfen Schnee, Küste, Pflanzen und echte
+Kaktussegmente. Rohaufnahmen, Testprotokolle und Einschränkungen stehen im
+[aktuellen Prüfbericht](tools/benchmarks/results/reference-biomes-f14-2026-11-14/README.md).
+
+## 253. Blattflächen, Birkenform, Augen und Tiefenschwimmen
+
+Zehn vorhandene Laubtypen besitzen getrennte Seiten-/Oberseitentexturen in
+512 × 512 Pixeln. Überlappende Blätter, Adern, Blüten und unterschiedliche
+Paletten ersetzen die kleinteiligen Muster. Nahe Laubzellen erhalten gefaltete
+Blattflächen auf einer geschlossenen Trägerfläche; künstliche Zufallslöcher
+entfallen. Der Aufbau bleibt im vorhandenen Chunk-Batching mit begrenzten
+LOD-Budgets. [Laubaufbau](docs/foliage-reference-surfaces.md).
+
+Neue Welten nutzen Ecology 7 für Birken mit breitem verwurzeltem Fuß,
+schmaler freier Mitte und einer breiteren oberen Krone. Neu gepflanzte Birken
+verwenden die gespeicherte Weltrevision beim Wachstum. Alte Weltverträge und
+bereits gespeicherte ausgewachsene Bäume behalten ihre bisherige Form.
+
+Schaf, Kuh, Schwein, Bär und Pferd behalten erkennbare Pupillen in einem
+eigenen Augenraster. Passende Lider schließen vom oberen Rand und liegen vor
+der tatsächlichen Kopfoberfläche. Pferde erhalten kräftigere Brust/Hinterhand,
+eine gegliederte Hals-/Kopfkontur, Mähne und flache Hufe bei unveränderten
+16 Fellvarianten. Die drei Spinnengrößen erhalten einen geschlossenen
+Hinterleib, größere primäre Augen und acht gegliederte Beine.
+[Modelle und Animation](docs/voxel-creature-models.md).
+
+Fische, Tintenfische, Quallen und Haie wählen anhaltende Tiefenziele im
+zusammenhängenden geladenen Wasser. Gedrehte Körper und Zwischenwinkel werden
+geprüft; trockene Ecken außerhalb des Körpers blockieren nicht mehr. Fisch-
+Umwege teilen das vorhandene Suchkontingent. Identität, Alter und vorhandene
+Speicherdaten genügen für reproduzierbare Tiefenkurse nach Reload.
+[Birken und Wasserbewegung](docs/birch-aquatic-depth.md).
+
+5.147 Rust-Tests und 35 Assettests sind erfolgreich. Formatprüfung,
+Workspace-Check und striktes Clippy sind grün; Client, Server und Gebäude-Editor
+bauen. Zehn vorhandene Tests bleiben ignoriert und ein Original-Importtest mit
+fehlender externer GLB-Fixture ist ausgefiltert. 62 native Aufnahmen prüfen
+Laub, Birken, Kreaturen und vier Blinkphasen. Alle 23 bestehenden Weltdateien
+besitzen nach der Prüfung unveränderte Prüfsummen. Ergebnisse, Rohbilder und
+gestalterische Grenzen stehen im
+[Prüfbericht](tools/benchmarks/results/foliage-creatures-depth-2026-11-14/README.md).
+
+## 254. Freigestelltes Laub und Raben über den Baumkronen
+
+Die zwanzig bestehenden Laubtexturen wurden neu gestaltet: unregelmäßige
+Zweig-/Blattgruppen mit Adern, Lichtkanten, Pigment und einzelnen Blüten ersetzen
+das feste Raster. Rund 30–33 % echte transparente Zwischenräume liegen zwischen
+den Blattkonturen; auch die Außenränder sind aufgelöst. IDs und Pfade bleiben
+bestehen. Beide Blattseiten sowie Vorschau, Tiefenpass und Schatten behalten die
+Maske. Abdeckungsbewahrende Mipmaps berücksichtigen jetzt die aktiven Laub-PNGs.
+
+Eine leicht gewölbte, überstehende Fläche pro exponierter Seite löst den alten
+Backing-/Faltenaufbau ab. Sie verwendet maximal 48/12 Dreiecke bei Near/Middle
+statt 228/132, ohne eine innere Füllfläche vor die Lücken zu legen. Laub wirft
+Schatten mit seiner tatsächlichen Geometrie; Nadelkronen verwenden dadurch
+für Schatten ebenfalls ihre vollständige Geometrie. Die Dreieckszahlen sind
+keine FPS-Messung. [Darstellungsvertrag](docs/foliage-reference-surfaces.md).
+
+Raben erhalten einen eigenen Reiseflug mit etwa 12–20 Blöcken Abstand über
+Gelände, Kronen und Wasser. Begrenzte Steig-/Sinkraten und gedrehte Körperproben
+verhindern Höhenteleports und Durchfliegen von Hindernissen. Gelegentliche
+Landepausen enden mit erneutem Abflug. Gespeicherte Raben nutzen dieselben
+Felder und steigen aus ihrer tatsächlichen Position auf. Geladener Luftraum
+begrenzt die erreichbare Höhe. [Rabenflug](docs/raven-flight.md).
+
+2.661 Tests der betroffenen Rust-Bibliotheken und 16 Assettests sind erfolgreich;
+sieben vorhandene Tests bleiben ignoriert. Striktes Clippy, Workspace-Check und
+alle drei App-Builds sind grün. 15 finale Spielaufnahmen zeigen die Blattlücken,
+vollständige Konturen, natürliche Wälder und erhaltenes Blinzeln. Sämtliche
+20 bestehenden Weltdateien besitzen nach den isolierten Prüfungen unveränderte
+Prüfsummen. [Prüfbericht und Rohbilder](tools/benchmarks/results/foliage-silhouettes-2026-11-15/README.md).
+
+## 255. Blattgruppen, Menükategorien, Flussbreiten und Nebelblöcke
+
+Blood Slime verwendet ein echtes Blend-Material mit 0,70 Deckkraft für seinen
+Körper; Augen und Mund bleiben opak. Skelette erhalten vertiefte Schädelhöhlen,
+separate rote Pupillen, offene Rippenreihen und feinere Gliedmaßen-/Rüstungsdetails.
+Laufen und Angriffe verwenden geglättete Bewegungsverläufe. Hitboxen, Varianten
+und Spielwerte bleiben erhalten.
+
+Elf separate Gruppensprites ergänzen die bestehenden Laub-IDs. Vier gebogene,
+gegeneinander geneigte Gruppen je exponierter Seite ersetzen die flächige
+Nahdarstellung. Ihr Überstand bleibt innerhalb von 25 cm. Near benötigt
+maximal 192, Middle 48 Dreiecke; Far/Low und Inventar behalten ihre bisherigen
+vollständigen Bilder. Wind, Schatten, Condition-Tints und Vertex-Herkunft bleiben
+an dieselben Materialien und Blockbesitzer gebunden.
+Die Sprites verwenden viele kleine Blätter statt übergroßer übereinanderliegender
+Blätter. Zurückgebogene Ränder verhindern, dass die Seiten bei schrägem Blick
+auseinanderlaufen. Eine perspektivische Prüfung der tatsächlichen Batch-Indizes,
+UVs und PNG-Masken ergänzt die frontale Flächenprüfung. Sie begrenzt große
+Kronenlücken, ohne geschlossene Füllflächen einzuführen. Zwölf gezielte
+Laubtests und die native Galerie bestätigen den korrigierten Viergruppenstand.
+
+Deutsche Beschriftungen zerfallen nicht mehr in einzelne Wortteile. Zusammen-
+gehörige Menükategorien erhalten dieselbe Breite aus tatsächlichen geformten
+Text-, Icon- und Randmaßen. Sprachwechsel können die gemeinsame Breite auch
+wieder verkleinern. Bei schmalen Fenstern ordnen sich Optionsbereiche und
+Controls untereinander an; Kategorien bleiben innerhalb ihrer Gruppe gleichbreit.
+
+Flussrevision 5 erzeugt reale Wasserquerschnitte im Bereich 6–22 m statt nur eine
+unbenutzte nominale Breite zu begrenzen. Ecology 8 ergänzt natürliche, abbaubare
+Nebelquellen. Beides wird für neue Welten gespeichert; alte Revisionen behalten
+ihr Gelände. [Generation und Messungen](docs/river-width-and-fog-sources.md).
+
+Der neue feste Nebelblock 430 erzeugt auch unter einer Gras-/Bodenplatte bewegten
+Bodennebel mit maximal 8 Blöcken Radius. Bis zu 16 Quellen teilen ein begrenztes
+Höhenfeld und einen Renderpass. Abbau und Streaming entfernen alte Quellen;
+überlappende Kreise stapeln keine Dichte. Geiststein 308 verliert seine flächige
+Emission. Protokoll 146 grenzt die neue Block-ID gegen ältere Clients ab.
+[Funktions- und Darstellungsvertrag](docs/fog-block-and-spirit-stone.md).
+
+Workspace-Check, striktes Clippy und Builds für Client, Server und Building
+Editor bestehen. Die vollständige Testsuite und ein separat wiederholtes
+Netzwerkpaket sowie zwölf Tests nach der letzten Laubkorrektur sind dokumentiert.
+Fünf native Galerien liefern 31 geprüfte Aufnahmen mit derselben Client-Prüfsumme.
+Alle 34 Dateien der vorhandenen Spielerwelten bleiben unverändert.
+[Prüfbericht, Fristtest-Wiederholung und Bilder](tools/benchmarks/results/leaf-fog-ui-rivers-2026-11-15/README.md).
+
+## 256. Fantasy-Natur, Kaktusstacheln, Sandwurm und Biomatmosphären
+
+Ecology 9 ergänzt große offene Felsbögen, geneigte Hornformationen und
+asymmetrische Pflanzengruppen. Einzelne Bodenfüße wachsen auf unterschiedlichen
+Geländehöhen an; die Formationen bleiben normales abbaubares Gestein. Neue Welten
+nutzen diese Generation, gespeicherte Revisionen behalten ihr Gelände.
+
+Laub zeigt einzelne gefaltete Blatt- und Blütenmotive mit echten Lücken und
+Überhang. Rosa und weiße Kirschblüten, Birkenblüten, Apfelfrüchte und Nadelmotive
+nutzen elf vierteilige Texturbilder. Near verwendet höchstens 504, Middle 168
+Dreiecke je freistehender Zelle. Verdeckte Seiten werden weiter entfernt;
+Far/Low behalten die bisherigen Darstellungen. Die zusätzliche Nahgeometrie
+ist kein Nachweis höherer Bildraten.
+
+Kakteen tragen räumliche Stacheln. Der Server verursacht bei tatsächlichem
+Kontakt bis zu 3 Basisschaden je 0,8 Sekunden pro Wesen. Spieler-Kapseln und
+gedrehte Mob-Hitboxen, Immunitäten, Abbau, Tod und Drops werden berücksichtigt.
+Der neue feindliche Sandwurm verfolgt Spieler meist unter Wüstensand. Er warnt
+1,8 Sekunden durch bebenden Sand und Grollen, taucht auf, schlägt einmal zu und
+zieht sich zurück. Der angekündigte Standort bleibt fest, sodass Ausweichen
+möglich ist. Segmente, Maul, Sand und Phasen werden getrennt animiert.
+Protokoll 147 berücksichtigt die angehängte Art und neue Verhaltenswerte.
+
+Neun weich überblendete Audioebenen und unregelmäßige entfernte Details geben
+Blood Forest, Geisterwald, Wüste, Ozean, Hochland, übrigen Biomen und Höhlen
+eigene Klangkulissen. Biomgewichte, Tag/Nacht, Höhe, Wetter, Unterwasserzustand
+und Höhlenraum wirken am Spieler. Neue frei lizenzierte Vogel-, Krähen-,
+Meeres- und Windklänge verwenden den gemeinsamen Decoder und vorhandene Regler.
+[Technik, Verhalten und Grenzen](docs/fantasy-nature-sandworm-ambience.md).
+
+Der vollständige Workspace-Lauf vor der abschließenden Modellpflege besteht
+mit 5.203 erfolgreichen Tests. Danach bestehen erneut zwölf Laub-, 35 Modell-
+und sieben Phasen-/KI-Tests, Workspace-Check, striktes Clippy und alle drei
+App-Builds. Zehn vorhandene Tests bleiben ignoriert; eine fehlende externe
+Original-GLB-Fixture ist ausgefiltert. Fünf native Läufe mit derselben finalen
+Clientdatei liefern 24 Spielaufnahmen und prüfen die Audiowiedergabe. Sieben
+Hörproben stammen aus dem tatsächlichen Decoder. Alle 25 vorhandenen Weltdateien
+bleiben unverändert.
+[Prüfbericht, Aufnahmen und Hörproben](tools/benchmarks/results/fantasy-sandworm-ambience-2026-11-16/README.md).
+
+## 257. Regionale Berge, Wasserfälle, Kreaturen-KI und F68-Straßen
+
+Landschaft 7 konzentriert Gebirge auf seltenere Regionen und verteilt die übrigen
+Profilgewichte auf Tiefland. Plains behalten sanfte Höhenverläufe; Biomgewichte
+beschreiben das tatsächliche Geländeprofil. Drei Seeds zeigen etwa 10 statt
+30 Prozent bergdominierte Inlandproben. Neue Welten erhalten Revision 7,
+gespeicherte Revisionen 0–6 behalten ihre bisherigen Höhenfelder.
+
+Fallendes dynamisches Wasser arbeitet geladene Säulen bis zum nächsten Hindernis
+priorisiert ab. Seitenflächen bleiben innerhalb ihrer Zelle, degenerierte und
+umgedrehte Dreiecke entfallen; gefilterte Schaummuster reduzieren Fernflimmern.
+Seagrass prüft den tatsächlichen Boden nach Geländeoperationen. Vertikale
+Pflanzensegmente schließen aneinander an; die vorhandene Stützprüfung repariert
+auch geladene frei schwebende Altbestände.
+
+Kreaturen prüfen Sicht über reale Objektkollisionen und wählen sichtbare Gegner
+auch bei näheren verdeckten Spielern. Waldgegner suchen höchstens vier Sekunden
+an der zuletzt gesehenen Position. Natürlicher Sandstein unter echtem Sand
+erlaubt Sandwurm-Spawns; alternative Positionen und die Berücksichtigung kleiner
+Restbudgets beheben weitere Spawnlücken. Gespeicherte Todesfälle bleiben erhalten.
+
+F68 ergänzt die Brecher-/Ofen-/Werkbankkette von Stein und Kohlestaub über
+Zuschlag und Kohlenteer-Bindemittel zu Asphalt. IDs 431–436 enthalten Vollblock,
+⅛-Block-Decke, volle Steigung, zwei Übergänge und Randstein. Vier Richtungen,
+wiederholbare Texturen, zwölfteilige Rampenkollisionen, eigener Abbaudrop,
+volumengleiche Rückverarbeitung und TMI sind eingebunden. Protokoll 148 grenzt
+die beiden angehängten Itemvarianten ab. [Rezepte, Verhalten und Grenzen](docs/fantasy-nature-sandworm-ambience.md).
+
+Alle 5.254 ausgeführten Workspace-Tests bestehen; zehn ausdrücklich ignorierte
+Tests und eine fehlende externe Original-GLB-Fixture bleiben ausgelassen.
+Striktes Produktions-Clippy und Builds aller drei Apps bestehen. Fünf native
+Prüfläufe mit 17 Aufnahmen prüfen regionale Ebenen, einen tatsächlich generierten
+Fluss, Straßenanschlüsse und dynamisches Wasser einschließlich Teilblöcken.
+Die Aufnahmen belegen Geometrie und Darstellung, keine zeitliche Flimmerfreiheit
+oder Bildraten. F68 ist aus den offenen Aufgaben entfernt.
+
+## 258. Aufrechte Biom-Graskappen, natürliche Klangkulissen und Straßenrichtung
+
+Der gemeinsame Biom-Texturgenerator richtet die Seitenkarten von Spirit Grass,
+Blood Grass, Crimson Mycelium und Blood Moss an der positiven Welt-Y-Projektion
+des Renderers aus. Ihre Gras-/Mooskappen schließen oben an die Deckfläche an;
+Top-/Bottom-Karten, Materialbindungen und gespeichertes Gelände bleiben erhalten.
+
+Die Außenkulissen verwenden echte Vogel-, Insekten- und bewegte Blattaufnahmen
+mit ruhigen Abständen. Synthetische Drone-/Akkordbetten und Atemphrasen entfallen.
+Zurückgenommener Außenhall, wenig Wind und seltene leise Einzelakzente erhalten
+die Fantasy-Stimmung. Elf Ebenen, 124 Clip-Indizes und sanfte Biomüberblendungen
+bleiben erhalten; die vorhandene Blattaufnahme wird auf dem Lade-Worker dekodiert.
+
+Straßenlayout und Spielerplatzierung verwenden dieselbe Blickrichtungszuordnung.
+Rampen steigen vom Spieler weg an, Randsteine liegen längs zur Straße.
+Straßenformen unterstützen die vorhandene Schraubenschlüsselrotation einschließlich
+Rückwärtsdrehen. Tests durchlaufen echte Boden-Raycasts, Platzierung, gerenderte
+Modelle und Kollisionen in allen vier Richtungen. Vorhandene Bauten behalten ihre
+gespeicherte Ausrichtung.
+
+129 gezielte Rustprüfungen und fünf Assetprüfungen bestehen. Der normale
+Workspace-Build und striktes Clippy sind grün. Drei isolierte native Läufe prüfen
+sechs Aufnahmen sowie die echte Audiowiedergabe mit 124 Clips und 27 eingespeisten
+Materialkontakten. Eine 72-sekündige Hörprobe führt durch sechs Regionen;
+eine gesonderte Decoderprüfung exportiert die neun tatsächlichen Biom-/Höhlenmixe.
+
+## 259. Aktueller Client als RustRover-Startziel
+
+Das veraltete lokale Startziel `teramic` ist auf `terra-client` korrigiert.
+Eine geteilte Startkonfiguration **Terra Client** startet ebenfalls das aktuelle
+Workspace-Paket. XML und tatsächlicher Cargo-Binaryname sind geprüft; die fünf
+Gras-Assetprüfungen bestehen erneut. Die Audiobank wird beim Prozessstart geladen,
+weshalb neue Klangkulissen einen vollständigen Client-Neustart benötigen.
+
+
+## 260. Flüssiger Teer und mit der Schaufel vorbereitete Wege
+
+Holz- und Steinschaufeln bereiten freie Gras-, Erd-, Sand- und Kiesoberseiten
+als Wegblöcke vor. Ein Teereimer aus leerem Eimer und vier Kohlenteer-Bindemitteln
+enthält acht begrenzte Einheiten. Ausgießen ist nur auf freien Wegblöcken
+erlaubt; die vorhandene Menge fließt langsam entlang benachbarter Wege und
+trocknet zu festem Teerbelag. Der Film sitzt direkt auf dem abgesenkten Weg,
+seine Dicke richtet sich nach der verbleibenden Menge.
+
+IDs 437/438 bilden flüssige und getrocknete Beschichtungen ab. Glänzendes und
+mattes Material unterscheiden ihre Zustände; der Teereimer zeigt schwarze
+Flüssigkeit. Wegkörper, Teermenge und Trocknungsfortschritt bleiben gespeichert.
+Im Inventarkatalog stehen Wegblock und Teereimer; die Beschichtungen sind
+Weltzustände. Material-/Werkzeugnummern werden nur angehängt. Client und Server
+verwenden gemeinsam Protokoll 149. [Bedienung und Herstellung](docs/tar-roads.md).
+
+Prüfung: Workspace-Build und Clippy mit `-D warnings` bestehen. 228 gezielte
+Rust-Tests und vier Assettests prüfen unter anderem Rezept-/Inventarlogik,
+Teermengen, alle Schichtdicken, echte Regionsdateien und Vorlagen-Sperren.
+Die native Prüfung erzeugt vier Aufnahmen bei 1920×1080: vorbereiteter Weg,
+nasser Teer, Ausbreitung und trockener Belag. Nach 61,54 Sekunden bleiben
+24 Einheiten auf zwölf getrockneten Feldern erhalten. Nachweis:
+`target/tar-roads/verification.json`; Wiederholung der Grafikprüfung über
+`tools/benchmarks/run-tar-roads.sh`.
+
+## 261. Referenzmodelle, Blockmaterialien, Sandwurm und Laufzeitlast
+
+Tote Büsche und die Blütenbüsche 317/426 erhalten offene, verwurzelte Geometrie.
+Die Grundblöcke und sechs Holzfamilien verwenden eine gemeinsame PBR-Palette
+mit Stirnholz und linearen Normaltexturen. Dornenwächter, die drei bestehenden
+Skelett-Ausrüstungen und das Sandwurm-Modell sind überarbeitet; Schmetterlinge
+werden mit ihren Trefferflächen halbiert.
+
+Sandwürmer starten per Befehl sichtbar, bleiben auf abgestuften Dünen aktiv und
+können auch am eingegrabenen Rücken getroffen werden. Karte und Lebensanzeige
+folgen dieser Phase. Kakteen und anderer bestätigter Schaden lösen eine kurze
+Kamerareaktion aus, ohne die Zielrichtung zu ändern.
+
+Standard- und Projektkonfigurationen verwenden acht Chunks und 60 FPS;
+Hintergrundfenster, Workerbudget und GPU-Speicherstrategie reduzieren die Last.
+[Bedienung und Prüfszenen](docs/reference-models-and-runtime.md).
+
+Prüfung: Workspace-Build und Clippy mit `-D warnings` bestehen. 280 gezielte
+Rust-Tests und zwölf Assettests bestehen; ein vorhandener optionaler Zeitvergleich
+bleibt ignoriert. Echte Spawn-Befehle werden an zwei Clients repliziert und
+anschließende Treffer senken die Lebenspunkte. 20 native Aufnahmen prüfen
+Palette, Vegetation, Modelle und eine echte Waldszene mit integriertem Server.
+
+Der dreiminütige Stillstandstest beendet sich mit rund 2,22 GiB residentem
+Speicher und ohne private Auslagerung. In der letzten Minute kommen rund
+1,07 MiB hinzu; Mesh-, Material- und Bildanzahlen bleiben konstant. Der native
+Benchmark misst ohne den interaktiven Frontend-FPS-Limiter; die normale
+Frontend-Konfiguration verwendet 60 FPS. Nachweis:
+`target/reference-creature-rework/verification.json`.
+
+
+## 262. Echte Sichtweite, Sandwurmsprung und weichere Biomübergänge
+
+Die voreingestellte 60-FPS-Grenze ist aufgehoben. Sichtweitenänderungen erreichen
+nun auch den tatsächlichen Chunk-Streamingradius, einschließlich Verkleinern im
+Stand; 32 Chunks entsprechen 512 Blöcken Radius. Hintergrundlimit, Workerbudgets
+und die speichersparende GPU-Strategie bleiben aktiv.
+
+Der Sandwurm erhält einen vollständigen Sprungbogen und ein kopfgeführtes
+Eintauchen. Gemeinsame Phasenposen halten Darstellung, sieben Trefferbereiche und
+Lebensanzeige zusammen; Treffer unterbrechen den Flug nicht. Drei wandernde
+Sandwellen aus 24 gecachten, bodengeprüften Sektoren begleiten die Bewegung.
+
+Glooms haben eine Blütenhülle mit dunklem Gesicht, kleinen Augen, Kristallfühlern,
+geäderten Flügeln und sichtbarem gekräuseltem Leuchtschweif. Schweben, Flattern,
+Neigung, Blinzeln und Schweifbewegung verwenden sieben Modellteile. Tieraugen
+haben weniger Weiß, gegnerische Augen weniger Emission. Waldgegner verfolgen
+schneller und zeigen einen ausweichbaren Angriff mit Ausholen, einem einzelnen
+Treffer und anschließender Erholung; die Animation folgt derselben Phase.
+
+Sand wird heller beige und feiner. Kaktusstacheln variieren anhand der Weltzelle.
+Wiesen-, Geisterwald- und Blutwaldgras teilen ein interpoliertes Farbfeld und eine
+einheitliche Jahreszeitenfärbung, einschließlich seitlicher Graskappen und Karte.
+Mystic Mist Block (399) und Fog Block (430) werfen in allen Detailstufen keine
+Schatten. Höhleneingänge erhalten räumlich und zeitlich geglättete Lichtanpassung;
+Geisterwaldnebel reicht dezent hinein, ohne tiefe Höhlen oder den Himmel zu fluten.
+
+
+Prüfung: Workspace-Build, Clippy mit `-D warnings` und Formatprüfung bestehen.
+396 verschiedene Rust-Tests und fünf Assettests bestehen.
+29 native Aufnahmen prüfen Modelle, Sprung-/Tauchposen, Sand und Farbpalette,
+reale Biomfarbfelder, Nebel sowie Höhlenbeleuchtung. Der Spawn-Befehl, zwei
+UDP-Clients, Treffer und Ausweichen sind zusätzlich mit dem echten Server geprüft.
+Nachweis: `target/nov19-world-polish/verification.json`.
+
+Die optionale Aufnahme natürlich generierter Kakteen erreichte ihre globale
+drei Sekunden lange Ruhebedingung nicht. Für diese Szene wird keine Bildfreigabe
+behauptet; die direkten Tests prüfen unterschiedliche Stacheln, Außenrichtung,
+Wiederholbarkeit und LOD-Konsistenz. Die Wellenaufnahmen zeigen eine ebene
+Sandfläche; Stufen, Wasser, Änderungen und unbekannter Boden sind separat getestet.
+
+
+## 263. Begrenzter Einstieg, Galle und vollständige Gloom-Palette
+
+Der erste Weltaufbau lädt höchstens 961 Chunk-Spalten. Die Grenze wird vor dem
+Streaming und vor jedem Verbindungsaufbau gesetzt und erreicht auch den
+Server-Handshake. Weitere Sichtweitenringe folgen nach dem Einstieg; die
+gewählte Sichtweite bleibt gespeichert. Schattenkaskaden benötigen bei kurzen
+Sichtweiten weniger Durchläufe, ferne Schatten haben feste Qualitätsbudgets.
+
+Der Sandwurm erhält zwölf Körpersegmente, ein verjüngtes Ende, echte Wanderung,
+eine begrenzte Sandspur, schließende Maulfächer und ein angekündigtes Gallespucken.
+Das serverseitige Projektil setzt Säurepfützen. Der Galleeimer transportiert
+Quellen; Galle fließt halb so schnell wie Wasser und horizontal vier Blöcke weit.
+Säurekontakt schädigt Spieler und Mobs über den normalen Schadens-/Todespfad.
+Flüssigkeitszellen, Projektile, Spuren und Partikel besitzen feste Obergrenzen.
+
+Teer verteilt 64 erhaltene Feineinheiten pro Eimer über zusammenhängende Wege
+bis vier Blöcke vom Ausguss und gleicht deren Pegel an. Trocknung und Pausieren
+beim Ausladen bleiben erhalten. Material 439 ist flüssige Galle; 440–448 ergänzen
+Galleblock, Bürgersteigblock, sechs Bürgersteigprofile und Strohblock. Bordkanten
+richten sich zur angrenzenden Straße aus; Auswahl und Physik teilen das Modell.
+Neue Rezepte erweitern den begrenzten Katalog auf höchstens 1024 Einträge.
+
+Sieben Gloom-Varianten folgen Biom und Höhlenlage. Echte Essenz- und
+Lichtsplitterdrops, Leuchtspuren, Blütenpartikel und Reaktionen sind eingebunden.
+Benachbarte Grasoberseiten bilden ohne wiederholte Modellränder eine ebene
+Fläche; Außenkanten behalten die Rundung. Zusätzliche weltfeste Materialdetails
+verwenden bestehende Oberflächen und überspringen ferne Rauschberechnungen.
+
+Flüssigkeitszustand wird im kompatibel eingebetteten RG15-Regionsformat und mit
+Protokoll 150 übertragen; bestehende Material-, Werkzeug- und Variantenindizes
+bleiben erhalten. Client und Server müssen gemeinsam aktualisiert werden.
+
+
+Prüfung: Workspace-Build, Clippy für alle Targets mit `-D warnings`, Format- und
+Diffprüfung bestehen. 345 gezielte Rust-Tests, zwölf Assetprüfungen und 19 native
+Aufnahmen bestehen. Der echte UDP-Wurmtest umfasst zwei Clients, einen
+angekündigten Angriff, Kreativschutz und Ausweichen. Tests decken Galleeimer,
+Säurekontakt, Todesablauf, feine Teermenge und RG15-Speicherung ab.
+
+Im dreiminütigen nativen Waldtest mit integriertem Server bei 1920×1080 und acht
+Chunks werden rund 104 durchschnittliche und 173 maximale CPU-Wall-Frame-FPS
+aufgezeichnet. In der letzten Minute steigt RSS um 504 KiB; Mesh-, Material-
+und Bildanzahlen bleiben konstant, ohne private Auslagerung. Der native Test
+umgeht den interaktiven FPS-Limiter; die Zahlen gelten für diese Szene und
+Sichtweite. Nachweis: `target/nov19-bile-street/verification.json`.
+
+## 264. Mehrsprachige Suche, Strömung, Klimazonen und Sandwurm
+
+Too Many Items durchsucht gleichzeitig deutsche und englische Namen,
+Beschreibungen und Kennungen. Teilwörter, mehrere Suchwörter und normalisierte
+Umlaute funktionieren unabhängig von der gewählten Oberflächensprache. Galle
+heißt auch in der englischen Oberfläche Galle; interne Materialkennungen bleiben
+für Spielstände erhalten. Der Galleblock erhält zusammenhängende, weichere
+Gelauflagen und eine passende Normaltextur.
+
+Wasser, Galle und Teer tauschen vorhandene Menge lokal aus. Schwerkraft und
+Verbindungen steuern die bezahlten Transfers; kleine Fronten wachsen innerhalb
+des nächsten Voxels. Zwei benachbarte Wasserquellen erzeugen keine zusätzlichen
+Quellen. Galle besitzt 64 Feineinheiten und animierte Strömungsnormalen. Der
+endliche Teerfilm gleicht seine Höhe über zusammenhängende Wege an. Die
+Simulation bleibt pro Schritt begrenzt und verwendet keine Offline-Fluidsimulation.
+
+Neue Welten verwenden Landschaftsrevision 8 und Flussrevision 7. Größere
+Klimaregionen besitzen die Klassen Kalt, Warm und Heiß; eine warme Zwischenzone
+trennt Wüsten von kalten Hochländern. Lokale Reliefbezirke variieren auch das
+gleiche Biom. Kurze Bäche und große Einzugsgebiete ermöglichen unterschiedliche
+Längen, lange Zuflüsse und auslaufende Gabelungen. Bestehende Welten behalten ihre
+gespeicherten Generationsrevisionen und bearbeiteten Chunks.
+
+An der Wasserlinie folgen die optischen Effekte dem tatsächlichen unter Wasser
+liegenden Sichtstrahl. Eine kleinere Nahgrenze verhindert abgeschnittene
+Wasserflächen unmittelbar vor der Kamera, auch bei niedriger Wasserqualität.
+
+Der Sandwurm besteht aus 24 kräftigen Ringen und ist ungefähr fünfmal so lang
+wie das bisherige Modell. Unterirdisch verschwinden Körper und anatomische
+Trefferflächen; bodengeprüfte Sandwellen bleiben sichtbar. Klippen begrenzen die
+Bewegung. Gallespucken erfordert ein sichtbares, verwundbares Ziel und eine freie
+Flugbahn; der Angriff hält die angekündigte Zielposition fest. Ausgespuckte
+Quellen verschwinden nach fünf Sekunden und können vorher mit einem Eimer
+aufgenommen werden. Eimerquellen bleiben bestehen. Protokoll 151 trennt diese
+Zustände von älteren Clients; bestehende Gegenstands- und Materialnummern bleiben
+unverändert.
+
+Beim Auftauchen folgen die hinteren Ringe zeitlich dem Vorderkörper, statt den
+gesamten langen Wurm als starren Hebel anzuheben. Ruhende endliche Wasserbecken
+behalten ihre Menge auch über mehreren gefüllten Schichten. Einheiten pendeln
+nicht zwischen Plattenkante und Nachbarzelle; nach dem Ausgleich wachsen die
+Mesh- und Flüssigkeitsrevisionen nicht weiter.
+
+Prüfung: Workspace-Build, Clippy für alle Targets mit `-D warnings`, Format- und
+Diffprüfung bestehen. 749 verschiedene gezielte Rust-Tests, zwölf Assetprüfungen
+und 20 native Aufnahmen bestehen. Die Aufnahmen verwenden denselben Spielbuild
+und prüfen alle drei Wasserqualitäten, sechs Wurmphasen, Teer/Galle und die neue
+Materialpalette. Die lange Flussprüfung weist für Seed 42042 einen real nassen
+17.280-m-Lauf (1.080 Chunks), zwei lange Zuflüsse und eine getrennte entfernte
+Seegabelung nach. Die Prüfung umfasst ebenfalls echte UDP-Clients, geschützte
+Kreativspieler, Ausweichen und fünfsekündige Gallequellen.
+
+Nachweis: `target/nov19-flow-climate/verification.json`. Landschaftsrevision 8
+und Flussrevision 7 gelten für neue Welten; vorhandene Spielstände werden nicht
+nachträglich umgebaut. Die Flüssigkeiten verwenden eine begrenzte
+Echtzeitsimulation, keinen Blender-Offline-Solver.
+
+## 265. Sichtbar fließende Flüssigkeiten und Wurmsprünge
+
+Nach dem Entfernen der letzten verbundenen Wasserquelle ziehen sich auch ruhende,
+eingeschlossene Pfützen zurück. Über ausgeladene Bereiche gespeicherte
+Wasserverbindungen und weitere Quellen bleiben berücksichtigt. Die Prüfung und
+das Aufwecken ruhender Wasserflächen sind pro Simulationsschritt begrenzt.
+
+Wasser, Galle und nasser Teer bewegen ihre sichtbaren Flächen zwischen den
+Simulationsschritten. Neue Fronten wachsen über den Block, Pegel ändern sich
+kontinuierlich und leer werdende Stellen laufen aus. Galle und Teer reagieren
+zäher, mit bewegten Oberflächenfalten. Tatsächlicher Kontakt mit der benetzten
+Fläche bremst Spieler und Mobs. Teer bleibt auf vorbereitete Wege begrenzt und
+trocknet weiterhin zum festen Belag. Der zusätzliche Oberflächenverlauf im
+Renderer ist nach Einträgen und Vertexanzahl begrenzt.
+
+Sandwürmer springen auf einer Bogenbahn aus dem Sand und tauchen an anderer
+Stelle wieder ein. Die Ringe folgen der Bahn mit Abstand, bis auch das Schwanzende
+vollständig untergetaucht ist. Zum Kämpfen richtet sich der Vorderkörper auf;
+Biss, Geschossursprung und Trefferflächen folgen derselben bewegten Anatomie.
+Nur nahe Bewegung weckt verborgene Würmer. Friedliche Bodenmobs dienen ebenfalls
+als Ziele, und Dorfbewohnersoldaten bekämpfen sichtbare Würmer. Begonnene Sprünge
+und Tauchphasen laufen auch bei größerer Entfernung und entladenem Terrain zu
+Ende; verzögerte KI-Schritte verlieren ihre verstrichene Zeit nicht mehr.
+
+Bürgersteigkanten und Bögen sind bündig mit der Gehfläche. Etwas dunklere Steine
+markieren die Straßenkante; die abgesenkte Form bleibt als Übergang erhalten.
+Kollision und Darstellung verwenden dieselben flachen Profile.
+
+Prüfung: Workspace-Build, Clippy für alle Targets mit `-D warnings`, Format- und
+Diffprüfung bestehen. 943 gezielte Rust-Tests, 13 Assetprüfungen und 36 native
+Aufnahmen bestehen. Die 15 Flüssigkeitsaufnahmen prüfen sichtbare Zwischenstände
+beim Füllen und Auslaufen bei unverändertem autoritativem Zielzustand, einschließlich
+transparenter Galle und einzelner verschwindender Zellen neben einer verbleibenden
+Quelle. Die sieben Wurmaufnahmen, sechs Wasserlinienaufnahmen, Teer-Trocknung und
+vier Bürgersteigansichten verwenden denselben endgültigen Spielbuild. Echte
+UDP-Clients prüfen Bewegung, Sprung, Aufrichten, Biss, Kreativschutz und Ausweichen.
+
+Nachweis: `target/nov19-fluid-arcs/verification.json`.
+
+## 266. Partikelflüssigkeiten und Sandwurm-Anatomie
+
+Wasser, Blood-Wasser, Galle und Teer verwenden in der Nähe einen GPU-Solver mit
+anhaltenden Partikelpositionen. Schwerkraft, Dichteausgleich, Kollisionen und
+unterschiedliche Zähigkeit bewegen die Flüssigkeit; eine rekonstruierte freie
+Oberfläche stellt ihre Form dar. Die Physik verwendet feste Schritte mit 120 Hz,
+unabhängig von den gerenderten Bildern. Höchstens vier Schritte pro Bild und
+8.192 Partikel begrenzen die Arbeit. Die Detailberechnung umfasst einen
+16-Meter-Bereich, der über einen Übergangsrand in die entfernte Weltdarstellung
+übergeht. Flüssigkeitsmengen, Quellen und Trocknung bleiben gespeicherter,
+serverbestätigter Weltzustand. Getrennte Becken erhalten eigene Partikelkontingente;
+Quellenwechsel und bewegte Simulationsbereiche hinterlassen keine alten Pfützen.
+Ein Partikel behält beim Bereichswechsel sein Volumen; eintretende Randstreifen
+erhalten nur die passende zusätzliche Menge. Kleine getrennte Pfützen ohne
+ausreichende Partikelabdeckung behalten die normale Weltoberfläche.
+Teer bleibt als dünner Film auf vorbereiteten Wegen; Galle und Teer beachten
+ihre begrenzte Reichweite. Platten und andere Teilformen verwenden ihre echten
+Kollisionsräume.
+
+Der Sandwurm hat einen zurückgesetzten Schlund, getrennte Fangzähne und einen
+geschichteten hinteren Kopfkragen. Der bewegliche Hals schließt hinter dem Maul
+an. Chitinplatten gliedern die Körperringe; Animation und Trefferflächen verwenden
+dieselbe Anatomie. Beim sichtbaren Auftauchen brüllt der Wurm einmal. Graben,
+Landung, Biss, Gallespeien, Treffer, Tod und Atmen haben eigene räumliche Klänge.
+Wiederholte Netzwerkschnappschüsse lösen kein zweites Brüllen aus.
+
+Prüfung: Workspace-Build, Clippy für alle Targets mit `-D warnings`, Format- und
+Diffprüfung bestehen. 941 gezielte Rust-Tests, 22 native Aufnahmen und acht
+exportierte Wurmklänge bestehen. GPU-Auslesungen prüfen vier Flüssigkeiten nach
+vier simulierten Sekunden, feste Mengen, echte Kollisionen und vollständige
+Entleerung. Ein eigener Lastlauf verwendet alle 8.192 Partikel. Die Wasserprüfung
+liest alle Partikel beim Hin- und Zurückfahren über eine Bereichsgrenze aus und
+bewertet Spritzer anhand der tatsächlichen Beckenmauern und Partikelradien.
+Acht Wurmposen zeigen Maul, Halsanschluss und Körperplatten; echte UDP-Tests prüfen
+Spawn, Treffer, Soldatenverfolgung, Biss und Ausweichen. Der native Audiomixer
+bestätigt die Aktionsgeräusche und genau ein Brüllen pro Auftauchen.
+Alle nativen Läufe verwenden denselben endgültigen Spielbuild.
+
+Nachweis: `target/nov20-pbf-worm/verification.json`.
+
+## 267. Einheitliche Flüssigkeitsoberflächen und senkrechtes Wurmauftauchen
+
+Wasser, Blood-Wasser, Galle und flüssiger Teer verwenden eine gemeinsame
+rekonstruierte Oberfläche. Die bisherigen Wasserflächen, zusätzlichen
+Flüssigkeitsblockflächen und ständig erzeugten Wasserfallspritzer werden nicht
+mehr gezeichnet. Entfernte Flüssigkeit wird aus den gespeicherten Mengen mit
+demselben Oberflächenmaterial rekonstruiert; angrenzende Abschnitte teilen ihre
+Randwerte. Unveränderte Abschnitte behalten ihre Geometrie, entladene Abschnitte
+geben sie frei. Der nahe GPU-Bereich übernimmt die tatsächliche Bewegung.
+Becken, Glasrohre, Strahlen sowie gehaltene und abgelegte Flüssigkeitsmodelle
+verwenden ebenfalls das gemeinsame Oberflächenmaterial. Ihre bestätigten,
+begrenzten Füllräume bleiben unabhängig vom bewegten Simulationsbereich sichtbar.
+
+Der Flüssigkeitssolver entfernt Energie aus Kollisionskorrekturen und verwendet
+acht Dichtekorrekturen pro festem Zeitschritt. Ruhende Becken beruhigen sich;
+einfallende Flüssigkeit kann weiterhin Wellen und Spritzer auslösen. Die
+Oberflächenrekonstruktion glättet ruhende, zusammenhängende Wassermengen, ohne
+einzelne Tropfen oder fallende Ströme durch eine zusätzliche Ebene zu ersetzen.
+
+Zum Angriff schießt der Sandwurm zunächst senkrecht aus seinem aktuellen
+Aufenthaltsort und beugt sich erst am Ende leicht nach vorn. Beim Rückzug folgt
+er demselben Schacht. Ein Bogen bleibt für längere Fortbewegungssprünge erhalten;
+das folgende Auftauchen verwendet den tatsächlichen Landeort. Sichtbare
+Anatomie, Trefferflächen und Geschossursprung folgen derselben Animation.
+
+Prüfung: Workspace-Build, Clippy für alle Targets mit `-D warnings`, Format-
+und Diffprüfung bestehen. 1.015 gezielte Rust-Tests, 63 native Aufnahmen und
+acht exportierte Wurmklänge bestehen. Der native Wasserlauf prüft 35 simulierte
+Sekunden, Oberflächenhöhen und Bewegungsenergie beim Bereichswechsel, ohne alte
+Wasserflächen oder dauerhafte Sprüheffekte. Vier Flüssigkeiten werden beim Fallen,
+Aufprall, Ruhen und Entfernen der Quelle geprüft; ein separater Lastlauf verwendet
+alle 8.192 Partikel. Zehn Wurmposen und echte UDP-Clients prüfen das neue Auftauchen
+und die Trefferflächen. Der vollständige Hydrauliklauf bestätigt Becken,
+Glasrohre, Strahlen, Befüllen und Abschalten. Alle nativen Läufe verwenden denselben
+endgültigen Spielbuild. Der frühere Zellflächen-Tween-Test wurde durch die Prüfung
+der tatsächlichen Partikelbewegung und gespeicherten Wasseroberflächen ersetzt.
+
+Nachweis: `target/nov20-unified-fluid-worm/verification.json`.
+
+## 268. Ruhige Gewässer, Überflugleistung und sichtbare Sandwurmspuren
+
+Meere, Seen, Flüsse und bestätigte größere Becken behalten zusammenhängende
+Wasserflächen mit der bisherigen Tiefenwirkung, Biomtönung, Brechung und
+Reflexion. Meerwasser behält auch neben Blood Forest eine blaugrüne Grundfarbe.
+Die vorbereitete Ufer- und Strömungsgeometrie wird direkt wiederverwendet;
+der zusätzliche alte Wasser-Uploader und dauerhafte Sprüheffekte bleiben aus.
+Kleine Ausgüsse von Wasser, Blood-Wasser, Galle und Teer verwenden weiterhin
+die begrenzte örtliche Partikelphysik.
+
+Unveränderte Gewässer werden beim Überfliegen weder neu mit Partikeln gefüllt
+noch auf dem Hauptthread als Blockvolumen abgetastet. Veröffentlichte Änderungen
+laufen durch begrenzte Arbeitsbudgets; bestehende Flächen behalten ihre Meshes,
+entladene Abschnitte geben sie frei. Flugkameras erzeugen keine Wasserkontakte.
+Tatsächliche Eintritte und Bewegung hinterlassen kleine Wellen und wenige,
+kurzlebige ballistische Spritzer statt starker Oberflächenverformung.
+
+Dominante trockene Wüsten erhalten Sand und Sandstein, auch wenn mehrere
+Nachbarbiome ihre Gewichtung unter die bisherige Hälfte drücken. Oasen behalten
+ihre Vegetation. Der Sandwurm hinterlässt beim unterirdischen Bewegen eine
+angehobene, auslaufende Sandspur; diese folgt kleinen Dünenstufen und bleibt
+auch bei Netzwerkschnappschüssen ohne Geschwindigkeitswert sichtbar. Klippen,
+Wasser und unbekannter Boden begrenzen die Spur. Die Bissanimation schließt
+und öffnet mit weichen Übergängen, ohne den Trefferzeitpunkt zu verschieben.
+
+Unter Uhrzeit und Jahreszeit der Minikarte steht die aktuelle FPS-Zahl.
+Sie verwendet tatsächlich gerenderte Bilder und verstrichene Echtzeit,
+aktualisiert sich zweimal pro Sekunde und funktioniert unabhängig von F1.
+
+Prüfung: Workspace-Build, Clippy für alle Targets mit `-D warnings`, Format-,
+Shell- und Diffprüfung bestehen. 963 gezielte Rust-Tests und 70 native Aufnahmen
+bestehen. Generierter Ozean und Fluss zeigen bei Hin-/Rückflug und Untertauchen
+null Wasserpartikel, null kamerabedingte Kontaktimpulse und null erneute
+Blockvolumen-Abtastungen; die Rückkehr behält vorhandene Wasser-Meshes.
+Die sechs Wasserlinienansichten prüfen Fläche, Pegel und Quellenmenge.
+13 Wurmposen prüfen unter anderem sichtbare Spuren auf ebenem Boden,
+Dünenstufen und aus größerer Entfernung. Echte UDP-Clients prüfen weiterhin
+Spawn, Biss, Ausweichen und Trefferflächen. Der vollständige Hydrauliklauf
+bestätigt Quellenentfernung, Befüllen, Abschalten, Unterwasserbauen und eine
+positive FPS-Anzeige. Vier endliche Flüssigkeiten bestehen zusätzlich ihre
+GPU-Prüfung für Fall, Aufprall, Beruhigung und Entleerung.
+Alle nativen Läufe verwenden denselben endgültigen Spielbuild und eigene
+Testwelten. Die FPS-Messung ist kein allgemeiner Leistungsvergleich.
+
+Nachweis: `target/nov20-natural-water-flight/verification.json`.
+
+## 269. Weiche Fließfronten, Sandwurm-Kampf und verlässliches Bauen
+
+Ruhendes und fließendes Wasser verwenden dieselbe vorbereitete Wassergeometrie
+mit Tiefenwirkung und Reflexion. Der Renderer übernimmt die bestätigten Mengen
+des Servers und interpoliert Füllstände, Vorderkanten und das Zurückziehen leerer
+Flächen. Galle und Teer behalten eigene zähere Materialbewegungen und langsamere
+Übergänge. Die zusätzliche kameranahe Partikelsimulation übernimmt gespeicherte
+Weltflüssigkeiten nicht mehr; sie bleibt auf isolierte Partikeltests beschränkt.
+So kann ein bewegter Simulationswürfel weder ein Becken umformen noch eine
+zweite Oberfläche erzeugen. Auch trockene Abschnittseigentümer über gefüllten
+Zellen erhalten die Übergänge. Animationspunkte wechseln nicht über eine
+massive Trennzelle zwischen benachbarten Becken.
+
+Sandwürmer haben 120 maximale Lebenspunkte und patrouillieren auch ohne Aggro
+unter geeignetem Sand. Jede tatsächliche unterirdische Bewegung hinterlässt
+eine Sandspur. Der Kampf umfasst Biss, gezieltes Gallespeien bis 40 Meter,
+einen angekündigten schnellen Charge auf einer festgelegten Linie und einen
+einmaligen Hochwurf beim Auftauchen unter dem Ziel. Schaden, Schutzregeln,
+Sichtprüfung und Hochwurf laufen auf dem Server; die tatsächliche Aufwärtsbewegung
+wird repliziert. Der Charge geht in die vollständige Auftauchanimation über.
+Der Client verankert deren Austrittspunkt sofort, statt die unterirdische
+Verfolgung während des sichtbaren Ausbruchs nachzuholen. Gespeicherte Verletzungen
+bleiben erhalten; neue Würmer starten mit 120 Lebenspunkten.
+
+Bauen und Abbauen verwenden denselben physischen Augenpunkt wie die
+Serverprüfung. Kamerawackeln, Treppenglättung und Kamerainterpolation ändern
+dadurch nicht die geprüfte Zelle oder Blockseite. Eine getrennte lokale
+Flugkamera behält ihren eigenen Blickstrahl, auch bei einer unverbundenen
+ClientSession. Die konservative Windhülle biegsamer Vegetation verdeckt keinen
+explizit anvisierten Block mehr. Starre Gegenstände und Wände bleiben Hindernisse;
+das gezielte Abbauen der Vegetation behält seine normale Auswahl.
+
+Prüfung und native Bildnachweise: `target/nov20-smooth-flow-combat/verification.json`.
+Die Fließgalerie prüft für vier Flüssigkeiten jeweils Anfang, Füllübergang,
+gefüllte Fläche, Ablaufübergang und leere Fläche mit unveränderten Ziel- und
+Quellmengen. Die Mengen- und Quellenlogik wird zusätzlich separat geprüft.
+15 Wurmansichten prüfen passive Spuren und Charge; echte UDP-Clients prüfen
+Biss, Hochwurf, Ausweichen und die gemeinsame Austrittsposition. Der vollständige
+Hydrauliklauf prüft reales Bauen, Befüllen, Quellenentfernung und Abschalten.
+
+## 270. Wasserbewegung, Sandwurm und größere Landbiome
+
+Wellen behalten bei Windwechseln ihre Phase. Auf Flüssen und an Fließfronten
+wandert die Oberflächenstruktur entlang der lokalen Strömung. Feine Wellen und
+Spiegelungen werden mit wachsendem Pixelabstand gefiltert. Beim Aktualisieren
+eines Beckens behält die sichtbare Fläche denselben Mesh-Handle.
+
+Der Sandwurm fängt laufende Beute anhand ihrer letzten Schritte ab und kann
+Hindernisse auf tragfähigem Sand umgehen. Verwundete Würmer flankieren stärker.
+Auf Distanz kündigt der aufgerichtete Kopf einen Gallespeier an, im Nahkampf
+schließen sich drei bewegliche Kiefer zum Biss. Überlappende Panzerplatten,
+gebogene Zähne und ein vertiefter Schlund geben dem Modell seine neue Form.
+
+Neue Welten verwenden Landschaftsversion 9. Klimatisch passende Standorte
+bilden große Innenflächen mit gekrümmten Übergängen. Kalte und heiße Regionen
+erhalten einen gemäßigten Nachbarn. Weltmenü und Server verwenden beim Anlegen
+die aktuellen Vorlagen für Gelände und Flüsse. Gespeicherte Welten verwenden
+ihre bisherige Landschafts- und Flussversion auch in neu erkundeten Gebieten.
+
+## 271. Sandwurm, Bürgersteigkurven, Bauziel und fließendes Wasser
+
+Beim Auftauchen biegt sich der Sandwurm über mehrere Körpersegmente. Gestufte
+Chitinringe, drei Kieferlappen und innen sitzende Fangzähne formen den Kopf.
+Spuckursprung und Trefferzonen folgen der Pose.
+
+Der massive Bürgersteig ist einen halben Block hoch. Die sechs Gehwegprofile
+sind einen Viertelblock hoch und schließen an die Straße an. Beide Kurven
+haben eine gerundete Außenkante. In ihrer freien Ecke lässt sich der Boden mit
+der Schaufel vorbereiten und mit Teer bis an die Rundung asphaltieren.
+
+Bauklicks übertragen in Protokoll 152 den anvisierten Punkt. Der Server
+prüft Reichweite und Sicht von der aktuellen Spielerposition aus. Beim
+Dauerabbau bleibt der angeklickte Block über Bewegungsupdates hinweg das Ziel.
+Ein gesetzter Block verdrängt flüssige Galle in derselben Zelle.
+
+Ausströmendes Wasser auf festem Boden breitet sich mit gerundeter Vorderkante
+aus. Die Wasserhöhenabfrage folgt denselben Dreiecken wie die sichtbare
+Fläche. Die Zwischenbilder verbinden aufeinanderfolgende Querschnitte.
+In geschlossenen Becken erreicht die Flüssigkeit auch die letzte Zelle
+schrittweise. Freie Meeres- und Seeoberflächen behalten ihre Darstellung.

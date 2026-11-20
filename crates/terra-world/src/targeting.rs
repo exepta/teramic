@@ -69,7 +69,8 @@ pub fn item_placement_with_state(
             return None;
         }
         let expected = chunks.block_at(position)?;
-        return matches!(expected, 0 | 27 | 98).then_some((position, expected));
+        return (matches!(expected, 0 | 98) || displaceable_liquid(expected))
+            .then_some((position, expected));
     }
     if material == terra_voxel::MaterialId::SnowLayer as u16 {
         return crate::snow::target(chunks, journal, hit);
@@ -91,7 +92,8 @@ pub fn item_placement_with_state(
             && let Some(position) = journal.rotary_crank_mount(hit.position, facing)
         {
             let expected = chunks.block_at(position)?;
-            return matches!(expected, 0 | 27 | 98).then_some((position, expected));
+            return (matches!(expected, 0 | 98) || displaceable_liquid(expected))
+                .then_some((position, expected));
         }
         let anchor = journal.crusher_primary(hit.position)?;
         let state = journal.object_state(anchor)?;
@@ -100,7 +102,8 @@ pub fn item_placement_with_state(
         }
         let position = journal.crusher_crank_position(anchor)?;
         let expected = chunks.block_at(position)?;
-        return matches!(expected, 0 | 27 | 98).then_some((position, expected));
+        return (matches!(expected, 0 | 98) || displaceable_liquid(expected))
+            .then_some((position, expected));
     }
     if terra_core::kinetic::uses_adaptive_facing(material)
         && chunks
@@ -236,6 +239,13 @@ pub fn placement_facing(
     material: u16,
     ray: ([f64; 3], [f64; 3]),
 ) -> u8 {
+    if terra_core::street::is_shape(material)
+        && let Some((position, _)) = item_placement(chunks, hit, material)
+    {
+        return terra_core::street::placement_facing(material, position, ray.1, |p| {
+            chunks.block_at(p)
+        });
+    }
     if terra_core::lantern::is_part(material) {
         return terra_core::lantern::facing(material, hit.normal).unwrap_or_default();
     }
@@ -327,6 +337,11 @@ pub fn placement_facing(
     )
 }
 
+/// Liquid anchors yield to construction. The solid bile block remains ordinary terrain.
+pub fn displaceable_liquid(material: u16) -> bool {
+    material == terra_voxel::MaterialId::FluidWater as u16 || material == terra_core::bile::FLUID
+}
+
 /// Fluid and incomplete snow caps yield their cell to ordinary construction.
 /// A completed snow block is solid support and must never be replaced this way.
 pub fn block_placement(chunks: &ChunkStore, hit: BlockHit) -> Option<([i64; 3], u16)> {
@@ -340,7 +355,7 @@ fn block_placement_with_snow(
 ) -> Option<([i64; 3], u16)> {
     use terra_voxel::MaterialId;
     let clicked = chunks.block_at(hit.position)?;
-    let position = if clicked == MaterialId::FluidWater as u16
+    let position = if displaceable_liquid(clicked)
         || replace_snow && clicked == MaterialId::SnowLayer as u16
     {
         hit.position
@@ -350,10 +365,9 @@ fn block_placement_with_snow(
         return None;
     };
     let expected = chunks.block_at(position)?;
-    (matches!(
-        MaterialId::from_raw(expected),
-        Some(MaterialId::Air | MaterialId::FluidWater)
-    ) || replace_snow && expected == MaterialId::SnowLayer as u16)
+    (expected == 0
+        || displaceable_liquid(expected)
+        || replace_snow && expected == MaterialId::SnowLayer as u16)
         .then_some((position, expected))
 }
 
@@ -469,6 +483,30 @@ pub fn pick_world_for_mining(
     )
 }
 
+/// Validate an explicit block-removal request through flexible vegetation.
+/// The server has a wind envelope rather than the client's animation clock;
+/// that envelope cannot turn a visible gap between blades into a solid wall.
+/// Rigid props and actual block shapes still stop this ray. Ordinary prop
+/// picking/mining keeps its full geometry and remains separately validated.
+pub fn pick_world_for_block_mining(
+    chunks: &ChunkStore,
+    journal: &crate::edits::EditJournal,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    pose: PropPose,
+) -> (Option<BlockHit>, Option<WorldTarget>) {
+    pick_context(
+        chunks,
+        journal,
+        properties,
+        origin,
+        direction,
+        pose,
+        PickPurpose::BlockMining,
+    )
+}
+
 /// Construction anchors on the visible bed or machinery through liquid, even
 /// when the eye itself lies inside a water cell. Vessel sampling stays separate.
 pub fn pick_world_for_placement(
@@ -517,6 +555,7 @@ enum PickPurpose {
     Planting,
     Sapling,
     Mining,
+    BlockMining,
     Placement,
     RailPlacement,
 }
@@ -555,7 +594,10 @@ fn pick_context(
     };
     let obstruction = if matches!(
         purpose,
-        PickPurpose::Mining | PickPurpose::Placement | PickPurpose::RailPlacement
+        PickPurpose::Mining
+            | PickPurpose::BlockMining
+            | PickPurpose::Placement
+            | PickPurpose::RailPlacement
     ) {
         crate::interaction_shapes::raycast_through_water(
             chunks,
@@ -609,6 +651,9 @@ fn pick_context(
                         // placement targets soil; occupancy is validated separately.
                         section.props.iter().filter(|p| {
                             !p.removed
+                                && (purpose != PickPurpose::BlockMining
+                                    || crate::props::wind_parameters(p.kind, p.variant, 1., 1.)[1]
+                                        == 0.)
                                 && (!planting || p.kind.crop().is_none())
                                 && (purpose != PickPurpose::Sapling
                                     || !crate::saplings::soft_natural(p, journal))
@@ -685,6 +730,10 @@ fn pick_context(
 #[cfg(test)]
 #[path = "targeting_snow_tests.rs"]
 mod snow_tests;
+
+#[cfg(test)]
+#[path = "targeting_building_tests.rs"]
+mod building_tests;
 
 #[cfg(test)]
 mod tests {

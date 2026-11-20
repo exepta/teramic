@@ -28,6 +28,9 @@ impl Royal<'_, '_> {
         }
     }
     pub(super) fn tower(&mut self, cx: i64, cz: i64, y: i64, r: i64, height: i64, roof: bool) {
+        if self.terrain_adapted() {
+            self.bounded_foundation(cx - r, cz - r, 2 * r, 2 * r, y);
+        }
         for dz in -r..=r {
             for dx in -r..=r {
                 let rr = dx * dx + dz * dz;
@@ -36,11 +39,13 @@ impl Royal<'_, '_> {
                 }
                 let position = self.point([cx + dx, 0, cz + dz]);
                 let natural = self.builder.ground(position[0], position[2]) - self.origin[1];
-                self.fill(
-                    [cx + dx, natural.min(y - 1) - 2, cz + dz],
-                    [cx + dx, y - 1, cz + dz],
-                    43,
-                );
+                if !self.terrain_adapted() {
+                    self.fill(
+                        [cx + dx, natural.min(y - 1) - 2, cz + dz],
+                        [cx + dx, y - 1, cz + dz],
+                        43,
+                    );
+                }
                 self.fill(
                     [cx + dx, y, cz + dz],
                     [cx + dx, (y + height + 7).max(natural + 5), cz + dz],
@@ -231,6 +236,11 @@ impl Royal<'_, '_> {
                 let position = self.point([x + dx, 0, z + dz]);
                 let natural = self.builder.ground(position[0], position[2]) - self.origin[1];
                 let support = self.natural_walk_height(x + dx, z + dz)?;
+                if self.terrain_adapted()
+                    && ((deck_top - support).abs() > 3 || (natural - deck_top).abs() > 3)
+                {
+                    return None;
+                }
                 self.fill(
                     [x + dx, support.min(sy - 1) - 2, z + dz],
                     [x + dx, deck_top - 1, z + dz],
@@ -264,6 +274,11 @@ impl Royal<'_, '_> {
                 if z == max_z && x.abs() <= 4 {
                     continue;
                 }
+                let y = if self.terrain_adapted() {
+                    self.floor(x, z)
+                } else {
+                    y
+                };
                 self.fill([x, y, z], [x, y + 6, z], 43);
                 if x.rem_euclid(3) != 0 {
                     self.set([x, y + 7, z], castle::BATTLEMENT_STRAIGHT);
@@ -272,6 +287,11 @@ impl Royal<'_, '_> {
         }
         for z in min_z..=max_z {
             for x in [-26, 26] {
+                let y = if self.terrain_adapted() {
+                    self.floor(x, z)
+                } else {
+                    y
+                };
                 self.fill([x, y, z], [x, y + 6, z], 43);
                 if z.rem_euclid(3) != 0 {
                     self.set([x, y + 7, z], castle::BATTLEMENT_STRAIGHT);
@@ -280,14 +300,21 @@ impl Royal<'_, '_> {
         }
         for x in [-25, 25] {
             for z in [-61, -17] {
-                self.tower(x, z, y, 4, 12, true);
+                let base = if self.terrain_adapted() {
+                    self.floor(x, z)
+                } else {
+                    y
+                };
+                self.tower(x, z, base, 4, 12, true);
             }
         }
         self.keep(0, -40, y);
         for dx in [-7, 7] {
             self.banner(dx, y + 4, max_z);
         }
-        self.fill([-4, y, -16], [4, y + 4, -14], 0);
+        if !self.terrain_adapted() {
+            self.fill([-4, y, -16], [4, y + 4, -14], 0);
+        }
         if self.winter {
             for x in [-10, 10] {
                 self.tower(x, -42, y + 24, 3, 10, true);
@@ -296,6 +323,10 @@ impl Royal<'_, '_> {
     }
     fn keep(&mut self, x: i64, z: i64, y: i64) {
         let (rx, rz, height) = (13, 11, 24);
+        let y = self.local_floor(x - rx - 4, z - rz - 4, 2 * rx + 8, 2 * rz + 8, y);
+        if self.terrain_adapted() {
+            self.bounded_foundation(x - rx, z - rz, 2 * rx, 2 * rz, y);
+        }
         self.fill([x - rx, y, z - rz], [x + rx, y + height + 4, z + rz], 0);
         for level in 0..height {
             let material = self.masonry(level);
@@ -370,6 +401,9 @@ impl Royal<'_, '_> {
                     self.set([x + dx, y + 24 + level, z + dz], self.roof());
                 }
             }
+        }
+        if self.terrain_adapted() {
+            self.natural_access([x, y, z + rz]);
         }
         self.banner(x, y + 15, z + rz);
         self.set([x, y, z - 7], 104);

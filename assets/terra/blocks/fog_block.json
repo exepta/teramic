@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 430,
+  "name": "Fog Block",
+  "description": "Creates drifting ground mist in a circle up to eight blocks around, even below a floor block.",
+  "creative_category": "decoration",
+  "hardness": 1.0,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "fog_stone": {
+      "base_color": [
+        0.65,
+        0.84,
+        0.86,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    }
+  },
+  "textures": {
+    "fog_stone": "textures/mystic_mist_block.png"
+  },
+  "face_materials": [
+    "fog_stone",
+    "fog_stone",
+    "fog_stone",
+    "fog_stone",
+    "fog_stone",
+    "fog_stone"
+  ],
+  "surface": "rock"
+}

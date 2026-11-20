@@ -18,6 +18,8 @@ impl Plugin for TerraUiPlugin {
         crate::inventory_portrait::install(app);
         crate::kingdom::install(app);
         crate::npc_work::install(app);
+        crate::building_jobs::install(app);
+        crate::work_areas::install(app);
         crate::realm_title::install(app);
         crate::multiplayer::install(app);
         crate::survival::install(app);

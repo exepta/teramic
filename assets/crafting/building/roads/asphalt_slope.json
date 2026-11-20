@@ -1,0 +1,28 @@
+{
+  "id": "teramic::asphalt_slope",
+  "name": "Asphalt Road Slope",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 433
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 431
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 431
+        },
+        "count": 1
+      }
+    ]
+  }
+}

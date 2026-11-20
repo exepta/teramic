@@ -31,7 +31,8 @@ Beispiel fuer eine angepasste Fischdefinition (Teil der bestehenden JSON-Datei):
 - Ohne `spawn` oder mit `spawn: {}` bleiben die bisherigen Regeln erhalten.
 - `enabled = false` verhindert neue natuerliche Spawns dieser Art.
 - Eine leere `biomes`-Liste erlaubt die bisher zulaessigen Biome. Gueltige Namen:
-  `ocean`, `plains`, `forest`, `desert`, `highland`, `mushroom_park`, `cliffted_desert`.
+  `ocean`, `plains`, `forest`, `desert`, `highland`, `mushroom_park`, `cliffted_desert`,
+  `cherry_forest`, `spirit_blossom`, `blood_forest`.
   Listen/Overrides duerfen keine Duplikate enthalten.
 - `herd_size` und `biome_herds[].size` sind inklusive Min-/Max-Bereiche von 1
   bis zum bestehenden `group_size` (hoechstens 4). Der Biom-Override hat Vorrang.
@@ -82,6 +83,72 @@ ueber die bestehende begrenzte Wegsuche; Reisende erkunden laengere Wege innerha
 der Siedlung. Arbeitsplaetze werden dabei weder abgebaut noch Inventare veraendert.
 Rechtsklick spricht Bewohner an; Handel und berufliche Produktion sind noch nicht
 Teil dieses Grundsystems. Alle neuen Referenzrollen sind ebenfalls ueber
-`/spawnmob teramic::train_driver`, `miner`, `unemployed`, `butcher`, `seller`,
+`/spawn teramic::train_driver`, `miner`, `unemployed`, `butcher`, `seller`,
 `travelling_merchant` und `nomad_a` bis `nomad_d` erreichbar (jeweils mit
 `teramic::`-Praefix).
+
+## Spirit Blossom fauna
+
+`butterfly.json`, `spirit_gloom.json` und `spirit_fox.json` erweitern die Registry
+am Ende; die gespeicherten IDs 0–20 bleiben erhalten. Die neuen IDs sind 21, 22,
+23. Varianten werden als bestehendes `variant`-Feld gespeichert und repliziert:
+
+- Butterfly 0–6: Blossom, Petal, Wisteria, Spirit, Goldenbloom, Moonpetal, Sakurawing.
+  Natürliche Habitate: Plains, Forest, Cherry Forest und Spirit Blossom. Die Tiere
+  fliegen mit sichtbar schlagenden Flügeln, landen kurz und können von kleinen
+  Spinnen gefressen werden.
+- Spirit Gloom 0–1: Blossom und Moon. Ausschließlich im Spirit-Blossom-Biom.
+  Schwebende, friedliche Wesen in Weiß/Cyan beziehungsweise Violett mit
+  eigenständig animierten Armen, Flammenschweif und zwei kreisenden Minigeistern.
+  Lebende Glooms gewähren Überlebensspielern innerhalb von sechs Metern
+  Regeneration I. Der Server prüft einmal je Sekunde; mehrere Glooms addieren
+  keine Stufen und überschreiben keine stärkeren Tränke.
+- Spirit Fox 0: friedlicher laufender Fuchs mit drei animierten Leuchtschweifen,
+  ausschließlich in Spirit Blossom. Die Tiere fliehen bei Bedrohung. Keine
+  Zähmung, Zucht oder neuen Beutegegenstände werden hier behauptet.
+
+Alle drei verwenden die bestehenden Populations-, Sichtbarkeits- und
+Aktualisierungsbudgets. Flieger benötigen geladene, freie Voxelzellen und werden
+bei der Abstandskorrektur nicht auf den Boden projiziert. Geteilte Meshes liegen
+in `terra-render/src/creatures/model/spirit.rs`, Animationen separat daneben.
+
+Manuell testen: `/spawn teramic::blossom_butterfly` (beziehungsweise die anderen
+sechs Variantennamen), `/spawn teramic::spirit_gloom_blossom`,
+`/spawn teramic::spirit_gloom_moon`, `/spawn teramic::spirit_fox`.
+`TERRA_SPIRIT_INSPECT=1` zusammen mit `--smoke-test-creatures` startet die isolierte
+Rendergalerie; `TERRA_CAPTURE_DIR` bestimmt ihr Screenshot-Verzeichnis.
+
+## Kryptawachen und Blood Forest
+
+Neue Arten werden append-only gespeichert: Skeleton=24, Raven=25, BloodSlime=26,
+BloodStalker=27, BloodWisp=28, ThornBrute=29. Skeleton hat drei Varianten:
+0 unbewaffnet, 1 Schwertkämpfer, 2 gerüsteter Wächter. Alle Modelle bestehen aus
+geteilten, geschlossenen 3D-Meshes mit eigenen Gliedmaßen; keine flachen Sprites.
+Die neue Geometrie liegt modular unter `terra-render/src/creatures/model/forest/`.
+
+Raben fliegen und landen gelegentlich, Blutschleime laufen friedlich mit einem
+federnden Körper. Blood Stalker sind achtbeinige Lauerer. Skelette, Lauerer,
+Blutirrlichter und Dornenwächter verfolgen sichtbare Überlebensspieler und greifen
+mit JSON-gesteuerter Reichweite und Abklingzeit an. Blockierte Wege nutzen die
+begrenzte Navigation; unbekannte Chunks blockieren Bewegung. Kein Schaden durch
+Wände. Die eigentliche Simulation und Beutevergabe laufen ausschließlich auf dem
+Server. Die neuen Arten besitzen noch keine Zähmung, Fortpflanzung oder
+Fernkampfangriffe.
+
+Natürliche Blood-Forest-Habitate wählen friedliche und feindliche Arten über den
+Weltseed. Im Geistwald entstehen zusätzlich Skelette auf geladenen Kryptaböden.
+Ihr eigener ID-Namensraum bewahrt vorhandene Tiere, Bewohner und tote Wächter;
+ein Reload würfelt sie nicht erneut aus. Spawnfilter bleiben über JSON steuerbar.
+
+Beute: Skelette/Krähen hinterlassen Knochen, Blutschleime rotes Schleimgel,
+Lauerer Blutkristallsplitter, Irrlichter Blutsporen und Dornenwächter Dornenzweige
+und dunkles Harz. Blutbeeren und Karmesinpilze sind essbar. Die neun neuen Items
+haben eigene JSON-Dateien unter `assets/terra/items/`, Inventar-/Hand-/Drop-Meshes
+und deutsche/englische Beschreibungen.
+
+Manuell: `/spawn teramic::skeleton`, `teramic::skeleton_fighter`,
+`teramic::skeleton_guardian`, `teramic::raven`, `teramic::blood_slime`,
+`teramic::blood_stalker`, `teramic::blood_wisp`, `teramic::thorn_brute`.
+`TERRA_FOREST_INSPECT=1 --smoke-test-creatures` zeigt acht echte Modelle in einer
+isolierten Galerie. Screenshots verwenden `TERRA_CAPTURE_DIR`. Dies prüft
+Darstellung/Animation; AI, Treffer und Persistenz werden getrennt getestet.

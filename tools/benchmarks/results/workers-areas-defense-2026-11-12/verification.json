@@ -1,0 +1,169 @@
+{
+  "phase": 239,
+  "status": "passed",
+  "validated_utc": "2026-11-12T22:39:48.462485+00:00",
+  "tests": {
+    "unit_and_binary": 4839,
+    "integration": 4,
+    "total_passed": 4843,
+    "failed": 0,
+    "existing_ignored": 10,
+    "external_fixture_filtered": 1,
+    "world": 1350,
+    "doc_examples": 0
+  },
+  "excluded_test": {
+    "name": "original_glb_loads_through_the_named_reader_with_uvs_tangents_and_pbr_images",
+    "reason": "missing external fixture",
+    "path": "FIVERR/VoxelGrassBlock glb file.glb"
+  },
+  "checks": {
+    "fmt": true,
+    "workspace_check": true,
+    "workspace_clippy_all_targets_deny_warnings": true,
+    "independent_client_build": true,
+    "independent_server_build": true,
+    "headless_without_display": true,
+    "headless_sections": 27,
+    "server_graphics_ui_dependencies": []
+  },
+  "recipes": {
+    "directory": "assets/crafting",
+    "ordinary": 447,
+    "smelting": 9,
+    "crushing": 19,
+    "brewing": 12,
+    "total": 487
+  },
+  "house_template": {
+    "path": "assets/buildings/templates/village/residential.json",
+    "schema_version": 1,
+    "atomic_steps": 390,
+    "cells": 392,
+    "material_kinds": 17,
+    "full_facing_tests": 4
+  },
+  "authority": {
+    "real_two_client_udp_pvp_policy_and_damage": true,
+    "own_true_king_exemption": true,
+    "physical_npc_retaliation": true,
+    "work_and_build_supplies_preserved": true
+  },
+  "saved_areas": {
+    "confirmed_only": true,
+    "negative_inclusive_bounds_test": true,
+    "gpu_outline_legend_and_close_icon_manually_inspected": true,
+    "automatic_checks": "confirmed saved bounds, responsive HUD/button geometry; not a GPU pixel assertion"
+  },
+  "native_building": {
+    "status": "passed",
+    "screens": {
+      "building-local-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 491006
+      },
+      "building-storage-selection-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 1439156
+      },
+      "building-saved-areas-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 1530358
+      },
+      "building-job-en-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 230882
+      },
+      "building-progress-en-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 210408
+      },
+      "building-paused-en-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 201218
+      }
+    },
+    "input": "real gameplay raycasts and HTML component handlers",
+    "transport": "real local UDP server",
+    "claims": "real acknowledged Build claim",
+    "storage": "actual chest and transferred 128 structure stone plus 128 planks",
+    "craftsman_without_work_area": true,
+    "house": "actual default village template, real non-air voxel placement, acknowledged pause",
+    "responsive_geometry": true,
+    "saved_area_overlay": true
+  },
+  "native_npc": {
+    "status": "passed",
+    "screens": {
+      "npc-direct-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 730541
+      },
+      "npc-selection-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 1552897
+      },
+      "npc-selection-en-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 562713
+      },
+      "npc-direct-en-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 696260
+      },
+      "npc-direct-de-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 209919
+      },
+      "npc-direct-en-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 214568
+      },
+      "npc-direct-en-compact-paused": {
+        "width": 960,
+        "height": 640,
+        "bytes": 202396
+      },
+      "npc-lumberjack-missing-station-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 211605
+      },
+      "npc-lumberjack-profession-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 697617
+      }
+    },
+    "input": "real target raycasts and frame-controlled gameplay/HTML handlers",
+    "transport": "real local UDP server",
+    "private_inventory": true,
+    "kingdom_hotkey": true,
+    "responsive_geometry": true
+  },
+  "native_building_fixture_fly_speed": 4.0,
+  "production_default_fly_speed": 20.0,
+  "native_runs": {
+    "building": "target/building-local/run.6tVEBh",
+    "npc": "target/npc-work-direct/run.fJsUkB"
+  },
+  "limits": {
+    "loaded_regions_only": true,
+    "group_alert_and_new_archery": false,
+    "visual_template_editor": "TODO F82"
+  },
+  "protocol_version": 139,
+  "save_index": "ID24"
+}

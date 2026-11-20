@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": 442,
+  "name": "Sidewalk",
+  "description": "Carved fantasy paving with fine joints and moss in sheltered seams.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0.015,
+  "hardness": 1.6,
+  "resistance": 5,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "materials": {
+    "Surface": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/street/paving_normal.png"
+    },
+    "Deck": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/street/paving_normal.png"
+    }
+  },
+  "textures": {
+    "Surface": "textures/street/paving.png",
+    "Deck": "textures/street/decks/sidewalk.png"
+  },
+  "face_materials": [
+    "Surface",
+    "Surface",
+    "Surface",
+    "Deck",
+    "Surface",
+    "Surface"
+  ],
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.25,
+        1
+      ]
+    }
+  ]
+}

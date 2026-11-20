@@ -1,0 +1,11 @@
+   Compiling terra-client v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/apps/client)
+warning: unused import: `bevy::camera::CameraProjection`
+ --> apps/client/src/biome_smoke/blood/camera.rs:3:5
+  |
+3 | use bevy::camera::CameraProjection;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `terra-client` (bin "terra-client") generated 1 warning
+    Finished `dev` profile [optimized + debuginfo] target(s) in 1m 50s

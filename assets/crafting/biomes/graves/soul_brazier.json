@@ -1,0 +1,34 @@
+{
+  "id": "teramic::soul_brazier",
+  "name": "Soul Brazier",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 373
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 338
+        },
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 395
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 40
+        },
+        "count": 1
+      }
+    ]
+  }
+}

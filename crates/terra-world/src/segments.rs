@@ -199,7 +199,11 @@ pub fn visit(
         return;
     }
     if material == 50 {
-        let phase = (h & 255) as f32 * 0.0245;
+        // Every metre of a frond shares its root column. Including Y in this
+        // phase makes adjacent stalks miss each other, especially at sections.
+        let column_hash = (position[0] as u64).wrapping_mul(0x9e3779b97f4a7c15)
+            ^ (position[2] as u64).wrapping_mul(0xbf58476d1ce4e5b9);
+        let phase = (column_hash & 255) as f32 * 0.0245;
         for stalk in 0..if coarse { 1 } else { 2 } {
             let a = phase + stalk as f32 * 2.39996;
             let center = [0.5 + a.cos() * 0.10, 0.5, 0.5 + a.sin() * 0.10];

@@ -90,7 +90,11 @@ fn update(
         .map(|material| authored_grass_top_palette(material_albedo(None, material, &means)));
     let biome_colors = crate::appearance::LINEAR_COLORS.map(|c| [c[0], c[1], c[2]]);
     let water_colors = std::array::from_fn(|index| {
-        if index == 7 {
+        if index == 9 {
+            crate::water::biome::BLOOD_TINT
+        } else if index == 8 {
+            crate::water::biome::SPIRIT_TINT
+        } else if index == 7 {
             crate::water::biome::CHERRY_TINT
         } else {
             crate::water::biome::COLORS[if index == 6 { 3 } else { index }]
@@ -113,7 +117,7 @@ fn update(
 
 fn authored_grass_top_palette(color: [f32; 3]) -> [f32; 3] {
     // Keep in step with authored_grass_top_palette in terra_wet_surface.wesl.
-    std::array::from_fn(|axis| color[axis] * 0.22 + [0.28, 0.46, 0.08][axis] * 0.78)
+    std::array::from_fn(|axis| color[axis] * 0.68 + [0.17, 0.30, 0.045][axis] * 0.32)
 }
 
 fn material_albedo(
@@ -240,10 +244,13 @@ mod tests {
         app.update();
 
         let palette = app.world().resource::<MapPalette>();
+        assert_eq!(palette.water_colors[9], crate::water::biome::BLOOD_TINT);
+        assert_eq!(palette.biome_colors.len(), terra_core::BiomeKind::ALL.len());
+        assert!(palette.biome_colors[9][0] > palette.biome_colors[9][1]);
         assert!(palette.authored_grass);
         assert_eq!(palette.colors[1], [0.4, 0.2, 25.0 / 255.0]);
         let surface = palette.surface_grass.unwrap();
-        for (actual, expected) in surface.into_iter().zip([0.2624, 0.4908, 0.083_968_63]) {
+        for (actual, expected) in surface.into_iter().zip([0.1904, 0.504, 0.081_066_67]) {
             assert!((actual - expected).abs() < 1e-6);
         }
         assert!(surface[1] > palette.colors[1][1] * 2.0);

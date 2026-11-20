@@ -2,6 +2,10 @@
 use super::{Behavior, Creature, Habitat, Kind, bears, distance, random};
 use terra_core::creatures::CreaturePopulation;
 use terra_core::creatures::definitions::{MobDefinition, SpawnWater};
+mod depth;
+pub(super) use depth::goal as depth_goal;
+#[cfg(test)]
+mod depth_tests;
 
 #[cfg(test)]
 mod tests;
@@ -88,7 +92,9 @@ fn bottom(a: &Creature, h: &Habitat) -> Option<[f64; 3]> {
         let material = h.block(below)?;
         if terra_voxel::MaterialId::from_raw(material).is_some_and(|m| m.is_solid()) {
             let p = [a.position[0], below[1] as f64 + 1.02, a.position[2]];
-            return h.clear(p, a.size(), true).then_some(p);
+            return h
+                .clear_rotated(p, a.size(), true, f64::from(a.yaw))
+                .then_some(p);
         }
     }
     None
@@ -105,15 +111,38 @@ fn attached(a: &Creature, h: &Habitat) -> bool {
         })
 }
 
-fn sweep(a: &Creature, h: &Habitat, start: [f64; 3], end: [f64; 3]) -> bool {
-    let steps = (distance(start, end).sqrt() / 0.25).ceil().max(1.0) as usize;
+fn yaw_delta(from: f32, to: f32) -> f32 {
+    (to - from + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI
+}
+
+fn sweep_pose(a: &Creature, h: &Habitat, start: [f64; 3], end: [f64; 3], yaw: f32) -> bool {
+    let turn = yaw_delta(a.yaw, yaw);
+    let steps = (distance(start, end).sqrt() / 0.25)
+        .max(f64::from(turn.abs()) / 0.12)
+        .ceil()
+        .max(1.0) as usize;
     (1..=steps).all(|step| {
-        h.clear(
+        h.clear_rotated(
             std::array::from_fn(|i| start[i] + (end[i] - start[i]) * step as f64 / steps as f64),
             a.size(),
             true,
+            f64::from(a.yaw) + f64::from(turn) * step as f64 / steps as f64,
         )
     })
+}
+
+pub(super) fn swim_step(a: &Creature, h: &Habitat, end: [f64; 3], yaw: f32) -> bool {
+    sweep_pose(a, h, a.position, end, yaw)
+}
+
+fn heading_for(a: &Creature, next: [f64; 3], dt: f32) -> f32 {
+    let dx = (next[0] - a.position[0]) as f32;
+    let dz = (next[2] - a.position[2]) as f32;
+    if dx.hypot(dz) <= 0.025 * dt {
+        return a.yaw;
+    }
+    let desired = (-dx).atan2(-dz);
+    (a.yaw + yaw_delta(a.yaw, desired).clamp(-dt * 2.2, dt * 2.2)).rem_euclid(std::f32::consts::TAU)
 }
 
 /// No full-world path searches: a swept local course and a bounded vertical detour avoid banks.
@@ -128,33 +157,38 @@ fn travel(a: &mut Creature, h: &Habitat, goal: [f64; 3], dt: f32, speed: f64) {
             + delta[i] / length * amount
             + f64::from(flow.velocity[i].clamp(-0.6, 0.6) * dt * 0.18)
     });
-    if sweep(a, h, before, next) {
+    let next_yaw = heading_for(a, next, dt);
+    if sweep_pose(a, h, before, next, next_yaw) {
         a.position = next;
+        a.yaw = next_yaw;
     } else {
         // A wall changes the chosen course once, rather than spinning every simulation tick.
         let yaw = a.yaw;
         let sign = if a.id.is_multiple_of(2) { 1.0 } else { -1.0 };
-        for [turn, rise] in [[0.8, 0.3], [-0.8, -0.25], [1.7, 0.0]] {
+        for [turn, rise] in [
+            [0.8, -0.5],
+            [-0.8, 0.5],
+            [1.7, 0.0],
+            [0.0, -1.0],
+            [0.0, 1.0],
+        ] {
             let heading = f64::from(yaw) + turn * sign;
+            let horizontal = if rise.abs() == 1.0 { 0.0 } else { 1.0 };
             let probe = [
-                before[0] - heading.sin() * amount,
+                before[0] - heading.sin() * amount * horizontal,
                 before[1] + rise * amount,
-                before[2] - heading.cos() * amount,
+                before[2] - heading.cos() * amount * horizontal,
             ];
-            if sweep(a, h, before, probe) {
+            let probe_yaw = heading_for(a, probe, dt);
+            if sweep_pose(a, h, before, probe, probe_yaw) {
                 a.position = probe;
+                a.yaw = probe_yaw;
                 a.timer = a.timer.max(1.2);
                 break;
             }
         }
     }
     a.velocity = std::array::from_fn(|i| ((a.position[i] - before[i]) / f64::from(dt)) as f32);
-    if a.velocity[0].hypot(a.velocity[2]) > 0.025 {
-        let desired = (-a.velocity[0]).atan2(-a.velocity[2]);
-        let delta = (desired - a.yaw + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
-            - std::f32::consts::PI;
-        a.yaw = (a.yaw + delta.clamp(-dt * 2.2, dt * 2.2)).rem_euclid(std::f32::consts::TAU);
-    }
 }
 
 /// Uses the bear authority effect contract so fish catches and bites are committed exactly once.
@@ -216,14 +250,14 @@ pub fn step(
     if a.kind.hostile_to_players()
         && let Some(combat) = definition.combat
     {
-        let target = players
-            .iter()
-            .enumerate()
-            .filter(|(_, p)| h.wet(**p))
-            .filter(|(_, p)| distance(**p, center(a)) < combat.aggro_radius.powi(2))
-            .min_by(|(_, x), (_, y)| {
-                distance(**x, a.position).total_cmp(&distance(**y, a.position))
-            });
+        let target = super::perception::nearest_visible(
+            h,
+            center(a),
+            center(a),
+            players,
+            combat.aggro_radius,
+            |p| h.wet(p),
+        );
         if let Some((index, player)) = target {
             let goal = [player[0], player[1], player[2]];
             if a.behavior != Behavior::Attack {
@@ -232,8 +266,8 @@ pub fn step(
             a.behavior = Behavior::Attack;
             travel(a, h, goal, dt, a.kind.speed() * 1.25);
             if a.timer <= 0.0
-                && distance(center(a), *player) <= combat.reach.powi(2)
-                && bears::visible(h, center(a), *player)
+                && distance(center(a), player) <= combat.reach.powi(2)
+                && bears::visible(h, center(a), player)
             {
                 a.timer = combat.cooldown;
                 return bears::Effect::StrikePlayer {
@@ -296,11 +330,15 @@ pub fn step(
     }
     let turn = (random(a.id, (a.age / 6.0) as u64) % 2000) as f64 / 1000.0 - 1.0;
     let heading = f64::from(a.yaw) + turn * 0.22;
-    let goal = [
-        a.position[0] - heading.sin() * 4.0,
-        a.position[1] + (a.age * 0.35 + (a.id % 17) as f64).sin() * 0.8,
-        a.position[2] - heading.cos() * 4.0,
-    ];
+    let goal = depth::course(
+        a,
+        h,
+        [
+            a.position[0] - heading.sin() * 4.0,
+            a.position[1],
+            a.position[2] - heading.cos() * 4.0,
+        ],
+    );
     travel(
         a,
         h,

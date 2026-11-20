@@ -1,0 +1,28 @@
+{
+  "id": "teramic::cracked_grave_stone",
+  "name": "Cracked Dark Stone",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 339
+    },
+    "count": 2
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 337
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 42
+        },
+        "count": 1
+      }
+    ]
+  }
+}

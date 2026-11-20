@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 355,
+  "name": "Grave Relief Wall",
+  "description": "Grave Relief Wall carved with a memorial ornament.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/grave_relief_wall.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/grave_relief_wall.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.03,
+        0,
+        0.5
+      ],
+      "maximum": [
+        0.97,
+        1,
+        0.94
+      ]
+    }
+  ]
+}

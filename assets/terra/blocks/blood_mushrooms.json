@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 412,
+  "name": "Blood Mushrooms",
+  "description": "Blood Mushrooms from the crimson woodland.",
+  "creative_category": "nature",
+  "hardness": 0.35,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/blood_mushrooms.glb",
+  "textures": {},
+  "struct_block": true,
+  "collision_boxes": []
+}

@@ -1,10 +1,13 @@
 //! The inlet is physical support even when its input is full or has no recipe.
-use crate::{edits::EditJournal, streaming::ChunkStore};
+use crate::edits::EditJournal;
+#[cfg(feature = "bevy")]
+use crate::streaming::ChunkStore;
 use terra_core::WorldDrop;
 
 type Cell = [i64; 3];
 pub const INLET_TOP: f64 = 1.0;
 
+#[cfg(feature = "bevy")]
 pub fn loaded(position: Cell, chunks: &ChunkStore, journal: &EditJournal) -> bool {
     journal.valid_crusher(position)
         && chunks.block_at(position) == Some(99)

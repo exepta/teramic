@@ -19,6 +19,47 @@ fn animal(kind: Kind) -> Creature {
 }
 
 #[test]
+fn butterflies_use_half_size_targets_without_retaining_the_old_wing_span() {
+    assert_eq!(Kind::Butterfly.size(), [0.11, 0.11, 0.15]);
+    for variant in 0..Kind::Butterfly.variant_count() {
+        let mut butterfly = animal(Kind::Butterfly);
+        butterfly.variant = variant;
+        let boxes = for_creature(&butterfly);
+        assert_eq!(boxes.scale, [0.5; 3]);
+        for x in [0.0, 0.15, -0.15] {
+            assert!(
+                boxes
+                    .ray_distance([x, 0.07, -1.0], [0.0, 0.0, 1.0], 2.0)
+                    .is_some()
+            );
+        }
+        for x in [-0.35, 0.35] {
+            assert!(
+                boxes
+                    .ray_distance([x, 0.07, -1.0], [0.0, 0.0, 1.0], 2.0)
+                    .is_none()
+            );
+        }
+    }
+}
+
+#[test]
+fn butterfly_targeting_halves_with_the_visible_wings_and_body() {
+    assert_eq!(Kind::Butterfly.size(), [0.11, 0.11, 0.15]);
+    let butterfly = animal(Kind::Butterfly);
+    let targets = for_creature(&butterfly);
+    assert_eq!(targets.count, 3);
+    let mut targets = targets.iter();
+    let body = targets.next().unwrap();
+    assert_eq!(body.center, [0.0, 0.07, -0.01]);
+    assert_eq!(body.size, [0.07, 0.125, 0.15]);
+    for (target, side) in targets.zip([-1.0, 1.0]) {
+        assert_eq!(target.center, [side * 0.125, 0.07, 0.0]);
+        assert_eq!(target.size, [0.225, 0.06, 0.26]);
+    }
+}
+
+#[test]
 fn horse_picking_hits_barrel_head_and_hooves_but_not_the_empty_square_or_leg_gap() {
     let horse = animal(Kind::Horse);
     let boxes = for_creature(&horse);
@@ -119,6 +160,9 @@ fn spider_body_box_tracks_wall_and_ceiling_orientation_around_the_actual_pivot()
 fn bounded_species_boxes_have_finite_orthogonal_axes_and_reject_invalid_rays() {
     for kind in Kind::ALL {
         let mut a = animal(kind);
+        if kind == Kind::SandWorm {
+            a.behavior = CreatureBehavior::Attack;
+        }
         a.yaw = 1.27;
         let boxes = for_creature(&a);
         assert!((1..=CAPACITY).contains(&boxes.count));
@@ -136,5 +180,95 @@ fn bounded_species_boxes_have_finite_orthogonal_axes_and_reject_invalid_rays() {
                 .ray_distance([0.0; 3], [1.0, 0.0, 0.0], -1.0)
                 .is_none()
         );
+    }
+}
+
+#[test]
+fn buried_worm_anatomy_is_not_pickable_until_it_emerges() {
+    let mut a = animal(Kind::SandWorm);
+    for behavior in [CreatureBehavior::Burrowed, CreatureBehavior::Tremor] {
+        a.behavior = behavior;
+        assert_eq!(for_creature(&a).count, 0);
+        assert!(
+            for_creature(&a)
+                .ray_distance([0.0, 0.18, -4.0], [0.0, 0.0, 1.0], 40.0)
+                .is_none()
+        );
+    }
+    a.behavior = CreatureBehavior::Attack;
+    assert!(
+        (7..=12).contains(&for_creature(&a).count),
+        "the buried rear has no attack hitboxes"
+    );
+    for [x, y] in [[0.87, 6.25], [-0.77, 6.85], [0.12, 7.5]] {
+        assert!(
+            for_creature(&a)
+                .ray_distance([x, y, -4.0], [0.0, 0.0, 1.0], 8.0)
+                .is_some(),
+            "visible upright maw must be hittable at {x},{y}"
+        );
+    }
+    a.timer = super::super::sandworm::EXPOSED_SECONDS * (1.0 - super::super::sandworm::BITE_PHASE);
+    let head = super::super::sandworm::pose(&a, super::super::sandworm::HEAD_SEGMENT);
+    assert!(head.center[1] < 1.51);
+    assert!(
+        for_creature(&a)
+            .ray_distance([0.0, 1.3, -4.0], [0.0, 0.0, 1.0], 8.0)
+            .is_some()
+    );
+}
+
+#[test]
+fn airborne_and_diving_worm_targets_follow_the_shared_authoritative_spine() {
+    let mut a = animal(Kind::SandWorm);
+    for (behavior, duration) in [
+        (CreatureBehavior::Leap, super::super::sandworm::LEAP_SECONDS),
+        (
+            CreatureBehavior::Emerge,
+            super::super::sandworm::EMERGE_SECONDS,
+        ),
+        (
+            CreatureBehavior::Retreat,
+            super::super::sandworm::RETREAT_SECONDS,
+        ),
+    ] {
+        a.behavior = behavior;
+        for t in [0.15, 0.4, 0.6, 0.9] {
+            a.timer = duration * (1.0 - t);
+            let boxes = for_creature(&a);
+            let expected = super::super::sandworm::pose(&a, super::super::sandworm::HEAD_SEGMENT);
+            if !super::super::sandworm::anatomy_visible(
+                behavior,
+                expected,
+                super::super::sandworm::HEAD_SEGMENT,
+            ) {
+                assert!(boxes.iter().all(|b| {
+                    b.center
+                        .iter()
+                        .zip(expected.center)
+                        .any(|(x, y)| (*x - f64::from(y)).abs() > 0.001)
+                }));
+                continue;
+            }
+            let head = boxes.iter().last().unwrap();
+            assert!(
+                head.center
+                    .iter()
+                    .zip(super::super::sandworm::target_center(
+                        expected,
+                        super::super::sandworm::HEAD_SEGMENT
+                    ))
+                    .all(|(x, y)| (*x - f64::from(y)).abs() < 1e-5)
+            );
+            assert!(
+                boxes
+                    .ray_distance(
+                        [head.center[0], head.center[1], head.center[2] - 4.0],
+                        [0.0, 0.0, 1.0],
+                        8.0,
+                    )
+                    .is_some()
+            );
+        }
     }
 }

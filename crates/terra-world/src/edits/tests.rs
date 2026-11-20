@@ -65,6 +65,7 @@ fn object_rotation_and_pair_state_replicate_and_invalidate_same_material_meshes(
         facing: 0,
         peer: Some(peer),
         secondary: false,
+        liquid: None,
     };
     host.set_object_state(p, Some(state)).unwrap();
     client.import_delta(host.section_delta(owner)).unwrap();

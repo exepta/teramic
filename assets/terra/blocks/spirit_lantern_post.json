@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": 318,
+  "name": "Spirit Lantern Post",
+  "description": "A mossy stepped stone lantern with a warm blossom window.",
+  "creative_category": "decoration",
+  "hardness": 1.4,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/spirit_lantern_post.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.17,
+        0,
+        0.17
+      ],
+      "maximum": [
+        0.83,
+        0.08,
+        0.83
+      ]
+    },
+    {
+      "minimum": [
+        0.24,
+        0.08,
+        0.24
+      ],
+      "maximum": [
+        0.76,
+        0.16,
+        0.76
+      ]
+    },
+    {
+      "minimum": [
+        0.38,
+        0.16,
+        0.38
+      ],
+      "maximum": [
+        0.62,
+        0.43,
+        0.62
+      ]
+    }
+  ],
+  "light": {
+    "color": [
+      1,
+      0.76,
+      0.43
+    ],
+    "intensity": 900,
+    "range": 13,
+    "falloff": "soft_core",
+    "flicker": 0.035,
+    "cave_intensity": 0.6,
+    "shadows": false
+  }
+}

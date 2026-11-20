@@ -130,6 +130,9 @@ impl Builder {
         color: [f32; 3],
         rotation: Quat,
     ) -> Result<(), String> {
+        // Keep authored cloth, scales and bark tiles planar. Their spacing,
+        // neutral dye colors and shared-mesh budget are part of the model design;
+        // curved silhouettes opt into bevel_box/rounded explicitly.
         let start = self.0.get(&0).map_or(0, |batch| batch.positions.len());
         crate::props::add_box(
             &mut self.0,

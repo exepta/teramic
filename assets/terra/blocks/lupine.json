@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": 424,
+  "name": "Lupine",
+  "description": "Lupine, shaped for the regional biome flora.",
+  "creative_category": "nature",
+  "hardness": 0.15,
+  "resistance": 0.4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/lupine.glb",
+  "textures": {
+    "leaf_light": "textures/lupine.png",
+    "pale": "textures/lupine.png",
+    "violet": "textures/lupine.png",
+    "leaf": "textures/lupine.png",
+    "stem": "textures/lupine.png"
+  },
+  "struct_block": true,
+  "collision_boxes": []
+}

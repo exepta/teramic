@@ -1,0 +1,10 @@
+{
+  "item": "crimson_mushroom",
+  "name": "Crimson Mushroom",
+  "description": "An edible mushroom with a crimson cap.",
+  "food": {
+    "nutrition": 10.0,
+    "saturation": 6.0,
+    "eat_seconds": 1.0
+  }
+}

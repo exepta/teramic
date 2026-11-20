@@ -1,0 +1,5 @@
+2026-11-14T09:51:55.384104Z  INFO terra_server::bootstrap: Authoritative server initialized seed=42042 generator_version=5 tick_rate=60 save_format_version=2 configured_address=127.0.0.1:5000
+2026-11-14T09:51:55.418672Z  INFO terra_network::server::spawn: World spawn selected on dry solid terrain ground=[8, 112, 23]
+2026-11-14T09:51:55.418915Z  INFO lightyear_udp::endpoint: UDP endpoint bound to 127.0.0.1:44077
+2026-11-14T09:51:55.419081Z  INFO terra_network::server: Authoritative Terra server listening address=Some(127.0.0.1:44077)
+2026-11-14T09:51:55.502512Z  INFO terra_server::smoke_test: Headless server smoke test completed sections=27

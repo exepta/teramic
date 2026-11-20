@@ -1,0 +1,11 @@
+{
+  "mist": "on",
+  "source": "/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/spirit-fog-perf/run.DifWn4",
+  "exit_code": 0,
+  "cargo_running_at_start": false,
+  "inherited_terra_overrides_removed": true,
+  "screenshot_requested": false,
+  "binary_mtime_ns": 1794608992667200875,
+  "binary_size": 1882117568,
+  "flower_geometry_audit_sha256": "7576baab33c48077b3d8f2cfea219a026fcc3d0ab2f03607e4b16ac8aebede9b"
+}

@@ -54,6 +54,9 @@ struct TerraWeather {
     grass: vec4<f32>,
     vegetation: vec4<f32>,
     flowers: array<vec4<f32>, 64>,
+    footprints: array<vec4<f32>, 1024>,
+    liquid: vec4<f32>,
+    particle: vec4<f32>,
 };
 @group(constants::MATERIAL_BIND_GROUP) @binding(101) var<storage, read> terra_weather: TerraWeather;
 

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 370,
+  "name": "Crypt Wall Torch",
+  "description": "Crypt Wall Torch casts warm light over paths and chambers.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_wall_torch.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      1,
+      0.61,
+      0.27
+    ],
+    "intensity": 700,
+    "range": 11,
+    "falloff": "soft_core",
+    "flicker": 0.025,
+    "cave_intensity": 0.65,
+    "shadows": false,
+    "offset": [
+      0.5,
+      0.79,
+      0.42
+    ]
+  }
+}

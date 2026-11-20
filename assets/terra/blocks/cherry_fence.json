@@ -143,12 +143,14 @@
   "materials": {
     "Cherry boards": {
       "base_color": [
-        0.88,
-        0.57,
-        0.58,
+        1,
+        1,
+        1,
         1
       ],
-      "texture_pattern": "planks"
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/sakura_planks_normal.png"
     }
   },
   "face_materials": [
@@ -163,5 +165,8 @@
   "resistance": 3,
   "required_tool": null,
   "mining_level": 0,
-  "struct_block": true
+  "struct_block": true,
+  "textures": {
+    "Cherry boards": "textures/block_palette/sakura_planks.png"
+  }
 }

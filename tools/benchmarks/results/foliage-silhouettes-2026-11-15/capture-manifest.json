@@ -1,0 +1,77 @@
+[
+  {
+    "file": "captures/eyes-0-open.png",
+    "source": "target/foliage-creatures/run.uyUyBx/eyes/eyes-0-open.png",
+    "sha256": "93b1a15e6a34494a13d84a57b2aeee1db5cc5ab59a8719579b43ba21e18c2bd3"
+  },
+  {
+    "file": "captures/eyes-1-half-blink.png",
+    "source": "target/foliage-creatures/run.uyUyBx/eyes/eyes-1-half-blink.png",
+    "sha256": "55d3625abaa5052cb0807080f2f11fb7cecf6333d108ec75ebbf97e8ee99233f"
+  },
+  {
+    "file": "captures/eyes-2-closed.png",
+    "source": "target/foliage-creatures/run.uyUyBx/eyes/eyes-2-closed.png",
+    "sha256": "0d7a4a9b719392f824a14554276f3932310a37090d3bb2faf15214fcd3b00005"
+  },
+  {
+    "file": "captures/eyes-3-after-blink.png",
+    "source": "target/foliage-creatures/run.uyUyBx/eyes/eyes-3-after-blink.png",
+    "sha256": "19141dd00e08fb9d3475ed63e0cacf135b871597d141ab2f905aa56ef69aa9ed"
+  },
+  {
+    "file": "captures/foliage-0.png",
+    "source": "target/foliage-creatures/run.uyUyBx/foliage/foliage-0.png",
+    "sha256": "01b4548f5128e68095c09def9b373e0ac5ba1ef0e1dd9a55f32d514cca381b5c"
+  },
+  {
+    "file": "captures/foliage-1.png",
+    "source": "target/foliage-creatures/run.uyUyBx/foliage/foliage-1.png",
+    "sha256": "36d541a4aec196d4b67e07a25362a48e40306f57ea3b49f5cdcc600d18a522f4"
+  },
+  {
+    "file": "captures/foliage-2.png",
+    "source": "target/foliage-creatures/run.uyUyBx/foliage/foliage-2.png",
+    "sha256": "204f9b0e2bb2cffd177a33f38c0f9e238ccd66dd65c748c1707827af4bd7a9eb"
+  },
+  {
+    "file": "captures/foliage-3.png",
+    "source": "target/foliage-creatures/run.uyUyBx/foliage/foliage-3.png",
+    "sha256": "f00d7ac1b70b27288d47049816d7c8788b77c3c28d475684a924bc0556ebf8fd"
+  },
+  {
+    "file": "captures/foliage-4.png",
+    "source": "target/foliage-creatures/run.uyUyBx/foliage/foliage-4.png",
+    "sha256": "26b630dedc3345edf71497ca6b86c054794995155ea92871ecacaa28094c4d63"
+  },
+  {
+    "file": "captures/foliage-5.png",
+    "source": "target/foliage-creatures/run.uyUyBx/foliage/foliage-5.png",
+    "sha256": "206db98f4b947edb67330af39aa584abd8c56c9146deee65b1271e47e94072c4"
+  },
+  {
+    "file": "captures/foliage-6.png",
+    "source": "target/foliage-creatures/run.uyUyBx/foliage/foliage-6.png",
+    "sha256": "10d7d77954bfb9cf3c5dbb5a20b0e2fb56e58ce314f5d8429d4d0f446914a99b"
+  },
+  {
+    "file": "captures/picker-cherry-forest-overview.png",
+    "source": "target/reference-biomes/run.GGLb7G/captures/picker-cherry-forest-overview.png",
+    "sha256": "1bd3e0451de01cd6c1c3565675f4d7343c9c27516fe6d4bb409580dd32fb420f"
+  },
+  {
+    "file": "captures/picker-forest-overview.png",
+    "source": "target/reference-biomes/run.GGLb7G/captures/picker-forest-overview.png",
+    "sha256": "433e6e9a3956a0fcd3d09a21115f1fd76d0c960e52486debcf5b479cbbdd9458"
+  },
+  {
+    "file": "captures/reference-birch-close.png",
+    "source": "target/reference-biomes/run.GGLb7G/captures/reference-birch-close.png",
+    "sha256": "58394fdf86d99a0c2977a9c8bb95f73f4e834416ba4c6bba172dfa1821f180bb"
+  },
+  {
+    "file": "captures/reference-birch-overview.png",
+    "source": "target/reference-biomes/run.GGLb7G/captures/reference-birch-overview.png",
+    "sha256": "074648bca641efe7d63cdcdf6176d275e99bdd4d7130d43d89b7548941120713"
+  }
+]

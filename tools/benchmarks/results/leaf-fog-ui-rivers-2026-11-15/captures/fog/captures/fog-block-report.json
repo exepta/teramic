@@ -1,0 +1,105 @@
+{
+  "biomes": false,
+  "captures": 4,
+  "floor_size": [
+    21,
+    21
+  ],
+  "measurements": [
+    {
+      "above_source_material": 0,
+      "ambient_biome_volumes": 0,
+      "drift": [
+        0.6508614420890808,
+        0.3254307210445404
+      ],
+      "generation": 2,
+      "phase": "exposed_on_floor",
+      "radius": 8.0,
+      "sampled_cells": 1681,
+      "source_cell": [
+        16,
+        49,
+        16
+      ],
+      "source_material": 430,
+      "sources": 1,
+      "volumes": 1
+    },
+    {
+      "above_source_material": 1,
+      "ambient_biome_volumes": 0,
+      "drift": [
+        1.4008640050888062,
+        0.7004320025444031
+      ],
+      "generation": 3,
+      "phase": "buried_a",
+      "radius": 8.0,
+      "sampled_cells": 1681,
+      "source_cell": [
+        16,
+        49,
+        16
+      ],
+      "source_material": 430,
+      "sources": 1,
+      "volumes": 1
+    },
+    {
+      "above_source_material": 1,
+      "ambient_biome_volumes": 0,
+      "drift": [
+        2.1539463996887207,
+        1.0769731998443604
+      ],
+      "generation": 3,
+      "phase": "buried_b",
+      "radius": 8.0,
+      "sampled_cells": 1681,
+      "source_cell": [
+        16,
+        49,
+        16
+      ],
+      "source_material": 430,
+      "sources": 1,
+      "volumes": 1
+    },
+    {
+      "above_source_material": 1,
+      "ambient_biome_volumes": 0,
+      "drift": [
+        2.6660616397857666,
+        1.3330308198928833
+      ],
+      "generation": 4,
+      "phase": "removed",
+      "radius": 8.0,
+      "sampled_cells": 0,
+      "source_cell": [
+        16,
+        49,
+        16
+      ],
+      "source_material": 0,
+      "sources": 0,
+      "volumes": 0
+    },
+    {
+      "active_point_lights_near_chamber": 0,
+      "control_stone": 3,
+      "emission": [
+        0,
+        0,
+        0
+      ],
+      "roof": true,
+      "spirit_stone": 308
+    }
+  ],
+  "radius": 8,
+  "scope": "Real edit/render path and public fog state. Stone uses a roofed comparison without local point lights; not a luminance benchmark.",
+  "source_id": 430,
+  "status": "passed"
+}

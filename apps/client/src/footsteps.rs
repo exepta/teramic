@@ -191,13 +191,21 @@ fn update(
             use terra_core::creatures::CreatureKind;
             let walker = match track.current.kind {
                 CreatureKind::Cow | CreatureKind::Horse => Walker::Cow,
-                CreatureKind::Sheep => Walker::Sheep,
+                CreatureKind::Sheep | CreatureKind::SpiritFox => Walker::Sheep,
                 CreatureKind::Pig => Walker::Pig,
                 CreatureKind::Bear => Walker::Bear,
                 CreatureKind::Stalker => Walker::Stalker,
-                CreatureKind::Villager => Walker::Player,
+                CreatureKind::Villager | CreatureKind::Skeleton => Walker::Player,
+                CreatureKind::ThornBrute => Walker::Bear,
                 CreatureKind::Fish
+                | CreatureKind::SandWorm
                 | CreatureKind::Bee
+                | CreatureKind::Butterfly
+                | CreatureKind::SpiritGloom
+                | CreatureKind::Raven
+                | CreatureKind::BloodSlime
+                | CreatureKind::BloodStalker
+                | CreatureKind::BloodWisp
                 | CreatureKind::Squid
                 | CreatureKind::MoonJelly
                 | CreatureKind::FireJelly

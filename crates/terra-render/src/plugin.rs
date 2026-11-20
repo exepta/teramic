@@ -27,8 +27,11 @@ impl Plugin for TerraRenderPlugin {
         crate::scene::daylight::install(app);
         crate::scene::caves::install(app);
         crate::water::install(app);
+        crate::liquid_motion::install(app);
+        crate::particle_fluids::install(app);
         crate::props::install(app);
         crate::apple_fruit::install(app);
+        crate::blood_drips::install(app);
         crate::players::install(app);
         crate::creatures::install(app);
         crate::weather::install(app);
@@ -47,6 +50,7 @@ impl Plugin for TerraRenderPlugin {
         crate::train_yards::install(app);
         crate::settlement_banners::install(app);
         crate::chunk_borders::install(app);
+        crate::work_areas::install(app);
         crate::previews::install(app);
         app.insert_resource(ClearColor(Color::srgb(
             crate::scene::SURFACE_FOG.x,

@@ -9,6 +9,8 @@ pub(crate) enum TreeSpecies {
     Spruce,
     Palm,
     Cherry(bool),
+    SpiritBlossom(u8),
+    Bloodwood,
     Mushroom(u8),
     Fir,
     Apple,
@@ -28,6 +30,8 @@ impl TreeSpecies {
             Self::Birch => MaterialId::WeatheredWood,
             Self::Spruce | Self::Fir => MaterialId::SpruceLog,
             Self::Cherry(_) => MaterialId::CherryLog,
+            Self::SpiritBlossom(_) => MaterialId::SpiritBlossomLog,
+            Self::Bloodwood => MaterialId::BloodwoodLog,
             Self::Mushroom(_) => MaterialId::MushroomStem,
             _ => MaterialId::Wood,
         }
@@ -38,6 +42,12 @@ impl TreeSpecies {
             Self::Autumn => MaterialId::AutumnLeaves,
             Self::Birch => MaterialId::SilverLeaves,
             Self::Apple => MaterialId::AppleLeaves,
+            Self::Bloodwood => MaterialId::BloodLeaves,
+            Self::SpiritBlossom(variant) => [
+                MaterialId::PinkBlossomLeaves,
+                MaterialId::WhiteBlossomLeaves,
+                MaterialId::LavenderBlossomLeaves,
+            ][usize::from(variant % 3)],
             Self::Cherry(false) => MaterialId::CherryLeaves,
             Self::Cherry(true) => MaterialId::WhiteCherryLeaves,
             Self::Mushroom(variant) => [
@@ -59,11 +69,19 @@ impl TreeSpecies {
             Self::Fir => (22.0, 31.0),
             Self::Palm => (8.0, 14.0),
             Self::Cherry(_) => (9.0, 17.0),
+            Self::SpiritBlossom(_) => (13.0, 23.0),
+            Self::Bloodwood => (14.0, 25.0),
             Self::Mushroom(_) => (6.0, 14.0),
             Self::Apple => (7.0, 10.0),
         }
     }
     pub fn in_biome(seed: u64, biome: BiomeSample, landscape_revision: u8) -> Self {
+        if f64::from(super::random(seed, 910)) < (biome.weights.blood_forest * 1.7).min(1.0) {
+            return Self::Bloodwood;
+        }
+        if f64::from(super::random(seed, 734)) < (biome.weights.spirit_blossom * 1.6).min(1.0) {
+            return Self::SpiritBlossom((super::random(seed, 735) * 3.0) as u8);
+        }
         if f64::from(super::random(seed, 271)) < (biome.weights.cherry_forest * 1.7).min(1.0) {
             return Self::Cherry(super::random(seed, 272) < 0.24);
         }
@@ -116,6 +134,8 @@ mod tests {
                     mushroom_park: 0.0,
                     cliffted_desert: 0.0,
                     cherry_forest: 0.0,
+                    spirit_blossom: 0.0,
+                    blood_forest: 0.0,
                 },
             };
             let mut firs = 0;

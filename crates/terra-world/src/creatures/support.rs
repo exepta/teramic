@@ -2,17 +2,29 @@
 use super::{Creature, Habitat};
 
 pub(super) fn settle(animal: &mut Creature, habitat: &Habitat, dt: f32) {
+    settle_with_access(animal, habitat, dt, |_| true);
+}
+
+/// Territorial movement rules also constrain forced overlap recovery. Inward
+/// alternatives remain available when the shortest exit crosses a boundary.
+pub(super) fn settle_with_access(
+    animal: &mut Creature,
+    habitat: &Habitat,
+    dt: f32,
+    allowed: impl Fn([f64; 3]) -> bool,
+) {
     if !animal.kind.is_aquatic()
         && !animal.kind.is_spider()
         && animal.kind != super::Kind::Bee
         && !habitat.clear_swimmer_rotated(animal.position, animal.size(), f64::from(animal.yaw))
-        && recover_overlap(animal, habitat)
+        && recover_overlap(animal, habitat, &allowed)
     {
         return;
     }
     if let Some(ground) =
         habitat.supported_sized(animal.position, animal.size(), f64::from(animal.yaw))
         && ground[1] <= animal.position[1] + 0.001
+        && allowed(ground)
     {
         animal.position = ground;
         animal.velocity[1] = 0.0;
@@ -26,7 +38,7 @@ pub(super) fn settle(animal: &mut Creature, habitat: &Habitat, dt: f32) {
     let size = animal.size();
     let yaw = f64::from(animal.yaw);
     let clear = |p: [f64; 3]| {
-        habitat.clear_swimmer_rotated([p[0], p[1] - 0.02 + 0.000001, p[2]], size, yaw)
+        allowed(p) && habitat.clear_swimmer_rotated([p[0], p[1] - 0.02 + 0.000001, p[2]], size, yaw)
     };
     for _ in 0..steps {
         let mut next = animal.position;
@@ -136,7 +148,11 @@ fn overlap_volume(
 /// Only remove a genuine local penetration. Every sampled pose remains loaded,
 /// cannot acquire a new collision, and monotonically leaves the initial shapes.
 /// Encased bodies and unknown sections fail closed instead of crossing a wall.
-fn recover_overlap(animal: &mut Creature, habitat: &Habitat) -> bool {
+fn recover_overlap(
+    animal: &mut Creature,
+    habitat: &Habitat,
+    allowed: &impl Fn([f64; 3]) -> bool,
+) -> bool {
     let start = animal.position;
     let size = animal.size();
     let yaw = f64::from(animal.yaw);
@@ -172,6 +188,7 @@ fn recover_overlap(animal: &mut Creature, habitat: &Habitat) -> bool {
                         .then_some(probe)
                     });
                 if let Some(next) = next
+                    && allowed(next)
                     && super::distance(start, next) <= 1.001_f64.powi(2)
                     && habitat.clear_swimmer_rotated(next, size, yaw)
                 {
@@ -192,6 +209,9 @@ fn recover_overlap(animal: &mut Creature, habitat: &Habitat) -> bool {
         let safe = (1..=steps).all(|step| {
             let t = step as f64 / steps as f64;
             let p = std::array::from_fn(|i| start[i] + (next[i] - start[i]) * t);
+            if !allowed(p) {
+                return false;
+            }
             let Some(collisions) = overlapping_shapes(habitat, p, size, yaw) else {
                 return false;
             };

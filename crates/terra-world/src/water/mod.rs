@@ -5,7 +5,13 @@ mod channels;
 pub(crate) mod fluid;
 #[cfg(any(feature = "bevy", test))]
 pub(crate) mod fluid_mesh;
+#[cfg(feature = "bevy")]
+mod front;
 mod geometry;
+#[cfg(any(feature = "bevy", test))]
+mod tongue;
+#[cfg(feature = "bevy")]
+pub use front::{flowing_surface_height, leading_front};
 #[cfg(feature = "bevy")]
 mod motion;
 pub(crate) mod outlets;
@@ -13,6 +19,8 @@ pub(crate) mod outlets;
 mod power;
 #[cfg(feature = "bevy")]
 mod simulation;
+#[cfg(feature = "bevy")]
+pub(crate) use simulation::sources::SourceCache;
 pub(crate) mod space;
 pub(crate) use channels::build_channel_patch;
 #[cfg(test)]
@@ -37,6 +45,9 @@ pub use power::{WaterDriveKind, WheelMotion, wheel_motion_at};
 pub(crate) use simulation::tick as tick_fluids;
 #[cfg(feature = "bevy")]
 pub use simulation::{FluidDiagnostics, FluidStep, FluidWorkCounts, simulate_fluid_step};
+
+/// Water material mask with persistent surface coordinates for a moving sheet.
+pub const POUR_SURFACE: f32 = 9.;
 
 pub const WATER_SURFACE_VERSION: u32 = 1;
 pub const MIN_WATERFALL_DROP: f64 = 5.0;

@@ -2,6 +2,7 @@
 import json
 import pathlib
 import tomllib
+from recipe_paths import recipe_path, write_builtins, crafting_sources
 
 root = pathlib.Path(__file__).resolve().parents[2]
 assets = root / "assets"
@@ -29,7 +30,8 @@ if old.exists():
                 if material is not None:
                     cells[i] = {"item": ingredients[material]["item"], "count": 1}
             recipe["pattern"] = {"kind": "shaped", "width": 3, "height": 3, "cells": cells}
-        (target / f"{name}.json").write_text(json.dumps(recipe, indent=2) + "\n")
+        recipe_path(name).parent.mkdir(parents=True, exist_ok=True)
+        recipe_path(name).write_text(json.dumps(recipe, indent=2) + "\n")
     old.unlink()
     old.parent.rmdir()
 
@@ -57,7 +59,7 @@ for path in (assets / "terra/blocks").glob("*.json"):
     definition["mining_level"] = 1 if material in [12, 13] else 0
     path.write_text(json.dumps(definition, indent=2) + "\n")
 
-for path in (assets / "crafting").glob("*.json"):
+for path in crafting_sources():
     recipe = json.loads(path.read_text())
     pattern = recipe["pattern"]
     if pattern["kind"] != "shaped":
@@ -70,10 +72,7 @@ for path in (assets / "crafting").glob("*.json"):
     pattern["width"], pattern["height"] = x1 - x0 + 1, y1 - y0 + 1
     path.write_text(json.dumps(recipe, indent=2) + "\n")
 
-sources = sorted((assets / "crafting").glob("*.json"))
-(root / "crates/terra-core/src/crafting/builtins.rs").write_text(
-    "[\n" + "".join(f'    include_str!("../../../../assets/crafting/{path.name}"),\n' for path in sources) + "]\n"
-)
+write_builtins()
 
 categories = assets / "terra/inventory/categories.json"
 if categories.exists():

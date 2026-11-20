@@ -74,12 +74,19 @@ impl MaterialExtension for WaterExtension {
         }
         let biome = layout.0.contains(super::biome::ATTRIBUTE_BIOME_TINT);
         let waves = layout.0.contains(ATTRIBUTE_WAVE_WEIGHT);
-        if biome || waves {
+        let blood = layout.0.contains(super::biome::ATTRIBUTE_BLOOD_WEIGHT);
+        let liquid = layout.0.contains(crate::liquid_motion::FROM);
+        if biome || waves || blood || liquid {
             let mut attributes = vec![
                 Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
                 Mesh::ATTRIBUTE_NORMAL.at_shader_location(1),
                 Mesh::ATTRIBUTE_UV_0.at_shader_location(2),
             ];
+            if liquid {
+                attributes.push(crate::liquid_motion::FROM.at_shader_location(11));
+                attributes.push(crate::liquid_motion::DATA.at_shader_location(12));
+                descriptor.vertex.shader_defs.push("LIQUID_MOTION".into());
+            }
             if biome {
                 attributes.push(super::biome::ATTRIBUTE_BIOME_TINT.at_shader_location(8));
                 descriptor
@@ -93,6 +100,13 @@ impl MaterialExtension for WaterExtension {
                     .vertex
                     .shader_defs
                     .push("WATER_WAVE_WEIGHT".into());
+            }
+            if blood {
+                attributes.push(super::biome::ATTRIBUTE_BLOOD_WEIGHT.at_shader_location(10));
+                descriptor
+                    .vertex
+                    .shader_defs
+                    .push("WATER_BLOOD_WEIGHT".into());
             }
             for (attribute, location) in [
                 (Mesh::ATTRIBUTE_UV_1, 3),
@@ -168,6 +182,8 @@ type WaterEnvironment<'w> = (
     Option<Res<'w, crate::scene::caves::CaveState>>,
     Option<Res<'w, super::contacts::WakeField>>,
     Option<Res<'w, Time>>,
+    Option<Res<'w, crate::ParticleFluidInput>>,
+    Option<Res<'w, crate::ParticleFluidStatus>>,
 );
 
 pub(super) fn update_water_settings(
@@ -181,7 +197,7 @@ pub(super) fn update_water_settings(
 ) {
     let weather = water_weather(visual.as_deref());
     let native_depth_filter = raymarch.as_ref().is_some_and(|state| state.ready);
-    let (daylight, cave, wakes, time) = environment;
+    let (daylight, cave, wakes, time, _, _) = environment;
     let solar = daylight.as_ref().map_or(1.0, |day| day.daylight)
         * cave
             .as_ref()
@@ -210,12 +226,20 @@ pub(super) fn update_water_settings(
             count += 1;
         }
     }
-    let environment = Vec4::new(solar, count as f32, wrap, 0.0);
+    let environment = Vec4::new(
+        solar,
+        count as f32,
+        wrap,
+        time.as_ref().map_or(0.0, |time| time.elapsed_secs()),
+    );
     let data = super::storage::WaterGpuData {
         weather,
         environment,
         wake_positions,
         wake_motions,
+        // Body ownership is decided from saved water provenance, never from
+        // the camera cube. Acid or a nearby poured puddle cannot cut a lake.
+        particle: Vec4::ZERO,
     };
     if payload.0 != data {
         payload.0 = data;

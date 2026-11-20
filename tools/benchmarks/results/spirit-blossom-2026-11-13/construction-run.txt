@@ -1,0 +1,4 @@
+Isolated Construction Mode run: /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/construction-mode/run.qQOb7u
+Traceback (most recent call last):
+  File "<stdin>", line 26, in <module>
+AssertionError: ('construction-catalog-de-wide', (1601, 900), (1600, 900))

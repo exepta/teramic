@@ -454,12 +454,28 @@ pub(super) fn tick(
     }
     for id in affected {
         let mut drop = None;
+        let mut forest_loot = None;
         if let Some(animal) = journal.gameplay_mut().creatures.animals.get_mut(&id) {
             animal.health = (animal.health - (elapsed * 2.0) as f32).max(0.0);
             if animal.health == 0.0 {
                 animal.behavior = terra_core::creatures::CreatureBehavior::Dead;
                 animal.timer = 5.0;
                 drop = animal.product().map(|product| (animal.position, product));
+                forest_loot = Some((
+                    animal.position,
+                    terra_core::creatures::drops::forest_loot(
+                        animal.kind,
+                        animal.variant,
+                        animal.id,
+                    ),
+                ));
+            }
+        }
+        if let Some((position, loot)) = forest_loot {
+            for stack in loot.into_iter().flatten() {
+                journal
+                    .gameplay_mut()
+                    .drop_stack(position, stack, [0.0, 1.8, 0.0], 0.35);
             }
         }
         if let Some((position, product)) = drop {

@@ -826,6 +826,7 @@ mod tests {
         let mut staged = rich_batch(6);
         staged.staged = Some(crate::meshing::staging::StagedMesh {
             handle: Handle::default(),
+            liquid: None,
             bounds: None,
             rooted: true,
             damp: false,

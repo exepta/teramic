@@ -1,0 +1,28 @@
+{
+  "id": "teramic::spirit_lantern_post",
+  "name": "Spirit Lantern Post",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 318
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 308
+        },
+        "count": 3
+      },
+      {
+        "item": {
+          "block": 315
+        },
+        "count": 1
+      }
+    ]
+  }
+}

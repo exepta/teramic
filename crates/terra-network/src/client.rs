@@ -1,6 +1,7 @@
 //! Network replica, confirmed world deltas and shared-controller prediction.
 #[path = "client_train_motion.rs"]
 mod train_motion_display;
+pub mod work_areas;
 use crate::{connection::ConnectionStatus, protocol::session::*};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use lightyear::prelude::{client::*, *};
@@ -51,6 +52,23 @@ pub struct ReconnectRequest;
 #[derive(Message)]
 pub struct MiningRequest(pub MiningIntent);
 
+/// Physical surface selected this frame, shared with outgoing block actions.
+#[derive(Resource, Default)]
+pub struct BlockCursor(pub Option<(terra_voxel::blocks::BlockHit, [f64; 3])>);
+
+impl BlockCursor {
+    fn point_for(&self, action: EditAction) -> Option<[f64; 3]> {
+        let EditAction::Block {
+            position, material, ..
+        } = action
+        else {
+            return None;
+        };
+        let (hit, point) = self.0?;
+        (position == hit.position || material != 0 && position == hit.adjacent()).then_some(point)
+    }
+}
+
 #[derive(Message, Clone, Copy, Debug)]
 pub struct ConsumptionRequest(pub Option<u8>);
 #[derive(Resource, Default)]
@@ -84,6 +102,9 @@ pub struct KingdomRequest(pub crate::protocol::kingdom::KingdomCommand);
 pub struct NpcWorkRequest(pub crate::protocol::npc_work::WorkCommand);
 
 #[derive(Message, Clone, Debug)]
+pub struct BuildingRequest(pub crate::protocol::building_jobs::BuildingCommand);
+
+#[derive(Message, Clone, Debug)]
 pub struct TrainRequest(pub crate::protocol::trains::TrainCommand);
 
 #[derive(Resource, Default)]
@@ -102,6 +123,13 @@ pub struct SelectedInventorySlot(pub Option<u8>);
 pub struct PropPlaceRequest {
     pub support: [i64; 3],
     pub kind: terra_core::ResourcePropKind,
+}
+
+#[derive(Message, Clone, Copy, Debug)]
+pub struct ChestPlaceRequest {
+    pub position: [i64; 3],
+    pub expected: u16,
+    pub merge: terra_core::containers::ChestMerge,
 }
 #[derive(Message, Clone, Copy, Debug)]
 pub struct FarmToolRequest {
@@ -286,6 +314,9 @@ pub fn disconnect_session(world: &mut World) {
     session.work = Default::default();
     session.last_work_result = None;
     session.work_request = 0;
+    session.buildings = Default::default();
+    session.last_building_result = None;
+    session.building_request = 0;
     session.trains = Default::default();
     session.train_cargo = None;
     session.train_seat = None;
@@ -316,6 +347,9 @@ pub struct ClientSession {
     train_request: u64,
     tree_patch_signature: Option<u64>,
     pub kingdoms: terra_core::kingdom::KingdomRegistry,
+    pub buildings: crate::protocol::building_jobs::BuildingSnapshot,
+    pub last_building_result: Option<crate::protocol::building_jobs::BuildingResult>,
+    building_request: u64,
     pub work: crate::protocol::npc_work::WorkSnapshot,
     pub last_work_result: Option<crate::protocol::npc_work::WorkResult>,
     work_request: u64,
@@ -395,6 +429,9 @@ impl Default for ClientSession {
             train_response: 0,
             train_request: 0,
             kingdoms: Default::default(),
+            buildings: Default::default(),
+            last_building_result: None,
+            building_request: 0,
             work: Default::default(),
             last_work_result: None,
             work_request: 0,
@@ -553,6 +590,19 @@ impl ClientSession {
             action,
         }))
     }
+    pub fn make_building_request(
+        &mut self,
+        action: crate::protocol::building_jobs::BuildingAction,
+    ) -> Option<BuildingRequest> {
+        self.building_request = self.building_request.checked_add(1)?;
+        Some(BuildingRequest(
+            crate::protocol::building_jobs::BuildingCommand {
+                request: self.building_request,
+                action,
+            },
+        ))
+    }
+
     pub fn make_work_request(
         &mut self,
         action: crate::protocol::npc_work::WorkAction,
@@ -702,6 +752,9 @@ impl ClientSession {
         self.work = Default::default();
         self.last_work_result = None;
         self.work_request = 0;
+        self.buildings = Default::default();
+        self.last_building_result = None;
+        self.building_request = 0;
         self.kingdoms = Default::default();
         self.trains = Default::default();
         self.train_cargo = None;
@@ -868,17 +921,20 @@ pub(crate) fn install(app: &mut App) {
         .add_message::<ContainerRequest>()
         .add_message::<KingdomRequest>()
         .add_message::<NpcWorkRequest>()
+        .add_message::<BuildingRequest>()
         .add_message::<TrainRequest>()
         .init_resource::<SocialState>()
         .init_resource::<CursorShare>()
         .add_message::<RespawnRequest>()
         .add_message::<PropPlaceRequest>()
+        .add_message::<ChestPlaceRequest>()
         .add_message::<TreeHarvestRequest>()
         .add_message::<FarmToolRequest>()
         .add_message::<ObjectRotateRequest>()
         .add_message::<ConveyorConnectRequest>()
         .add_message::<ConveyorInteractionRequest>()
         .init_resource::<SelectedInventorySlot>()
+        .init_resource::<BlockCursor>()
         .add_message::<ConfirmedEdit>()
         .add_message::<TreeCollapseEvent>()
         .insert_resource(WorldAccess::Replica { ready: false })
@@ -905,6 +961,7 @@ pub(crate) fn install(app: &mut App) {
         .add_systems(Update, send_inventory.after(StreamingSet::Edits))
         .add_systems(Update, send_kingdoms.after(StreamingSet::Edits))
         .add_systems(Update, send_npc_work.after(StreamingSet::Edits))
+        .add_systems(Update, send_building_jobs.after(StreamingSet::Edits))
         .add_systems(Update, send_trains.after(StreamingSet::Edits))
         .add_systems(Update, send_cursor.after(StreamingSet::Edits))
         .add_systems(Update, send_respawn.after(StreamingSet::Edits))
@@ -1032,6 +1089,7 @@ fn connected(
     event: On<Add<Connected>>,
     mut senders: Query<&mut MessageSender<ClientControl>, With<Client>>,
     config: Res<GameConfig>,
+    view_limit: Option<Res<terra_world::streaming::StreamingRadiusLimit>>,
     profile: Res<PlayerProfile>,
     mut session: ResMut<ClientSession>,
     mut status: ResMut<ConnectionStatus>,
@@ -1040,7 +1098,7 @@ fn connected(
         return;
     };
     session.ever_connected = true;
-    let view = config.client.view_distance.clamp(1, 32);
+    let view = limited_view(config.client.view_distance, view_limit.as_deref());
     session.last_view = view;
     sender.send::<ControlChannel>(ClientControl::Hello {
         version: PROTOCOL_VERSION,
@@ -1817,6 +1875,31 @@ fn receive_controls(
                     Ok(())
                 }
             }
+            ServerControl::Building(snapshot) => {
+                if session.player.is_none() || !snapshot.valid() {
+                    Err("Invalid construction snapshot".into())
+                } else {
+                    session.buildings = *snapshot;
+                    Ok(())
+                }
+            }
+            ServerControl::BuildingResult(result) => {
+                if session.player.is_none()
+                    || result.request == 0
+                    || result.request > session.building_request
+                {
+                    Err("Invalid construction response".into())
+                } else {
+                    if session
+                        .last_building_result
+                        .as_ref()
+                        .is_none_or(|last| result.request > last.request)
+                    {
+                        session.last_building_result = Some(result);
+                    }
+                    Ok(())
+                }
+            }
             ServerControl::NpcWork(snapshot) => {
                 if session.player.is_none() || !snapshot.valid() {
                     Err("Invalid NPC work snapshot".into())
@@ -1963,6 +2046,7 @@ fn send_respawn(
 }
 
 fn send_mining(
+    cursor: Option<Res<BlockCursor>>,
     mut requests: MessageReader<MiningRequest>,
     session: Res<ClientSession>,
     selected: Res<SelectedInventorySlot>,
@@ -1981,7 +2065,13 @@ fn send_mining(
             *held = Some(current);
         }
         if let Some(intent) = intent {
-            sender.send::<ControlChannel>(ClientControl::Mining(intent));
+            let point = intent
+                .target
+                .and_then(|target| cursor.as_ref()?.point_for(target.action()));
+            sender.send::<ControlChannel>(match point {
+                Some(point) => ClientControl::MineBlockAt { intent, point },
+                None => ClientControl::Mining(intent),
+            });
         }
     }
 }
@@ -2232,6 +2322,7 @@ fn send_inputs(
         With<Client>,
     >,
     config: Res<GameConfig>,
+    view_limit: Option<Res<terra_world::streaming::StreamingRadiusLimit>>,
 ) {
     if !session.ready {
         session.outbox.clear();
@@ -2246,7 +2337,7 @@ fn send_inputs(
     for input in session.outbox.drain(..) {
         sender.send::<InputChannel>(input);
     }
-    let view = config.client.view_distance.clamp(1, 32);
+    let view = limited_view(config.client.view_distance, view_limit.as_deref());
     if view != session.last_view {
         session.last_view = view;
         control.send::<ControlChannel>(ClientControl::ViewDistance(view));
@@ -2258,8 +2349,31 @@ fn send_inputs(
     }
 }
 
+fn limited_view(requested: u8, limit: Option<&terra_world::streaming::StreamingRadiusLimit>) -> u8 {
+    limit
+        .and_then(|limit| limit.0)
+        .map_or(requested, |limit| requested.min(limit))
+        .clamp(1, 32)
+}
+
+#[cfg(test)]
+mod loading_view_tests {
+    use super::*;
+    #[test]
+    fn hello_and_live_view_share_the_same_startup_network_budget() {
+        use terra_world::streaming::StreamingRadiusLimit;
+        assert_eq!(limited_view(32, Some(&StreamingRadiusLimit(Some(15)))), 15);
+        assert_eq!(limited_view(32, Some(&StreamingRadiusLimit(Some(16)))), 16);
+        assert_eq!(limited_view(8, Some(&StreamingRadiusLimit(Some(15)))), 8);
+        assert_eq!(limited_view(32, Some(&StreamingRadiusLimit(None))), 32);
+        assert_eq!(limited_view(32, None), 32);
+        assert_eq!(limited_view(0, None), 1);
+    }
+}
+
 #[derive(SystemParam)]
 struct EditRequests<'w, 's> {
+    chests: MessageReader<'w, 's, ChestPlaceRequest>,
     rails: MessageReader<'w, 's, RailConnectRequest>,
     rail_builds: MessageReader<'w, 's, RailBuildRequest>,
     rail_placements: MessageReader<'w, 's, RailPlacementRequest>,
@@ -2289,12 +2403,17 @@ pub(crate) fn farming_revision(
         FarmingAction::FillBucket
         | FarmingAction::EmptyBucket
         | FarmingAction::Till
+        | FarmingAction::MakePath
+        | FarmingAction::PourTar
+        | FarmingAction::FillBileBucket
+        | FarmingAction::EmptyBileBucket
         | FarmingAction::Refill => journal.revision(section),
         _ => journal.prop_epoch(section),
     }
 }
 
 fn send_edits(
+    cursor: Option<Res<BlockCursor>>,
     mut requests: EditRequests,
     mut session: ResMut<ClientSession>,
     journal: Res<EditJournal>,
@@ -2365,6 +2484,14 @@ fn send_edits(
             position: edit.position,
             expected: edit.expected_material,
             material: edit.material,
+        });
+    }
+    let chest_requests: Vec<_> = requests.chests.read().copied().collect();
+    for edit in &chest_requests {
+        actions.push(EditAction::Block {
+            position: edit.position,
+            expected: edit.expected,
+            material: 29,
         });
     }
     for edit in requests.props.read() {
@@ -2461,7 +2588,29 @@ fn send_edits(
                 revision: session.inventory.revision,
             });
         }
-        sender.send::<ControlChannel>(ClientControl::Edit(command));
+        let chest_merge = match action {
+            EditAction::Block {
+                position,
+                material: 29,
+                ..
+            } => chest_requests
+                .iter()
+                .find(|request| request.position == position)
+                .map(|request| request.merge),
+            _ => None,
+        };
+        let message = if let Some(point) = cursor.as_ref().and_then(|c| c.point_for(action)) {
+            ClientControl::BlockEditAt {
+                command,
+                point,
+                chest_merge,
+            }
+        } else if let Some(merge) = chest_merge {
+            ClientControl::PlaceChest { command, merge }
+        } else {
+            ClientControl::Edit(command)
+        };
+        sender.send::<ControlChannel>(message);
         if let Some(token) = token {
             rail_sent.write(RailPlacementSent {
                 token,
@@ -2605,3 +2754,18 @@ fn send_trains(
 #[cfg(test)]
 #[path = "client_train_cargo_tests.rs"]
 mod train_cargo_tests;
+
+fn send_building_jobs(
+    mut requests: MessageReader<BuildingRequest>,
+    session: Res<ClientSession>,
+    mut senders: Query<&mut MessageSender<ClientControl>, With<Client>>,
+) {
+    for request in requests.read().take(8) {
+        if session.ready
+            && !session.teleporting
+            && let Some(mut sender) = senders.iter_mut().next()
+        {
+            sender.send::<ControlChannel>(ClientControl::Building(request.0.clone()));
+        }
+    }
+}

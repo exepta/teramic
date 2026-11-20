@@ -1,4 +1,6 @@
 //! Identical authoritative session runtime for dedicated and integrated hosts.
+#[path = "server_building_jobs.rs"]
+mod building_jobs;
 #[path = "server_npc_work.rs"]
 mod npc_work;
 #[path = "server_train_builder.rs"]
@@ -191,11 +193,13 @@ pub(crate) fn install(app: &mut App) {
         .init_resource::<ConnectedProfiles>()
         .init_resource::<kingdoms::KingdomRuntime>()
         .init_resource::<npc_work::WorkRuntime>()
+        .init_resource::<building_jobs::BuildingRuntime>()
         .init_resource::<trains::TrainRuntime>()
         .init_resource::<train_damage::Impacts>()
         .init_resource::<trains::SeatedPlayers>()
         .init_resource::<trees::TreeRuntime>()
         .init_resource::<creatures::InspectionTargets>()
+        .init_resource::<villager_defense::Defenses>()
         .init_resource::<pvp::Attacks>()
         .init_resource::<stalkers::Grips>()
         .init_resource::<riding::Mounts>()
@@ -234,8 +238,15 @@ pub(crate) fn install(app: &mut App) {
                 crushers::tick,
                 plumbing::tick,
                 gameplay::tick,
-                creatures::tick,
+                (
+                    villager_defense::tick,
+                    creatures::tick,
+                    cactus::tick,
+                    bile_hazards::tick,
+                )
+                    .chain(),
                 npc_work::tick,
+                building_jobs::tick,
                 lightning::tick,
                 update_foci,
             )
@@ -268,6 +279,7 @@ pub(crate) fn install(app: &mut App) {
                 social::broadcast,
                 kingdoms::broadcast,
                 npc_work::broadcast,
+                building_jobs::broadcast,
                 trees::broadcast,
                 farm_tools::send_progress,
             )
@@ -499,6 +511,7 @@ struct ControlWorld<'w, 's> {
     chat: Option<ResMut<'w, chat::ChatRuntime>>,
     mounts: ResMut<'w, riding::Mounts>,
     attacks: Option<ResMut<'w, pvp::Attacks>>,
+    defenses: Option<ResMut<'w, villager_defense::Defenses>>,
     inspections: Option<ResMut<'w, creatures::InspectionTargets>>,
     sleep: Option<ResMut<'w, beds::SleepRuntime>>,
     block_properties: Res<'w, terra_core::block_properties::BlockPropertiesCatalog>,
@@ -531,6 +544,7 @@ fn receive_controls(
     mut world: ControlWorld,
     mut kingdoms: ResMut<kingdoms::KingdomRuntime>,
     mut npc_work: ResMut<npc_work::WorkRuntime>,
+    mut buildings: ResMut<building_jobs::BuildingRuntime>,
     mut trains_runtime: ResMut<trains::TrainRuntime>,
     mut train_seats: ResMut<trains::SeatedPlayers>,
 ) {
@@ -545,6 +559,25 @@ fn receive_controls(
             if index >= 64 {
                 break;
             }
+            let (message, chest_merge, mining_point) = match message {
+                ClientControl::PlaceChest { command, merge } => {
+                    (ClientControl::Edit(command), Some(merge), None)
+                }
+                ClientControl::BlockEditAt {
+                    mut command,
+                    point,
+                    chest_merge,
+                } if matches!(command.action, EditAction::Block { .. }) => {
+                    command.look = validation::block_look_at(point, command.look, &peer, &world);
+                    (ClientControl::Edit(command), chest_merge, None)
+                }
+                ClientControl::MineBlockAt { intent, point }
+                    if matches!(intent.target, Some(MiningTarget::Block { .. })) =>
+                {
+                    (ClientControl::Mining(intent), None, Some(point))
+                }
+                message => (message, None, None),
+            };
             match message {
                 ClientControl::Train(command) if peer.synced => {
                     trains::control(
@@ -558,6 +591,9 @@ fn receive_controls(
                 }
                 ClientControl::Kingdom(command) if peer.synced => {
                     kingdoms::control(command, &peer, &mut sender, &mut world, &mut kingdoms);
+                }
+                ClientControl::Building(command) if peer.synced => {
+                    building_jobs::control(command, &peer, &mut sender, &mut world, &mut buildings);
                 }
                 ClientControl::NpcWork(command) if peer.synced => {
                     npc_work::control(command, &peer, &mut sender, &mut world, &mut npc_work);
@@ -690,7 +726,7 @@ fn receive_controls(
                         continue;
                     }
                     if crushing_catalog != terra_core::crusher::catalog_fingerprint() {
-                        sender.send::<ControlChannel>(ServerControl::Reject("Incompatible crushing recipes. Client and server must use the same assets/crushing JSON files.".into()));
+                        sender.send::<ControlChannel>(ServerControl::Reject("Incompatible crushing recipes. Client and server must use the same assets/crafting/processes/crushing JSON files.".into()));
                         continue;
                     }
                     let Ok(body) = world.bodies.get(peer.body) else {
@@ -763,7 +799,11 @@ fn receive_controls(
                     sender.send::<ControlChannel>(ServerControl::Welcome {
                         player: peer.id,
                         uuid: profile.uuid,
-                        world: Box::new(world.config.world.clone()),
+                        world: Box::new({
+                            let mut advertised = world.config.world.clone();
+                            world.config.effective_world_rules().apply(&mut advertised);
+                            advertised
+                        }),
                         tick_rate: world.config.server.tick_rate,
                         spawn,
                         location,
@@ -848,7 +888,9 @@ fn receive_controls(
                     } else {
                         peer.edits_left -= 1.0;
                         peer.last_request = command.request;
-                        if matches!(command.action, EditAction::Farm { .. }) {
+                        if let Some(merge) = chest_merge {
+                            validation::apply_chest(command, &peer, &mut world, merge)
+                        } else if matches!(command.action, EditAction::Farm { .. }) {
                             farm_tools::apply(command, &mut peer, &mut sender, &mut world)
                         } else {
                             validation::apply(command, &peer, &mut world, false)
@@ -864,7 +906,7 @@ fn receive_controls(
                     if intent.target.is_some() {
                         consumption::cancel(&mut peer, &mut sender);
                     }
-                    gameplay::intent(intent, &mut peer, &mut sender, &mut world);
+                    gameplay::intent(intent, mining_point, &mut peer, &mut sender, &mut world);
                 }
                 _ => {}
             }
@@ -1463,7 +1505,7 @@ fn send_clock(
     mut peers: Query<(&Peer, &mut MessageSender<ServerControl>), With<Connected>>,
 ) {
     let latest = weather.latest_lightning.map(|event| event.id);
-    let settings = terra_core::WorldRuleSettings::from_world(&config.world);
+    let settings = config.effective_world_rules();
     let changed = published.rules != Some(settings);
     if time.elapsed_secs_f64() - published.time < 0.5 && published.lightning == latest && !changed {
         return;
@@ -1486,6 +1528,10 @@ fn send_clock(
 mod beds;
 #[path = "server_bees.rs"]
 mod bees;
+#[path = "server_bile.rs"]
+mod bile_hazards;
+#[path = "server_cactus.rs"]
+mod cactus;
 #[path = "server_chat.rs"]
 mod chat;
 #[path = "server_consumption.rs"]
@@ -1535,6 +1581,8 @@ mod survival;
 mod trains;
 #[path = "server_validation.rs"]
 mod validation;
+#[path = "server_villager_defense.rs"]
+mod villager_defense;
 
 #[cfg(test)]
 #[path = "server_rgb_filter_tests.rs"]

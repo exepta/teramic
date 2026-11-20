@@ -1,0 +1,2 @@
+Isolated native grave run: /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/grave-sites/run.WYszuk
+Generated grave sites, streamed voxel/loot probes and native captures passed: cemetery, grave-knight, grave-priestess, grave-scholar

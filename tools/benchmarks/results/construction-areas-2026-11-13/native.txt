@@ -1,0 +1,98 @@
+2026-11-13T12:54:21.593908Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.5-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-13T12:54:21.706517Z  INFO terra_client::bootstrap: Smoke-test compute worker cap; IO and async policies are unchanged compute_thread_cap=4 compute_threads=16 async_threads=4 io_threads=4
+2026-11-13T12:54:21.716522Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-13T12:54:21.716558Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-13T12:54:21.717634Z  INFO bevy_winit::system: Creating new window TERAMIC (206v0)
+2026-11-13T12:54:21.717842Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-13T12:54:22.365264Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:40895 [1/1]
+2026-11-13T12:54:22.365358Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-11-13T12:54:23.307619Z  INFO terra_ui::settings: Applied window presentation policy mode=Mailbox
+2026-11-13T12:54:23.312772Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-11-13T12:54:23.387642Z  INFO lightyear_udp::endpoint: Received UDP packet from new address 127.0.0.1:42445, Spawn new LinkOf entity=251v0 endpoint_entity=231v0
+2026-11-13T12:54:23.405313Z  INFO terra_render::weather::surfaces: Terrain wet material GPU binding mode legacy_smoke_control=false bindless=true
+2026-11-13T12:54:23.478541Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-11-13T12:54:23.479613Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-11-13T12:54:23.490345Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 22, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-13T12:54:23.490367Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 25, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490374Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 28, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490380Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 40, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490386Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-11-13T12:54:23.490392Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 29, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490398Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 37, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490403Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490410Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-11-13T12:54:23.490416Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 26, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490422Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 32, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490433Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 33, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490444Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 34, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490449Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=0
+2026-11-13T12:54:23.490455Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 24, generation: 0} mip_levels=1 rebound_materials=1
+2026-11-13T12:54:23.490461Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 39, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490467Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 27, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490473Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 36, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490478Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 42, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490484Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 38, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490489Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 23, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-13T12:54:23.490494Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 35, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.490500Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-iron-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T12:54:23.490506Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T12:54:23.490511Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-belt-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T12:54:23.491243Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-oak-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T12:54:23.491251Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 31, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.491256Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 41, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.491261Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 30, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T12:54:23.533387Z  INFO terra_render::blocks::loading: Block template library ready blocks=305 materials=878
+2026-11-13T12:54:23.621802Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (251v0)
+2026-11-13T12:54:23.674143Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-11-13T12:54:23.706485Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=968eb6a9-f6dc-497d-bee7-0725755b24b0 name=Player-968eb6a9
+2026-11-13T12:54:24.069201Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-11-13T12:54:24.940978Z  INFO terra_client::inventory_benchmark::chest: Inventory benchmark chest fixture created through a real grant and acknowledged block edit; disposable world retains the chest position=[9, 12, 24] material=173 request=1
+2026-11-13T12:54:26.058704Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/construction-mode/run.wbAWtf/captures/kingdom-unbound.png
+2026-11-13T12:54:27.512318Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=0
+2026-11-13T12:54:27.922688Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=1
+2026-11-13T12:54:28.327316Z  INFO terra_client::construction_mode_smoke: Native construction mode TAB and Creative four-resource HUD acknowledged
+2026-11-13T12:54:28.327335Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=2
+2026-11-13T12:54:28.371964Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/construction-mode/run.wbAWtf/captures/construction-catalog-de-wide.png
+2026-11-13T12:54:28.372340Z  INFO terra_client::construction_mode_smoke: Native construction world crop visibility frame="construction-catalog-de-wide" sampled=8640 terrain=8622 visible=true
+2026-11-13T12:54:28.730323Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=3
+2026-11-13T12:54:29.133884Z  INFO terra_client::construction_mode_smoke: Native construction cached server preview readiness acknowledged transient_preview_observed=true
+2026-11-13T12:54:29.133905Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=4
+2026-11-13T12:54:29.942988Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=5
+2026-11-13T12:54:30.346207Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=6
+2026-11-13T12:54:30.390325Z  WARN bevy_text::pipeline: Text span 3887v3 has a font size <= 0.0. Nothing will be displayed.
+2026-11-13T12:54:30.749239Z  INFO terra_client::construction_mode_smoke: Native construction mode real NPC click and private inventory acknowledged npc=144115188075855912
+2026-11-13T12:54:30.749257Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=7
+2026-11-13T12:54:30.819583Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/construction-mode/run.wbAWtf/captures/construction-npc-de-wide.png
+2026-11-13T12:54:30.819931Z  INFO terra_client::construction_mode_smoke: Native construction world crop visibility frame="construction-npc-de-wide" sampled=8640 terrain=7264 visible=true
+2026-11-13T12:54:31.961111Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=8
+2026-11-13T12:54:32.694717Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=9
+2026-11-13T12:54:33.099006Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=10
+2026-11-13T12:54:33.504393Z  INFO terra_client::construction_mode_smoke: Native construction mode real orange server-template mesh and ground raycast acknowledged origin=[24, 12, 24]
+2026-11-13T12:54:33.504415Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=11
+2026-11-13T12:54:33.550323Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/construction-mode/run.wbAWtf/captures/construction-blueprint-de-wide.png
+2026-11-13T12:54:33.550674Z  INFO terra_client::construction_mode_smoke: Native construction world crop visibility frame="construction-blueprint-de-wide" sampled=8640 terrain=8640 visible=true
+2026-11-13T12:54:33.908684Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=12
+2026-11-13T12:54:34.312079Z  INFO terra_client::construction_mode_smoke: Native construction mode actual cottage queue and Creative free_resources acknowledged job=1 template="spruce-cottage-v1"
+2026-11-13T12:54:34.312101Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=13
+2026-11-13T12:54:34.719269Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=14
+2026-11-13T12:54:34.752750Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/construction-mode/run.wbAWtf/captures/construction-queued-en-compact.png
+2026-11-13T12:54:34.752912Z  INFO terra_client::construction_mode_smoke: Native construction world crop visibility frame="construction-queued-en-compact" sampled=3741 terrain=3741 visible=true
+2026-11-13T12:54:35.122417Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=15
+2026-11-13T12:54:35.526015Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=16
+2026-11-13T12:54:35.934570Z  INFO terra_client::construction_mode_smoke: Native construction mode persisted Creative job and owner settlement acknowledged job=1 kingdom=KingdomId(1) template="spruce-cottage-v1"
+2026-11-13T12:54:35.934590Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=17
+2026-11-13T12:54:36.342143Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=18
+2026-11-13T12:54:36.745512Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=19
+2026-11-13T12:54:37.146085Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=20
+2026-11-13T12:54:37.550060Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=21
+2026-11-13T12:54:37.953531Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=22
+2026-11-13T12:54:37.981516Z  INFO terra_client::construction_mode_smoke: Native construction world crop visibility frame="construction-areas-de-wide" sampled=8640 terrain=8611 visible=true
+2026-11-13T12:54:38.005552Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/construction-mode/run.wbAWtf/captures/construction-areas-de-wide.png
+2026-11-13T12:54:38.358899Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=23
+2026-11-13T12:54:38.389116Z  INFO terra_client::construction_mode_smoke: Native construction world crop visibility frame="construction-areas-hidden-de-wide" sampled=8640 terrain=8613 visible=true
+2026-11-13T12:54:38.410809Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/construction-mode/run.wbAWtf/captures/construction-areas-hidden-de-wide.png
+2026-11-13T12:54:38.763776Z  INFO terra_client::construction_mode_smoke: Native construction automatic saved areas, red Build boundaries and real H hide/show acknowledged areas=4 pulse=0.8325284123420715
+2026-11-13T12:54:38.763844Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=24
+2026-11-13T12:54:39.169899Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=25
+2026-11-13T12:54:39.575235Z  INFO terra_client::construction_mode_smoke: Native construction mode acceptance step completed step=26
+2026-11-13T12:54:39.977446Z  INFO terra_client::construction_mode_smoke: Native construction mode passed: real TAB, detached pan, four-resource HUD, cottage HTML selection/server preview/orange mesh, ground-click queue, Creative free build without storage, private NPC dialog, ESC retention, restored avatar/camera, automatic saved areas, red Build boundaries and H hide/show; DE/EN bounds job=1 npc=144115188075855912 captures=6

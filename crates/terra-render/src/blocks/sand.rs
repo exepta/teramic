@@ -1,4 +1,4 @@
-//! Fine cohesive golden grains and subtle wind ripples; no stones or per-cell assets.
+//! Fine cohesive beige grains and subtle wind ripples; no stones or per-cell assets.
 pub(super) const SIZE: u32 = 512;
 
 fn hash(x: u32, y: u32) -> u32 {
@@ -38,15 +38,15 @@ pub(super) fn color(px: u32, py: u32) -> [f32; 3] {
     // lighting leaves fine individual grains visible without rock-sized cells.
     let phase =
         TAU * (p[1] * 5.0 + (p[0] * TAU).sin() * 0.10 + ((p[0] * 3.0 - p[1]) * TAU).sin() * 0.035);
-    let dune = phase.sin() * 0.018 + (phase * 2.0).cos() * 0.004;
-    let base = [239.0, 205.0, 139.0];
+    let dune = phase.sin() * 0.006 + (phase * 2.0).cos() * 0.0015;
+    let base = [236.0, 217.0, 184.0];
     std::array::from_fn(|axis| {
         (base[axis] * (1.0 + dune)
-            + [14.0, 12.0, 8.0][axis] * grain
-            + [17.0, 14.0, 10.0][axis] * packed
-            + [16.0, 13.0, 9.0][axis] * cluster
-            + [4.0, 3.0, 2.0][axis] * facet
-            + [2.0, 0.0, 3.0][axis] * warmth)
+            + [4.0, 3.0, 2.0][axis] * grain
+            + [3.0, 2.5, 2.0][axis] * packed
+            + [5.0, 4.0, 3.0][axis] * cluster
+            + [2.0, 1.5, 1.0][axis] * facet
+            + [1.0, 0.0, 1.5][axis] * warmth)
             .clamp(0.0, 255.0)
     })
 }
@@ -56,7 +56,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn painted_sand_is_cohesive_fine_grained_golden_and_entirely_stone_free() {
+    fn painted_sand_is_cohesive_fine_grained_beige_and_entirely_stone_free() {
         let mut mean = [0.0; 3];
         let mut detail = 0;
         for y in 0..SIZE {
@@ -66,20 +66,20 @@ mod tests {
                     rgb.iter()
                         .all(|v| v.is_finite() && (0.0..=255.0).contains(v))
                 );
-                assert!(rgb[0] > 200.0 && rgb[1] > 170.0 && rgb[2] < 165.0);
-                assert!(rgb[0] > rgb[1] + 22.0 && rgb[1] > rgb[2] + 45.0);
+                assert!(rgb[0] > 220.0 && rgb[1] > 200.0 && (170.0..200.0).contains(&rgb[2]));
+                assert!(rgb[0] > rgb[1] + 14.0 && rgb[1] > rgb[2] + 26.0);
                 for axis in 0..3 {
                     mean[axis] += rgb[axis] / (SIZE * SIZE) as f32;
                 }
                 assert_eq!(rgb, color(x + SIZE, y + SIZE));
                 let adjacent = color(x + 1, y);
                 let difference = (rgb[0] - adjacent[0]).abs();
-                assert!(difference < 40.0, "grain contrast: {difference}");
+                assert!(difference < 12.0, "grain contrast: {difference}");
                 detail += usize::from(difference > 0.5);
             }
         }
         assert!(detail as f32 / (SIZE * SIZE) as f32 > 0.5);
-        for (actual, expected) in mean.into_iter().zip([239.0, 205.0, 139.0]) {
+        for (actual, expected) in mean.into_iter().zip([236.0, 217.0, 184.0]) {
             assert!((actual - expected).abs() < 1.5);
         }
     }
@@ -106,9 +106,13 @@ mod tests {
         }
         let count = (SIZE / 8).pow(2) as f32;
         let variance = squares / count - (sum / count).powi(2);
-        assert!(high - low > 20.0, "mipped grain range: {}", high - low);
-        assert!(variance > 12.0, "mipped grain variance: {variance}");
-        assert!(variance < 80.0, "sand must stay cohesive: {variance}");
+        assert!(
+            (5.0..15.0).contains(&(high - low)),
+            "mipped grain range: {}",
+            high - low
+        );
+        assert!(variance > 1.0, "mipped grain variance: {variance}");
+        assert!(variance < 10.0, "sand must stay cohesive: {variance}");
     }
 
     #[test]

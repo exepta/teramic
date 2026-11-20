@@ -14,6 +14,8 @@ fn climate(terrain: &TerraGenerator, temperature: f64, humidity: f64, ocean: f64
         mushroom_park: 0.0,
         cliffted_desert: 0.0,
         cherry_forest: 0.0,
+        spirit_blossom: 0.0,
+        blood_forest: 0.0,
     };
     biome
 }

@@ -11,6 +11,10 @@ use terra_world::{
 
 #[path = "kingdom_claim_tests.rs"]
 mod claim_tests;
+#[path = "kingdom_starter_udp_tests.rs"]
+mod starter_udp_tests;
+#[path = "kingdom_territory_udp_tests.rs"]
+mod territory_udp_tests;
 
 fn request(
     host: &mut App,

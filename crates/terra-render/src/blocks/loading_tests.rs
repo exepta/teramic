@@ -8,6 +8,8 @@ mod kinetic_art_tests;
 mod lantern_tests;
 #[path = "profession_station_tests.rs"]
 mod profession_station_tests;
+#[path = "road_tests.rs"]
+mod road_tests;
 
 #[test]
 fn authored_tangents_follow_nonuniform_node_scale_rotation_and_reflection() {
@@ -150,9 +152,112 @@ fn torch_emits_but_ores_only_reflect_existing_light() {
             .lights()
             .map(|(id, _)| id)
             .collect::<std::collections::BTreeSet<_>>(),
-        [28, 40, 56, 99, terra_core::lantern::LANTERN]
-            .into_iter()
-            .collect()
+        [
+            28,
+            40,
+            56,
+            99,
+            terra_core::lantern::LANTERN,
+            315,
+            316,
+            318,
+            321,
+            323,
+            358,
+            369,
+            370,
+            371,
+            372,
+            373,
+            386,
+            395,
+            396,
+            397,
+            409,
+            411,
+            414,
+            421,
+        ]
+        .into_iter()
+        .collect()
+    );
+    for (id, light) in assets.lights().filter(|(id, _)| (306..=323).contains(id)) {
+        assert!(
+            !light.shadows,
+            "Spirit light {id} stays in the bounded lamp budget"
+        );
+        assert_eq!(
+            light.falloff,
+            super::super::definitions::LightFalloff::SoftCore
+        );
+        let (range, intensity) = if id == 316 {
+            (5.0, 70.0)
+        } else {
+            (13.0, 900.0)
+        };
+        assert_eq!(light.range, range);
+        assert_eq!(light.intensity, intensity);
+    }
+    for (id, light) in assets.lights().filter(|(id, _)| (324..=399).contains(id)) {
+        assert!(
+            !light.shadows,
+            "cemetery light {id} shares the unshadowed lamp pool"
+        );
+        assert_eq!(
+            light.falloff,
+            super::super::definitions::LightFalloff::SoftCore
+        );
+        let expected = match id {
+            358 => (9.0, 450.0),
+            369 => (28.0, 2400.0),
+            370 | 373 => (11.0, 700.0),
+            371 => (10.0, 500.0),
+            372 => (13.0, 900.0),
+            386 => (6.0, 100.0),
+            395 => (5.0, 100.0),
+            396 => (8.0, 240.0),
+            397 => (8.0, 350.0),
+            _ => panic!("Unspecified cemetery lighting profile {id}"),
+        };
+        assert_eq!((light.range, light.intensity), expected, "light {id}");
+        assert_eq!(light.cave_intensity, 0.65);
+        assert!(light.flicker <= 0.03);
+        assert!(
+            light
+                .offset
+                .is_some_and(|point| point.into_iter().all(|v| (0.0..=1.0).contains(&v))),
+            "cemetery light {id} must stay on its authored flame, not an adjacent air cell"
+        );
+    }
+    for (id, light) in assets.lights().filter(|(id, _)| *id >= 400) {
+        assert!(
+            !light.shadows,
+            "Blood Forest light {id} shares the unshadowed lamp pool"
+        );
+        assert_eq!(
+            light.falloff,
+            super::super::definitions::LightFalloff::SoftCore
+        );
+        let intensity = match id {
+            409 | 411 | 414 => 140.0,
+            421 => 260.0,
+            _ => panic!("Unspecified Blood Forest lighting profile {id}"),
+        };
+        assert_eq!((light.range, light.intensity), (7.0, intensity));
+        assert_eq!(light.color, [1.0, 0.10, 0.06]);
+        assert_eq!(light.cave_intensity, 0.7);
+        assert_eq!(light.flicker, 0.02);
+    }
+    assert!(
+        assets
+            .library
+            .as_ref()
+            .unwrap()
+            .blocks
+            .iter()
+            .filter(|b| matches!(b.id, 398 | 399))
+            .all(|b| b.light.is_none()),
+        "inactive runes and decorative mist never create lights or fog volumes"
     );
     let (_, crusher_lantern) = assets.lights().find(|(id, _)| *id == 99).unwrap();
     assert_eq!(crusher_lantern.range, 4.0);
@@ -296,7 +401,7 @@ fn cube_materials_share_handles_without_merging_distinct_colors() {
     let tinted = assets.shared_material(
         &CubeMaterialDefinition {
             base_color: [0.35, 0.70, 0.20, 1.0],
-            ..plain
+            ..plain.clone()
         },
         Some("textures/dirt.png"),
         &mut materials,
@@ -307,7 +412,7 @@ fn cube_materials_share_handles_without_merging_distinct_colors() {
     let matte = assets.shared_material(
         &CubeMaterialDefinition {
             reflectance: 0.08,
-            ..plain
+            ..plain.clone()
         },
         Some("textures/dirt.png"),
         &mut materials,
@@ -359,13 +464,38 @@ fn shipped_cube_materials_share_soil_but_keep_whole_snow_distinct_from_rock() {
     let sand = materials
         .get(&assets.materials[slots[&(4, "Fine sand")]])
         .unwrap();
-    assert_eq!(sand.perceptual_roughness, 1.0);
+    assert_eq!(sand.perceptual_roughness, 0.94);
     assert_eq!(sand.reflectance, 0.12);
     assert_eq!(
         materials.len(),
         72 + terra_core::OreKind::ALL.len() + terra_core::beds::DyeColor::ALL.len()
             + 1 // Distinct apple canopy.
             + 1 // One new angular ballast material shared by its three shapes.
+            + 6 // Independent top art for the six original foliage blocks.
+            + 16 // Ten Spirit cubes, including three foliage tops.
+            + 23 // Thirteen clay, seven grave stones, two rune states and mist.
+            + 20 // Twelve Blood cubes, turf side/bottom, log end and foliage top.
+            + 3 // Cactus stem, top cut and root cap have independent textures.
+            + 11 // Independent near leaf sprays, including the needle profile.
+            + 1 // Solid fog stone has its own matte material.
+            + 2 // Shared asphalt aggregate and contrasting stone curb textures.
+            + 2 // New independent oak and birch end grain.
+            + 2 // Wet and cured tar surface materials.
+    );
+    let spirit_slots: std::collections::BTreeSet<_> = slots
+        .iter()
+        .filter(|((id, _), _)| (306..=315).contains(id))
+        .map(|(_, slot)| *slot)
+        .collect();
+    assert_eq!(
+        spirit_slots.len(),
+        19,
+        "individual Spirit textures retain their material identity"
+    );
+    assert!(
+        slots
+            .iter()
+            .all(|((id, _), slot)| *id >= 306 || !spirit_slots.contains(slot))
     );
     let ballast = slots[&(206, "Angular ballast")];
     assert_eq!(ballast, slots[&(207, "Angular ballast")]);
@@ -1620,7 +1750,16 @@ fn static_models_batch_once_and_do_not_occlude_terrain_or_each_other() {
             terrain: None,
             exposure: None,
             tints: Default::default(),
-            conditions: Default::default(),
+            // A real surface condition colors the leaf range; static models
+            // sharing this slot must still retain neutral vertex colors.
+            conditions: [(
+                [6, 2, 2],
+                terra_world::environment::SurfaceCondition {
+                    wetness: 0.7,
+                    ..Default::default()
+                },
+            )]
+            .into(),
         },
     )
     .expect("mixed material batch");
@@ -1922,4 +2061,65 @@ fn rail_builder_scoop_accepts_three_metre_width_but_keeps_height_and_other_block
         assert!(bake_transform(id, &mut beyond, bevy::math::Affine3A::IDENTITY).is_err());
     }
     assert!(bake_transform(1, &mut primitive.clone(), bevy::math::Affine3A::IDENTITY).is_err());
+}
+
+#[test]
+fn cutout_leaf_materials_keep_alpha_and_reverse_sides_in_base_and_preview_paths() {
+    let mut assets = BlockAssets::default();
+    let mut materials = Assets::<StandardMaterial>::default();
+    let definition = CubeMaterialDefinition::default();
+    for texture in [
+        "textures/foliage/oak_side.png",
+        "textures/foliage/cherry_pink_top.png",
+        "textures/stone.png",
+    ] {
+        let slot = assets.shared_material(&definition, Some(texture), &mut materials);
+        let material = materials.get(&assets.materials[slot]).unwrap();
+        if authored_foliage_texture(texture) {
+            assert_eq!(material.alpha_mode, AlphaMode::Mask(0.5));
+            assert!(material.double_sided);
+            assert_eq!(material.cull_mode, None);
+        } else {
+            assert_eq!(material.alpha_mode, AlphaMode::Opaque);
+        }
+    }
+    assert!(!authored_foliage_texture("model:foliage/0"));
+    assert!(!authored_foliage_texture("textures/foliage/README.md"));
+}
+
+#[test]
+fn palette_normal_maps_are_bound_without_aliasing_distinct_shared_materials() {
+    let mut assets = BlockAssets::default();
+    let mut materials = Assets::<StandardMaterial>::default();
+    let mut images = Assets::<Image>::default();
+    let first_map = images.add(Image::default());
+    let second_map = images.add(Image::default());
+    assets
+        .textures
+        .insert("textures/palette-a.png".into(), first_map.clone());
+    assets
+        .textures
+        .insert("textures/palette-b.png".into(), second_map.clone());
+    let mut definition = CubeMaterialDefinition {
+        normal_texture: Some("textures/palette-a.png".into()),
+        ..default()
+    };
+    let first = assets.shared_material(&definition, None, &mut materials);
+    assert_eq!(
+        materials
+            .get(&assets.materials[first])
+            .unwrap()
+            .normal_map_texture,
+        Some(first_map)
+    );
+    definition.normal_texture = Some("textures/palette-b.png".into());
+    let second = assets.shared_material(&definition, None, &mut materials);
+    assert_ne!(first, second);
+    assert_eq!(
+        materials
+            .get(&assets.materials[second])
+            .unwrap()
+            .normal_map_texture,
+        Some(second_map)
+    );
 }

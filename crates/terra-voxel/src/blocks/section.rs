@@ -22,6 +22,9 @@ pub struct BlockSection {
     revision: u64,
     blocks: Vec<u16>,
     solid_count: usize,
+    // Conservative material index: collisions only cause extra scans, never
+    // missed blocks. Counts keep removals exact without rescanning 4096 cells.
+    material_buckets: [u16; 256],
 }
 impl BlockSection {
     pub fn empty(position: SectionPos) -> Result<Self, BlockError> {
@@ -36,15 +39,18 @@ impl BlockSection {
             return Err(BlockError::InvalidBlockCount(blocks.len()));
         }
         position.global_block([15; 3])?;
-        let solid_count = blocks
-            .iter()
-            .filter(|&&b| b != MaterialId::Air as u16)
-            .count();
+        let mut material_buckets = [0; 256];
+        let mut solid_count = 0;
+        for &block in &blocks {
+            solid_count += usize::from(block != MaterialId::Air as u16);
+            material_buckets[usize::from(block) % 256] += 1;
+        }
         Ok(Self {
             position,
             revision,
             blocks,
             solid_count,
+            material_buckets,
         })
     }
     pub fn position(&self) -> SectionPos {
@@ -58,6 +64,11 @@ impl BlockSection {
     }
     pub fn is_empty(&self) -> bool {
         self.solid_count == 0
+    }
+    /// Cheap conservative membership for streaming consumers. `false` proves
+    /// absence; `true` still requires checking cells (IDs can share a bucket).
+    pub fn may_contain(&self, material: u16) -> bool {
+        self.material_buckets[usize::from(material) % 256] != 0
     }
     pub fn block(&self, local: [usize; 3]) -> Result<u16, BlockError> {
         Ok(self.blocks[block_index(local)?])
@@ -74,6 +85,8 @@ impl BlockSection {
             .ok_or(BlockError::RevisionOverflow)?;
         self.solid_count -= usize::from(old != MaterialId::Air as u16);
         self.solid_count += usize::from(material != MaterialId::Air as u16);
+        self.material_buckets[usize::from(old) % 256] -= 1;
+        self.material_buckets[usize::from(material) % 256] += 1;
         self.blocks[index] = material;
         self.revision = revision;
         Ok(true)

@@ -1,0 +1,34 @@
+{
+  "id": "teramic::mosaic_grave_slab",
+  "name": "Mosaic Floor Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 346
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 337
+        },
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 338
+        },
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 340
+        },
+        "count": 2
+      }
+    ]
+  }
+}

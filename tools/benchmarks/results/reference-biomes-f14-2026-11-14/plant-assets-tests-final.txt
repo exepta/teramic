@@ -1,0 +1,8 @@
+test_cactus_has_six_complete_seamless_faces_and_three_surface_textures (test_assets.ReferencePlants.test_cactus_has_six_complete_seamless_faces_and_three_surface_textures) ... ok
+test_catalog_ids_individual_texture_paths_and_nonblocking_flora (test_assets.ReferencePlants.test_catalog_ids_individual_texture_paths_and_nonblocking_flora) ... ok
+test_voxel_silhouettes_winding_tangents_and_closed_outer_surface (test_assets.ReferencePlants.test_voxel_silhouettes_winding_tangents_and_closed_outer_surface) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.103s
+
+OK

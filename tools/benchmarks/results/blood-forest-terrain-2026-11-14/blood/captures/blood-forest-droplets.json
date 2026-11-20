@@ -1,0 +1,34 @@
+{
+  "fixture_edits": 0,
+  "status": "passed",
+  "views": {
+    "close": {
+      "active_frames": 377,
+      "first_animation_time": 8.348859786987305,
+      "last_animation_time": 11.345865249633789,
+      "maximum_pool_capacity": 192,
+      "maximum_scanned_sections": 32,
+      "moving_frames": 376,
+      "observed_seconds": 2.996926985,
+      "peak_candidates": 61,
+      "peak_falling": 58,
+      "peak_splashes": 8,
+      "samples": 563,
+      "water_triangles": 16404
+    },
+    "overview": {
+      "active_frames": 336,
+      "first_animation_time": 4.835933685302734,
+      "last_animation_time": 7.849987983703613,
+      "maximum_pool_capacity": 192,
+      "maximum_scanned_sections": 32,
+      "moving_frames": 334,
+      "observed_seconds": 3.012174384,
+      "peak_candidates": 81,
+      "peak_falling": 46,
+      "peak_splashes": 14,
+      "samples": 563,
+      "water_triangles": 16404
+    }
+  }
+}

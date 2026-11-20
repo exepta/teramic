@@ -1,0 +1,22 @@
+{
+  "id": "teramic::spirit_blossom_planks",
+  "name": "Spirit Blossom Planks",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 314
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 313
+        },
+        "count": 1
+      }
+    ]
+  }
+}

@@ -63,67 +63,86 @@ impl CrusherRecipe {
             && (0.5..=600.0).contains(&self.seconds)
     }
 }
-const RECIPES: [(&str, &str); 19] = [
+const RECIPES: [(&str, &str); 20] = [
     (
         "pink_flower",
-        include_str!("../../../assets/crushing/pink_flower.json"),
+        include_str!("../../../assets/crafting/processes/crushing/pink_flower.json"),
     ),
     (
         "black_dye",
-        include_str!("../../../assets/crushing/black_dye.json"),
+        include_str!("../../../assets/crafting/processes/crushing/black_dye.json"),
     ),
     (
         "white_dye",
-        include_str!("../../../assets/crushing/white_dye.json"),
+        include_str!("../../../assets/crafting/processes/crushing/white_dye.json"),
     ),
-    ("iron", include_str!("../../../assets/crushing/iron.json")),
-    ("gold", include_str!("../../../assets/crushing/gold.json")),
-    ("coal", include_str!("../../../assets/crushing/coal.json")),
+    (
+        "iron",
+        include_str!("../../../assets/crafting/processes/crushing/iron.json"),
+    ),
+    (
+        "gold",
+        include_str!("../../../assets/crafting/processes/crushing/gold.json"),
+    ),
+    (
+        "coal",
+        include_str!("../../../assets/crafting/processes/crushing/coal.json"),
+    ),
     (
         "diamond",
-        include_str!("../../../assets/crushing/diamond.json"),
+        include_str!("../../../assets/crafting/processes/crushing/diamond.json"),
     ),
-    ("salt", include_str!("../../../assets/crushing/salt.json")),
-    ("ruby", include_str!("../../../assets/crushing/ruby.json")),
+    (
+        "salt",
+        include_str!("../../../assets/crafting/processes/crushing/salt.json"),
+    ),
+    (
+        "ruby",
+        include_str!("../../../assets/crafting/processes/crushing/ruby.json"),
+    ),
     (
         "red_dye",
-        include_str!("../../../assets/crushing/red_dye.json"),
+        include_str!("../../../assets/crafting/processes/crushing/red_dye.json"),
     ),
     (
         "red_flower",
-        include_str!("../../../assets/crushing/red_flower.json"),
+        include_str!("../../../assets/crafting/processes/crushing/red_flower.json"),
     ),
     (
         "yellow_flower",
-        include_str!("../../../assets/crushing/yellow_flower.json"),
+        include_str!("../../../assets/crafting/processes/crushing/yellow_flower.json"),
     ),
     (
         "white_flower",
-        include_str!("../../../assets/crushing/white_flower.json"),
+        include_str!("../../../assets/crafting/processes/crushing/white_flower.json"),
     ),
     (
         "blue_flower",
-        include_str!("../../../assets/crushing/blue_flower.json"),
+        include_str!("../../../assets/crafting/processes/crushing/blue_flower.json"),
     ),
     (
         "purple_flower",
-        include_str!("../../../assets/crushing/purple_flower.json"),
+        include_str!("../../../assets/crafting/processes/crushing/purple_flower.json"),
     ),
     (
         "orange_flower",
-        include_str!("../../../assets/crushing/orange_flower.json"),
+        include_str!("../../../assets/crafting/processes/crushing/orange_flower.json"),
     ),
     (
         "green_flower",
-        include_str!("../../../assets/crushing/green_flower.json"),
+        include_str!("../../../assets/crafting/processes/crushing/green_flower.json"),
     ),
     (
         "iron_ingot",
-        include_str!("../../../assets/crushing/iron_ingot.json"),
+        include_str!("../../../assets/crafting/processes/crushing/iron_ingot.json"),
     ),
     (
         "gold_ingot",
-        include_str!("../../../assets/crushing/gold_ingot.json"),
+        include_str!("../../../assets/crafting/processes/crushing/gold_ingot.json"),
+    ),
+    (
+        "road_aggregate",
+        include_str!("../../../assets/crafting/processes/crushing/road_aggregate.json"),
     ),
 ];
 pub const fn flower_color(variant: u8) -> crate::beds::DyeColor {
@@ -155,7 +174,7 @@ pub fn recipes() -> &'static [CrusherRecipe] {
                 assert!(builtin.valid());
                 std::fs::read_to_string(
                     crate::asset_directory()
-                        .join("crushing")
+                        .join("crafting/processes/crushing")
                         .join(format!("{name}.json")),
                 )
                 .ok()

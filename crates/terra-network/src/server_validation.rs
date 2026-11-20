@@ -22,6 +22,38 @@ mod snow;
 #[path = "server_wrench.rs"]
 mod wrench;
 
+#[cfg(test)]
+mod road_drop_tests {
+    use super::*;
+    #[test]
+    fn every_road_form_returns_exactly_its_own_piece_on_authoritative_mining() {
+        let chunks = terra_world::streaming::ChunkStore::default();
+        let journal = terra_world::edits::EditJournal::default();
+        for material in terra_core::roads::MATERIALS {
+            let position = [-17, 3, -1];
+            let drops = resource_stacks(
+                EditAction::Block {
+                    position,
+                    expected: material,
+                    material: 0,
+                },
+                &chunks,
+                &journal,
+            );
+            assert_eq!(
+                drops,
+                vec![(
+                    position.map(|v| v as f64 + 0.5),
+                    terra_core::ItemStack {
+                        item: terra_core::ItemKind::Block(material),
+                        count: 1
+                    }
+                )]
+            );
+        }
+    }
+}
+
 fn planting_rejection(action: EditAction, reason: PlantError) -> EditOutcome {
     if matches!(action, EditAction::PlaceProp { kind, .. } if terra_core::TreeSpecies::from_sapling(kind).is_some())
     {
@@ -29,6 +61,42 @@ fn planting_rejection(action: EditAction, reason: PlantError) -> EditOutcome {
     } else {
         EditOutcome::Invalid
     }
+}
+
+/// Reproject the clicked surface from the current authoritative eye. Prediction and
+/// the separate movement channel can put that eye on the other side of a voxel seam.
+/// The usual first-hit, reach, support and collision checks still run on this ray.
+pub(super) fn block_look_at(
+    point: [f64; 3],
+    original: [f32; 2],
+    peer: &Peer,
+    world: &ControlWorld,
+) -> [f32; 2] {
+    let Ok(body) = world.bodies.get(peer.body) else {
+        return original;
+    };
+    let eye = (body.translation + Vec3::Y * PLAYER_EYE_OFFSET).as_dvec3();
+    let delta = bevy::math::DVec3::from_array(point) - eye;
+    let distance = delta.length();
+    if !(0.001..=8.001).contains(&distance)
+        || original.iter().any(|angle| !angle.is_finite())
+        || original[0].abs() > std::f32::consts::TAU + 0.001
+        || original[1].abs() > 1.501
+    {
+        return original;
+    }
+    let view =
+        (Quat::from_euler(EulerRot::YXZ, original[0], original[1], 0.) * Vec3::NEG_Z).as_dvec3();
+    let along = view.dot(delta);
+    let miss = (delta - view * along).length_squared();
+    if along <= 0. || !(1e-12..=1.5 * 1.5).contains(&miss) {
+        return original;
+    }
+    let direction = delta / distance;
+    [
+        (-direction.x).atan2(-direction.z) as f32,
+        direction.y.clamp(-1., 1.).asin() as f32,
+    ]
 }
 
 pub(super) fn mined_slab(
@@ -65,6 +133,23 @@ pub(super) fn mined_slab(
 }
 
 pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> EditOutcome {
+    check_with_chest(
+        command,
+        peer,
+        world,
+        terra_core::containers::ChestMerge::Auto,
+    )
+}
+fn check_with_chest(
+    command: EditCommand,
+    peer: &Peer,
+    world: &ControlWorld,
+    merge: terra_core::containers::ChestMerge,
+) -> EditOutcome {
+    if matches!(command.action, EditAction::Block { material, .. } if terra_core::roads::is_tar(material) || material==terra_core::bile::FLUID)
+    {
+        return EditOutcome::Invalid;
+    }
     if rails::handles(command.action) {
         return rails::check(command, peer, world);
     }
@@ -136,9 +221,15 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
             return planting_rejection(command.action, PlantError::MissingItem);
         }
     }
+    // A rebased block contact can lie directly below the authoritative eye.
+    let pitch_limit = if matches!(command.action, EditAction::Block { .. }) {
+        std::f32::consts::FRAC_PI_2
+    } else {
+        1.501
+    };
     if command.look.iter().any(|v| !v.is_finite())
         || command.look[0].abs() > std::f32::consts::TAU + 0.001
-        || command.look[1].abs() > 1.501
+        || command.look[1].abs() > pitch_limit
     {
         return EditOutcome::Invalid;
     }
@@ -219,10 +310,9 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
     if !distance.is_finite() || (distance > 9.5 * 9.5 && !crystal_placement) {
         return EditOutcome::OutOfReach;
     }
-    let picker = if matches!(
-        command.action,
-        EditAction::Block { material: 0, .. } | EditAction::Prop { .. }
-    ) {
+    let picker = if matches!(command.action, EditAction::Block { material: 0, .. }) {
+        terra_world::targeting::pick_world_for_block_mining
+    } else if matches!(command.action, EditAction::Prop { .. }) {
         terra_world::targeting::pick_world_for_mining
     } else if matches!(command.action, EditAction::Block { .. }) {
         terra_world::targeting::pick_world_for_placement
@@ -319,7 +409,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
                 && (terra_world::trains::reserved(&world.journal, position)
                     || block
                         .and_then(|hit| {
-                            terra_world::placement::propose(
+                            terra_world::placement::propose_with_chest(
                                 &world.chunks,
                                 &world.journal,
                                 hit,
@@ -329,6 +419,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
                                     direction.to_array().map(f64::from),
                                 ),
                                 command.look,
+                                merge,
                             )
                             .ok()
                         })
@@ -368,10 +459,10 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
                 || MaterialId::from_raw(expected).is_none()
                 || material == expected && !terra_core::construction::is_slab(material)
                 || !terra_core::construction::obtainable(material)
-                || (material == 0 && expected == MaterialId::FluidWater as u16)
+                || (material == 0 && terra_world::targeting::displaceable_liquid(expected))
                 || (material != 0
                     && expected != 0
-                    && expected != MaterialId::FluidWater as u16
+                    && !terra_world::targeting::displaceable_liquid(expected)
                     && expected != MaterialId::SnowLayer as u16
                     && !matches!((expected, material), (161, 162) | (162, 161))
                     && !(terra_core::construction::is_slab(material)
@@ -528,7 +619,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
                 let half = Vec3::new(PLAYER_RADIUS, PLAYER_HALF_HEIGHT, PLAYER_RADIUS);
                 let exact = block
                     .and_then(|hit| {
-                        terra_world::placement::resolve(
+                        terra_world::placement::resolve_with_chest(
                             &world.chunks,
                             &world.journal,
                             hit,
@@ -539,6 +630,7 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
                             ),
                             command.look,
                             world.config.world.bounded_world,
+                            merge,
                         )
                         .ok()
                     })
@@ -767,6 +859,32 @@ pub(super) fn apply(
     world: &mut ControlWorld,
     timed: bool,
 ) -> EditOutcome {
+    apply_with_chest(
+        command,
+        peer,
+        world,
+        timed,
+        terra_core::containers::ChestMerge::Auto,
+    )
+}
+pub(super) fn apply_chest(
+    command: EditCommand,
+    peer: &Peer,
+    world: &mut ControlWorld,
+    merge: terra_core::containers::ChestMerge,
+) -> EditOutcome {
+    if !matches!(command.action, EditAction::Block { material: 29, .. }) {
+        return EditOutcome::Invalid;
+    }
+    apply_with_chest(command, peer, world, false, merge)
+}
+fn apply_with_chest(
+    command: EditCommand,
+    peer: &Peer,
+    world: &mut ControlWorld,
+    timed: bool,
+    merge: terra_core::containers::ChestMerge,
+) -> EditOutcome {
     if rails::handles(command.action) {
         return rails::apply(command, peer, world, timed);
     }
@@ -802,7 +920,7 @@ pub(super) fn apply(
     if survival && removal && !timed {
         return EditOutcome::Invalid;
     }
-    let valid = check(command, peer, world);
+    let valid = check_with_chest(command, peer, world, merge);
     if valid != EditOutcome::Applied {
         return valid;
     }
@@ -981,7 +1099,8 @@ pub(super) fn apply(
     let port_layout = if let EditAction::Block {
         material, expected, ..
     } = command.action
-        && (terra_core::logistics::is_port(material)
+        && (material == 29
+            || terra_core::logistics::is_port(material)
             || terra_core::plumbing::is_pipe(material)
             || material == terra_core::plumbing::VALVE
             || material == terra_core::train_parts::RAIL_BUILDER
@@ -1018,13 +1137,14 @@ pub(super) fn apply(
         else {
             return EditOutcome::Invalid;
         };
-        match terra_world::placement::propose(
+        match terra_world::placement::propose_with_chest(
             &world.chunks,
             &world.journal,
             hit,
             placed.unwrap_or(terra_core::ItemKind::Block(material)),
             (eye, direction),
             command.look,
+            merge,
         ) {
             Ok(layout) => Some(layout),
             Err(_) => return EditOutcome::Invalid,
@@ -1684,10 +1804,15 @@ fn resource_drop(
     use terra_core::{ItemKind, ResourcePropKind};
     match action {
         EditAction::Block {
-            expected: 30 | 38,
+            expected: 30 | 38 | terra_core::bile::FLUID,
             material: 0,
             ..
         } => None,
+        EditAction::Block {
+            expected,
+            material: 0,
+            ..
+        } if terra_world::saplings::leaf_species(expected).is_some() => None,
         EditAction::Block {
             position,
             expected,
@@ -1696,6 +1821,8 @@ fn resource_drop(
             position.map(|v| v as f64 + 0.5),
             if terra_core::castle::retired_item(expected) {
                 ItemKind::Block(terra_core::castle::item_material(expected))
+            } else if terra_core::roads::is_tar(expected) {
+                ItemKind::Block(terra_voxel::MaterialId::Path as u16)
             } else if expected == terra_voxel::MaterialId::Grass as u16 {
                 ItemKind::Block(terra_voxel::MaterialId::Dirt as u16)
             } else if expected == terra_voxel::MaterialId::SaltCrystal as u16 {
@@ -1811,10 +1938,26 @@ fn resource_stacks(
     if let Some(prop) = prop {
         return resource_stacks_for_prop(prop, journal);
     }
-    let mut drops: Vec<_> = resource_drop(action, chunks)
-        .map(|(position, item)| (position, terra_core::ItemStack { item, count: 1 }))
-        .into_iter()
-        .collect();
+    let special = match action {
+        EditAction::Block {
+            position,
+            expected,
+            material: 0,
+        } => terra_core::block_loot::blood_forest(expected, position).map(|stacks| {
+            stacks
+                .into_iter()
+                .flatten()
+                .map(|stack| (position.map(|axis| axis as f64 + 0.5), stack))
+                .collect::<Vec<_>>()
+        }),
+        _ => None,
+    };
+    let mut drops: Vec<_> = special.unwrap_or_else(|| {
+        resource_drop(action, chunks)
+            .map(|(position, item)| (position, terra_core::ItemStack { item, count: 1 }))
+            .into_iter()
+            .collect()
+    });
     if let EditAction::Block {
         position,
         expected,
@@ -1885,6 +2028,71 @@ mod aquatic_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn blood_plant_harvest_uses_shared_item_yields_without_duplicate_blocks() {
+        let chunks = terra_world::streaming::ChunkStore::default();
+        let journal = terra_world::edits::EditJournal::default();
+        for expected in [406, 409, 412, 413, 414, 419, 421] {
+            for x in -50..50 {
+                let position = [x, -1, -1];
+                let action = EditAction::Block {
+                    position,
+                    expected,
+                    material: 0,
+                };
+                let actual = resource_stacks(action, &chunks, &journal);
+                let expected: Vec<_> = terra_core::block_loot::blood_forest(expected, position)
+                    .unwrap()
+                    .into_iter()
+                    .flatten()
+                    .map(|stack| (position.map(|v| v as f64 + 0.5), stack))
+                    .collect();
+                assert_eq!(actual, expected);
+                assert!(actual.iter().all(|(_, stack)| stack.valid()
+                    && !matches!(stack.item, terra_core::ItemKind::Block(_))));
+            }
+        }
+    }
+
+    #[test]
+    fn ordinary_leaf_harvest_returns_only_matching_chance_seeds_and_never_the_leaf_block() {
+        let chunks = terra_world::streaming::ChunkStore::default();
+        let mut journal = terra_world::edits::EditJournal::default();
+        for (material, species) in [
+            (7, terra_core::TreeSpecies::Oak),
+            (8, terra_core::TreeSpecies::Oak),
+            (9, terra_core::TreeSpecies::Birch),
+            (132, terra_core::TreeSpecies::Cherry),
+            (133, terra_core::TreeSpecies::Cherry),
+            (195, terra_core::TreeSpecies::Apple),
+        ] {
+            let mut winners = 0;
+            for x in -100..100_i64 {
+                let position = [x, -1, -1];
+                journal.record(position, material).unwrap();
+                let action = EditAction::Block {
+                    position,
+                    expected: material,
+                    material: 0,
+                };
+                assert!(resource_drop(action, &chunks).is_none());
+                let drops = resource_stacks(action, &chunks, &journal);
+                assert_eq!(drops, resource_stacks(action, &chunks, &journal));
+                assert!(drops.len() <= 1);
+                for (_, stack) in &drops {
+                    assert_eq!(stack.item, terra_core::ItemKind::Prop(species.sapling()));
+                    assert_eq!(stack.count, 1);
+                }
+                winners += drops.len();
+            }
+            assert!(
+                (25..=55).contains(&winners),
+                "{material}: {winners}/200 seeds"
+            );
+        }
+    }
+
     #[test]
     fn retired_castle_corner_break_returns_the_adaptive_wall_without_reusing_the_saved_id() {
         let (_, item) = resource_drop(

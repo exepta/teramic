@@ -3,7 +3,8 @@
 import json
 import math
 import struct
-from build_castle import Mesh, BLOCKS, MODELS, RECIPES, unit, cross
+from build_castle import Mesh, BLOCKS, MODELS, unit, cross
+from recipe_paths import recipe_path
 from build_locomotive_parts import cylinder
 
 
@@ -261,4 +262,4 @@ for material, slug, name in DEFINITIONS:
     recipe = dict(id='teramic::' + slug, name=name, station='workbench',
                   output=dict(item=dict(block=material), count=1),
                   pattern=dict(kind='shapeless', ingredients=ingredients))
-    (RECIPES / (slug + '.json')).write_text(json.dumps(recipe, indent=2) + '\n')
+    recipe_path(slug).write_text(json.dumps(recipe, indent=2) + '\n')

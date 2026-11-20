@@ -8,25 +8,66 @@
   "bevel_width": 0.0,
   "materials": {
     "Painted moss canopy": {
-      "texture_pattern": "canopy",
       "base_color": [
-        0.42,
-        0.68,
-        0.12,
-        1.0
-      ]
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "Painted moss canopy_top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "leaf_cluster": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "needle_cluster": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
     }
   },
   "face_materials": [
     "Painted moss canopy",
     "Painted moss canopy",
     "Painted moss canopy",
-    "Painted moss canopy",
+    "Painted moss canopy_top",
     "Painted moss canopy",
     "Painted moss canopy"
   ],
   "hardness": 0.3,
   "resistance": 0.5,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Painted moss canopy": "textures/foliage/oak_side.png",
+    "Painted moss canopy_top": "textures/foliage/oak_top.png",
+    "leaf_cluster": "textures/foliage/oak_cluster.png",
+    "needle_cluster": "textures/foliage/spruce_cluster.png"
+  },
+  "foliage_cluster": {
+    "material": "leaf_cluster",
+    "needles": "needle_cluster"
+  }
 }

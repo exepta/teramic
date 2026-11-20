@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 414,
+  "name": "Blood Flower",
+  "description": "Blood Flower from the crimson woodland.",
+  "creative_category": "nature",
+  "hardness": 0.35,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/blood_flower.glb",
+  "textures": {},
+  "struct_block": true,
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      1,
+      0.1,
+      0.06
+    ],
+    "intensity": 140,
+    "range": 7,
+    "falloff": "soft_core",
+    "flicker": 0.02,
+    "cave_intensity": 0.7,
+    "shadows": false
+  }
+}

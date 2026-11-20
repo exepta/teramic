@@ -1,0 +1,2 @@
+    Checking terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 4.06s

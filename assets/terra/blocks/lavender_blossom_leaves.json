@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": 312,
+  "name": "Lavender Blossom Leaves",
+  "description": "Lavender flower clusters from the spirit grove.",
+  "creative_category": "nature",
+  "hardness": 0.3,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "lavender_blossom_leaves": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "lavender_blossom_leaves_top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "leaf_cluster": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    }
+  },
+  "textures": {
+    "lavender_blossom_leaves": "textures/foliage/spirit_lavender_side.png",
+    "lavender_blossom_leaves_top": "textures/foliage/spirit_lavender_top.png",
+    "leaf_cluster": "textures/foliage/spirit_lavender_cluster.png"
+  },
+  "face_materials": [
+    "lavender_blossom_leaves",
+    "lavender_blossom_leaves",
+    "lavender_blossom_leaves",
+    "lavender_blossom_leaves_top",
+    "lavender_blossom_leaves",
+    "lavender_blossom_leaves"
+  ],
+  "foliage_cluster": {
+    "material": "leaf_cluster"
+  }
+}

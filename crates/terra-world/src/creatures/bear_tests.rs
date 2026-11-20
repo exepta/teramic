@@ -359,7 +359,11 @@ fn natural_shore_bear_is_solitary_deterministic_and_keeps_its_spawn_tombstone() 
     let seed = (0..512)
         .find(|seed| {
             let group = random(id, *seed);
-            (group >> 40).is_multiple_of(7) && !(group >> 32).is_multiple_of(3)
+            (group >> 40).is_multiple_of(7)
+                && !(group >> 32).is_multiple_of(3)
+                // Regression: both the bear and butterfly gates must accept
+                // this exact cell, so priority is exercised rather than avoided.
+                && (group >> 48).is_multiple_of(6)
         })
         .unwrap();
     let group = random(id, seed);

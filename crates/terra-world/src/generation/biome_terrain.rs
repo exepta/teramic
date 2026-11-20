@@ -88,7 +88,7 @@ impl TerraGenerator {
         let profiles = self.biome_definitions();
         let mut weights = biome.weights.values();
         let land = 1.0 - weights[0];
-        let mut bridge = [0.0; 8];
+        let mut bridge = [0.0; 10];
         for kind in BiomeKind::ALL.into_iter().skip(1) {
             let p = profiles.get(kind).terrain;
             let suitability = smoothstep(p.min_height, p.min_height + 5.0, height)
@@ -102,6 +102,8 @@ impl TerraGenerator {
                 BiomeKind::MushroomPark => biome.weights.mushroom_park,
                 BiomeKind::ClifftedDesert => biome.weights.cliffted_desert,
                 BiomeKind::CherryForest => biome.weights.cherry_forest,
+                BiomeKind::SpiritBlossom => biome.weights.spirit_blossom,
+                BiomeKind::BloodForest => biome.weights.blood_forest,
                 BiomeKind::Ocean => 0.0,
             };
             bridge[kind as usize] = suitability * affinity;
@@ -126,6 +128,11 @@ impl TerraGenerator {
             let kind = BiomeKind::ALL
                 .into_iter()
                 .skip(1)
+                .filter(|kind| {
+                    (*kind != BiomeKind::BloodForest || self.config().blood_forest_revision > 0)
+                        && (*kind != BiomeKind::SpiritBlossom
+                            || self.config().spirit_blossom_revision > 0)
+                })
                 .min_by(|a, b| {
                     let distance = |kind| {
                         let p = profiles.get(kind).terrain;
@@ -146,6 +153,8 @@ impl TerraGenerator {
             mushroom_park,
             cliffted_desert,
             cherry_forest,
+            spirit_blossom,
+            blood_forest,
         ] = weights;
         BiomeSample {
             weights: BiomeWeights {
@@ -157,6 +166,8 @@ impl TerraGenerator {
                 mushroom_park,
                 cliffted_desert,
                 cherry_forest,
+                spirit_blossom,
+                blood_forest,
             },
             ..biome
         }

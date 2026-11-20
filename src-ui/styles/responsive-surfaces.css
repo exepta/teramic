@@ -1,0 +1,71 @@
+/* The painted copper rim overlays its host. Reserve an actual inner content
+   rectangle, including footer actions and wrapped translated captions. */
+.copper-menu-page { min-width: 0 !important; min-height: 0 !important; padding: 44px 42px 42px !important; box-sizing: border-box !important; }
+.copper-menu-actions, .copper-dialog-actions { min-width: 0 !important; max-width: 100% !important; height: auto !important; display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: center !important; align-items: center !important; gap: 10px !important; }
+.copper-menu-actions > menu-button, .copper-dialog-actions > menu-button { width: auto !important; min-width: 0 !important; max-width: 100% !important; flex-basis: auto !important; flex-grow: 0 !important; flex-shrink: 0 !important; }
+.copper-menu-action { width: auto !important; min-width: 0 !important; max-width: 100% !important; height: auto !important; min-height: 52px !important; display: flex !important; flex-direction: row !important; flex-grow: 0 !important; flex-shrink: 0 !important; align-items: center !important; justify-content: center !important; padding: 12px 38px !important; gap: 10px !important; box-sizing: border-box !important; }
+.copper-menu-action .button-copy { position: relative !important; left: auto !important; top: auto !important; width: auto !important; height: auto !important; min-width: 0 !important; max-width: auto !important; flex-grow: 0 !important; flex-shrink: 0 !important; flex-direction: row !important; }
+.copper-menu-action > icon { position: relative !important; left: auto !important; top: auto !important; transform: translate(0px, 0px) !important; width: 20px !important; height: 20px !important; flex-shrink: 0 !important; }
+.copper-menu-action .button-title { width: auto !important; min-width: 0 !important; max-width: auto !important; font-size: 16px !important; line-height: 20px !important; text-wrap: nowrap !important; flex-shrink: 0 !important; }
+.copper-options-content, .copper-options-panel { min-width: 0 !important; min-height: 0 !important; }
+.copper-options-tabs { width: auto !important; align-items: stretch !important; min-width: 0 !important; overflow-y: auto !important; min-height: 0 !important; flex-shrink: 0 !important; }
+.copper-options-tabs .tab { width: auto !important; height: auto !important; min-height: 44px !important; flex-shrink: 0 !important; flex-direction: row !important; align-self: stretch !important; padding: 10px 12px !important; gap: 8px !important; }
+.copper-options-tabs .tab p { width: auto !important; min-width: 0 !important; max-width: auto !important; font-size: 16px !important; text-align: center !important; text-wrap: nowrap !important; flex-shrink: 0 !important; }
+.setting-description .setting-title { width: auto !important; max-width: auto !important; text-wrap: nowrap !important; flex-shrink: 0 !important; }
+.setting-hint { min-width: 0 !important; max-width: 100% !important; text-wrap: wrap !important; }
+.settings-row { flex-wrap: wrap !important; }
+.setting-description { width: auto !important; flex-basis: 220px !important; flex-grow: 0 !important; flex-shrink: 0 !important; }
+/* A translated title keeps its full word; controls move to the next row when needed. */
+.setting-description .setting-title, .setting-label, .surface-label { text-wrap: nowrap !important; }
+.kingdom-tabs, .character-tabs, .world-create-tabs { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; height: auto !important; }
+.kingdom-tab, .character-tabs button, .world-create-tab, .build-mode-category { flex-shrink: 0 !important; flex-grow: 0 !important; flex-basis: auto !important; }
+.kingdom-tab::value, .character-tabs button::value, .world-create-dialog .world-create-tab p, .build-mode-category::value { text-wrap: nowrap !important; }
+.setting-control { min-width: 0 !important; flex-basis: 210px !important; flex-shrink: 1 !important; }
+.copper-setting-binding { width: auto !important; height: auto !important; min-height: 40px !important; max-width: 100% !important; padding: 8px 12px !important; flex-basis: auto !important; flex-grow: 0 !important; flex-shrink: 0 !important; text-wrap: nowrap !important; box-sizing: border-box !important; }
+.copper-setting-binding::value { text-wrap: nowrap !important; flex-shrink: 0 !important; }
+.copper-dialog { min-width: 0 !important; min-height: 0 !important; padding: 42px 38px 42px !important; box-sizing: border-box !important; }
+.copper-dialog > .copper-dialog-body { min-width: 0 !important; min-height: 0 !important; }
+.copper-dialog-actions { flex-shrink: 0 !important; }
+.settings-panel { min-width: 0 !important; min-height: 0 !important; padding: 36px 38px 40px !important; box-sizing: border-box !important; }
+.settings-content { min-width: 0 !important; min-height: 0 !important; flex-shrink: 1 !important; }
+.settings-actions, .surface-actions { min-width: 0 !important; display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; align-items: center !important; }
+.settings-actions button, .surface-actions button { width: auto !important; min-width: 0 !important; max-width: 100% !important; height: auto !important; text-wrap: nowrap !important; flex-direction: row !important; flex-basis: auto !important; flex-grow: 0 !important; flex-shrink: 0 !important; align-self: flex-start !important; box-sizing: border-box !important; }
+.settings-actions button::value, .surface-actions button::value { text-wrap: nowrap !important; flex-shrink: 0 !important; }
+
+@media (max-height: 760px) {
+ .copper-menu-page { top: 8% !important; bottom: 5% !important; padding: 36px 32px 36px !important; gap: 10px !important; }
+ .copper-menu-action { height: auto !important; min-height: 48px !important; }
+ .copper-menu-action .button-title { font-size: 14px !important; line-height: 17px !important; }
+ .copper-options-tabs .tab { min-height: 40px !important; }
+ .copper-dialog { padding: 34px 30px 36px !important; }
+ .settings-panel { padding: 32px 32px 36px !important; }
+}
+@media (max-width: 780px) {
+ .copper-menu-page { max-width: 96% !important; padding-left: 30px !important; padding-right: 30px !important; }
+ .copper-options-tabs { width: auto !important; }
+ .copper-options-tabs .tab p { font-size: 14px !important; line-height: 18px !important; }
+ .settings-row { flex-wrap: wrap !important; }
+ .settings-row .setting-description { width: calc(100% - 56px) !important; }
+ .settings-row .setting-control { flex-basis: 100% !important; }
+}
+/* On phone-sized windows the intrinsic category rail belongs above the form.
+   Keep each category a complete caption and wrap whole buttons into rows. */
+@media (max-width: 600px) {
+ .options-page.copper-menu-page { max-width: 98% !important; padding: 34px 16px 22px !important; gap: 8px !important; }
+ .options-page .copper-page-title, .options-page .copper-page-title::value { font-size: 24px !important; line-height: 28px !important; text-wrap: nowrap !important; }
+ .copper-options-content { flex-direction: column !important; gap: 8px !important; }
+ .copper-options-tabs { width: 100% !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: center !important; gap: 6px !important; padding: 0 !important; max-height: 128px !important; }
+ .copper-options-tabs .tab { min-height: 34px !important; padding: 6px !important; gap: 6px !important; align-self: flex-start !important; }
+ .copper-options-tabs .tab icon { width: 20px !important; height: 20px !important; }
+ .copper-options-tabs .tab p { font-size: 12px !important; line-height: 16px !important; min-height: 16px !important; }
+ .copper-options-panel { width: 100% !important; flex-grow: 1 !important; flex-basis: 0px !important; padding: 5px !important; }
+ .copper-options-panel .settings-list { padding-right: 8px !important; }
+ .settings-row { width: 100% !important; padding: 6px !important; gap: 6px !important; }
+ .settings-row .setting-emblem { display: none !important; }
+ .settings-row .setting-description { width: 100% !important; max-width: 100% !important; min-width: 0 !important; flex-basis: 100% !important; padding: 2px 0 !important; }
+ .setting-description .setting-title { font-size: 12px !important; line-height: 16px !important; }
+ .settings-row .setting-control { width: 100% !important; flex-basis: 100% !important; }
+ .options-page .copper-menu-actions { gap: 6px !important; }
+ .options-page .copper-menu-action { min-height: 34px !important; padding: 7px 14px !important; gap: 6px !important; }
+ .options-page .copper-menu-action .button-title { font-size: 11px !important; line-height: 16px !important; }
+}

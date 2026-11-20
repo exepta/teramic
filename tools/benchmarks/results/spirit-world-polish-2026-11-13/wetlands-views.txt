@@ -1,0 +1,8 @@
+WATER_VIEW seed=42042 target=[-20751.5, 8.0, -19639.5] depth=3.000
+seed=42042 regions=6 wet_before=421 wet_after=519 area_gain=23.28%
+WATER_VIEW seed=271828 target=[-16091.5, 17.220499216495686, -19299.5] depth=8.220
+seed=271828 regions=6 wet_before=2107 wet_after=2630 area_gain=24.82%
+WATER_VIEW seed=9317 target=[5320.5, 13.122744993748384, -19795.5] depth=8.123
+seed=9317 regions=6 wet_before=3038 wet_after=4601 area_gain=51.45%
+TOTAL cells=377729 wet_before=5566 wet_after=7750 water_area_gain=39.24% dry_edges=369979 measured_relief_gain=25.01%
+DRY_INTERIOR edges=295129 relief_gain=20.000%

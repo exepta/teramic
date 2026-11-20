@@ -748,7 +748,7 @@ The recipes include regeneration, strength, speed, night vision, fire
 resistance, a regeneration/strength mixture, and the harmful effects poison,
 slowness, freezing, bleeding, rotten and fire. Existing potion IDs 1..6 retain
 their recipes; the harmful potions append IDs 7..12. Recipe JSON lives in
-`assets/brewing/`; it reuses the existing effect definitions.
+`assets/crafting/processes/brewing/`; it reuses the existing effect definitions.
 
 Fill a glass bottle by holding use while aiming at a visible water source or a
 supplied, open faucet. The held water level rises before the checked transfer;
@@ -981,3 +981,44 @@ compound shapes, ray hits, clearance and seats use the shared physical origin.
 Vehicles batch by authored material and retain their geometry through cargo or
 coupling changes. F63 covers parked assembly; driving and arbitrary block payloads
 remain separate features. Acceptance uses CPU scene/geometry checks only.
+
+## Spirit Blossom (306–323)
+
+Eighteen additional per-block JSON definitions, individual textures and authored
+GLB assets live alongside the existing catalog. `tools/assets/build_spirit_blossom.py`
+is their deterministic standard-library exporter. Runtime voxel cubes still use
+the shared face generator, with their individual textures; the exported cube
+GLBs are authoring references. The eight custom props load their GLB scenes.
+Light metadata uses the existing bounded lamp system. Lotus and lily models
+follow the loaded water surface without changing their saved voxel coordinates.
+See [Spirit Blossom](../../../docs/spirit-blossom.md) for IDs and behavior.
+
+## Grave block set (324–399)
+
+The 76 cemetery assets use separate JSON, GLB and PNG files. Ornate Crypt Chest
+377 is a real 18-slot depot. Other crypt switches, gates, traps and the mist
+block currently provide decorative models; they do not implement circuits,
+keys, damage or extra fog volumes. Light sources use the existing light budget.
+Rebuild with `python3 tools/assets/build_cemetery.py`; craftable masonry, clay
+and lighting recipes are in `assets/crafting/biomes/graves/`. See
+[world and model details](../../../docs/spirit-world-polish.md).
+
+## Blood Forest (400–421)
+
+The 22 appended blocks retain one JSON definition per block and individual
+textures. Terrain cubes use the shared closed face generator; their GLBs remain
+authoring references. The ten props use authored GLB geometry and exported
+collision boxes. Grass, moss and mycelium have separate top, bottom and side
+textures; bloodwood logs have separate end grain. Rebuild only this set with
+`python3 tools/assets/build_blood_forest.py`. Recipes live in
+`assets/crafting/biomes/blood_forest/`; plant and crystal harvesting uses the
+shared server-authoritative item-drop policy.
+
+See [Blood Forest and practical use](../../../docs/blood-forest.md),
+[terrain-aware structures, revision 10](../../../docs/structure-terrain-revision-10.md)
+and [block graphics and streamed lights](../../../docs/block-graphics-and-light-streaming.md).
+Light definitions keep using the bounded shared lamp pool. A new world selects
+the new generation revisions; existing saves retain their recorded terrain.
+Current client/server builds must both use protocol 144. Validation and native
+captures are recorded in the
+[acceptance report](../../../tools/benchmarks/results/blood-forest-terrain-2026-11-14/README.md).

@@ -417,7 +417,9 @@ pub(super) fn albedo(sample: &MapSample, palette: &MapPalette, layer: MapLayer) 
         let attenuation = 1.0 - (f32::from(sample.water_depth).min(18.0) * 0.022);
         return rgb.map(|v| v * attenuation);
     }
-    if matches!(sample.material, 1 | 4 | 5) {
+    if matches!(sample.material, 1 | 4 | 5)
+        || layer == MapLayer::Surface && matches!(sample.material, 306 | 400)
+    {
         let grass: [f32; 3] = std::array::from_fn(|a| {
             sample
                 .biome_weights
@@ -427,11 +429,14 @@ pub(super) fn albedo(sample: &MapSample, palette: &MapPalette, layer: MapLayer) 
                 .sum()
         });
         if layer == MapLayer::Surface
-            && sample.material == 1
+            && matches!(sample.material, 1 | 306 | 400)
             && palette.authored_grass
             && let Some(top) = palette.surface_grass
         {
-            let tint = palette.authored_grass_tint(grass);
+            let tint = palette.authored_grass_tint(
+                grass,
+                sample.biome_weights[7] + sample.biome_weights[8] + sample.biome_weights[9],
+            );
             return std::array::from_fn(|axis| top[axis] * tint[axis]);
         }
         let turf = palette.colors.get(1).copied().unwrap_or([0.38; 3]);
@@ -1046,6 +1051,7 @@ mod tests {
             CreatureKind::MediumSpider,
             CreatureKind::Stalker,
             CreatureKind::Bee,
+            CreatureKind::SandWorm,
         ]
         .into_iter()
         .enumerate()
@@ -1060,6 +1066,8 @@ mod tests {
                 health: kind.health(),
                 behavior: if kind == CreatureKind::Bee {
                     CreatureBehavior::InNest
+                } else if kind == CreatureKind::SandWorm {
+                    CreatureBehavior::Burrowed
                 } else {
                     CreatureBehavior::Rest
                 },
@@ -1093,7 +1101,12 @@ mod tests {
         let settings = MinimapConfig::default();
         let projection = Projection::at([0.0, -8.0], 96, 0.0, false, true, 320, true);
         let first = markers(Some(&animals), None, &projection, 2, false, &settings);
-        assert_eq!(first.len(), 5);
+        assert_eq!(first.len(), 6);
+        assert!(
+            first
+                .iter()
+                .any(|marker| marker.kind == CreatureKind::SandWorm && marker.hostile)
+        );
         assert!(
             first
                 .iter()
@@ -1470,7 +1483,7 @@ mod tests {
     fn colors_follow_actual_palette_and_different_materials() {
         let mut palette = MapPalette {
             colors: vec![[0.3, 0.3, 0.3]; 44],
-            biome_colors: [[0.2, 0.6, 0.1]; 8],
+            biome_colors: [[0.2, 0.6, 0.1]; 10],
             ..Default::default()
         };
         let sample = MapSample {
@@ -1508,7 +1521,7 @@ mod tests {
     fn authored_palette() -> MapPalette {
         let mut palette = MapPalette {
             colors: vec![[0.15, 0.09, 0.03]; 44],
-            biome_colors: [[0.28, 0.40, 0.08]; 8],
+            biome_colors: [[0.28, 0.40, 0.08]; 10],
             authored_grass: true,
             surface_grass: Some([0.28, 0.46, 0.08]),
             ..Default::default()
@@ -1523,7 +1536,7 @@ mod tests {
         let palette = authored_palette();
         let forest = MapSample {
             material: 1,
-            biome_weights: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            biome_weights: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             shore: 0.8,
             snow: 0.9,
             known: true,
@@ -1535,7 +1548,7 @@ mod tests {
             palette.surface_grass.unwrap()
         );
         let blend = MapSample {
-            biome_weights: [0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0],
+            biome_weights: [0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             ..forest
         };
         for (actual, expected) in albedo(&blend, &palette, MapLayer::Surface)
@@ -1543,6 +1556,30 @@ mod tests {
             .zip([0.448, 0.506, 0.06])
         {
             assert!((actual - expected).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn surface_biome_turf_ids_share_albedo_across_the_real_material_switch() {
+        let mut palette = authored_palette();
+        palette.biome_colors[8] = [0.06, 0.60, 0.53];
+        palette.biome_colors[9] = [0.42, 0.10, 0.18];
+        for biome in [8, 9] {
+            for step in 0..=10 {
+                let weight = step as f32 / 10.0;
+                let mut sample = MapSample {
+                    material: 1,
+                    known: true,
+                    ..Default::default()
+                };
+                sample.biome_weights[2] = 1.0 - weight;
+                sample.biome_weights[biome] = weight;
+                let reference = albedo(&sample, &palette, MapLayer::Surface);
+                for material in [306, 400] {
+                    sample.material = material;
+                    assert_eq!(albedo(&sample, &palette, MapLayer::Surface), reference);
+                }
+            }
         }
     }
 

@@ -305,7 +305,20 @@ pub(super) fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, 
         | ItemKind::WaterBottle
         | ItemKind::Potion(_)
         | ItemKind::Apple
-        | ItemKind::AppleCore => {
+        | ItemKind::AppleCore
+        | ItemKind::BloodBerry
+        | ItemKind::CrimsonMushroom
+        | ItemKind::ThornTwig
+        | ItemKind::BloodCrystal
+        | ItemKind::DarkSap
+        | ItemKind::BloodLeaf
+        | ItemKind::BloodSpore
+        | ItemKind::BloodSlimeGel
+        | ItemKind::Bone
+        | ItemKind::Bitumen
+        | ItemKind::GloomEssence
+        | ItemKind::LightSplitter
+        | ItemKind::RoadAggregate => {
             let (name, description) =
                 palette
                     .item_metadata
@@ -313,11 +326,15 @@ pub(super) fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, 
                     .cloned()
                     .unwrap_or_else(|| {
                         (
-                            item.identifier()
-                                .split("::")
-                                .last()
-                                .unwrap_or("Item")
-                                .replace('_', " "),
+                            if item == ItemKind::Tool(terra_core::ToolKind::BileBucket) {
+                                "Galle Bucket".to_owned()
+                            } else {
+                                item.identifier()
+                                    .split("::")
+                                    .last()
+                                    .unwrap_or("Item")
+                                    .replace('_', " ")
+                            },
                             String::new(),
                         )
                     });
@@ -532,15 +549,14 @@ impl CatalogViewCache {
             let mut view = item_view(item, STACK_LIMIT, palette);
             view.command = "catalog".into();
             view.count.clear();
-            let name = format!(
+            let name = crate::localization::normalize_search(&format!(
                 "{}\n{}\n{}\n{}",
                 view.name,
                 view.description,
                 translate(&view.name),
                 translate(&view.description),
-            )
-            .to_lowercase();
-            let identifier = view.identifier.to_lowercase();
+            ));
+            let identifier = crate::localization::normalize_search(&view.identifier);
             (item, view, name, identifier)
         })
         .collect();
@@ -557,7 +573,9 @@ impl CatalogViewCache {
     ) -> (Vec<InventoryItemView>, usize, usize) {
         let matches = |entry: &&(ItemKind, InventoryItemView, String, String)| {
             (category == "all" || entry.1.category == category)
-                && (query.is_empty() || entry.2.contains(query) || entry.3.contains(query))
+                && query
+                    .split_whitespace()
+                    .all(|word| entry.2.contains(word) || entry.3.contains(word))
         };
         let pages = self
             .entries
@@ -803,13 +821,15 @@ pub(super) fn update_view(
         .iter()
         .find(|category| category.id == state.category)
         .map_or("all", |category| category.id.as_str());
-    let query = state.search.to_lowercase();
+    let query = crate::localization::normalize_search(&state.search);
     if !catalog.ready
         || palette.is_changed()
         || language.changed()
         || catalog.localized != language.available()
     {
-        catalog.rebuild(&palette, |source| language.text(source));
+        catalog.rebuild(&palette, |source| {
+            format!("{}\n{}", language.terms(source), language.text(source))
+        });
         catalog.localized = language.available();
     }
     let page_size = if state.page_capacity == 0 {
@@ -1120,7 +1140,13 @@ pub(super) fn update_view(
                     .chunks
                     .as_ref()
                     .and_then(|chunks| chunks.block_at(container.anchor))
-                    .and_then(terra_core::profession_stations::label)
+                    .and_then(|material| {
+                        if material == terra_core::grave_blocks::ORNATE_CHEST {
+                            Some("Ornate Crypt Chest")
+                        } else {
+                            terra_core::profession_stations::label(material)
+                        }
+                    })
                 {
                     return title;
                 }

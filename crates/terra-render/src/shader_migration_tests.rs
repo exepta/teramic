@@ -21,7 +21,7 @@ fn all_custom_shader_modules_parse_as_wesl() {
         assert!(!source.contains("#{"), "{}", path.display());
         checked += 1;
     }
-    assert_eq!(checked, 18);
+    assert_eq!(checked, 26); // Includes shared near/coarse particle-fluid coverage.
 }
 
 #[test]
@@ -265,6 +265,169 @@ fn dry_surface_variant_preserves_stock_pbr_without_detail_or_weather_work() {
 }
 
 #[test]
+fn distant_and_disabled_detail_skip_noise_while_derivatives_remain_reconverged() {
+    use wesl::{
+        pass::{Features, condcomp},
+        syntax::{GlobalDeclaration, Statement, TranslationUnit},
+    };
+    let source = include_str!("../../../assets/shaders/terra_wet_surface.wesl");
+    for bindless in [false, true] {
+        for prepass in [false, true] {
+            let mut module = source.parse::<TranslationUnit>().unwrap();
+            let mut features = Features::new();
+            for (name, value) in [
+                ("BINDLESS", bindless),
+                ("PREPASS_PIPELINE", prepass),
+                ("VERTEX_UVS_B", true),
+                ("VERTEX_COLORS", true),
+            ] {
+                features.set(name, value);
+            }
+            condcomp(&mut module, &features).unwrap();
+            let fragment = module
+                .global_declarations
+                .iter()
+                .find_map(|declaration| match &**declaration {
+                    GlobalDeclaration::Function(function)
+                        if function.ident.name().as_str() == "fragment" =>
+                    {
+                        Some(function)
+                    }
+                    _ => None,
+                })
+                .unwrap();
+            let detail = fragment
+                .body
+                .statements
+                .iter()
+                .find_map(|statement| match &**statement {
+                    Statement::If(statement)
+                        if statement
+                            .if_clause
+                            .expression
+                            .to_string()
+                            .contains("terra_detail.x > 0.5") =>
+                    {
+                        Some(&statement.if_clause.body)
+                    }
+                    _ => None,
+                })
+                .unwrap();
+            assert_eq!(detail.to_string().matches("block_profile(").count(), 1);
+            let (gate_index, gate) = detail
+                .statements
+                .iter()
+                .enumerate()
+                .find_map(|(index, statement)| match &**statement {
+                    Statement::If(statement)
+                        if statement
+                            .if_clause
+                            .body
+                            .to_string()
+                            .contains("block_profile(") =>
+                    {
+                        Some((index, statement))
+                    }
+                    _ => None,
+                })
+                .expect("costly profile must be inside a fade/output gate");
+            let condition = gate.if_clause.expression.to_string();
+            assert!(condition.contains("detail_fade > 0.0001"));
+            assert!(condition.contains("terra_detail.y > 0.0 || terra_detail.z > 0.0"));
+            let guarded = gate.if_clause.body.to_string();
+            for forbidden in ["dpdx(", "dpdy(", "texture", "return", "discard"] {
+                assert!(
+                    !guarded.contains(forbidden),
+                    "divergent profile gate contains {forbidden}"
+                );
+            }
+            assert!(gate.else_if_clauses.is_empty() && gate.else_clause.is_none());
+            let before = detail.statements[..gate_index]
+                .iter()
+                .map(ToString::to_string)
+                .collect::<String>();
+            let after = detail.statements[gate_index + 1..]
+                .iter()
+                .map(ToString::to_string)
+                .collect::<String>();
+            assert!(before.contains("dpdx(uv)") && before.contains("dpdy(uv)"));
+            assert!(
+                before.contains("vec3<f32>(0.0, 1.0, 1.0)"),
+                "far/disabled detail must have neutral height and tint"
+            );
+            assert!(after.contains("dpdx(height)") && after.contains("dpdy(height)"));
+            // Every function reachable from the divergent profile call is pure
+            // arithmetic: it cannot smuggle implicit sampling/derivatives into it.
+            for name in ["block_profile", "wet_noise", "wet_hash"] {
+                let body = module
+                    .global_declarations
+                    .iter()
+                    .find_map(|declaration| match &**declaration {
+                        GlobalDeclaration::Function(function)
+                            if function.ident.name().as_str() == name =>
+                        {
+                            Some(function.body.to_string())
+                        }
+                        _ => None,
+                    })
+                    .unwrap();
+                for forbidden in ["dpdx(", "dpdy(", "texture"] {
+                    assert!(
+                        !body.contains(forbidden),
+                        "{name} contains divergent {forbidden}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn authored_grass_palette_parameters(module: &wesl::syntax::TranslationUnit) -> ([f32; 3], f32) {
+    use wesl::syntax::{Expression, GlobalDeclaration, LiteralExpression, Statement};
+    let function = module
+        .global_declarations
+        .iter()
+        .find_map(|declaration| match &**declaration {
+            GlobalDeclaration::Function(function)
+                if function.ident.name().as_str() == "authored_grass_top_palette" =>
+            {
+                Some(function)
+            }
+            _ => None,
+        })
+        .unwrap();
+    // Inspect the AST, rather than its printer's spelling of 0.30 versus 0.3.
+    // A pure mix must preserve the source texel and contain no texture/lighting work.
+    assert_eq!(function.body.statements.len(), 1);
+    let Statement::Return(returned) = &*function.body.statements[0] else {
+        panic!("Palette must return its mix");
+    };
+    let Expression::FunctionCall(mix) = &**returned.expression.as_ref().unwrap() else {
+        panic!("Palette must mix source and target");
+    };
+    assert_eq!(mix.ty.ident.name().as_str(), "mix");
+    assert_eq!(mix.arguments.len(), 3);
+    let Expression::TypeOrIdentifier(source) = &*mix.arguments[0] else {
+        panic!("Palette must retain source texels");
+    };
+    assert_eq!(source.ident.name().as_str(), "color");
+    let Expression::FunctionCall(target) = &*mix.arguments[1] else {
+        panic!("Palette target must be a color");
+    };
+    assert_eq!(target.ty.ident.name().as_str(), "vec3");
+    assert_eq!(target.arguments.len(), 3);
+    let scalar = |expression: &wesl::syntax::ExpressionNode| match &**expression {
+        Expression::Literal(LiteralExpression::AbstractFloat(value)) => *value as f32,
+        Expression::Literal(LiteralExpression::F32(value)) => *value,
+        _ => panic!("Palette coefficients must be constant linear albedos"),
+    };
+    (
+        std::array::from_fn(|axis| scalar(&target.arguments[axis])),
+        scalar(&mix.arguments[2]),
+    )
+}
+
+#[test]
 fn authored_grass_top_palette_preserves_tints_normals_and_weather_order() {
     use wesl::{
         pass::{Features, condcomp},
@@ -294,8 +457,11 @@ fn authored_grass_top_palette_preserves_tints_normals_and_weather_order() {
                     .unwrap()
             };
             let palette = function("authored_grass_top_palette");
-            let compact: String = palette.chars().filter(|c| !c.is_whitespace()).collect();
-            assert!(compact.contains("returnmix(color,vec3<f32>(0.28,0.46,0.08),0.78)"));
+            let (target, weight) = authored_grass_palette_parameters(&module);
+            for (actual, expected) in target.into_iter().zip([0.17_f32, 0.30, 0.045]) {
+                assert!((actual - expected).abs() < 1e-6);
+            }
+            assert!((weight - 0.32).abs() < 1e-6);
             for forbidden in ["pbr", "texture", "noise", "emissive"] {
                 assert!(!palette.contains(forbidden));
             }
@@ -303,8 +469,11 @@ fn authored_grass_top_palette_preserves_tints_normals_and_weather_order() {
             assert_eq!(body.contains("input.color.rgb"), colors);
             assert!(body.contains("normalize(input.world_normal).y"));
             assert!(body.contains("round(input.world_position.y)"));
-            assert!(body.contains("green_texel && top_face"));
+            assert!(body.contains("green_texel && (top_face || side_face)"));
             assert!(body.contains("* vertex_tint"));
+            assert!(body.contains("calendar_turf = true"));
+            assert!(body.contains("calendar_turf = turf"));
+            assert!(body.contains("if calendar_turf"));
             let palette_call = body
                 .find("authored_grass_top_palette(source_color)")
                 .unwrap();
@@ -319,8 +488,13 @@ fn authored_grass_top_palette_preserves_tints_normals_and_weather_order() {
 
 #[test]
 fn authored_grass_top_palette_brightens_and_limits_albedo_variation() {
-    let palette = |color: [f32; 3]| color.map(|v| v * 0.22);
-    let target = [0.28_f32, 0.46, 0.08].map(|v| v * 0.78);
+    let module = include_str!("../../../assets/shaders/terra_wet_surface.wesl")
+        .parse::<wesl::syntax::TranslationUnit>()
+        .unwrap();
+    let (target_color, weight) = authored_grass_palette_parameters(&module);
+    let retained_weight = 1.0 - weight;
+    let palette = |color: [f32; 3]| color.map(|v| v * retained_weight);
+    let target = target_color.map(|v| v * weight);
     let apply = |color| {
         let retained = palette(color);
         std::array::from_fn::<_, 3, _>(|axis| retained[axis] + target[axis])
@@ -330,7 +504,7 @@ fn authored_grass_top_palette_brightens_and_limits_albedo_variation() {
     let high = [0.20, 0.38, 0.07];
     for color in [low, [0.12, 0.28, 0.04], high] {
         let output = apply(color);
-        assert!(luminance(output) > luminance(color));
+        assert!((luminance(output) - luminance(color)).abs() < 0.04);
         assert!(output[1] > output[0] * 1.12 && output[1] > output[2] * 1.12);
         for tint in [[1.0_f32; 3], [0.8, 1.3, 0.7], [1.3, 0.9, 0.75]] {
             let tinted: [f32; 3] = std::array::from_fn(|axis| color[axis] * tint[axis]);
@@ -343,6 +517,6 @@ fn authored_grass_top_palette_brightens_and_limits_albedo_variation() {
     }
     for axis in 0..3 {
         let variation = apply(high)[axis] - apply(low)[axis];
-        assert!((variation - (high[axis] - low[axis]) * 0.22).abs() < 1e-6);
+        assert!((variation - (high[axis] - low[axis]) * retained_weight).abs() < 1e-6);
     }
 }

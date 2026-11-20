@@ -1,0 +1,22 @@
+{
+  "id": "teramic::recover_asphalt_entry",
+  "name": "Recover Asphalt Lower Transition",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 431
+    },
+    "count": 5
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 434
+        },
+        "count": 16
+      }
+    ]
+  }
+}

@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use terra_core::creatures::{
     CreatureNeeds, CreaturePopulation, NeedGoal, NeedKind, soldiers::SoldierLoadout, villagers,
 };
+pub(super) mod patrol;
 
 #[derive(Default)]
 pub struct Residents {
@@ -128,6 +129,22 @@ impl Residents {
         search: bool,
         navigation: &mut navigation::Navigation,
     ) -> Option<[i64; 3]> {
+        self.step_as(resident, habitat, phase, dt, search, navigation, None)
+    }
+
+    /// Owned residents carry their actual actor rights; native residents remain
+    /// inside their settlement and may not enter another player's claims.
+    #[allow(clippy::too_many_arguments)]
+    pub fn step_as(
+        &self,
+        resident: &mut Creature,
+        habitat: &Habitat,
+        phase: f64,
+        dt: f32,
+        search: bool,
+        navigation: &mut navigation::Navigation,
+        actor: Option<terra_core::PlayerUuid>,
+    ) -> Option<[i64; 3]> {
         if resident.health <= 0.0
             || !dt.is_finite()
             || !(0.001..=0.25).contains(&dt)
@@ -142,6 +159,36 @@ impl Residents {
         resident.timer = (resident.timer - dt).max(0.0);
         resident.needs.food = (resident.needs.food - dt * 0.003).max(0.0);
         resident.needs.water = (resident.needs.water - dt * 0.004).max(0.0);
+        if let Some(actor) = actor
+            && resident.kind == Kind::Villager
+        {
+            let military = SoldierLoadout::of(resident);
+            let sleep = military.map_or_else(
+                || villagers::sleeping(resident.id, phase),
+                |loadout| loadout.sleeping(resident.id, phase),
+            );
+            let home_needed = self.sites.get(&resident.id).is_some_and(|site| {
+                // Leave a generated home through its real doorway before taking
+                // a claim patrol goal. The home schedule also owns the authorized
+                // opening request while the resident is still inside.
+                inside_home(site, resident.position)
+                    || (assigned_bed(site, habitat)
+                        && (sleep
+                            || resident.behavior == Behavior::Sleep
+                            || resident.needs.food < resident.kind.food() * 0.45
+                            || resident.needs.water < resident.kind.water() * 0.45))
+            });
+            if !home_needed {
+                if military.is_none() && sleep {
+                    // A homeless civilian still rests at night; owned guards
+                    // retain their existing night-patrol behavior.
+                    resident.needs.goal = None;
+                    resident.timer = 0.5;
+                    navigation.invalidate(resident.id);
+                }
+                return patrol::step(resident, habitat, dt, search, navigation, actor);
+            }
+        }
         let Some(site) = self.sites.get(&resident.id) else {
             resident.velocity[0] = 0.0;
             resident.velocity[2] = 0.0;
@@ -149,6 +196,13 @@ impl Residents {
             support::settle(resident, habitat, dt);
             return None;
         };
+        let access = |point| resident_access(habitat, site, actor, point);
+        if !access(resident.position) {
+            navigation.invalidate(resident.id);
+            resident.velocity = [0.0; 3];
+            resident.behavior = Behavior::Rest;
+            return None;
+        }
         let military = SoldierLoadout::of(resident);
         let sleep = military.map_or_else(
             || villagers::sleeping(resident.id, phase),
@@ -157,7 +211,8 @@ impl Residents {
         let bed_exists = assigned_bed(site, habitat);
         if resident.behavior == Behavior::Sleep && (!sleep || !bed_exists) {
             // Leave the bed only onto a verified adjacent floor, not by snapping through walls.
-            resident.position = exit_bed(site, habitat, resident.position)?;
+            resident.position =
+                exit_bed(site, habitat, resident.position).filter(|point| access(*point))?;
             resident.behavior = Behavior::Rest;
             resident.needs.goal = None;
             resident.timer = 1.0;
@@ -174,7 +229,8 @@ impl Residents {
         if distance(resident.position, site.door.map(|v| v as f64 + 0.5)) < 2.5_f64.powi(2)
             && habitat
                 .block(site.door)
-                .is_some_and(crate::objects::is_door)
+                .is_some_and(crate::npc_work::worker_openable_door)
+            && resident_door_allowed(habitat, site, actor)
             && !crate::objects::is_open(
                 habitat.block(site.door).unwrap_or(0),
                 habitat.journal.object_state(site.door),
@@ -273,6 +329,7 @@ impl Residents {
             } else {
                 if military.is_some()
                     && let Some(position) = military_patrol_goal(site, resident, habitat)
+                        .filter(|position| access(position.map(|v| v as f64)))
                 {
                     resident.needs.goal = Some(NeedGoal {
                         kind: NeedKind::Food,
@@ -281,6 +338,7 @@ impl Residents {
                 }
                 if military.is_none()
                     && let Some(position) = profession_goal(site, resident, habitat)
+                        .filter(|position| access(position.map(|v| v as f64)))
                 {
                     resident.needs.goal = Some(NeedGoal {
                         kind: NeedKind::Food,
@@ -312,7 +370,10 @@ impl Residents {
                     {
                         continue;
                     }
-                    if let Some(p) = habitat.ground(p, Kind::Villager) {
+                    if let Some(p) = habitat
+                        .ground(p, Kind::Villager)
+                        .filter(|point| access(*point))
+                    {
                         resident.needs.goal = Some(NeedGoal {
                             kind: NeedKind::Food,
                             position: p.map(|v| v.floor() as i64),
@@ -363,14 +424,19 @@ impl Residents {
                     inside
                 }
             } else {
-                goal.position.map(|v| v as f64 + 0.5)
+                let point = [
+                    goal.position[0] as f64 + 0.5,
+                    goal.position[1] as f64,
+                    goal.position[2] as f64 + 0.5,
+                ];
+                habitat.ground(point, Kind::Villager).unwrap_or(point)
             };
             let escape = navigation.escape(resident);
             let target = escape.unwrap_or(target);
             if escape.is_none()
                 && !going_home
                 && !inside_home(site, resident.position)
-                && (target[0] - resident.position[0]).hypot(target[2] - resident.position[2]) < 0.5
+                && navigation::ground_arrived(resident, habitat, target, 0.5)
             {
                 resident.needs.goal = None;
                 resident.timer = 1.5 + (resident.id % 35) as f32 * 0.1;
@@ -378,7 +444,7 @@ impl Residents {
                 resident.velocity[0] = 0.0;
                 resident.velocity[2] = 0.0;
             } else {
-                walk(
+                walk_with_access(
                     resident,
                     habitat,
                     target,
@@ -386,6 +452,7 @@ impl Residents {
                     search,
                     escape.is_some(),
                     navigation,
+                    access,
                 );
                 if navigation.stalled(resident.id, resident.age) {
                     // An unreachable destination must not keep winning the
@@ -418,6 +485,74 @@ impl Residents {
         support::settle(resident, habitat, dt);
         door
     }
+}
+
+fn resident_access(
+    h: &Habitat,
+    site: &ResidentSite,
+    actor: Option<terra_core::PlayerUuid>,
+    point: [f64; 3],
+) -> bool {
+    let registry = &h.journal.gameplay().kingdoms;
+    let home = registry
+        .region_at(site.village_center)
+        .map(|record| registry.realm_id(record.id));
+    [-0.3, 0.3].into_iter().all(|dx| {
+        [-0.3, 0.3].into_iter().all(|dz| {
+            let cell = [
+                (point[0] + dx).floor() as i64,
+                point[1].floor() as i64,
+                (point[2] + dz).floor() as i64,
+            ];
+            if let Some(actor) = actor {
+                crate::kingdom_access::can_use(
+                    registry,
+                    h.chunks,
+                    actor,
+                    terra_core::kingdom::KingdomPermission::NpcWork,
+                    cell,
+                )
+            } else {
+                registry
+                    .region_at(cell)
+                    .is_none_or(|record| Some(registry.realm_id(record.id)) == home)
+            }
+        })
+    })
+}
+
+fn resident_door_allowed(
+    h: &Habitat,
+    site: &ResidentSite,
+    actor: Option<terra_core::PlayerUuid>,
+) -> bool {
+    let Some(material) = h
+        .block(site.door)
+        .filter(|material| crate::npc_work::worker_openable_door(*material))
+    else {
+        return false;
+    };
+    let Some(state) = h.journal.object_state(site.door) else {
+        return false;
+    };
+    let Some(group) = crate::objects::doors::group(site.door, material, state, |cell| {
+        Some((h.block(cell)?, h.journal.object_state(cell)?))
+    }) else {
+        return false;
+    };
+    group.cells().all(|cell| {
+        h.block(cell) == Some(material)
+            && resident_access(h, site, actor, cell.map(|v| v as f64 + 0.5))
+            && actor.is_none_or(|actor| {
+                crate::kingdom_access::can_use(
+                    &h.journal.gameplay().kingdoms,
+                    h.chunks,
+                    actor,
+                    terra_core::kingdom::KingdomPermission::Openings,
+                    cell,
+                )
+            })
+    })
 }
 
 /// Reuses normal loaded-voxel walking to visit nearby workplaces without editing their contents.
@@ -675,7 +810,8 @@ fn local_exit(a: &Creature, h: &Habitat, dt: f32) -> Option<[f64; 3]> {
     })
 }
 
-pub(super) fn walk(
+#[allow(clippy::too_many_arguments)]
+pub(super) fn walk_with_access(
     a: &mut Creature,
     h: &Habitat,
     target: [f64; 3],
@@ -683,7 +819,15 @@ pub(super) fn walk(
     search: bool,
     strafe: bool,
     nav: &mut navigation::Navigation,
+    allowed: impl Fn([f64; 3]) -> bool,
 ) {
+    if navigation::ground_arrived(a, h, target, 0.05) {
+        a.velocity[0] = 0.0;
+        a.velocity[2] = 0.0;
+        a.behavior = Behavior::Rest;
+        nav.ground_unblocked(a.id);
+        return;
+    }
     nav.intend(
         a,
         terra_core::creatures::intentions::IntentReason::Explore,
@@ -693,7 +837,10 @@ pub(super) fn walk(
     let movement = |point: [f64; 3]| {
         let dx = point[0] - before[0];
         let dz = point[2] - before[2];
-        let length = dx.hypot(dz).max(0.001);
+        let length = dx.hypot(dz);
+        if length < 0.00001 {
+            return None;
+        }
         let amount = (a.kind.speed() * f64::from(dt)).min(length);
         let yaw = if strafe {
             f64::from(a.yaw)
@@ -710,6 +857,17 @@ pub(super) fn walk(
             ],
             yaw,
         )
+        .filter(|p| (p[0] - before[0]).hypot(p[2] - before[2]) > 0.00001)
+        .filter(|p| {
+            let steps = ((p[0] - before[0]).hypot(p[2] - before[2]) / 0.18)
+                .ceil()
+                .clamp(1.0, 64.0) as usize;
+            (0..=steps).all(|step| {
+                allowed(std::array::from_fn(|axis| {
+                    before[axis] + (p[axis] - before[axis]) * step as f64 / steps as f64
+                }))
+            })
+        })
         .map(|p| (p, yaw))
     };
     let detouring = nav.following_ground_route(a.id);
@@ -723,12 +881,15 @@ pub(super) fn walk(
             a.kind,
             (before[0] - target[0]).atan2(before[2] - target[2]),
         )
-        .is_some();
+        .is_some_and(|point| (point[1] - target[1]).abs() <= 0.125);
     let direct = (!detouring || precise_finish)
         .then(|| movement(target))
         .flatten();
     let next = direct
-        .or_else(|| navigation::ground_waypoint(a, h, target, search, Some(nav)).and_then(movement))
+        .or_else(|| {
+            navigation::ground_waypoint_with_access(a, h, target, search, Some(nav), &allowed)
+                .and_then(movement)
+        })
         .filter(|(p, _)| (p[0] - before[0]).hypot(p[2] - before[2]) > 0.00001);
     if let Some((p, yaw)) = next {
         let falling = a.velocity[1].min(0.0);
@@ -839,6 +1000,198 @@ mod tests {
                 .unwrap();
         }
         (terrain, chunks, journal, residents, a)
+    }
+
+    #[test]
+    fn f49_height_changes_sweep_the_old_column_before_advancing_past_a_ceiling() {
+        let (terrain, mut chunks, journal, _, _) = fixture();
+        let data = &mut chunks.loaded.get_mut(&SectionPos::default()).unwrap().data;
+        data.set_block([5, 3, 4], 3).unwrap();
+        data.set_block([4, 5, 4], 3).unwrap();
+        let start = [4.94, 3.0, 4.5];
+        let target = [5.3, 3.0, 4.5];
+        let size = [0.1, 1.75, 0.1];
+        let h = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        assert!(h.clear(start, size, false));
+        assert!(h.clear([target[0], 4.0, target[2]], size, false));
+        assert!(
+            h.walk_step_sized(start, target, size, 0.0).is_none(),
+            "two clear endpoints cannot step vertically through the old ceiling"
+        );
+        chunks
+            .loaded
+            .get_mut(&SectionPos::default())
+            .unwrap()
+            .data
+            .set_block([4, 5, 4], 0)
+            .unwrap();
+        let h = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        assert_eq!(h.walk_step_sized(start, target, size, 0.0).unwrap()[1], 4.0);
+    }
+
+    #[test]
+    fn f49_real_worker_walks_a_stair_detour_to_the_same_xz_on_an_upper_floor() {
+        let (terrain, mut chunks, mut journal, _, mut a) = fixture();
+        for cell in [[8, 3, 8], [8, 3, 9]] {
+            journal.record(cell, 0).unwrap();
+            journal.set_object_state(cell, None).unwrap();
+            chunks
+                .loaded
+                .get_mut(&SectionPos::default())
+                .unwrap()
+                .data
+                .set_block(cell.map(|v| v as usize), 0)
+                .unwrap();
+        }
+        let data = &mut chunks.loaded.get_mut(&SectionPos::default()).unwrap().data;
+        for x in 6..=10 {
+            for z in 6..=10 {
+                data.set_block([x, 5, z], 3).unwrap();
+            }
+        }
+        for (x, height) in [(4, 1), (5, 2), (6, 3)] {
+            for y in 3..=height + 2 {
+                data.set_block([x, y, 5], 3).unwrap();
+            }
+        }
+        a.position = [8.5, 3.0, 8.5];
+        let target = [8.5, 6.0, 8.5];
+        let h = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        let mut navigation = navigation::Navigation::default();
+        let mut detoured = false;
+        for _ in 0..1400 {
+            if navigation::ground_arrived(&a, &h, target, 0.2) {
+                break;
+            }
+            let previous = a.position;
+            crate::creatures::work_step(&mut a, &h, target, 0.05, &mut navigation);
+            assert!((previous[0] - a.position[0]).hypot(previous[2] - a.position[2]) <= 0.16);
+            assert!(h.clear(a.position, a.size(), false));
+            detoured |= a.position[0] < 6.0;
+        }
+        assert!(detoured, "must physically reach the side stairs");
+        assert!(
+            navigation::ground_arrived(&a, &h, target, 0.2),
+            "walker at {:?}, route {:?}",
+            a.position,
+            navigation.inspection(&a)
+        );
+        assert_eq!(a.position[1], 6.0);
+    }
+
+    #[test]
+    fn f49_owned_resident_rechecks_claim_rights_before_moving_or_requesting_a_door() {
+        use terra_core::{PlayerUuid, kingdom::KingdomRole};
+        let (terrain, mut chunks, mut journal, residents, mut a) = fixture();
+        for (cell, peer, secondary) in [([8, 3, 5], [8, 4, 5], false), ([8, 4, 5], [8, 3, 5], true)]
+        {
+            chunks
+                .loaded
+                .get_mut(&SectionPos::default())
+                .unwrap()
+                .data
+                .set_block(cell.map(|v| v as usize), 65)
+                .unwrap();
+            journal.record(cell, 65).unwrap();
+            journal
+                .set_object_state(
+                    cell,
+                    Some(crate::edits::BlockObjectState {
+                        peer: Some(peer),
+                        secondary,
+                        ..Default::default()
+                    }),
+                )
+                .unwrap();
+        }
+        let founder = PlayerUuid::from_u128(2);
+        let actor = PlayerUuid::from_u128(1);
+        let realm = journal
+            .gameplay_mut()
+            .kingdoms
+            .found(founder, [8, 3, 8], "Private")
+            .unwrap();
+        a.position = [8.5, 3.0, 6.5];
+        let original = a.position;
+        let mut navigation = navigation::Navigation::default();
+        assert!(
+            residents
+                .step_as(
+                    &mut a,
+                    &Habitat {
+                        terrain: &terrain,
+                        chunks: &chunks,
+                        journal: &journal
+                    },
+                    0.5,
+                    0.1,
+                    true,
+                    &mut navigation,
+                    Some(actor)
+                )
+                .is_none()
+        );
+        assert_eq!(a.position, original);
+        assert_eq!(a.behavior, Behavior::Rest);
+        journal.gameplay_mut().kingdoms.join(actor, realm).unwrap();
+        journal
+            .gameplay_mut()
+            .kingdoms
+            .set_role(founder, realm, actor, KingdomRole::Worker)
+            .unwrap();
+        assert_eq!(
+            residents.step_as(
+                &mut a,
+                &Habitat {
+                    terrain: &terrain,
+                    chunks: &chunks,
+                    journal: &journal
+                },
+                0.5,
+                0.1,
+                true,
+                &mut navigation,
+                Some(actor)
+            ),
+            Some([8, 3, 5])
+        );
+        let authorized_position = a.position;
+        journal
+            .gameplay_mut()
+            .kingdoms
+            .set_role(founder, realm, actor, KingdomRole::Visitor)
+            .unwrap();
+        assert!(
+            residents
+                .step_as(
+                    &mut a,
+                    &Habitat {
+                        terrain: &terrain,
+                        chunks: &chunks,
+                        journal: &journal,
+                    },
+                    0.5,
+                    0.1,
+                    true,
+                    &mut navigation,
+                    Some(actor),
+                )
+                .is_none()
+        );
+        assert_eq!(a.position, authorized_position);
+        assert_eq!(a.behavior, Behavior::Rest);
     }
 
     #[test]
@@ -1113,15 +1466,18 @@ mod tests {
         let mut nav = navigation::Navigation::default();
         for _ in 0..150 {
             residents.step(&mut a, &h, 0.5, 0.1, true, &mut nav);
+            let yaw = f64::from(a.yaw);
+            let half_x = (a.size()[0] * yaw.cos().abs() + a.size()[2] * yaw.sin().abs()) * 0.5;
+            assert!(
+                a.position[0] + half_x <= 5.000001,
+                "rotated body crossed wall: {:?}, yaw={yaw}",
+                a.position
+            );
+            assert!(h.clear_rotated(a.position, a.size(), false, yaw));
         }
-        assert!(
-            a.position[0] < 4.73,
-            "does not cross a wall: {:?}",
-            a.position
-        );
         assert_eq!(a.position[1], 3.0);
         assert!(a.valid());
-        assert!(h.clear(a.position, a.size(), false));
+        assert!(h.clear_rotated(a.position, a.size(), false, f64::from(a.yaw)));
     }
 
     #[test]

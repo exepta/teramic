@@ -1,0 +1,28 @@
+{
+  "id": "teramic::orange_clay",
+  "name": "Orange Clay",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 336
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "dye": "orange"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

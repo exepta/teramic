@@ -10,6 +10,7 @@ fn brooks_use_existing_drains_and_flow_downhill_across_negative_section_edges() 
         let config = WorldConfig {
             seed: WorldSeed(seed),
             rivers: false,
+            river_terrain_revision: 4, // Historical narrow-brook contract.
             landscape_revision: 2,
             ..Default::default()
         };

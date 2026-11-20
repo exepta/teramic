@@ -1,0 +1,222 @@
+[
+  {
+    "source": "Allgemein",
+    "de": "Allgemein",
+    "en": "General"
+  },
+  {
+    "source": "Gebäude",
+    "de": "Gebäude",
+    "en": "Buildings"
+  },
+  {
+    "source": "Armee",
+    "de": "Armee",
+    "en": "Army"
+  },
+  {
+    "source": "Wappen des Reichs",
+    "de": "Wappen des Reichs",
+    "en": "Realm heraldry"
+  },
+  {
+    "source": "Gründer",
+    "de": "Gründer",
+    "en": "Founder"
+  },
+  {
+    "source": "Siedlung und Rolle",
+    "de": "Siedlung und Rolle",
+    "en": "Settlement and role"
+  },
+  {
+    "source": "Name und Banner",
+    "de": "Name und Banner",
+    "en": "Name and banner"
+  },
+  {
+    "source": "Status des Reichs",
+    "de": "Status des Reichs",
+    "en": "Realm status"
+  },
+  {
+    "source": "Level des Reichs",
+    "de": "Level des Reichs",
+    "en": "Realm level"
+  },
+  {
+    "source": "Mitglieder verwalten",
+    "de": "Mitglieder verwalten",
+    "en": "Manage members"
+  },
+  {
+    "source": "Abbauen",
+    "de": "Abbauen",
+    "en": "Mine"
+  },
+  {
+    "source": "Inventare öffnen",
+    "de": "Inventare öffnen",
+    "en": "Open inventories"
+  },
+  {
+    "source": "NPC-Arbeit verwalten",
+    "de": "NPC-Arbeit verwalten",
+    "en": "Manage NPC work"
+  },
+  {
+    "source": "Rolle zuweisen",
+    "de": "Rolle zuweisen",
+    "en": "Assign role"
+  },
+  {
+    "source": "Deine Berechtigungen",
+    "de": "Deine Berechtigungen",
+    "en": "Your permissions"
+  },
+  {
+    "source": "Berechtigungen folgen der zugewiesenen Rolle.",
+    "de": "Berechtigungen folgen der zugewiesenen Rolle.",
+    "en": "Permissions follow the assigned role."
+  },
+  {
+    "source": "Königreich wählen",
+    "de": "Königreich wählen",
+    "en": "Choose a realm"
+  },
+  {
+    "source": "Aktueller Beziehungsstatus",
+    "de": "Aktueller Beziehungsstatus",
+    "en": "Current relationship"
+  },
+  {
+    "source": "Beziehung ändern",
+    "de": "Beziehung ändern",
+    "en": "Change relationship"
+  },
+  {
+    "source": "Beziehungen werden vom Gründer oder Offizier verwaltet.",
+    "de": "Beziehungen werden vom Gründer oder Offizier verwaltet.",
+    "en": "Relations are managed by the Founder or an Officer."
+  },
+  {
+    "source": "Die Haltung wird erst nach der Serverbestätigung übernommen.",
+    "de": "Die Haltung wird erst nach der Serverbestätigung übernommen.",
+    "en": "Your stance changes after confirmation."
+  },
+  {
+    "source": "Aufträge, Beruf und Inventar einer Arbeitskraft verwalten.",
+    "de": "Aufträge, Beruf und Inventar einer Arbeitskraft verwalten.",
+    "en": "Manage a worker’s orders, profession and inventory."
+  },
+  {
+    "source": "Nach Beruf",
+    "de": "Nach Beruf",
+    "en": "By profession"
+  },
+  {
+    "source": "Geladene eigene Soldaten und ihr aktueller Zustand.",
+    "de": "Geladene eigene Soldaten und ihr aktueller Zustand.",
+    "en": "Your loaded soldiers and their current condition."
+  },
+  {
+    "source": "Armeeübersicht",
+    "de": "Armeeübersicht",
+    "en": "Army overview"
+  },
+  {
+    "source": "Aktuelle Einheiten",
+    "de": "Aktuelle Einheiten",
+    "en": "Current units"
+  },
+  {
+    "source": "Eigene Soldaten in der geladenen Umgebung.",
+    "de": "Eigene Soldaten in der geladenen Umgebung.",
+    "en": "Your soldiers in the loaded surroundings."
+  },
+  {
+    "source": "Keine eigenen Soldaten geladen.",
+    "de": "Keine eigenen Soldaten geladen.",
+    "en": "No owned soldiers loaded."
+  },
+  {
+    "source": "Lebenspunkte",
+    "de": "Lebenspunkte",
+    "en": "Health"
+  },
+  {
+    "source": "Patrouillen und Verteidigung",
+    "de": "Patrouillen und Verteidigung",
+    "en": "Patrols and defense"
+  },
+  {
+    "source": "Soldaten ohne Befehl patrouillieren automatisch in geladenen Baugebieten des eigenen Reichs.",
+    "de": "Soldaten ohne Befehl patrouillieren automatisch in geladenen Baugebieten des eigenen Reichs.",
+    "en": "Soldiers without orders automatically patrol loaded building claims in their own realm."
+  },
+  {
+    "source": "Angegriffene Bewohner verteidigen sich. Schlafschichten und vorhandene Befehle haben Vorrang.",
+    "de": "Angegriffene Bewohner verteidigen sich. Schlafschichten und vorhandene Befehle haben Vorrang.",
+    "en": "Residents defend themselves when attacked. Sleep shifts and existing orders take priority."
+  },
+  {
+    "source": "Dörfer",
+    "de": "Dörfer",
+    "en": "Villages"
+  },
+  {
+    "source": "Städte",
+    "de": "Städte",
+    "en": "Cities"
+  },
+  {
+    "source": "Verfügbare Arbeitskräfte",
+    "de": "Verfügbare Arbeitskräfte",
+    "en": "Available workers"
+  },
+  {
+    "source": "Mit Auftrag",
+    "de": "Mit Auftrag",
+    "en": "Assigned"
+  },
+  {
+    "source": "Schwertkämpfer",
+    "de": "Schwertkämpfer",
+    "en": "Swordsmen"
+  },
+  {
+    "source": "Lanzenträger",
+    "de": "Lanzenträger",
+    "en": "Spearmen"
+  },
+  {
+    "source": "Bogenschützen",
+    "de": "Bogenschützen",
+    "en": "Archers"
+  },
+  {
+    "source": "Im Baugebiet unterwegs",
+    "de": "Im Baugebiet unterwegs",
+    "en": "Moving in building claims"
+  },
+  {
+    "source": "Im Kampf",
+    "de": "Im Kampf",
+    "en": "In combat"
+  },
+  {
+    "source": "Bereit / Pause",
+    "de": "Bereit / Pause",
+    "en": "Ready / resting"
+  },
+  {
+    "source": "Arbeitskräfte können im eigenen Reich verwaltet werden.",
+    "de": "Arbeitskräfte können im eigenen Reich verwaltet werden.",
+    "en": "Workers can be managed in your own realm."
+  },
+  {
+    "source": "Die Armeeübersicht ist im eigenen Reich verfügbar.",
+    "de": "Die Armeeübersicht ist im eigenen Reich verfügbar.",
+    "en": "The army overview is available in your own realm."
+  }
+]

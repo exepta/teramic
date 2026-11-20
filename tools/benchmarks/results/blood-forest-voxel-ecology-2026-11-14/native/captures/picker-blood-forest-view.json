@@ -1,0 +1,40 @@
+{
+  "captures": {
+    "0": {
+      "ambient_brightness": 757.394287109375,
+      "ambient_color_linear": [
+        0.7548643946647644,
+        0.8174151182174683,
+        0.9736469984054565,
+        1.0
+      ],
+      "camera": [
+        -615.5,
+        68.08000183105469,
+        640.5
+      ],
+      "camera_in_loaded_air": true,
+      "cave_blend": 0.0,
+      "exposure_ev100": 13.699999809265137,
+      "fog_end_m": 119.04000091552734,
+      "fog_start_m": 83.19999694824219,
+      "sightlines": [
+        {
+          "clear_loaded_voxels": true,
+          "ndc": [
+            0.0,
+            0.0,
+            0.002723678248003125
+          ],
+          "target": [
+            -647.5,
+            50.08000183105469,
+            640.5
+          ],
+          "water": null
+        }
+      ]
+    }
+  },
+  "fixture_edits": 0
+}

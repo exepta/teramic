@@ -1,0 +1,89 @@
+[
+  {
+    "name": "fmt",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 8.04
+  },
+  {
+    "name": "check",
+    "command": [
+      "cargo",
+      "check",
+      "--workspace",
+      "--all-targets"
+    ],
+    "exit_code": 0,
+    "seconds": 22.16
+  },
+  {
+    "name": "clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--workspace",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 30.97
+  },
+  {
+    "name": "leaf-tests",
+    "command": [
+      "cargo",
+      "test",
+      "--workspace",
+      "--lib",
+      "meshing::tree_details"
+    ],
+    "exit_code": 0,
+    "seconds": 159.61
+  },
+  {
+    "name": "model-tests",
+    "command": [
+      "cargo",
+      "test",
+      "--workspace",
+      "--lib",
+      "creatures::model"
+    ],
+    "exit_code": 0,
+    "seconds": 1.72
+  },
+  {
+    "name": "animation-tests",
+    "command": [
+      "cargo",
+      "test",
+      "--workspace",
+      "--lib",
+      "creatures::sandworm"
+    ],
+    "exit_code": 0,
+    "seconds": 0.45
+  },
+  {
+    "name": "build",
+    "command": [
+      "cargo",
+      "build",
+      "-p",
+      "terra-client",
+      "-p",
+      "terra-server",
+      "-p",
+      "terra-building-editor"
+    ],
+    "exit_code": 0,
+    "seconds": 220.19
+  }
+]

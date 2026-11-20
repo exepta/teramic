@@ -1,0 +1,5 @@
+seed = 42042
+spirit_blossom_revision = 2
+[time]
+start_hour = 10.0
+paused = true

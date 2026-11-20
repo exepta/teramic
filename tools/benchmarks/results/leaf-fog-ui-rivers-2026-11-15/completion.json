@@ -1,0 +1,18 @@
+{
+  "status": "passed_with_documented_network_timeout_retry",
+  "latest_builds": [
+    "terra-client",
+    "terra-server",
+    "terra-building-editor"
+  ],
+  "client_sha256": "eaced7338506d054eebb2f071b6da42718037d9e889c22d52b3b63359d61404c",
+  "native_runs": 5,
+  "native_captures": 31,
+  "foliage_textures": 31,
+  "world_files_unchanged": 34,
+  "workspace_suite": "final-test-summary.json",
+  "final_geometry_checks": "geometry-final-checks.json",
+  "native_proofs": "final-native-checks.json",
+  "script_syntax": "passed",
+  "git_diff_check": "passed"
+}

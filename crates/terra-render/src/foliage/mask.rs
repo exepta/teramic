@@ -1,7 +1,7 @@
 use bevy::{prelude::*, render::render_resource::TextureFormat};
 
-/// Derive cutouts from the existing canopy image on the texture worker. No
-/// second texture or per-leaf asset is needed; the RGB artwork is retained.
+/// Preserve authored foliage coverage. Synthetic random holes used to cut through
+/// painted leaves and expose coarse cavities; opacity now comes only from the asset.
 pub(crate) fn masked_canopy(mut image: Image) -> Result<Image, String> {
     if !matches!(
         image.texture_descriptor.format,
@@ -21,38 +21,10 @@ pub(crate) fn masked_canopy(mut image: Image) -> Result<Image, String> {
     if count == 0 || count.checked_mul(4) != Some(data.len()) {
         return Err("Canopy masking requires one complete base mip".into());
     }
-    for y in 0..height {
-        for x in 0..width {
-            let uv = Vec2::new(
-                (x as f32 + 0.5) / width as f32,
-                (y as f32 + 0.5) / height as f32,
-            );
-            if is_gap(uv) {
-                data[(x + y * width) * 4 + 3] = 0;
-            }
-        }
-    }
     let coverage = data.chunks_exact(4).filter(|p| p[3] >= 128).count() as f32 / count as f32;
     let mut image = crate::blocks::mipmaps::generate(image)?;
     preserve_coverage(&mut image, coverage);
     Ok(image)
-}
-
-fn is_gap(uv: Vec2) -> bool {
-    let tile = uv * 5.0;
-    let cell = tile.floor().as_uvec2();
-    let hash = (cell.x.wrapping_mul(0x9e37_79b9) ^ cell.y.wrapping_mul(0x85eb_ca6b))
-        .wrapping_mul(0xc2b2_ae35);
-    if hash % 10 < 6 {
-        return false;
-    }
-    let center = Vec2::new(
-        0.42 + ((hash >> 8) & 7) as f32 * 0.023,
-        0.42 + ((hash >> 16) & 7) as f32 * 0.023,
-    );
-    let delta = (tile - tile.floor() - center).abs();
-    let radius = 0.24 + ((hash >> 24) & 15) as f32 * 0.008;
-    delta.max_element() < radius && delta.x + delta.y < radius * 1.62
 }
 
 fn preserve_coverage(image: &mut Image, target: f32) {
@@ -102,10 +74,8 @@ mod tests {
         asset::RenderAssetUsages,
         render::render_resource::{Extent3d, TextureDimension},
     };
-
-    #[test]
-    fn canopy_keeps_rgb_and_reuses_a_coverage_preserving_mip_chain() {
-        let image = Image::new_fill(
+    fn canopy() -> Image {
+        Image::new_fill(
             Extent3d {
                 width: 128,
                 height: 128,
@@ -115,32 +85,115 @@ mod tests {
             &[71, 128, 49, 255],
             TextureFormat::Rgba8UnormSrgb,
             RenderAssetUsages::all(),
-        );
-        let result = masked_canopy(image).unwrap();
+        )
+    }
+    #[test]
+    fn opaque_leaf_art_stays_complete_at_every_mip() {
+        let result = masked_canopy(canopy()).unwrap();
         assert_eq!(result.texture_descriptor.mip_level_count, 8);
+        assert!(
+            result
+                .data
+                .unwrap()
+                .chunks_exact(4)
+                .all(|p| p == [71, 128, 49, 255])
+        );
+    }
+    #[test]
+    fn authored_cutouts_and_rgb_survive_without_new_holes() {
+        let mut source = canopy();
+        for (i, pixel) in source
+            .data
+            .as_mut()
+            .unwrap()
+            .chunks_exact_mut(4)
+            .enumerate()
+        {
+            if (i % 128) / 16 < 2 {
+                pixel[3] = 0;
+            }
+        }
+        let original = source.data.clone().unwrap();
+        let result = masked_canopy(source).unwrap();
         let data = result.data.unwrap();
-        let base = &data[..128 * 128 * 4];
-        assert!(base.chunks_exact(4).all(|p| p[..3] == [71, 128, 49]));
-        let coverage = |p: &[u8]| {
-            p.chunks_exact(4).filter(|p| p[3] >= 128).count() as f32 / (p.len() / 4) as f32
-        };
-        let target = coverage(base);
-        assert!((0.82..0.93).contains(&target), "coverage={target}");
-        let mut start = base.len();
+        assert_eq!(&data[..original.len()], original.as_slice());
+        let mut start = original.len();
         for size in [64, 32, 16] {
             let end = start + size * size * 4;
-            assert!((coverage(&data[start..end]) - target).abs() < 0.08);
+            let covered = data[start..end]
+                .chunks_exact(4)
+                .filter(|p| p[3] >= 128)
+                .count();
+            assert!((covered as f32 / (size * size) as f32 - 0.75).abs() < 0.08);
             start = end;
+        }
+    }
+    #[test]
+    fn shipped_leaf_silhouettes_keep_gaps_and_coverage_through_useful_mips() {
+        use bevy::image::{CompressedImageFormats, ImageSampler, ImageType};
+        let directory = terra_core::asset_directory().join("terra/blocks/textures/foliage");
+        for family in [
+            "oak",
+            "autumn",
+            "birch",
+            "apple",
+            "cherry_pink",
+            "cherry_white",
+            "spirit_pink",
+            "spirit_pearl",
+            "spirit_lavender",
+            "blood",
+        ] {
+            for side in ["side", "top"] {
+                let path = directory.join(format!("{family}_{side}.png"));
+                let source = Image::from_buffer(
+                    &std::fs::read(&path).unwrap(),
+                    ImageType::Extension("png"),
+                    CompressedImageFormats::empty(),
+                    true,
+                    ImageSampler::default(),
+                    RenderAssetUsages::MAIN_WORLD,
+                )
+                .unwrap();
+                let base = source.data.as_ref().unwrap();
+                let target = base.chunks_exact(4).filter(|p| p[3] >= 128).count() as f32
+                    / (512 * 512) as f32;
+                assert!(
+                    (0.65..=0.75).contains(&target),
+                    "{} {target}",
+                    path.display()
+                );
+                let original = base.clone();
+                let output = masked_canopy(source).unwrap();
+                let data = output.data.unwrap();
+                assert_eq!(&data[..original.len()], original.as_slice());
+                let mut start = original.len();
+                for size in [256, 128, 64, 32, 16] {
+                    let end = start + size * size * 4;
+                    let coverage = data[start..end]
+                        .chunks_exact(4)
+                        .filter(|p| p[3] >= 128)
+                        .count() as f32
+                        / (size * size) as f32;
+                    assert!(
+                        (coverage - target).abs() < 0.045,
+                        "{} {size}px: {coverage} vs {target}",
+                        path.display()
+                    );
+                    start = end;
+                }
+            }
         }
     }
 
     #[test]
-    fn malformed_canopy_is_rejected_and_cutouts_are_deterministic() {
-        let image = Image {
-            data: Some(vec![0; 3]),
-            ..default()
-        };
-        assert!(masked_canopy(image).is_err());
-        assert_eq!(is_gap(Vec2::new(0.32, 0.44)), is_gap(Vec2::new(0.32, 0.44)));
+    fn malformed_canopy_is_rejected() {
+        assert!(
+            masked_canopy(Image {
+                data: Some(vec![0; 3]),
+                ..default()
+            })
+            .is_err()
+        );
     }
 }

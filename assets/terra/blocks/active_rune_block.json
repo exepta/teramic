@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": 397,
+  "name": "Active Rune Block",
+  "description": "Carved runes glow with violet spirit energy.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "active_rune_block": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "emission": [
+        0.75,
+        0.13,
+        1.2
+      ]
+    }
+  },
+  "textures": {
+    "active_rune_block": "textures/active_rune_block.png"
+  },
+  "face_materials": [
+    "active_rune_block",
+    "active_rune_block",
+    "active_rune_block",
+    "active_rune_block",
+    "active_rune_block",
+    "active_rune_block"
+  ],
+  "light": {
+    "color": [
+      0.67,
+      0.31,
+      1
+    ],
+    "intensity": 350,
+    "range": 8,
+    "falloff": "soft_core",
+    "flicker": 0.025,
+    "cave_intensity": 0.65,
+    "shadows": false,
+    "offset": [
+      0.5,
+      0.5,
+      0.5
+    ]
+  }
+}

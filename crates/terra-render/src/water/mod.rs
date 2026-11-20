@@ -7,35 +7,40 @@ mod ink;
 pub use ink::InkExposure;
 pub(crate) mod mist;
 mod raymarch;
+#[cfg(test)]
 pub(crate) mod spray;
 mod storage;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
 mod upload;
 
 use bevy::prelude::*;
-use terra_world::streaming::StreamingSet;
-pub use upload::WaterStatus;
+/// Status of the unified reconstructed liquid renderer.
+#[derive(Resource, Default)]
+pub struct WaterStatus {
+    pub ready: bool,
+    pub initial_ready: bool,
+    pub visible_tiles: usize,
+    pub triangles: usize,
+    pub spray_particles: usize,
+    pub mist_volumes: usize,
+    #[cfg(test)]
+    pub(super) scanned_sections: usize,
+}
 
 pub(super) fn install(app: &mut App) {
     storage::install(app);
     contacts::install(app);
     raymarch::install(app);
+    // The body-aware uploader owns standing water exclusively. Preserve its
+    // depth, current, biome and reflection optics without reviving the previous
+    // upload/spray systems or deforming a reservoir with camera-local particles.
     app.add_plugins(MaterialPlugin::<material::WaterMaterial>::default())
-        .init_resource::<upload::WaterTiles>()
         .init_resource::<WaterStatus>()
         .init_resource::<UnderwaterState>()
         .init_resource::<InkExposure>()
-        .init_resource::<mist::MistAssets>()
         .add_systems(Startup, material::setup_water)
-        .add_systems(Startup, spray::setup)
-        .add_systems(Update, spray::update.after(upload::upload_water))
-        .add_systems(
-            Update,
-            mist::update
-                .after(upload::upload_water)
-                .after(crate::scene::caves::quality::ApplyCaveQuality),
-        )
         .add_systems(
             Update,
             material::update_water_settings
@@ -43,7 +48,6 @@ pub(super) fn install(app: &mut App) {
                 .after(environment::update)
                 .after(contacts::UpdateContacts),
         )
-        .add_systems(Update, upload::upload_water.after(StreamingSet::Receive))
         .add_systems(
             Update,
             environment::update

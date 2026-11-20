@@ -1,0 +1,24 @@
+{
+  "models": 279,
+  "changed_models": 22,
+  "beveled_components": 335,
+  "triangles_before": 309913,
+  "triangles_after": 320632,
+  "manifest": "tools/assets/model_polish/report.json",
+  "python_geometry_tests": 10,
+  "python_geometry_tests_status": "passed",
+  "additional_repair": "One pre-existing degenerate triangle removed from rail_switch_left; ornate chest lid collision completed.",
+  "changed_model_triangles_before": 26992,
+  "changed_model_triangles_after": 37712,
+  "models_includes_test_fixture": true,
+  "scope": {
+    "static_furniture_and_props_beveled": 22,
+    "spirit_props_geometrically_refined": 7,
+    "new_grave_assets": 76,
+    "rounded_runtime_creatures": "12 instead of 8 circumference samples for body parts at least 0.35 m across; smaller repeated details retain their original compact profile",
+    "preserved": "Existing player/resident/armor detail, exact machine contact surfaces, terrain seams and already detailed architectural forms"
+  },
+  "python_geometry_log": "model-tests-indexed-flowers.txt",
+  "comparison_scope": "Triangle before/after values describe only the subsequent 22-model bevel pass, after new cemetery assets and rebuilt Spirit flowers. They are not the pre-task native benchmark asset total.",
+  "flower_index_audit": "flower-index-audit.json"
+}

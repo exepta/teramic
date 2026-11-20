@@ -15,6 +15,8 @@ pub(crate) mod plumbing;
 mod rails;
 #[path = "custom_water_contacts.rs"]
 mod water_contacts;
+#[path = "custom_water_plants.rs"]
+mod water_plants;
 use std::{
     borrow::Cow,
     collections::{BTreeMap, HashMap, HashSet},
@@ -59,6 +61,9 @@ mod snow_tests;
 #[path = "custom_support_tests.rs"]
 mod support_tests;
 #[cfg(test)]
+#[path = "custom_tar_tests.rs"]
+mod tar_tests;
+#[cfg(test)]
 #[path = "custom_textile_tests.rs"]
 mod textile_tests;
 #[cfg(test)]
@@ -77,14 +82,37 @@ impl ConstructionProfiles {
         // with the same tread count and empty cells share one shape key.
         let key = ConstructionKey {
             material: model.material,
-            facing: model.state.facing,
+            facing: if model.material == terra_core::bile::FLUID {
+                model.state.liquid.map_or(model.state.facing, |s| {
+                    if s.age & terra_core::bile::FINE != 0 {
+                        64 + s.volume - 1
+                    } else {
+                        s.volume - 1
+                    }
+                })
+            } else if terra_core::roads::is_tar(model.material) {
+                model
+                    .state
+                    .liquid
+                    .map_or(64 + (model.state.facing & 7), |s| s.volume - 1)
+            } else {
+                model.state.facing
+            },
             neighbors: std::array::from_fn(|side| {
-                (terra_core::construction::is_stair(model.material)
+                ((terra_core::construction::is_stair(model.material)
                     && model.neighbors[side].is_some_and(terra_core::construction::is_stair))
-                .then_some((
-                    model.neighbor_facing[side],
-                    model.neighbors[side] == Some(terra_core::construction::BALLAST_STAIRS),
-                ))
+                    || model.material == terra_core::bile::FLUID
+                    || model.material == terra_core::roads::WET_TAR)
+                    .then_some((
+                        model.neighbor_facing[side],
+                        if model.material == terra_core::bile::FLUID {
+                            model.neighbors[side] == Some(terra_core::bile::FLUID)
+                        } else if model.material == terra_core::roads::WET_TAR {
+                            model.neighbors[side] == Some(terra_core::roads::WET_TAR)
+                        } else {
+                            model.neighbors[side] == Some(terra_core::construction::BALLAST_STAIRS)
+                        },
+                    ))
             }),
         };
         let full = self.0.len() == Self::LIMIT;
@@ -112,7 +140,104 @@ fn construction_profile(
         .blocks
         .get(&model.material)
         .ok_or("Missing construction template")?;
-    let mut profile: Vec<crate::blocks::PrimitiveTemplate> = if model.material == 98 {
+    let mut profile: Vec<crate::blocks::PrimitiveTemplate> = if model.material
+        == terra_core::bile::FLUID
+    {
+        crate::blocks::cube::box_model(
+            &[terra_core::block_shapes::ShapeBox {
+                minimum: [0.; 3],
+                maximum: [
+                    1.,
+                    f64::from(model.state.liquid.map_or_else(
+                        || terra_core::bile::height(model.state.facing + 1),
+                        |s| terra_core::bile::state_height(s.volume, s.age),
+                    )),
+                    1.,
+                ],
+                hinged: false,
+            }],
+            0.,
+            template.face_materials,
+        )
+    } else if terra_core::street::is_arc(model.material) {
+        crate::blocks::sidewalk::arc(model.material, model.state.facing, template.face_materials)
+    } else if terra_core::roads::is_tar(model.material) {
+        let soil = terra_core::block_shapes::ShapeBox {
+            minimum: [0.0; 3],
+            maximum: [1.0, 15.0 / 16.0, 1.0],
+            hinged: false,
+        };
+        let coating = terra_core::block_shapes::ShapeBox {
+            minimum: [0.0, 15.0 / 16.0, 0.0],
+            maximum: [
+                1.0,
+                f64::from(model.state.liquid.map_or_else(
+                    || terra_core::roads::tar_height(model.state.facing),
+                    |s| terra_core::roads::tar_fine_height(s.volume),
+                )),
+                1.0,
+            ],
+            hinged: false,
+        };
+        let front = (model.material == terra_core::roads::WET_TAR)
+            .then(|| {
+                let side = [0, 1, 4, 5]
+                    .into_iter()
+                    .filter(|&side| model.neighbors[side] == Some(terra_core::roads::WET_TAR))
+                    .max_by_key(|&side| model.neighbor_facing[side])?;
+                if model.neighbors[side ^ 1] != Some(terra_world::roads::PATH) {
+                    return None;
+                }
+                let volume = model.state.liquid.map_or_else(
+                    || terra_core::roads::tar_amount(model.state.facing) * 8,
+                    |s| s.volume,
+                );
+                terra_core::fluid_surface::Front::new(
+                    f32::from(volume) / 64.,
+                    f32::from(model.neighbor_facing[side]) / 64.,
+                    usize::from(side >= 4),
+                    side % 2 == 0,
+                )
+            })
+            .flatten();
+        // A leading film reveals the prepared soil outside its paid footprint.
+        // Once it joins a level film the coincident hidden soil top is removed.
+        let mut soil = crate::blocks::cube::box_model(&[soil], 0.0, template.face_materials);
+        if front.is_some() {
+            if let Some(path) = templates.blocks.get(&terra_world::roads::PATH) {
+                for face in &mut soil {
+                    if face.normals[0][1] > 0.5 {
+                        face.material = path.face_materials[3];
+                    }
+                }
+            }
+        } else {
+            soil.retain(|p| p.normals[0][1] < 0.5);
+        }
+        let mut film =
+            crate::blocks::cube::box_model(&[coating], 0.0, [template.face_materials[3]; 6]);
+        film.retain(|p| p.normals[0][1] > -0.5);
+        if let Some(front) = front {
+            let base = [0., terra_core::roads::PATH_HEIGHT, 0.];
+            let height = coating.maximum[1] as f32 - base[1];
+            for face in &mut film {
+                for point in &mut face.positions {
+                    *point = front.deform(*point, base, height);
+                    point[1] = base[1] + (point[1] - base[1]) / 16.;
+                }
+                for normal in &mut face.normals {
+                    if normal[1] > 0.5 {
+                        let mut n = front.normal();
+                        n[0] /= 16.;
+                        n[2] /= 16.;
+                        *normal = bevy::math::Vec3::from_array(n).normalize().to_array();
+                    }
+                }
+            }
+        }
+        soil.extend(film);
+        soil
+    } else if model.material == 98 {
         crate::blocks::cube::box_model(
             &[terra_core::construction::snow_bounds(model.state.facing)],
             template.bevel_width,
@@ -151,7 +276,41 @@ fn construction_profile(
         )
     };
     for primitive in &mut profile {
-        if templates.authored_terrain_material(primitive.material) {
+        if (terra_core::street::NORMAL..=terra_core::street::LOWERED).contains(&model.material)
+            && primitive.material == template.face_materials[3]
+        {
+            // Bounds are already rotated into the placed pose. Deck paint is
+            // authored with its road edge at local -Z, so map the projected
+            // world coordinates back into that same local frame.
+            for uv in &mut primitive.uvs {
+                let [u, v] = *uv;
+                *uv = match model.state.facing % 4 {
+                    0 => [u, v],
+                    1 => [1.0 - v, u],
+                    2 => [1.0 - u, 1.0 - v],
+                    _ => [v, 1.0 - u],
+                };
+            }
+            let (u, v) = match model.state.facing % 4 {
+                0 => (bevy::math::Vec3::X, bevy::math::Vec3::Z),
+                1 => (bevy::math::Vec3::NEG_Z, bevy::math::Vec3::X),
+                2 => (bevy::math::Vec3::NEG_X, bevy::math::Vec3::NEG_Z),
+                _ => (bevy::math::Vec3::Z, bevy::math::Vec3::NEG_X),
+            };
+            primitive.tangents = primitive
+                .normals
+                .iter()
+                .map(|&normal| {
+                    let normal = bevy::math::Vec3::from_array(normal);
+                    crate::blocks::tangent_frame(u, normal, normal.cross(u).dot(v))
+                })
+                .collect();
+        } else if primitive.tangents.is_empty()
+            && (templates.authored_terrain_material(primitive.material)
+                || templates
+                    .normal_mapped_materials
+                    .contains(&primitive.material))
+        {
             primitive.tangents = primitive
                 .normals
                 .iter()
@@ -163,6 +322,47 @@ fn construction_profile(
                     crate::blocks::projected_tangent(normal, axis * 2)
                 })
                 .collect();
+        }
+    }
+    if model.material == terra_core::bile::FLUID {
+        let volume = model
+            .state
+            .liquid
+            .map_or((model.state.facing + 1) * 8, |s| {
+                terra_core::bile::fine_volume(s.volume, s.age)
+            });
+        let strongest = [0, 1, 4, 5]
+            .into_iter()
+            .filter(|&side| model.neighbors[side] == Some(terra_core::bile::FLUID))
+            .max_by_key(|&side| model.neighbor_facing[side]);
+        if let Some(side) =
+            strongest.filter(|&side| model.neighbors[side ^ 1] != Some(terra_core::bile::FLUID))
+            && let Some(front) = terra_core::fluid_surface::Front::new(
+                f32::from(volume) / 64.,
+                f32::from(model.neighbor_facing[side]) / 64.,
+                usize::from(side >= 4),
+                side % 2 == 0,
+            )
+        {
+            let old_height = model.state.liquid.map_or_else(
+                || terra_core::bile::height(model.state.facing + 1),
+                |s| terra_core::bile::state_height(s.volume, s.age),
+            );
+            for primitive in &mut profile {
+                for point in &mut primitive.positions {
+                    *point = front.deform(*point, [0.; 3], old_height);
+                }
+                for normal in &mut primitive.normals {
+                    if normal[1] > 0.5 {
+                        *normal = front.normal();
+                    }
+                }
+                primitive.tangents = primitive
+                    .normals
+                    .iter()
+                    .map(|n| crate::blocks::projected_tangent(bevy::math::Vec3::from_array(*n), 3))
+                    .collect();
+            }
         }
     }
     Ok(profile)
@@ -181,6 +381,7 @@ pub(crate) struct ModelSnapshot {
     border_models: Vec<[i32; 3]>,
     border_glass: HashSet<[i32; 3]>,
     water_contacts: HashMap<[i32; 3], bool>,
+    water_plants: HashMap<[i32; 3], water_plants::Attachment>,
     chimney_infill: BTreeMap<[i32; 3], ChimneyInfill>,
     pipe_surround: BTreeMap<[i32; 3], pipe_surround::Surround>,
     funnel_supports: HashSet<[i32; 3]>,
@@ -400,6 +601,7 @@ fn standalone_geometry(
         border_models: Vec::new(),
         border_glass: HashSet::new(),
         water_contacts: HashMap::new(),
+        water_plants: HashMap::new(),
         chimney_infill: BTreeMap::new(),
         pipe_surround: BTreeMap::new(),
         funnel_supports: HashSet::new(),
@@ -467,6 +669,7 @@ pub(crate) fn isolate_model(
         border_models: Vec::new(),
         border_glass: HashSet::new(),
         water_contacts: HashMap::new(),
+        water_plants: HashMap::new(),
         chimney_infill: snapshot.chimney_infill.clone(),
         pipe_surround: snapshot.pipe_surround.clone(),
         funnel_supports: snapshot.funnel_supports.clone(),
@@ -568,7 +771,19 @@ pub(crate) fn capture(
                 neighbor_facing: std::array::from_fn(|side| {
                     let mut p = position;
                     p[side / 2] += if side % 2 == 0 { -1 } else { 1 };
-                    journal.object_state(p).unwrap_or_default().facing
+                    let neighbor = journal.object_state(p).unwrap_or_default();
+                    if material == terra_core::bile::FLUID {
+                        neighbor
+                            .liquid
+                            .map_or(0, |s| terra_core::bile::fine_volume(s.volume, s.age))
+                    } else if material == terra_core::roads::WET_TAR {
+                        neighbor.liquid.map_or_else(
+                            || terra_core::roads::tar_amount(neighbor.facing) * 8,
+                            |s| s.volume,
+                        )
+                    } else {
+                        neighbor.facing
+                    }
                 }),
                 neighbors: std::array::from_fn(|side| {
                     let mut p = position;
@@ -686,6 +901,7 @@ pub(crate) fn capture(
             border_models,
             border_glass,
             water_contacts,
+            water_plants: HashMap::new(),
             chimney_infill,
             pipe_surround,
             funnel_supports,
@@ -853,6 +1069,8 @@ pub(crate) fn compose(
         };
         let construction = terra_core::construction::is_slab(model.material)
             || terra_core::construction::is_stair(model.material)
+            || terra_core::roads::is_tar(model.material)
+            || model.material == terra_core::bile::FLUID
             || model.material == 98;
         let (template_id, rotation) =
             if construction || model.material == terra_core::flower_pot::MATERIAL {
@@ -1200,6 +1418,10 @@ pub(crate) fn compose(
                     .colors
                     .extend(std::iter::repeat_n(tint, primitive.positions.len()));
             }
+            let water_offset = snapshot
+                .water_plants
+                .get(&model.cell)
+                .map_or(0.0, |plant| plant.offset);
             batch
                 .positions
                 .extend(primitive.positions.iter().map(|point| {
@@ -1211,6 +1433,7 @@ pub(crate) fn compose(
                         return std::array::from_fn(|i| p[i] as f32 + model.cell[i] as f32);
                     }
                     let mut point = bevy::math::Vec3::from_array(*point);
+                    point.y += water_offset;
                     if wide_boiler {
                         point.x = (point.x - 0.5) * 3.0 + 0.5;
                         point.y *= 3.0;
@@ -1297,6 +1520,25 @@ pub(crate) fn compose(
                         .ok_or("Static model index overflow")?,
                 );
             }
+            let surface = if model.material == terra_core::bile::FLUID {
+                Some([
+                    model.state.liquid.map_or(1.0, |s| {
+                        f32::from(terra_core::bile::fine_volume(s.volume, s.age)) / 64.0
+                    }),
+                    -4.0,
+                ])
+            } else if model.material == terra_core::roads::WET_TAR
+                && primitive.material == template.face_materials[3]
+            {
+                // Dedicated tar material reads drying progress from UV1. The
+                // negative marker excludes rain, shore foam and snow payloads.
+                Some([
+                    f32::from(terra_core::roads::tar_stage(model.state.facing)) / 31.0,
+                    -3.0,
+                ])
+            } else {
+                surface
+            };
             if let Some(surface) = surface.filter(|_| batch.rooted_wind.is_empty()) {
                 batch.surface_water.resize(batch.positions.len(), [0.0; 2]);
                 for payload in &mut batch.surface_water[base as usize..] {
@@ -1659,6 +1901,7 @@ mod wood_tests {
                     border_models: Vec::new(),
                     border_glass: HashSet::new(),
                     water_contacts: HashMap::new(),
+                    water_plants: HashMap::new(),
                     chimney_infill: BTreeMap::new(),
                     pipe_surround: BTreeMap::new(),
                     funnel_supports: HashSet::new(),
@@ -1750,6 +1993,7 @@ mod wood_tests {
                     border_models: Vec::new(),
                     border_glass: HashSet::new(),
                     water_contacts: HashMap::new(),
+                    water_plants: HashMap::new(),
                     chimney_infill: BTreeMap::new(),
                     pipe_surround: BTreeMap::new(),
                     funnel_supports: HashSet::new(),
@@ -1909,6 +2153,7 @@ mod wood_tests {
                 border_models: Vec::new(),
                 border_glass: HashSet::new(),
                 water_contacts: HashMap::new(),
+                water_plants: HashMap::new(),
                 chimney_infill: BTreeMap::new(),
                 pipe_surround: BTreeMap::new(),
                 funnel_supports: HashSet::new(),
@@ -1988,6 +2233,7 @@ mod wood_tests {
             border_models: Vec::new(),
             border_glass: HashSet::new(),
             water_contacts: HashMap::new(),
+            water_plants: HashMap::new(),
             chimney_infill: BTreeMap::new(),
             pipe_surround: BTreeMap::new(),
             funnel_supports: HashSet::new(),
@@ -2389,6 +2635,7 @@ mod tests {
                 border_models: Vec::new(),
                 border_glass: HashSet::new(),
                 water_contacts: HashMap::new(),
+                water_plants: HashMap::new(),
                 chimney_infill: BTreeMap::new(),
                 pipe_surround: BTreeMap::new(),
                 funnel_supports: HashSet::new(),
@@ -2486,6 +2733,7 @@ mod tests {
                 border_models: Vec::new(),
                 border_glass: HashSet::new(),
                 water_contacts: HashMap::new(),
+                water_plants: HashMap::new(),
                 chimney_infill: BTreeMap::new(),
                 pipe_surround: BTreeMap::new(),
                 funnel_supports: HashSet::new(),
@@ -2686,6 +2934,7 @@ mod tests {
             border_models: vec![[6, 6, 6]],
             border_glass: HashSet::new(),
             water_contacts: HashMap::new(),
+            water_plants: HashMap::new(),
             chimney_infill: BTreeMap::new(),
             pipe_surround: BTreeMap::new(),
             funnel_supports: HashSet::new(),
@@ -2751,6 +3000,7 @@ mod tests {
             border_models: Vec::new(),
             border_glass: [[16, 8, 8]].into(),
             water_contacts: HashMap::new(),
+            water_plants: HashMap::new(),
             chimney_infill: BTreeMap::new(),
             pipe_surround: BTreeMap::new(),
             funnel_supports: HashSet::new(),

@@ -1,0 +1,47 @@
+[
+  {
+    "source": "Gespeicherte Gebiete",
+    "de": "Gespeicherte Gebiete",
+    "en": "Saved areas"
+  },
+  {
+    "source": "Gebiete anzeigen",
+    "de": "Gebiete anzeigen",
+    "en": "Show areas"
+  },
+  {
+    "source": "Gebiete ausblenden",
+    "de": "Gebiete ausblenden",
+    "en": "Hide areas"
+  },
+  {
+    "source": "Keine gespeicherten Gebiete verfügbar",
+    "de": "Keine gespeicherten Gebiete verfügbar",
+    "en": "No saved areas available"
+  },
+  {
+    "source": "Arbeitsgebiet",
+    "de": "Arbeitsgebiet",
+    "en": "Work area"
+  },
+  {
+    "source": "Lager",
+    "de": "Lager",
+    "en": "Storage"
+  },
+  {
+    "source": "Wohngebiet",
+    "de": "Wohngebiet",
+    "en": "Residential area"
+  },
+  {
+    "source": "Baupositionen",
+    "de": "Baupositionen",
+    "en": "Building anchors"
+  },
+  {
+    "source": "PvP is controlled by pvp in server.toml; omit it to use the world gamerule",
+    "de": "PvP wird durch pvp in server.toml festgelegt. Entferne den Eintrag, um die PvP-Weltregel zu verwenden.",
+    "en": "PvP is controlled by pvp in server.toml; omit it to use the world gamerule"
+  }
+]

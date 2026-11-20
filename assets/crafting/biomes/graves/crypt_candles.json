@@ -1,0 +1,28 @@
+{
+  "id": "teramic::crypt_candles",
+  "name": "Candle Group",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 371
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 40
+        },
+        "count": 3
+      }
+    ]
+  }
+}

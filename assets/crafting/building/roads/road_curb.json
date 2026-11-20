@@ -1,0 +1,22 @@
+{
+  "id": "teramic::road_curb",
+  "name": "Stone Road Curb",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 436
+    },
+    "count": 64
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 12
+        },
+        "count": 3
+      }
+    ]
+  }
+}

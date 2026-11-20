@@ -1,0 +1,39 @@
+{
+  "id": "spirit_gloom",
+  "title": "Spirit Gloom",
+  "variant_titles": [
+    "Standard Gloom",
+    "Shadow Gloom",
+    "Blood Gloom",
+    "Light Gloom",
+    "Forest Gloom",
+    "Ice Gloom",
+    "Sakura Gloom"
+  ],
+  "health": 8,
+  "food": 0,
+  "water": 0,
+  "size": [
+    0.6,
+    0.8,
+    0.52
+  ],
+  "speed": 0.65,
+  "group_size": 2,
+  "sleeps": false,
+  "spawn": {
+    "biomes": [
+      "spirit_blossom",
+      "forest",
+      "cherry_forest",
+      "blood_forest",
+      "highland",
+      "mushroom_park"
+    ],
+    "herd_size": [
+      1,
+      2
+    ],
+    "cave_chance": 0.25
+  }
+}

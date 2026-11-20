@@ -28,6 +28,25 @@ pub struct CaveState {
     target: f32,
     next_probe: f32,
     ceiling: f32,
+    entrance_mist: f32,
+}
+
+fn adapt(current: f32, target: f32, dt: f32) -> f32 {
+    // Eyes adapt to darkness more slowly than to daylight. Bound a resumed
+    // frame so loading or an unfocused window cannot cause a full EV jump.
+    let rate = if target > current { 1.8 } else { 4.0 };
+    let next = current + (target - current) * (1.0 - (-rate * dt.clamp(0.0, 0.1)).exp());
+    if (next - target).abs() < 0.0001 {
+        target
+    } else {
+        next
+    }
+}
+
+fn entrance_density(spirit: f32, burial: f32, enclosure: f32) -> f32 {
+    let shallow = 1.0 - ((burial - 6.0) / 20.0).clamp(0.0, 1.0);
+    let mouth = 4.0 * enclosure * (1.0 - enclosure);
+    spirit * shallow.max(mouth).clamp(0.0, 1.0) * (enclosure * 5.0).clamp(0.0, 1.0)
 }
 
 pub(crate) fn install(app: &mut App) {
@@ -59,7 +78,7 @@ fn probe(
 ) {
     for (transform, projection, mut settings) in &mut cameras {
         if time.elapsed_secs() >= state.next_probe {
-            state.next_probe = time.elapsed_secs() + 0.25;
+            state.next_probe = time.elapsed_secs() + 0.10;
             let p = transform.translation.to_array().map(f64::from);
             let height = terrain.0.surface_height(p[0], p[2]);
             let enclosure = terra_world::enclosure::sample(p, height, |p| {
@@ -69,15 +88,14 @@ fn probe(
             if enclosure.complete || enclosure.cave >= state.target {
                 state.target = enclosure.cave;
                 state.ceiling = enclosure.ceiling;
+                let spirit = chunks
+                    .surface_column_at(p[0].floor() as i64, p[2].floor() as i64)
+                    .map_or(0.0, |c| c.biome.weights.spirit_blossom as f32);
+                state.entrance_mist =
+                    entrance_density(spirit, (height - p[1]) as f32, enclosure.cave);
             }
         }
-        let blend =
-            state.blend + (state.target - state.blend) * (1.0 - (-3.5 * time.delta_secs()).exp());
-        let blend = if (blend - state.target).abs() < 0.001 {
-            state.target
-        } else {
-            blend
-        };
+        let blend = adapt(state.blend, state.target, time.delta_secs());
         if blend != state.blend {
             state.blend = blend;
         }
@@ -101,7 +119,7 @@ fn probe(
                 0.0
             },
             haze,
-            0.0,
+            state.entrance_mist * state.blend * (1.0 - underwater.blend),
             0.0,
         );
         if settings.view_from_clip != matrix || settings.parameters != parameters {
@@ -235,6 +253,42 @@ pub(crate) fn apply(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn eye_adaptation_is_continuous_and_recovers_daylight_faster() {
+        for fps in [30, 60, 144] {
+            let mut entering = 0.0;
+            let mut leaving = 1.0;
+            for _ in 0..fps {
+                let next = adapt(entering, 1.0, 1.0 / fps as f32);
+                assert!(next >= entering && next - entering < 0.065);
+                entering = next;
+                leaving = adapt(leaving, 0.0, 1.0 / fps as f32);
+            }
+            assert!((entering - 0.8347).abs() < 0.001);
+            assert!((leaving - 0.0183).abs() < 0.001);
+        }
+        assert!(adapt(0.0, 1.0, 30.0) < 0.17);
+        assert_eq!(entrance_density(0.0, 8.0, 0.5), 0.0);
+        assert_eq!(entrance_density(1.0, 40.0, 1.0), 0.0);
+        assert!(entrance_density(1.0, 8.0, 0.5) > 0.8);
+    }
+
+    #[test]
+    fn entrance_optics_shader_parses_in_both_multisample_modes() {
+        use wesl::{
+            pass::{Features, condcomp},
+            syntax::TranslationUnit,
+        };
+        for multisampled in [false, true] {
+            let mut module = include_str!("../../../../assets/shaders/terra_caves.wesl")
+                .parse::<TranslationUnit>()
+                .unwrap();
+            let mut features = Features::new();
+            features.set("MULTISAMPLED", multisampled);
+            condcomp(&mut module, &features).unwrap();
+        }
+    }
+
     #[test]
     fn spectator_cave_fill_is_local_and_does_not_change_surface_lighting() {
         let mut app = App::new();

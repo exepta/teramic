@@ -131,15 +131,17 @@ impl WorldLibrary {
             world.id = id;
             world.seed = WorldSeed(seed.unwrap_or_else(|| id.0.rotate_left(17)));
             world.geology_revision = 4;
-            world.ecology_revision = 4;
-            world.landscape_revision = 1;
+            world.ecology_revision = 11;
+            world.spirit_blossom_revision = 2;
+            world.blood_forest_revision = 1;
+            world.landscape_revision = WorldConfig::CURRENT_LANDSCAPE_REVISION;
             world.biome_definitions = Some(biome_definitions.clone());
             world.ocean_revision = 1;
             world.cave_structure_revision = 8;
-            world.structures_revision = 9;
+            world.structures_revision = 10;
             world.structure_border_gap = template.kingdom_rules.realm_min_border_gap;
             world.ravine_revision = 1;
-            world.river_terrain_revision = 4;
+            world.river_terrain_revision = WorldConfig::CURRENT_RIVER_TERRAIN_REVISION;
             if world.ores.revision == 0 {
                 world.ores.enabled = true;
             }
@@ -329,16 +331,16 @@ mod tests {
                 &WorldConfig::from_toml("").unwrap(),
             )
             .unwrap();
-        assert_eq!(entry.manifest.world.landscape_revision, 1);
+        assert_eq!(entry.manifest.world.landscape_revision, 9);
         assert_eq!(entry.manifest.world.sea_level, 8.0);
         assert_eq!(
             entry.manifest.world.biome_definitions,
             Some(BiomeDefinitions::default())
         );
         assert!(!entry.manifest.world.rivers);
-        assert_eq!(entry.manifest.world.structures_revision, 9);
-        assert_eq!(entry.manifest.world.ecology_revision, 4);
-        assert_eq!(entry.manifest.world.river_terrain_revision, 4);
+        assert_eq!(entry.manifest.world.structures_revision, 10);
+        assert_eq!(entry.manifest.world.ecology_revision, 11);
+        assert_eq!(entry.manifest.world.river_terrain_revision, 7);
         assert_eq!(library.list().unwrap().0.len(), 1);
         assert_eq!(
             library
@@ -378,7 +380,7 @@ mod tests {
         let mut entry = library
             .create("Custom policy", Some(20202), GameMode::Survival, &template)
             .unwrap();
-        assert_eq!(entry.manifest.world.structures_revision, 9);
+        assert_eq!(entry.manifest.world.structures_revision, 10);
         assert_eq!(entry.manifest.world.structure_border_gap, 6);
         assert_eq!(entry.manifest.world.kingdom_rules, template.kingdom_rules);
         entry.manifest.world.kingdom_rules.realm_min_border_gap = 80;
@@ -503,7 +505,7 @@ mod tests {
             let entry = library
                 .create("Sea Level", Some(77), GameMode::Survival, &template)
                 .unwrap();
-            assert_eq!(entry.manifest.world.landscape_revision, 1);
+            assert_eq!(entry.manifest.world.landscape_revision, 9);
             assert_eq!(entry.manifest.world.sea_level, expected);
             assert_eq!(entry.manifest.world.rivers, template.rivers);
             assert_eq!(

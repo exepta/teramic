@@ -1,0 +1,226 @@
+{
+  "client_sha256": "eaced7338506d054eebb2f071b6da42718037d9e889c22d52b3b63359d61404c",
+  "runs": [
+    {
+      "name": "foliage",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-foliage-creatures.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 32.29,
+      "source_directory": "target/foliage-creatures/run.iHB3Wl",
+      "captures": [
+        {
+          "file": "captures/foliage/eyes/eyes-0-open.png",
+          "sha256": "93b1a15e6a34494a13d84a57b2aeee1db5cc5ab59a8719579b43ba21e18c2bd3",
+          "bytes": 1973967
+        },
+        {
+          "file": "captures/foliage/eyes/eyes-1-half-blink.png",
+          "sha256": "55d3625abaa5052cb0807080f2f11fb7cecf6333d108ec75ebbf97e8ee99233f",
+          "bytes": 1976602
+        },
+        {
+          "file": "captures/foliage/eyes/eyes-2-closed.png",
+          "sha256": "0d7a4a9b719392f824a14554276f3932310a37090d3bb2faf15214fcd3b00005",
+          "bytes": 1979912
+        },
+        {
+          "file": "captures/foliage/eyes/eyes-3-after-blink.png",
+          "sha256": "19141dd00e08fb9d3475ed63e0cacf135b871597d141ab2f905aa56ef69aa9ed",
+          "bytes": 1976590
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-0.png",
+          "sha256": "5603c04e337a6aece0d53914595ae561868fad241298e4f461952afdb3b6501e",
+          "bytes": 2159279
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-1.png",
+          "sha256": "023dd0c0ffa23a57d9cef59cbce4eb76f61b55bd6a648e06d9e0346ca6dd362f",
+          "bytes": 2145829
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-2.png",
+          "sha256": "d914d1057a83a525cd0f8abcb13f6bd6d949110f604cbbba446306d287558a39",
+          "bytes": 2322735
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-3.png",
+          "sha256": "1fc2c6d11ee00da09217d9c97ffce924539f2e0a645d0f32eacba890988d540f",
+          "bytes": 2346825
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-4.png",
+          "sha256": "e10f7c971a594c6a776c7b07ce9ebe066a8c4785ac45fd2abdcbf2f52fe6c3ab",
+          "bytes": 2271580
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-5.png",
+          "sha256": "c476ad4ea421179364cb573f3cfe4017f16ccfe75aab2dc4ab9dd0ab03d2e174",
+          "bytes": 2434846
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-6.png",
+          "sha256": "6beaac8408a765b996c458c8877d2f22b7759d3a2ba515e1ada2a90ab13848f6",
+          "bytes": 2391793
+        }
+      ]
+    },
+    {
+      "name": "menu",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-menu-layout.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 30.87,
+      "source_directory": "target/menu-layout/run.YB9RDZ",
+      "captures": [
+        {
+          "file": "captures/menu/1920x1080/captures/gameplay-de.png",
+          "sha256": "60aeb6e9608b99c51fd3afa896f61c0041ff0492efe7629408a16ec0aa7bd0a9",
+          "bytes": 1444511
+        },
+        {
+          "file": "captures/menu/1920x1080/captures/gameplay-en.png",
+          "sha256": "441a55bea6f9279212f0ffd8a30ba2547d0e0eb15a3ae8d9f91f092ea575d96b",
+          "bytes": 1400036
+        },
+        {
+          "file": "captures/menu/1920x1080/captures/main-menu-de.png",
+          "sha256": "d1985ae60f62a7660f060ecd689c18052a0fecb192568c2216b545da9b4e271c",
+          "bytes": 3269099
+        },
+        {
+          "file": "captures/menu/1920x1080/captures/main-menu-en.png",
+          "sha256": "608db3cf59ab48dde39987f56dda688bc9969e57d623e9a06d7a5cf8c2e4c4d7",
+          "bytes": 3246922
+        },
+        {
+          "file": "captures/menu/960x640/captures/gameplay-de.png",
+          "sha256": "04da6186473fcdba6dfff170c137870402789e43816e879c07b4d0979da6ba9b",
+          "bytes": 363601
+        },
+        {
+          "file": "captures/menu/960x640/captures/gameplay-en.png",
+          "sha256": "2f4d3de02c08263c32837e1e4196a24fde7d154d33b7875a612f69a5419a78ba",
+          "bytes": 345109
+        },
+        {
+          "file": "captures/menu/960x640/captures/main-menu-de.png",
+          "sha256": "3df0df2e4f7b3382b16f5fd74b32ff210e3b2336cddc0b011203680040530165",
+          "bytes": 1172321
+        },
+        {
+          "file": "captures/menu/960x640/captures/main-menu-en.png",
+          "sha256": "e16cee9431819dd03f340178b2cda430903ecc35ab941e88419bc3da83695ad9",
+          "bytes": 1165197
+        }
+      ]
+    },
+    {
+      "name": "fog",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-fog-block.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 16.86,
+      "source_directory": "target/fog-block/run.0qYSej",
+      "captures": [
+        {
+          "file": "captures/fog/captures/fog-buried-a.png",
+          "sha256": "dbaa6a2f7da39e8837f2a47cf1973fb555c32fcb84168cf5992b46622d9336d3",
+          "bytes": 2029169
+        },
+        {
+          "file": "captures/fog/captures/fog-buried-b.png",
+          "sha256": "cf75d997d1ddb8bea387b4abd39be999ead8fc036e2eb1d3f72b828e5e2f6689",
+          "bytes": 2029185
+        },
+        {
+          "file": "captures/fog/captures/fog-removed.png",
+          "sha256": "7f7b048e3c14ab084a70d274ac80ff6c6aa3b974eaaecbdd5bb354c4803c3442",
+          "bytes": 2032903
+        },
+        {
+          "file": "captures/fog/captures/spirit-stone-roofed-comparison.png",
+          "sha256": "61f3b489f1b65df38c247af209d372bcd3d748cf1c122cc18c990db86db9a083",
+          "bytes": 2109973
+        }
+      ]
+    },
+    {
+      "name": "forest",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-voxel-creatures.sh",
+        "forest"
+      ],
+      "exit_code": 0,
+      "seconds": 18.83,
+      "source_directory": "target/voxel-creatures/run.bRA6rO",
+      "captures": [
+        {
+          "file": "captures/forest/forest/forest-creatures-0.png",
+          "sha256": "a0c2a0e64b522c5dc8fb200d8855191b52eb172c0e4fa16d5fe47a0329fa7a23",
+          "bytes": 2299239
+        },
+        {
+          "file": "captures/forest/forest/forest-creatures-1.png",
+          "sha256": "ad117cf3334bb98bc422257476f8382e08bc0a0dd3fc15609bc397e58aaf42d8",
+          "bytes": 2151702
+        },
+        {
+          "file": "captures/forest/forest/forest-creatures-2.png",
+          "sha256": "5ce0038c64301b3cf0d4bd50636ed72e15d10f718060d1a864020f99b7c436af",
+          "bytes": 2057109
+        },
+        {
+          "file": "captures/forest/forest/forest-creatures-3.png",
+          "sha256": "036869c0dfdbb7df2928a0ba20b1d2c32f0f9b41a48e926dd6948fa26db3019b",
+          "bytes": 2072949
+        }
+      ]
+    },
+    {
+      "name": "biomes",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-reference-biomes.sh",
+        "reference-birch",
+        "picker-forest",
+        "picker-cherry-forest"
+      ],
+      "exit_code": 0,
+      "seconds": 33.45,
+      "source_directory": "target/reference-biomes/run.25fip0",
+      "captures": [
+        {
+          "file": "captures/biomes/captures/picker-cherry-forest-overview.png",
+          "sha256": "8a15e2e85732a6379a75276fcc4e0b23c189fa1758a89596510318d794ab8237",
+          "bytes": 2666104
+        },
+        {
+          "file": "captures/biomes/captures/picker-forest-overview.png",
+          "sha256": "433eb38da0c54250f66a4afcde77a2685d16564a81228bc85d5eff38faa12c04",
+          "bytes": 2924365
+        },
+        {
+          "file": "captures/biomes/captures/reference-birch-close.png",
+          "sha256": "c7ce24ebb22c68bacf88905eb15a8e6cb5d8b234b219d724fd39c3a245093d79",
+          "bytes": 2830026
+        },
+        {
+          "file": "captures/biomes/captures/reference-birch-overview.png",
+          "sha256": "129185cd230319cc0624ff36c72dc31a3d4c9dc9be90cdf47d52dc419dbd48f0",
+          "bytes": 2844396
+        }
+      ]
+    }
+  ],
+  "status": "passed",
+  "total_captures": 31
+}

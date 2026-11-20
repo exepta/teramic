@@ -154,6 +154,7 @@ pub(crate) fn sync_controller(
 
 #[derive(bevy::ecs::system::SystemParam)]
 pub(crate) struct WalkControl<'w> {
+    construction: Option<Res<'w, super::ConstructionCamera>>,
     input: Res<'w, CameraInputState>,
     blocked: Res<'w, PlayerInputBlock>,
     mode: Res<'w, ControllerMode>,
@@ -171,6 +172,14 @@ pub(crate) fn read_walk_input(
     mut control: WalkControl,
     mut intent: ResMut<WalkIntent>,
 ) {
+    if control
+        .construction
+        .as_ref()
+        .is_some_and(|camera| camera.active)
+    {
+        *intent = WalkIntent::default();
+        return;
+    }
     let Some((camera, look)) = cameras.iter().next() else {
         return;
     };
@@ -375,6 +384,7 @@ type PresentedCameras<'w, 's> = Query<
 
 #[derive(bevy::ecs::system::SystemParam)]
 pub(crate) struct CameraPresentationControl<'w> {
+    construction: Option<Res<'w, super::ConstructionCamera>>,
     mode: Res<'w, ControllerMode>,
     session: Option<Res<'w, ClientSession>>,
     fixed: Res<'w, Time<Fixed>>,
@@ -392,6 +402,13 @@ pub(crate) fn follow_player_camera(
     mut focus: ResMut<ChunkFocus>,
     control: CameraPresentationControl,
 ) {
+    if control
+        .construction
+        .as_ref()
+        .is_some_and(|camera| camera.active)
+    {
+        return;
+    }
     if *control.mode != ControllerMode::Walk && control.session.is_none() {
         return;
     }

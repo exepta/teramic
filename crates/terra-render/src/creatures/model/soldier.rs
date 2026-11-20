@@ -70,42 +70,91 @@ fn weapon(loadout: SoldierLoadout) -> Result<Mesh, String> {
 
 /// Front and rear cloth share one small cached mesh per concrete realm emblem.
 pub(crate) fn tabard(heraldry: KingdomHeraldry) -> Result<Mesh, String> {
-    let mut b = Builder::default();
+    // The existing emblem is already axis-aligned voxel artwork. Keep its
+    // 32-pixel glyph detail and exact banner colors rather than resampling it.
+    let mut b = crate::players::model::Builder::default();
     // Builder decodes authored sRGB colors once when emitting vertex colors.
     let color = heraldry.color.map(|value| f32::from(value) / 255.0);
     for z in [-0.245, 0.245] {
-        b.voxel([0.0, 0.91, z], [0.275, 0.43, 0.018], color)?;
-        b.voxel([0.0, 0.69, z], [0.23, 0.06, 0.018], color)?;
+        cloth_panel(&mut b, z, color)?;
     }
+    let mut mesh = b.finish()?;
     if let Some(mask) = heraldry.icon.glyph_mask() {
-        for (row, &bits) in mask.iter().enumerate() {
-            let mut x = 0;
-            while x < 32 {
-                if bits & (1 << x) == 0 {
-                    x += 1;
-                    continue;
-                }
-                let start = x;
-                while x < 32 && bits & (1 << x) != 0 {
-                    x += 1;
-                }
-                let cell = 0.006;
-                let p = [
-                    (start as f32 + (x - start) as f32 * 0.5 - 16.0) * cell,
-                    1.01 - row as f32 * cell,
-                    -0.26,
-                ];
-                for z in [-0.26, 0.26] {
-                    b.voxel(
-                        [p[0], p[1], z],
-                        [(x - start) as f32 * cell, cell, 0.004],
-                        [0.97, 0.91, 0.72],
-                    )?;
-                }
-            }
+        // Adjacent glyph rows are one solid extrusion, not closed cuboids
+        // with two coincident contact faces. Keep every authored pixel and
+        // the original 4 mm relief; only hidden interior faces disappear.
+        let cells = mask
+            .iter()
+            .enumerate()
+            .flat_map(|(row, bits)| {
+                (0..32_i16).filter_map(move |x| {
+                    (bits & (1 << x) != 0).then_some((
+                        [x, 31 - row as i16, 0],
+                        [0.97_f32, 0.91, 0.72].map(f32::to_bits),
+                    ))
+                })
+            })
+            .collect();
+        for z in [-0.26, 0.26] {
+            let origin = Vec3::new(-0.096, 1.013 - 32.0 * 0.006, z - 0.002);
+            let emblem = super::voxel::surface::mesh(
+                &cells,
+                origin,
+                0.006,
+                origin + Vec3::new(0.192, 0.192, 0.004),
+            )?;
+            mesh.merge(&emblem)
+                .map_err(|error| format!("Cannot combine military emblem: {error}"))?;
         }
     }
-    b.finish()
+    Ok(mesh)
+}
+
+fn cloth_panel(
+    builder: &mut crate::players::model::Builder,
+    z: f32,
+    color: [f32; 3],
+) -> Result<(), String> {
+    // The narrow hem overlaps the upper cloth in the authored design. Emit
+    // the boundary of their union, retaining its exact outline and thickness.
+    let outline = [
+        [-0.115, 0.66],
+        [0.115, 0.66],
+        [0.115, 0.695],
+        [0.1375, 0.695],
+        [0.1375, 1.125],
+        [-0.1375, 1.125],
+        [-0.1375, 0.695],
+        [-0.115, 0.695],
+    ];
+    for (width, bottom, top) in [(0.115, 0.66, 0.695), (0.1375, 0.695, 1.125)] {
+        for sign in [-1.0, 1.0] {
+            let mut points = [
+                Vec3::new(-width, bottom, z + sign * 0.009),
+                Vec3::new(width, bottom, z + sign * 0.009),
+                Vec3::new(width, top, z + sign * 0.009),
+                Vec3::new(-width, top, z + sign * 0.009),
+            ];
+            if sign < 0.0 {
+                points.reverse();
+            }
+            builder.quad(points, color)?;
+        }
+    }
+    for i in 0..outline.len() {
+        let a = outline[i];
+        let b = outline[(i + 1) % outline.len()];
+        builder.quad(
+            [
+                Vec3::new(a[0], a[1], z - 0.009),
+                Vec3::new(b[0], b[1], z - 0.009),
+                Vec3::new(b[0], b[1], z + 0.009),
+                Vec3::new(a[0], a[1], z + 0.009),
+            ],
+            color,
+        )?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

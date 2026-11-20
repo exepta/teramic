@@ -8,6 +8,8 @@ tick_rate = 60
 max_players = 32
 log_filter = "info"
 simulation_distance = 1
+# true enables player damage; false disables it. Omit to use the saved world rule.
+pvp = true
 
 # Dedicated-server policy overrides. Singleplayer uses its own saved world settings.
 [kingdom_rules]

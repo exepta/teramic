@@ -34,6 +34,16 @@
 !/tools/benchmarks/results/capes-crusher-2026-10-22/native/**/*.png
 !/tools/benchmarks/results/manual-crusher-2026-10-22/native/**/*.png
 !/tools/benchmarks/results/f61-f72-stations-2026-11-11/*.png
+!/tools/benchmarks/results/npc-work-patrol-ui-2026-11-12/*.png
+!/tools/benchmarks/results/lumberjack-stations-2026-11-12/*.png
+!/tools/benchmarks/results/settlement-building-2026-11-12/*.png
+!/tools/benchmarks/results/workers-areas-defense-2026-11-12/*.png
+!/tools/benchmarks/results/keep-templates-2026-11-13/*.png
+!/tools/benchmarks/results/construction-editor-2026-11-13/*.png
+!/tools/benchmarks/results/editor-platform-2026-11-13/*.png
+!/tools/benchmarks/results/construction-areas-2026-11-13/*.png
+!/tools/benchmarks/results/construction-real-save-2026-11-13/*.png
+!/tools/benchmarks/results/construction-input-2026-11-13/*.png
 !/tools/benchmarks/results/inventory-fps-2026-10-22/logs/*.log
 !/tools/benchmarks/results/status-effects-2026-10-22/logs/*.log
 !/tools/benchmarks/results/equipment-2026-10-22/logs/*.log

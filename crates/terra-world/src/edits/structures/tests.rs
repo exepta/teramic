@@ -473,3 +473,64 @@ fn only_selected_loaded_meshes_are_invalidated_and_real_edits_still_wake_simulat
     assert!(!journal.fluid_active.is_empty());
     assert!(!journal.grass_candidates.is_empty());
 }
+
+#[test]
+fn generated_ornate_crypt_loot_initializes_persists_and_never_refills_after_loading() {
+    let position = [-17, -1, 31];
+    let mut loot = terra_core::Inventory::default();
+    loot.insert(
+        terra_core::ItemKind::Mineral(terra_core::MineralItem::RawIron),
+        7,
+    );
+    let object = StructureObject {
+        position,
+        material: terra_core::grave_blocks::ORNATE_CHEST,
+        state: Some(BlockObjectState {
+            facing: 2,
+            ..Default::default()
+        }),
+        loot: Some(loot.clone()),
+        crop: None,
+    };
+    let objects = [object];
+    let mut journal = EditJournal::default();
+    assert!(!journal.initialize_structures(&objects).unwrap().is_empty());
+    assert_eq!(journal.container_at(position), Some(&loot));
+    let owner = global_to_section(position).0;
+    let delta = serde_json::to_string(&journal.section_delta(owner)).unwrap();
+    let containers = serde_json::to_string(&journal.containers().collect::<Vec<_>>()).unwrap();
+    let mut loaded = EditJournal::default();
+    loaded
+        .import_delta(serde_json::from_str(&delta).unwrap())
+        .unwrap();
+    let contents: Vec<([i64; 3], terra_core::Inventory)> =
+        serde_json::from_str(&containers).unwrap();
+    for (position, inventory) in contents {
+        loaded.set_container(position, inventory).unwrap();
+    }
+    assert_eq!(
+        loaded.block(position),
+        Some(terra_core::grave_blocks::ORNATE_CHEST)
+    );
+    assert_eq!(loaded.object_state(position).unwrap().facing, 2);
+    assert_eq!(loaded.container_at(position), Some(&loot));
+    assert!(loaded.initialize_structures(&objects).unwrap().is_empty());
+    loaded
+        .set_container(position, terra_core::Inventory::default())
+        .unwrap();
+    let containers = serde_json::to_string(&loaded.containers().collect::<Vec<_>>()).unwrap();
+    let mut looted = EditJournal::default();
+    looted
+        .import_delta(serde_json::from_str(&delta).unwrap())
+        .unwrap();
+    let contents: Vec<([i64; 3], terra_core::Inventory)> =
+        serde_json::from_str(&containers).unwrap();
+    for (position, inventory) in contents {
+        looted.set_container(position, inventory).unwrap();
+    }
+    assert!(looted.initialize_structures(&objects).unwrap().is_empty());
+    assert_eq!(
+        looted.container_at(position),
+        Some(&terra_core::Inventory::default())
+    );
+}

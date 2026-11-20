@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": 425,
+  "name": "Forest Fern",
+  "description": "Forest Fern, shaped for the regional biome flora.",
+  "creative_category": "nature",
+  "hardness": 0.15,
+  "resistance": 0.4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/forest_fern.glb",
+  "textures": {
+    "leaf": "textures/forest_fern.png",
+    "stem": "textures/forest_fern.png",
+    "leaf_light": "textures/forest_fern.png"
+  },
+  "struct_block": true,
+  "collision_boxes": []
+}

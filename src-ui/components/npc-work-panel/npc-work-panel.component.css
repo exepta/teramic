@@ -4,8 +4,8 @@
 #npc-work-panel h3 { margin: 0; min-width: 0; font-size: 13px; line-height: 18px; color: #f4e3c3; text-wrap: wrap; }
 #npc-work-panel p { margin: 0; min-width: 0; font-size: 12px; line-height: 17px; color: #e8d4b0; text-wrap: wrap; }
 #npc-work-panel label { min-width: 0; font-size: 11px; line-height: 16px; color: #baa78a; text-wrap: wrap; }
-#npc-work-panel button { min-width: 0; max-width: 100%; min-height: 34px; height: auto; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 10px; flex-shrink: 0; background-color: #483020; border: 1px solid #977347; border-radius: 3px; color: #f2ddba; font-size: 12px; line-height: 17px; text-wrap: wrap; box-sizing: border-box; }
-#npc-work-panel button::value { min-width: 0; font-size: 12px; line-height: 17px; text-wrap: wrap; }
+#npc-work-panel button { width: auto; min-width: 0; max-width: 100%; flex-direction: row; flex-basis: auto; flex-grow: 0; align-self: flex-start; min-height: 34px; height: auto; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 10px; flex-shrink: 0; background-color: #483020; border: 1px solid #977347; border-radius: 3px; color: #f2ddba; font-size: 12px; line-height: 17px; text-wrap: nowrap; box-sizing: border-box; }
+#npc-work-panel button::value { font-size: 12px; line-height: 17px; text-wrap: nowrap; flex-shrink: 0; }
 #npc-work-panel button:hover, #npc-work-panel button.selected { background-color: #674a29; border-color: #dfb46d; }
 #npc-work-panel button:disabled { opacity: 0.45; background-color: #34251c; border-color: #705238; }
 #npc-work-panel input { min-width: 0; width: 100%; max-width: 100%; height: 34px; min-height: 34px; padding: 7px 8px; background-color: #1a120f; color: #ffedc9; border: 1px solid #977347; border-radius: 3px; font-size: 12px; line-height: 17px; box-sizing: border-box; }
@@ -15,7 +15,7 @@
 .npc-work-heading { display: flex; align-items: center; gap: 10px; min-height: 30px; }
 .npc-work-heading h2 { flex-grow: 1; }
 #npc-work-panel .npc-work-refresh { width: 30px; height: 30px; min-height: 30px; padding: 5px; }
-.npc-work-layout { display: grid; grid-template-columns: 260px 1fr; gap: 16px; min-width: 0; }
+.npc-work-layout { display: grid; grid-template-columns: 260px 1fr; gap: 16px; min-width: 0; width: 100%; }
 .npc-work-workers { display: flex; flex-direction: column; gap: 3px; min-width: 0; max-height: 390px; overflow-y: auto; padding-right: 5px; }
 #npc-work-panel .npc-work-worker { width: 100%; min-width: 0; justify-content: space-between; align-items: flex-start; padding: 8px; gap: 6px; border-radius: 3px; background-color: #2b2119; }
 .npc-work-worker > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
@@ -35,10 +35,10 @@
 .npc-work-choice option { font-size: 12px; line-height: 17px; color: #f2ddba; background-color: #302319; }
 .npc-work-choice option:hover, .npc-work-choice option:checked { background-color: #674a29; color: #ffe2a0; }
 .npc-work-coordinate-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.npc-work-coordinates { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 5px; align-items: center; min-width: 0; }
+.npc-work-coordinates { display: grid; grid-template-columns: 64px 1fr 1fr 1fr; gap: 5px; align-items: center; min-width: 0; }
 #npc-work-panel .npc-work-coordinates input { padding: 6px; min-width: 0; }
 .npc-work-carry { display: flex; align-items: center; gap: 7px; padding-top: 5px; }
-.npc-work-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid #705238; }
+.npc-work-actions { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid #705238; }
 .npc-work-enable { display: flex; align-items: center; gap: 6px; }
 .npc-work-enable switch-button { width: 38px; min-width: 38px; height: 22px; min-height: 22px; }
 .npc-work-enable switch-button::track { width: 36px; height: 20px; min-height: 20px; background-color: #302319; border: 1px solid #977347; border-radius: 10px; }
@@ -48,4 +48,21 @@
 #npc-work-panel .npc-work-error, #npc-work-panel .npc-work-validation { color: #efae94; }
 #npc-work-panel .npc-work-feedback { color: #c7d5a1; }
 .npc-work-empty { padding: 12px 0; }
+/* This modifier belongs to this component. A parent dialog's scoped CSS
+   cannot change the internal two-column kingdom worker list. */
+.npc-work-direct .npc-work-layout { display: flex; flex-direction: column; gap: 0; }
+.npc-work-direct .npc-work-editor { width: 100%; min-width: 0; padding-left: 0; border-left: 0; box-sizing: border-box; }
+.npc-work-pick-actions { width: 100%; min-width: 0; display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px; padding: 8px 0; }
+#npc-work-panel .npc-work-pick-actions button { width: auto; flex-basis: auto; flex-grow: 0; flex-shrink: 0; min-width: 0; min-height: 44px; padding: 10px 14px; }
+#npc-work-panel.npc-work-direct #npc-work-assign { width: auto; min-width: 0; min-height: 44px; padding: 10px 14px; }
 @media (max-width: 780px) { .npc-work-layout { grid-template-columns: 1fr; gap: 10px; } .npc-work-workers { max-height: 150px; } .npc-work-editor { border-left: 0; padding-left: 0; border-top: 1px solid #705238; padding-top: 10px; } }
+
+#npc-work-panel .npc-work-footer-status { min-width: 0; max-width: 100%; color: #e6c68d; font-weight: bold; text-wrap: wrap; }
+
+.npc-work-private { display: flex; flex-direction: column; min-width: 0; gap: 6px; padding-bottom: 10px; }
+.npc-work-private-slots { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; min-width: 0; }
+.npc-work-private-slot { position: relative; min-width: 0; height: 48px; padding: 4px; border: 1px solid #967752; background-color: #291c15; border-radius: 3px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.npc-work-private-slot img { width: 34px; height: 34px; max-width: 100%; }
+#npc-work-panel .npc-work-private-slot p { position: absolute; right: 3px; bottom: 2px; color: #fff1cd; }
+
+.npc-work-fields-craftsman { grid-template-columns: 1fr; }

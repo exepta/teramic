@@ -1,0 +1,94 @@
+2026-11-13T00:25:39.996019Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.5-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-13T00:25:40.067998Z  INFO terra_client::bootstrap: Smoke-test compute worker cap; IO and async policies are unchanged compute_thread_cap=4 compute_threads=16 async_threads=4 io_threads=4
+2026-11-13T00:25:40.075717Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-13T00:25:40.075752Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-13T00:25:40.076751Z  INFO bevy_winit::system: Creating new window TERAMIC (198v0)
+2026-11-13T00:25:40.077024Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-13T00:25:41.275685Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:37989 [1/1]
+2026-11-13T00:25:41.275778Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-11-13T00:25:41.630811Z  INFO terra_ui::settings: Applied window presentation policy mode=Mailbox
+2026-11-13T00:25:41.636151Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-11-13T00:25:41.692135Z  INFO lightyear_udp::endpoint: Received UDP packet from new address 127.0.0.1:43463, Spawn new LinkOf entity=251v0 endpoint_entity=231v0
+2026-11-13T00:25:41.702294Z  INFO terra_render::weather::surfaces: Terrain wet material GPU binding mode legacy_smoke_control=false bindless=true
+2026-11-13T00:25:41.765205Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-11-13T00:25:41.765415Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-11-13T00:25:41.775870Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 41, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775891Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-oak-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T00:25:41.775898Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 26, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775903Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 24, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775908Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 31, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775913Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 38, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775918Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-11-13T00:25:41.775922Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 29, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775928Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 39, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775932Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 21, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-13T00:25:41.775936Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 25, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775946Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=0
+2026-11-13T00:25:41.775957Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 35, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775961Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 32, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775966Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 30, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775971Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 37, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775976Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-iron-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T00:25:41.775981Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-belt-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T00:25:41.775985Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 33, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775990Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 40, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.775995Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 22, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-13T00:25:41.776000Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-11-13T00:25:41.776004Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 34, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.776009Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 28, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.776013Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 27, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.776018Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 36, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.776022Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T00:25:41.776026Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 23, generation: 0} mip_levels=1 rebound_materials=1
+2026-11-13T00:25:41.776031Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-11-13T00:25:41.815768Z  INFO terra_render::blocks::loading: Block template library ready blocks=305 materials=878
+2026-11-13T00:25:41.892835Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (251v0)
+2026-11-13T00:25:41.953430Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-11-13T00:25:41.977505Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=77ae07b4-0672-4029-b5eb-b5bc4a4b8961 name=Player-77ae07b4
+2026-11-13T00:25:42.623956Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-11-13T00:25:43.390608Z  INFO terra_client::inventory_benchmark::chest: Inventory benchmark chest fixture created through a real grant and acknowledged block edit; disposable world retains the chest position=[9, 12, 24] material=173 request=1
+2026-11-13T00:25:44.467280Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/building-local/run.51m7I5/captures/kingdom-unbound.png
+2026-11-13T00:25:45.895887Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=0
+2026-11-13T00:25:46.687538Z  INFO terra_client::inventory_benchmark::chest: Inventory benchmark chest fixture created through a real grant and acknowledged block edit; disposable world retains the chest position=[7, 12, 24] material=29 request=2
+2026-11-13T00:25:46.705676Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=1
+2026-11-13T00:25:47.070936Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=2
+2026-11-13T00:25:47.421573Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=3
+2026-11-13T00:25:47.791949Z  INFO terra_client::building_local_smoke: Native Building Local real town chest stocked with 128 structure stone and 128 planks position=[7, 12, 24]
+2026-11-13T00:25:47.791972Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=4
+2026-11-13T00:25:48.239627Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=5
+2026-11-13T00:25:48.563774Z  WARN bevy_text::pipeline: Text span 1122v4 has a font size <= 0.0. Nothing will be displayed.
+2026-11-13T00:25:48.596914Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=6
+2026-11-13T00:25:48.642838Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/building-local/run.51m7I5/captures/building-local-de-wide.png
+2026-11-13T00:25:48.961149Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=7
+2026-11-13T00:25:49.313977Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=8
+2026-11-13T00:25:49.357349Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/building-local/run.51m7I5/captures/building-storage-selection-de-wide.png
+2026-11-13T00:25:49.667650Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=9
+2026-11-13T00:25:50.024068Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=10
+2026-11-13T00:25:50.386708Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=11
+2026-11-13T00:25:50.746038Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=12
+2026-11-13T00:25:51.131023Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=13
+2026-11-13T00:25:51.482383Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=14
+2026-11-13T00:25:51.835822Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=15
+2026-11-13T00:25:56.011044Z  INFO terra_client::building_local_smoke: Native Building Local actual movement settled before UI transition destination=[8.0, 19.0] position=[8.032301, 12.91, 19.355206] velocity=[-0.00013614092, 0.0, -0.0014972633]
+2026-11-13T00:25:56.416619Z  INFO terra_client::building_local_smoke: Native Building Local saved area HUD and confirmed bounds acknowledged
+2026-11-13T00:25:56.462139Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/building-local/run.51m7I5/captures/building-saved-areas-de-wide.png
+2026-11-13T00:25:56.468885Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=16
+2026-11-13T00:26:03.281955Z  INFO terra_client::building_local_smoke: Native Building Local actual movement settled before UI transition destination=[24.0, 21.0] position=[23.649086, 12.91, 20.96385] velocity=[0.0014955243, 0.0, 0.0001540755]
+2026-11-13T00:26:03.281979Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=17
+2026-11-13T00:26:03.740275Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=18
+2026-11-13T00:26:04.100897Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=19
+2026-11-13T00:26:04.460124Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=20
+2026-11-13T00:26:04.820414Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=21
+2026-11-13T00:26:05.176532Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=22
+2026-11-13T00:26:05.540106Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=23
+2026-11-13T00:26:05.573608Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/building-local/run.51m7I5/captures/building-job-en-compact.png
+2026-11-13T00:26:05.903331Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=24
+2026-11-13T00:26:06.254768Z  INFO terra_client::building_local_smoke: Native Building Local real craftsman enrolled without work area npc=144115188075855912 job=1
+2026-11-13T00:26:06.254789Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=25
+2026-11-13T00:26:58.267502Z  INFO terra_client::building_local_smoke: Native Building Local actual non-air house voxel placement acknowledged job=1 progress=0.021634615384615384
+2026-11-13T00:26:58.267522Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=26
+2026-11-13T00:26:58.306507Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/building-local/run.51m7I5/captures/building-progress-en-compact.png
+2026-11-13T00:26:58.621255Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=27
+2026-11-13T00:26:58.975498Z  INFO terra_client::building_local_smoke: Native Building Local acceptance step completed step=28
+2026-11-13T00:26:59.004806Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/building-local/run.51m7I5/captures/building-paused-en-compact.png
+2026-11-13T00:26:59.332243Z  INFO terra_client::building_local_smoke: Native Building Local passed: real storage HUD selection, chest transfer, claim, house costs, craftsman without area, visible voxel progress and pause; DE/EN natural-width geometry npc=144115188075855912 job=1 captures=6

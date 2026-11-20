@@ -18,6 +18,7 @@
       @if (miniMapView.coordinates) { <div class="map-readout"><icon name="map-pin" size="14" /><p>{{ localizedUi.miniMapView.coordinates }}</p></div> }
       @if (miniMapView.biome) { <div class="map-readout"><icon name="mountain" size="14" /><p>{{ localizedUi.miniMapView.biome }}</p></div> }
       @if (miniMapView.clock) { <div class="map-readout"><icon name="clock" size="14" /><p>{{ localizedUi.miniMapView.clock }}</p></div> }
+      <div id="map-fps" class="map-readout"><p>{{ miniMapView.fps }}</p></div>
     </div>
     @if (miniMapView.error) { <p class="map-status">{{ localizedUi.miniMapView.error }}</p> }
   } @else {

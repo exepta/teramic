@@ -34,7 +34,10 @@ impl WorkKind {
                     | ToolKind::RubyHoe
             ),
             Self::Collector => false,
-            Self::Lumberjack => tool.durability() > 0,
+            Self::Lumberjack => {
+                tool.class() == Some(crate::block_properties::ToolClass::Axe)
+                    && tool.durability() > 0
+            }
         }
     }
 }
@@ -164,6 +167,7 @@ pub enum WaitReason {
     NoTargets,
     Night,
     NoPlantingSite,
+    MissingStation,
 }
 
 impl WaitReason {
@@ -178,6 +182,7 @@ impl WaitReason {
             Self::NoTargets => "No work available",
             Self::Night => "Resting at night",
             Self::NoPlantingSite => "No suitable planting site",
+            Self::MissingStation => "Missing profession station",
         }
     }
 }

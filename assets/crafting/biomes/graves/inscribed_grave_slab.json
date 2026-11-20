@@ -1,0 +1,28 @@
+{
+  "id": "teramic::inscribed_grave_slab",
+  "name": "Inscribed Grave Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 348
+    },
+    "count": 2
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 344
+        },
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 308
+        },
+        "count": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+test_active_binding_retains_dirt_source_and_existing_oak_bark (test_base_materials.BaseMaterialArt.test_active_binding_retains_dirt_source_and_existing_oak_bark) ... ok
+test_model_keeps_geometry_shared_material_slots_samplers_and_matte_orm (test_base_materials.BaseMaterialArt.test_model_keeps_geometry_shared_material_slots_samplers_and_matte_orm) ... ok
+test_native_resolution_and_low_contrast_continuous_earth (test_base_materials.BaseMaterialArt.test_native_resolution_and_low_contrast_continuous_earth) ... ok
+test_near_to_lod_affine_uv_mapping_including_mirrored_faces (test_base_materials.BaseMaterialArt.test_near_to_lod_affine_uv_mapping_including_mirrored_faces) ... ok
+test_existing_ten_ids_bind_distinct_top_and_side_without_transparency (test_foliage.FoliageArt.test_existing_ten_ids_bind_distinct_top_and_side_without_transparency) ... ok
+test_main_blades_are_readable_at_all_nine_geometry_centres (test_foliage.FoliageArt.test_main_blades_are_readable_at_all_nine_geometry_centres) ... ok
+test_palette_families_and_top_rosettes_remain_distinct (test_foliage.FoliageArt.test_palette_families_and_top_rosettes_remain_distinct) ... ok
+test_all_authored_biome_textures_have_native_detail_and_closed_alpha (test_surfaces.BiomeSurfaceArt.test_all_authored_biome_textures_have_native_detail_and_closed_alpha) ... ok
+test_appropriate_inward_surface_styles_preserve_closed_cube_contract (test_surfaces.BiomeSurfaceArt.test_appropriate_inward_surface_styles_preserve_closed_cube_contract) ... ok
+test_blood_leaf_bark_palette_remains_readable_without_emission (test_surfaces.BiomeSurfaceArt.test_blood_leaf_bark_palette_remains_readable_without_emission) ... ok
+test_periodic_leaf_fracture_and_field_sampling_has_no_boundary_reset (test_surfaces.BiomeSurfaceArt.test_periodic_leaf_fracture_and_field_sampling_has_no_boundary_reset) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 5.206s
+
+OK

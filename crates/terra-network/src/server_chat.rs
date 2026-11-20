@@ -142,6 +142,7 @@ struct LocateJob {
 
 struct Located {
     target: LocateTarget,
+    label: Option<String>,
     position: [i64; 3],
     spawn: Option<WorldSpawn>,
 }
@@ -161,6 +162,8 @@ impl LocateTarget {
             Self::Structure(StructureKind::Mine) => "Mine",
             Self::Structure(StructureKind::Kingdom) => "Kingdom",
             Self::Structure(StructureKind::Outpost) => "Outpost",
+            Self::Structure(StructureKind::Cemetery) => "Cemetery",
+            Self::Structure(StructureKind::GraveDungeon) => "Grave Dungeon",
         }
     }
 }
@@ -249,6 +252,11 @@ pub(super) struct ChatWorld<'w, 's> {
 
 impl ChatWorld<'_, '_> {
     fn set_rule(&mut self, rule: terra_core::GameRule, value: f64) -> Result<String, &'static str> {
+        if rule == terra_core::GameRule::Pvp && self.config.server.pvp.is_some() {
+            return Err(
+                "PvP is controlled by pvp in server.toml; omit it to use the world gamerule",
+            );
+        }
         let settings =
             terra_core::WorldRuleSettings::set(&self.config.world, &mut self.clock, rule, value)?;
         settings.apply(&mut self.config.world);
@@ -553,16 +561,19 @@ fn finish_search(
         None
     };
     entry.locate = Some(LocateResult {
-        name: found.target.name().into(),
+        name: found
+            .label
+            .clone()
+            .unwrap_or_else(|| found.target.name().into()),
         position: landing.map_or(found.position, LocateLanding::feet),
         token,
     });
     if world.runtime.console_reply {
         let [x, y, z] = found.position;
-        world
-            .runtime
-            .console_lines
-            .push_back(format!("{} found at {x}, {y}, {z}.", found.target.name()));
+        world.runtime.console_lines.push_back(format!(
+            "{} found at {x}, {y}, {z}.",
+            found.label.as_deref().unwrap_or(found.target.name())
+        ));
     }
     sender.send::<ControlChannel>(ServerControl::Chat(entry));
     if token.is_none() {
@@ -1148,6 +1159,8 @@ fn biome_name(kind: BiomeKind) -> &'static str {
         BiomeKind::MushroomPark => "Mushroom Park",
         BiomeKind::ClifftedDesert => "Cliffted Desert",
         BiomeKind::CherryForest => "Cherry Forest",
+        BiomeKind::SpiritBlossom => "Spirit Blossom",
+        BiomeKind::BloodForest => "Blood Forest",
     }
 }
 
@@ -1164,7 +1177,7 @@ fn parse_command(text: &str) -> Result<Option<LocateTarget>, &'static str> {
     if parts[1] == "struct" {
         if parts.len() != 3 {
             return Err(
-                "Usage: /locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost>.",
+                "Usage: /locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost|teramic::cemetery|teramic::grave_dungeon>.",
             );
         }
         return match parts[2].to_ascii_lowercase().as_str() {
@@ -1173,8 +1186,12 @@ fn parse_command(text: &str) -> Result<Option<LocateTarget>, &'static str> {
             "teramic::mine" => Ok(Some(LocateTarget::Structure(StructureKind::Mine))),
             "teramic::kingdom" => Ok(Some(LocateTarget::Structure(StructureKind::Kingdom))),
             "teramic::outpost" => Ok(Some(LocateTarget::Structure(StructureKind::Outpost))),
+            "teramic::cemetery" => Ok(Some(LocateTarget::Structure(StructureKind::Cemetery))),
+            "teramic::grave_dungeon" => {
+                Ok(Some(LocateTarget::Structure(StructureKind::GraveDungeon)))
+            }
             _ => Err(
-                "Unknown structure. Use teramic::village, teramic::ruin, teramic::mine, teramic::kingdom or teramic::outpost.",
+                "Unknown structure. Use teramic::village, teramic::ruin, teramic::mine, teramic::kingdom, teramic::outpost, teramic::cemetery or teramic::grave_dungeon.",
             ),
         };
     }
@@ -1192,6 +1209,8 @@ fn parse_command(text: &str) -> Result<Option<LocateTarget>, &'static str> {
         "mushroom_park" | "mushroompark" => BiomeKind::MushroomPark,
         "cliffted_desert" | "cliffteddesert" => BiomeKind::ClifftedDesert,
         "cherry_forest" | "cherryforest" => BiomeKind::CherryForest,
+        "spirit_blossom" | "spiritblossom" | "spirit-blossom" => BiomeKind::SpiritBlossom,
+        "blood_forest" | "bloodforest" | "blood-forest" | "blutwald" => BiomeKind::BloodForest,
         _ => return Err("Unknown biome. Use /help for biome names."),
     };
     Ok(Some(LocateTarget::Biome(biome)))
@@ -1219,6 +1238,7 @@ fn locate_biome(terrain: &TerraGenerator, origin: [i64; 2], biome: BiomeKind) ->
         let height = terrain.surface_height(x as f64 + 0.5, z as f64 + 0.5);
         let mut found = Located {
             target: LocateTarget::Biome(biome),
+            label: None,
             position: [x, height.ceil() as i64, z],
             spawn: None,
         };
@@ -1291,7 +1311,7 @@ fn locate_structure(
     let region = origin.map(|v| v.div_euclid(REGION_SIZE));
     let radius = SEARCH_STEP * SEARCH_RINGS;
     let deadline = Instant::now() + Duration::from_secs(12);
-    let mut best: Option<(i64, [i64; 3])> = None;
+    let mut best: Option<(i64, [i64; 3], Option<String>)> = None;
     'search: for ring in 0_i64..=radius / REGION_SIZE + 1 {
         for dz in -ring..=ring {
             for dx in -ring..=ring {
@@ -1309,6 +1329,11 @@ fn locate_structure(
                 {
                     continue;
                 }
+                if matches!(kind, StructureKind::Cemetery | StructureKind::GraveDungeon)
+                    && terrain.grave_site_candidate(candidate) != Some(kind)
+                {
+                    continue;
+                }
                 let Some(site) = terrain.structure_site(candidate) else {
                     continue;
                 };
@@ -1323,28 +1348,32 @@ fn locate_structure(
                 if distance <= radius.pow(2)
                     && best
                         .as_ref()
-                        .is_none_or(|(previous, _)| distance < *previous)
+                        .is_none_or(|(previous, _, _)| distance < *previous)
                 {
                     let position = site
                         .buildings
                         .first()
                         .map_or(site.center, |building| building.entrance);
-                    best = Some((distance, position));
+                    let label = site
+                        .grave_dungeon()
+                        .map(|info| format!("Tomb of {}", info.name));
+                    best = Some((distance, position, label));
                 }
             }
         }
         // Any unvisited region is at least this far from the origin. This
         // conservatively checks neighboring regions before returning a winner.
-        if best
-            .is_some_and(|(distance, _)| ring > 1 && distance < ((ring - 1) * REGION_SIZE).pow(2))
-        {
+        if best.as_ref().is_some_and(|(distance, _, _)| {
+            ring > 1 && *distance < ((ring - 1) * REGION_SIZE).pow(2)
+        }) {
             break;
         }
     }
-    let (_, position) = best?;
+    let (_, position, label) = best?;
     let spawn = nearby_dry_landing(terrain, position);
     Some(Located {
         target: LocateTarget::Structure(kind),
+        label,
         position,
         spawn,
     })
@@ -1426,6 +1455,29 @@ mod tests {
             parse_command("/locate biome Mushroom Park"),
             Ok(Some(LocateTarget::Biome(BiomeKind::MushroomPark)))
         );
+        for name in [
+            "Spirit Blossom",
+            "spirit_blossom",
+            "spirit-blossom",
+            "spiritblossom",
+        ] {
+            assert_eq!(
+                parse_command(&format!("/locate biome {name}")),
+                Ok(Some(LocateTarget::Biome(BiomeKind::SpiritBlossom)))
+            );
+        }
+        for name in [
+            "Blood Forest",
+            "blood_forest",
+            "blood-forest",
+            "bloodforest",
+            "Blutwald",
+        ] {
+            assert_eq!(
+                parse_command(&format!("/locate biome {name}")),
+                Ok(Some(LocateTarget::Biome(BiomeKind::BloodForest)))
+            );
+        }
         assert!(parse_command("/locate desert").is_err());
         assert!(parse_command("/teleport 1 2 3").is_err());
         assert!(parse_command("/locate biome desert extra").is_err());
@@ -1459,6 +1511,8 @@ mod tests {
             ("teramic::mine", StructureKind::Mine),
             ("teramic::kingdom", StructureKind::Kingdom),
             ("teramic::outpost", StructureKind::Outpost),
+            ("teramic::cemetery", StructureKind::Cemetery),
+            ("teramic::grave_dungeon", StructureKind::GraveDungeon),
         ] {
             assert_eq!(
                 parse_command(&format!("/locate struct {id}")),

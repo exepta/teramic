@@ -63,7 +63,7 @@ fn castle_models_load_through_the_real_scene_pipeline_with_stone_patterns_tangen
         assert_eq!(definition.model_layout, ModelLayout::Scene);
         assert!(definition.materials.iter().any(|(name, material)| {
             (name.starts_with("stone_") || name.contains("_stone_"))
-                && material.texture_pattern.is_some()
+                && (material.texture_pattern.is_some() || material.normal_texture.is_some())
                 && material.base_color[..3]
                     .iter()
                     .all(|channel| *channel >= 0.9 || definition.id == 190)
@@ -205,7 +205,7 @@ fn castle_crafting_keeps_the_requested_stone_and_crown_costs_and_covers_every_mo
         let id = terra_voxel::MaterialId::from_raw(material).unwrap();
         let slug = id.identifier().strip_prefix("teramic::").unwrap();
         let path = terra_core::asset_directory()
-            .join("crafting")
+            .join("crafting/building/castle")
             .join(format!("{slug}.json"));
         if terra_core::castle::retired_item(material) {
             assert!(

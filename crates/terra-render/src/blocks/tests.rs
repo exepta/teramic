@@ -6,6 +6,30 @@ fn library() -> BlockLibrary {
 }
 
 #[test]
+fn all_leaf_blocks_bind_separate_complete_sprites_without_changing_preview_faces() {
+    let library = library();
+    for id in terra_voxel::MaterialId::FOLIAGE {
+        let block = library.blocks.iter().find(|b| b.id == id).unwrap();
+        let cluster = block.foliage_cluster.as_ref().unwrap();
+        let faces = block.face_materials.as_ref().unwrap();
+        assert!(!faces.contains(&cluster.material));
+        assert!(block.textures[&cluster.material].ends_with("_cluster.png"));
+        assert_eq!(block.materials[&cluster.material].base_color, [1.0; 4]);
+        assert_eq!(cluster.needles.is_some(), id == 7);
+        assert!(block.validate().is_ok());
+        let mut missing = block.clone();
+        missing.foliage_cluster.as_mut().unwrap().material = "missing sprite".into();
+        assert!(missing.validate().is_err());
+        let mut nonleaf = block.clone();
+        nonleaf.id = 3;
+        assert!(
+            nonleaf.validate().is_err(),
+            "ordinary solid cubes cannot acquire leaf spray geometry"
+        );
+    }
+}
+
+#[test]
 fn shipped_blocks_have_square_edges_without_changing_material_identity() {
     use bevy::math::Vec3;
     let definitions = library();
@@ -18,6 +42,28 @@ fn shipped_blocks_have_square_edges_without_changing_material_identity() {
                 "authored join band, not a new cube bevel"
             );
             assert!(block.coarse_faces.is_some());
+            continue;
+        }
+        if [6, 10, 16, 17, 18, 36, 134, 135, 313, 314, 404, 405].contains(&block.id) {
+            assert_eq!(block.bevel_width, 0.025);
+            assert!(block.surface.is_none());
+            assert!(block.materials.values().all(|m| m.normal_texture.is_some()));
+            for face in super::cube_faces(block.bevel_width, [0; 6], None) {
+                for mesh in face {
+                    assert!(mesh.positions.len() <= 36);
+                    assert!(
+                        mesh.positions
+                            .iter()
+                            .flatten()
+                            .all(|v| (0.0..=1.0).contains(v))
+                    );
+                    assert!(
+                        mesh.normals
+                            .iter()
+                            .all(|n| (Vec3::from_array(*n).length() - 1.0).abs() < 1e-5)
+                    );
+                }
+            }
             continue;
         }
         assert_eq!(
@@ -75,6 +121,35 @@ fn ice_is_one_shared_translucent_solid_cube_without_a_glb_or_light() {
 }
 
 #[test]
+fn regional_plants_are_orientable_noncolliding_scenes_and_cactus_uses_three_faces() {
+    let definitions = library();
+    for id in terra_core::biome_flora::FIRST_PROP..=terra_core::biome_flora::LAST_PROP {
+        let block = definitions.blocks.iter().find(|d| d.id == id).unwrap();
+        assert_eq!(block.render_kind, BlockRenderKind::CustomMesh);
+        assert_eq!(block.model_layout, super::definitions::ModelLayout::Scene);
+        assert!(!block.model.is_empty());
+        assert!(block.gameplay.struct_block);
+        assert!(block.collision_boxes.is_empty() && block.light.is_none());
+        assert!(!terra_voxel::MaterialId::from_raw(id).unwrap().is_solid());
+    }
+    let cactus = definitions
+        .blocks
+        .iter()
+        .find(|d| d.id == terra_core::biome_flora::CACTUS)
+        .unwrap();
+    assert_eq!(cactus.render_kind, BlockRenderKind::Cube);
+    assert!(cactus.model.is_empty() && cactus.light.is_none());
+    assert_eq!(cactus.materials.len(), 3);
+    assert_eq!(cactus.textures.len(), 3);
+    let faces = cactus.face_materials.as_ref().unwrap();
+    assert_eq!(faces[0], faces[1]);
+    assert_eq!(faces[0], faces[4]);
+    assert_eq!(faces[0], faces[5]);
+    assert_ne!(faces[2], faces[3]);
+    assert_ne!(faces[0], faces[3]);
+}
+
+#[test]
 fn underwater_blocks_use_the_closed_cube_registry_without_models_or_extra_entities() {
     let definitions = library();
     for id in 44..=48 {
@@ -110,6 +185,60 @@ fn underwater_blocks_use_the_closed_cube_registry_without_models_or_extra_entiti
             }
         }
         assert_eq!(bounds, [bevy::math::Vec3::ZERO, bevy::math::Vec3::ONE]);
+    }
+}
+
+#[test]
+fn spirit_and_blood_surfaces_cut_inward_and_preserve_every_shared_cube_corner() {
+    use bevy::math::Vec3;
+    let definitions = library();
+    for id in [
+        306, 307, 308, 313, 314, 315, 400, 401, 402, 403, 404, 405, 407, 408, 409,
+    ] {
+        let block = definitions
+            .blocks
+            .iter()
+            .find(|block| block.id == id)
+            .unwrap();
+        assert_eq!(block.render_kind, BlockRenderKind::Cube);
+        if [313, 314, 404, 405].contains(&id) {
+            assert_eq!(block.bevel_width, 0.025);
+            assert!(block.surface.is_none());
+            assert!(block.materials.values().all(|m| m.normal_texture.is_some()));
+            continue;
+        }
+        assert_eq!(block.bevel_width, 0.0);
+        assert!(block.model.is_empty());
+        let template = super::surface::SurfaceTemplate::new(block.surface.unwrap());
+        let faces = super::cube_faces(0.0, [0; 6], None);
+        let mut inward_vertices = 0;
+        for (side, source) in faces.iter().enumerate() {
+            let patches = template.face(source, side, 0, 0, |p| p);
+            let points: Vec<_> = patches
+                .iter()
+                .flat_map(|p| &p.primitive.positions)
+                .collect();
+            for point in &points {
+                assert!(point.iter().all(|v| (0.0..=1.0).contains(v)), "block {id}");
+                let plane = (side % 2) as f32;
+                inward_vertices += usize::from((point[side / 2] - plane).abs() > 0.00001);
+            }
+            // The contour stays exactly on the shared voxel face: relief cannot
+            // expose cracks where two cubes or independently streamed chunks meet.
+            for primitive in source {
+                for &corner in &primitive.positions {
+                    if corner.iter().all(|v| *v == 0.0 || *v == 1.0) {
+                        assert!(
+                            points
+                                .iter()
+                                .any(|p| Vec3::from_array(**p) == Vec3::from_array(corner)),
+                            "block {id}, side {side}"
+                        );
+                    }
+                }
+            }
+        }
+        assert!(inward_vertices > 0, "block {id} must have visible relief");
     }
 }
 
@@ -152,11 +281,15 @@ fn shipped_ids_and_face_materials_stay_explicit_without_cube_models() {
         (1..=terra_voxel::MaterialId::LAST).collect::<Vec<_>>()
     );
     for block in &definitions.blocks {
-        if matches!(block.id, 1 | 28..=29 | 40 | 59..=73 | 99..=100 | 139..=172)
-            || terra_core::castle::is_castle(block.id)
+        if matches!(
+            block.id,
+            1 | 28..=29 | 40 | 59..=73 | 99..=100 | 139..=172 | 316..=323 | 344..=396 | 412..=421
+        ) || terra_core::castle::is_castle(block.id)
+            || terra_core::biome_flora::is_prop(block.id)
             || terra_core::lantern::is_part(block.id)
             || terra_core::rails::is_rail(block.id)
             || terra_core::train_parts::is_train(block.id)
+            || matches!(block.id, terra_core::roads::SLOPE..=terra_core::roads::EXIT)
             || terra_core::profession_stations::is_station(block.id)
             || block.id == terra_voxel::MaterialId::RailSwitchStand as u16
         {
@@ -203,7 +336,7 @@ fn shipped_ids_and_face_materials_stay_explicit_without_cube_models() {
         block.validate().expect("cube geometry requires no GLB");
     }
     let grass = &definitions.blocks[0];
-    assert_eq!(grass.model, "models/fiverr_grass_faces.glb");
+    assert_eq!(grass.model, "models/fiverr_grass_reference_base.glb");
     assert_eq!(
         grass.faces,
         ["West", "East", "Down", "Up", "North", "South"]
@@ -427,7 +560,7 @@ fn procedural_cube_geometry_is_closed_finite_and_outward_facing() {
 }
 
 #[test]
-fn shipped_cubes_have_shared_standalone_textures_and_no_glb_files() {
+fn shipped_cubes_have_standalone_textures_without_runtime_glb_dependencies() {
     use super::definitions::TexturePattern;
     use std::collections::BTreeSet;
     let directory = terra_core::asset_directory().join("terra/blocks");
@@ -438,41 +571,139 @@ fn shipped_cubes_have_shared_standalone_textures_and_no_glb_files() {
         .filter(|block| block.render_kind == BlockRenderKind::Cube)
         .flat_map(|block| block.textures.values())
         .collect();
-    assert_eq!(textures.len(), 2, "remaining standalone cube textures");
+    let spirit_textures = BTreeSet::from([
+        "textures/spirit_blossom_grass.png",
+        "textures/spirit_blossom_grass_bottom.png",
+        "textures/spirit_blossom_grass_side.png",
+        "textures/spirit_blossom_dirt.png",
+        "textures/spirit_stone.png",
+        "textures/blossom_petal_block.png",
+        "textures/spirit_blossom_log.png",
+        "textures/spirit_blossom_log_end.png",
+        "textures/spirit_blossom_planks.png",
+        "textures/glowing_lantern_stone.png",
+    ]);
+    let foliage_textures: BTreeSet<String> = [
+        "oak",
+        "autumn",
+        "birch",
+        "cherry_pink",
+        "cherry_white",
+        "apple",
+        "spirit_pink",
+        "spirit_pearl",
+        "spirit_lavender",
+        "blood",
+    ]
+    .into_iter()
+    .flat_map(|style| {
+        ["side", "top", "cluster"].map(move |face| format!("textures/foliage/{style}_{face}.png"))
+    })
+    .chain(["textures/foliage/spruce_cluster.png".to_string()])
+    .collect();
+    let cemetery_textures: BTreeSet<String> = (324..=343)
+        .chain([397, 398, 399])
+        .map(|id| {
+            let slug = terra_voxel::MaterialId::from_raw(id)
+                .unwrap()
+                .identifier()
+                .strip_prefix("teramic::")
+                .unwrap();
+            format!("textures/{slug}.png")
+        })
+        .collect();
+    let blood_textures: BTreeSet<String> = [
+        "blood_grass",
+        "blood_grass_bottom",
+        "blood_grass_side",
+        "blood_dirt",
+        "blood_stone",
+        "veined_stone",
+        "bloodwood_planks",
+        "bloodwood_log",
+        "bloodwood_log_end",
+        "crimson_mycelium",
+        "crimson_mycelium_bottom",
+        "crimson_mycelium_side",
+        "blood_moss",
+        "blood_moss_bottom",
+        "blood_moss_side",
+        "blood_crystal_block",
+        "blood_fungal_block",
+        "blood_glow_mushroom_block",
+    ]
+    .into_iter()
+    .map(|name| format!("textures/{name}.png"))
+    .collect();
+    let reference_textures: BTreeSet<String> =
+        ["oak", "birch", "spruce", "blood", "ghost", "sakura"]
+            .into_iter()
+            .flat_map(|species| {
+                ["bark", "end", "planks"]
+                    .map(move |face| format!("textures/block_palette/{species}_{face}.png"))
+            })
+            .chain(
+                ["stone", "sand", "gravel", "cobble"]
+                    .map(|name| format!("textures/block_palette/{name}.png")),
+            )
+            .collect();
     assert_eq!(
         textures
             .iter()
             .map(|path| path.as_str())
             .collect::<BTreeSet<_>>(),
-        BTreeSet::from(["textures/wood.png", "textures/stone-strata-hd.png"])
+        spirit_textures
+            .iter()
+            .copied()
+            .chain(cemetery_textures.iter().map(String::as_str))
+            .chain(blood_textures.iter().map(String::as_str))
+            .chain(foliage_textures.iter().map(String::as_str))
+            .chain(reference_textures.iter().map(String::as_str))
+            .chain([
+                "textures/cactus_side.png",
+                "textures/cactus_top.png",
+                "textures/cactus_bottom.png"
+            ])
+            .chain([
+                "textures/wood.png",
+                "textures/stone-strata-hd.png",
+                "textures/reference_base/snow.png",
+                "textures/asphalt.png",
+            ])
+            .filter(|path| !matches!(
+                *path,
+                "textures/wood.png"
+                    | "textures/spirit_blossom_log.png"
+                    | "textures/spirit_blossom_log_end.png"
+                    | "textures/spirit_blossom_planks.png"
+                    | "textures/bloodwood_log.png"
+                    | "textures/bloodwood_log_end.png"
+                    | "textures/bloodwood_planks.png"
+            ))
+            .collect::<BTreeSet<_>>()
     );
+    for (id, texture) in [(3, "stone"), (4, "sand"), (13, "cobble"), (42, "gravel")] {
+        let block = definitions.blocks.iter().find(|b| b.id == id).unwrap();
+        let face = &block.face_materials.as_ref().unwrap()[0];
+        assert!(block.materials[face].texture_pattern.is_none());
+        assert_eq!(
+            block.textures[face],
+            format!("textures/block_palette/{texture}.png")
+        );
+        assert!(block.materials[face].normal_texture.is_some());
+    }
     for (id, pattern) in [
-        (3, TexturePattern::Stone),
-        (4, TexturePattern::Sand),
-        (7, TexturePattern::Canopy),
-        (8, TexturePattern::Canopy),
-        (9, TexturePattern::BirchCanopy),
-        (13, TexturePattern::MossyStone),
         (19, TexturePattern::Clay),
-        (42, TexturePattern::Gravel),
         (43, TexturePattern::StructureStone),
     ] {
-        let block = definitions
-            .blocks
-            .iter()
-            .find(|block| block.id == id)
-            .unwrap();
+        let block = definitions.blocks.iter().find(|b| b.id == id).unwrap();
         assert!(
             block
                 .materials
                 .values()
-                .any(|material| material.texture_pattern == Some(pattern)),
-            "block {id} must reference its shared procedural {pattern:?} texture"
+                .any(|m| m.texture_pattern == Some(pattern))
         );
-        assert!(
-            block.textures.is_empty(),
-            "block {id} must not load stale PNGs"
-        );
+        assert!(block.textures.is_empty());
     }
     let dirt = definitions
         .blocks
@@ -489,21 +720,15 @@ fn shipped_cubes_have_shared_standalone_textures_and_no_glb_files() {
         .iter()
         .find(|block| block.id == 3)
         .unwrap();
-    let host_pattern = stone.materials[&stone.face_materials.as_ref().unwrap()[0]].texture_pattern;
-    assert_eq!(host_pattern, Some(TexturePattern::Stone));
+    let stone_face = &stone.face_materials.as_ref().unwrap()[0];
     for ore in definitions
         .blocks
         .iter()
         .filter(|block| (30..=35).contains(&block.id))
     {
-        assert_eq!(
-            ore.materials[&ore.face_materials.as_ref().unwrap()[0]].texture_pattern,
-            host_pattern
-        );
-        assert!(
-            ore.textures.is_empty(),
-            "ore host rock uses the shared stone pattern"
-        );
+        let host = &ore.face_materials.as_ref().unwrap()[0];
+        assert_eq!(ore.materials[host], stone.materials[stone_face]);
+        assert_eq!(ore.textures[host], stone.textures[stone_face]);
     }
     for texture in textures {
         let png = std::fs::read(directory.join(texture)).expect("standalone PNG");
@@ -511,10 +736,43 @@ fn shipped_cubes_have_shared_standalone_textures_and_no_glb_files() {
         let width = u32::from_be_bytes(png[16..20].try_into().expect("width"));
         let height = u32::from_be_bytes(png[20..24].try_into().expect("height"));
         assert_eq!(width, height, "standalone square texture: {texture}");
-        assert!(
-            (256..=2048).contains(&width),
-            "texture resolution: {texture}"
-        );
+        if foliage_textures.contains(texture.as_str()) {
+            assert_eq!(width, 512, "authored foliage texture resolution: {texture}");
+        } else if spirit_textures.contains(texture.as_str())
+            || blood_textures.contains(texture.as_str())
+        {
+            assert_eq!(width, 256, "authored biome texture resolution: {texture}");
+        } else if cemetery_textures.contains(texture.as_str()) {
+            assert_eq!(width, 128, "cemetery surface texture resolution: {texture}");
+        } else {
+            assert!(
+                (256..=2048).contains(&width),
+                "texture resolution: {texture}"
+            );
+        }
+    }
+    for block in definitions
+        .blocks
+        .iter()
+        .filter(|block| block.render_kind == BlockRenderKind::Cube)
+    {
+        assert!(block.model.is_empty(), "cube {} loads no GLB", block.id);
+        if (306..=315).contains(&block.id)
+            || (324..=343).contains(&block.id)
+            || matches!(block.id, 397..=399)
+        {
+            // Portable authoring references exist, but the renderer still uses
+            // shared closed cube geometry and the explicit per-face textures.
+            let slug = terra_voxel::MaterialId::from_raw(block.id)
+                .unwrap()
+                .identifier()
+                .strip_prefix("teramic::")
+                .unwrap();
+            let reference = std::fs::read(directory.join(format!("models/{slug}.glb")))
+                .expect("Spirit cube authoring reference");
+            assert_eq!(&reference[..4], b"glTF");
+            assert_eq!(u32::from_le_bytes(reference[4..8].try_into().unwrap()), 2);
+        }
     }
     for name in [
         "grass",
@@ -542,24 +800,33 @@ fn new_materials_are_distinct_and_glass_has_only_a_transparent_pane() {
     let library = library();
     let block = |id| library.blocks.iter().find(|b| b.id == id).unwrap();
     let pattern = |id| block(id).materials.values().find_map(|m| m.texture_pattern);
-    assert_eq!(pattern(4), Some(TexturePattern::Sand));
+    assert_eq!(pattern(4), None);
+    assert!(block(4).textures.values().any(|p| p.ends_with("/sand.png")));
     assert_eq!(pattern(11), Some(TexturePattern::Sandstone));
     assert_eq!(pattern(12), Some(TexturePattern::SmoothStone));
-    assert_eq!(pattern(13), Some(TexturePattern::MossyStone));
+    assert_eq!(pattern(13), None);
+    assert!(
+        block(13)
+            .textures
+            .values()
+            .any(|p| p.ends_with("/cobble.png"))
+    );
     assert_eq!(pattern(19), Some(TexturePattern::Clay));
     let glass = block(15);
     let pane = &glass.materials[&glass.face_materials.as_ref().unwrap()[0]];
     assert_eq!(pane.base_color[3], 0.1);
     let frame = &glass.materials[glass.frame_material.as_ref().unwrap()];
     assert_eq!(frame.base_color[3], 1.0);
-    assert_ne!(
-        block(16).materials.values().next().unwrap().base_color,
-        block(17).materials.values().next().unwrap().base_color
-    );
-    assert_ne!(
-        block(17).materials.values().next().unwrap().base_color,
-        block(18).materials.values().next().unwrap().base_color
-    );
+    assert_ne!(block(16).textures, block(17).textures);
+    assert_ne!(block(17).textures, block(18).textures);
+    for id in [16, 17, 18] {
+        assert!(
+            block(id)
+                .materials
+                .values()
+                .all(|m| m.base_color == [1.0; 4])
+        );
+    }
 }
 
 #[test]
@@ -633,4 +900,28 @@ fn json_directory_discovery_is_stable_and_reports_invalid_files() {
             .contains("malformed.json")
     );
     assert!(BlockLibrary::load(&directory.0.join("missing")).is_err());
+}
+
+#[test]
+fn fog_block_is_solid_mineable_and_spirit_stone_does_not_self_illuminate() {
+    let library = BlockLibrary::load(&terra_core::asset_directory().join("terra/blocks")).unwrap();
+    let fog = library
+        .blocks
+        .iter()
+        .find(|b| b.id == terra_core::fog_blocks::MATERIAL)
+        .unwrap();
+    assert_eq!(fog.name, "Fog Block");
+    assert!(terra_voxel::MaterialId::FogBlock.is_solid());
+    assert!(terra_voxel::MaterialId::FogBlock.is_opaque());
+    assert!(terra_core::ItemKind::Block(430).valid());
+    for id in [308, 430] {
+        let block = library.blocks.iter().find(|b| b.id == id).unwrap();
+        assert!(
+            block.light.is_none(),
+            "ordinary stone must not create a cave light"
+        );
+        for material in block.materials.values() {
+            assert_eq!(material.emission, [0.0; 3]);
+        }
+    }
 }

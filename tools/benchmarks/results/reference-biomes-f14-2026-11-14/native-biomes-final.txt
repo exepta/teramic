@@ -1,0 +1,2 @@
+Isolated native reference run: /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/reference-biomes/run.ZkiVMP
+Native reference biome/plant captures and loaded voxel inspections passed: picker-plains, picker-desert, picker-cherry-forest, picker-highlands, picker-blood-forest, picker-spirit-blossom, picker-ocean, picker-forest, reference-cactus, reference-plains, reference-desert, reference-spirit

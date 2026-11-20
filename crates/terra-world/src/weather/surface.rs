@@ -750,6 +750,8 @@ mod tests {
                 mushroom_park: 0.0,
                 cliffted_desert: 0.0,
                 cherry_forest: 0.0,
+                spirit_blossom: 0.0,
+                blood_forest: 0.0,
             },
         };
         for forced_snow in [false, true] {

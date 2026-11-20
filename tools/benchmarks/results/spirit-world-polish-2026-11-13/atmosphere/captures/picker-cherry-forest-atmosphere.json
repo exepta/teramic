@@ -1,0 +1,19 @@
+{
+  "first_banks": 0,
+  "first_drift": [
+    0.0,
+    0.0
+  ],
+  "later_banks": 0,
+  "later_drift": [
+    0.0,
+    0.0
+  ],
+  "mist_expected": false,
+  "ray_steps": 0,
+  "scene": "picker-cherry-forest",
+  "status": "passed",
+  "terrain": "Actual generated terrain; no placed lamps or fixture blocks",
+  "terrain_texture_bytes": 484,
+  "volumes": 0
+}

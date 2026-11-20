@@ -34,7 +34,8 @@ pub struct Cue {
 pub struct Controls {
     pub queue: Mutex<VecDeque<Cue>>,
     pub played: AtomicU32,
-    pub ambient: [AtomicU32; 3],
+    pub worm_played: [AtomicU32; super::worm::COUNT],
+    pub ambient: [AtomicU32; super::ambience::LAYERS],
     pub fire: [AtomicU32; 2],
     pub furnace: [AtomicU32; 2],
     pub faucet: [AtomicU32; 2],
@@ -49,6 +50,7 @@ impl Default for Controls {
         Self {
             queue: Mutex::new(VecDeque::new()),
             played: AtomicU32::new(0),
+            worm_played: Default::default(),
             ambient: Default::default(),
             fire: Default::default(),
             furnace: Default::default(),
@@ -105,8 +107,7 @@ impl Decodable for RecordedSoundscape {
             right: false,
             pair: [0.0; 2],
             low: [0.0; 2],
-            ambient: [0.0; 3],
-            phase: [0.0; 3],
+            beds: super::beds::Beds::default(),
             fire: [0.0; 2],
             fire_phase: 0.0,
             furnace: [0.0; 2],
@@ -126,6 +127,7 @@ impl Decodable for RecordedSoundscape {
                 .map(|gain| f32::from_bits(gain.load(Ordering::Relaxed))),
             wet: 0.0,
             reverb: std::array::from_fn(|_| reverb::Reverb::default()),
+            atmosphere_reverb: reverb::Reverb::default(),
         }
     }
 }
@@ -141,8 +143,7 @@ pub struct Stream {
     right: bool,
     pair: [f32; 2],
     low: [f32; 2],
-    ambient: [f32; 3],
-    phase: [f32; 3],
+    beds: super::beds::Beds,
     fire: [f32; 2],
     fire_phase: f32,
     furnace: [f32; 2],
@@ -158,6 +159,7 @@ pub struct Stream {
     categories: [f32; CATEGORIES],
     wet: f32,
     reverb: [reverb::Reverb; CATEGORIES],
+    atmosphere_reverb: reverb::Reverb,
 }
 fn sample(clip: &[f32], position: f32) -> f32 {
     let index = position as usize;
@@ -188,6 +190,12 @@ impl Iterator for Stream {
         }
         self.right = true;
         if self.frame.is_multiple_of(256) {
+            self.beds.retarget(
+                self.controls
+                    .ambient
+                    .each_ref()
+                    .map(|gain| f32::from_bits(gain.load(Ordering::Relaxed))),
+            );
             self.controls.faucet_rms.store(
                 (self.faucet_energy / 512.0).sqrt().to_bits(),
                 Ordering::Relaxed,
@@ -211,6 +219,13 @@ impl Iterator for Stream {
                 {
                     self.voices.push(Voice { cue, position: 0.0 });
                     self.controls.played.fetch_add(1, Ordering::Relaxed);
+                    if let Some(index) = cue
+                        .sound
+                        .checked_sub(super::worm::FIRST)
+                        .filter(|&index| index < super::worm::COUNT)
+                    {
+                        self.controls.worm_played[index].fetch_add(1, Ordering::Relaxed);
+                    }
                 }
             }
         }
@@ -240,14 +255,15 @@ impl Iterator for Stream {
             }
         }
         let environment = self.categories[Category::Environment as usize];
-        for layer in 0..3 {
-            let target = f32::from_bits(self.controls.ambient[layer].load(Ordering::Relaxed));
-            self.ambient[layer] += (target - self.ambient[layer]) * 0.000025;
-            let value =
-                loop_sample(&self.bank[11 + layer], &mut self.phase[layer]) * self.ambient[layer];
-            for channel in 0..2 {
-                self.pair[channel] += value * environment;
-            }
+        let (atmosphere, atmosphere_send) = self.beds.frame(&self.bank);
+        for (channel, value) in atmosphere.into_iter().enumerate() {
+            self.pair[channel] += value * environment;
+        }
+        // Regional beds share the same bounded environment tail as distant details.
+        // Category gain remains outside the effect, so muting kills its tail too.
+        let echo = self.atmosphere_reverb.process(atmosphere_send);
+        for (channel, value) in echo.into_iter().enumerate() {
+            self.pair[channel] += value * environment;
         }
         if let Some(clip) = self.bank.get(32) {
             let value = loop_sample(clip, &mut self.fire_phase);
@@ -324,6 +340,168 @@ impl Source for Stream {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn actual_biome_beds_mix_in_stereo_crossfade_and_respect_live_mute() {
+        let bank = super::super::clips::load().unwrap();
+        let export = std::env::var_os("TERRA_AUDIO_EXPORT_DIR").map(std::path::PathBuf::from);
+        let mut signatures = std::collections::BTreeSet::new();
+        for (name, biome, cave) in [
+            ("blood-forest", 9, 0.0),
+            ("spirit-forest", 8, 0.0),
+            ("desert", 3, 0.0),
+            ("ocean", 0, 0.0),
+            ("highlands", 4, 0.0),
+            ("woodland", 2, 0.0),
+            ("cherry-forest", 7, 0.0),
+            ("mushroom-park", 5, 0.0),
+            ("caves", 2, 1.0),
+        ] {
+            let controls = Arc::new(Controls::default());
+            controls.configure(&terra_core::AudioConfig::default(), true);
+            let mut weights = [0.0; 10];
+            weights[biome] = 1.0;
+            let p = super::super::ambience::profile(weights, cave, 0.5, 1.5, 0.0);
+            for (gain, target) in p.levels.into_iter().zip(&controls.ambient) {
+                target.store(gain.to_bits(), Ordering::Relaxed);
+            }
+            let mut cadence = super::super::ambience::Cadence::default();
+            cadence.update(0.0, p, &controls);
+            cadence.update(30.0, p, &controls);
+            let mut stream = RecordedSoundscape {
+                bank: bank.clone(),
+                controls: controls.clone(),
+            }
+            .decoder();
+            let samples: Vec<_> = stream.by_ref().take(48_000 * 2 * 8).collect();
+            assert!(samples.iter().all(|s| s.is_finite() && s.abs() < 0.89));
+            let rms = (samples.iter().map(|s| s * s).sum::<f32>() / samples.len() as f32).sqrt();
+            assert!(rms > 0.00005 && rms < 0.2, "{name}: {rms}");
+            assert!(
+                samples
+                    .chunks_exact(2)
+                    .any(|s| (s[0] - s[1]).abs() > 0.0001),
+                "{name}: stereo"
+            );
+            assert!(signatures.insert(rms.to_bits()), "{name}: duplicated bed");
+            // Re-select another region while using the same decoder. Smoothed
+            // controls avoid a hard jump or another audio device/entity.
+            for gain in &controls.ambient {
+                gain.store(0, Ordering::Relaxed);
+            }
+            controls.ambient[2].store(0.13_f32.to_bits(), Ordering::Relaxed);
+            let before = stream.next().unwrap();
+            let after = stream.next().unwrap();
+            assert!((after - before).abs() < 0.10);
+            controls.configure(
+                &terra_core::AudioConfig {
+                    ambience_volume: 0.0,
+                    ..Default::default()
+                },
+                true,
+            );
+            for _ in 0..48_000 {
+                stream.next();
+            }
+            assert!(
+                stream.by_ref().take(12_000).all(|s| s.abs() < 0.00001),
+                "{name}: mute tail"
+            );
+            if let Some(root) = &export {
+                std::fs::create_dir_all(root).unwrap();
+                let pcm: Vec<i16> = samples
+                    .into_iter()
+                    .map(|s| (s.clamp(-1.0, 1.0) * 32767.0) as i16)
+                    .collect();
+                let bytes = (pcm.len() * 2) as u32;
+                let mut wav = Vec::with_capacity(bytes as usize + 44);
+                wav.extend(b"RIFF");
+                wav.extend((bytes + 36).to_le_bytes());
+                wav.extend(b"WAVEfmt ");
+                wav.extend(16_u32.to_le_bytes());
+                wav.extend(1_u16.to_le_bytes());
+                wav.extend(2_u16.to_le_bytes());
+                wav.extend(48_000_u32.to_le_bytes());
+                wav.extend(192_000_u32.to_le_bytes());
+                wav.extend(4_u16.to_le_bytes());
+                wav.extend(16_u16.to_le_bytes());
+                wav.extend(b"data");
+                wav.extend(bytes.to_le_bytes());
+                for sample in pcm {
+                    wav.extend(sample.to_le_bytes());
+                }
+                std::fs::write(root.join(format!("{name}.wav")), wav).unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn continuous_biome_journey_uses_one_decoder_and_preserves_live_volume_controls() {
+        let controls = Arc::new(Controls::default());
+        controls.configure(&terra_core::AudioConfig::default(), true);
+        let mut stream = RecordedSoundscape {
+            bank: super::super::clips::load().unwrap(),
+            controls: controls.clone(),
+        }
+        .decoder();
+        let mut samples = Vec::new();
+        let mut cadence = super::super::ambience::Cadence::default();
+        for (region, biome) in [2, 7, 8, 5, 9, 3, 0].into_iter().enumerate() {
+            let mut weights = [0.0; 10];
+            weights[biome] = 1.0;
+            let profile = super::super::ambience::profile(weights, 0.0, 0.5, 2.0, 0.0);
+            for (target, gain) in controls.ambient.iter().zip(profile.levels) {
+                target.store(gain.to_bits(), Ordering::Relaxed);
+            }
+            for second in 0..6 {
+                cadence.update((region * 6 + second) as f32, profile, &controls);
+                samples.extend(stream.by_ref().take(48_000 * 2));
+            }
+        }
+        assert!(
+            samples
+                .iter()
+                .all(|sample| sample.is_finite() && sample.abs() < 0.89)
+        );
+        // Check actual consecutive frames of each channel, including each abrupt
+        // region replacement, rather than comparing left against right samples.
+        assert!(
+            samples
+                .windows(3)
+                .all(|pair| (pair[2] - pair[0]).abs() < 0.15)
+        );
+        controls.configure(
+            &terra_core::AudioConfig {
+                muted: true,
+                ..default()
+            },
+            true,
+        );
+        stream.by_ref().take(48_000).for_each(drop);
+        assert!(stream.take(12_000).all(|sample| sample.abs() < 0.00001));
+        if let Some(root) = std::env::var_os("TERRA_AUDIO_EXPORT_DIR") {
+            let path = std::path::PathBuf::from(root);
+            std::fs::create_dir_all(&path).unwrap();
+            let size = (samples.len() * 2) as u32;
+            let mut wav = Vec::with_capacity(size as usize + 44);
+            wav.extend(b"RIFF");
+            wav.extend((size + 36).to_le_bytes());
+            wav.extend(b"WAVEfmt ");
+            wav.extend(16_u32.to_le_bytes());
+            wav.extend(1_u16.to_le_bytes());
+            wav.extend(2_u16.to_le_bytes());
+            wav.extend(48_000_u32.to_le_bytes());
+            wav.extend(192_000_u32.to_le_bytes());
+            wav.extend(4_u16.to_le_bytes());
+            wav.extend(16_u16.to_le_bytes());
+            wav.extend(b"data");
+            wav.extend(size.to_le_bytes());
+            for sample in samples {
+                wav.extend(((sample.clamp(-1.0, 1.0) * 32767.0) as i16).to_le_bytes());
+            }
+            std::fs::write(path.join("biome-journey.wav"), wav).unwrap();
+        }
+    }
 
     fn queued_constant_voice(
         category: Category,

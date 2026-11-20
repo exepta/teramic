@@ -182,6 +182,9 @@ pub struct BlockDefinition {
     pub frame_material: Option<String>,
     #[serde(default)]
     pub crystal_material: Option<String>,
+    /// Complete, separately authored leaf sprays for near/middle crown geometry.
+    #[serde(default)]
+    pub foliage_cluster: Option<FoliageClusterDefinition>,
     #[serde(default = "face_names")]
     pub faces: [String; 6],
     /// Optional tiled cube faces for distant rendering of an authored terrain model.
@@ -189,6 +192,15 @@ pub struct BlockDefinition {
     pub coarse_faces: Option<[String; 6]>,
     #[serde(default)]
     pub details: Vec<DetailDefinition>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FoliageClusterDefinition {
+    pub material: String,
+    /// Conifers share the existing green leaf block, selected by tree appearance.
+    #[serde(default)]
+    pub needles: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize)]
@@ -284,6 +296,9 @@ pub struct CubeMaterialDefinition {
     pub double_sided: bool,
     #[serde(default)]
     pub texture_pattern: Option<TexturePattern>,
+    /// Tangent-space normal map, loaded in linear color space.
+    #[serde(default)]
+    pub normal_texture: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
@@ -362,6 +377,7 @@ impl Default for CubeMaterialDefinition {
             metallic: 0.0,
             double_sided: false,
             texture_pattern: None,
+            normal_texture: None,
         }
     }
 }
@@ -538,6 +554,11 @@ impl BlockDefinition {
                             || material.texture_pattern.is_some()
                             || self.textures.contains_key(name)
                     })
+                    || material
+                        .normal_texture
+                        .as_ref()
+                        .is_some_and(|path| !relative_asset(path, "png"))
+                    || (material.coarse_face.is_some() && material.normal_texture.is_some())
                     || (material.texture_pattern.is_some() && self.textures.contains_key(name))
                     || material
                         .base_color
@@ -571,6 +592,19 @@ impl BlockDefinition {
             })
             || self.crystal_material.as_ref().is_some_and(|name| {
                 self.render_kind != BlockRenderKind::Cube || !self.materials.contains_key(name)
+            })
+            || self.foliage_cluster.as_ref().is_some_and(|cluster| {
+                self.render_kind != BlockRenderKind::Cube
+                    || !terra_voxel::MaterialId::FOLIAGE.contains(&self.id)
+                    || std::iter::once(&cluster.material)
+                        .chain(cluster.needles.iter())
+                        .any(|name| {
+                            !self.materials.contains_key(name)
+                                || self.textures.get(name).is_none_or(|path| {
+                                    !path.starts_with("textures/foliage/")
+                                        || !path.ends_with(".png")
+                                })
+                        })
             })
             || self.details.iter().any(|d| {
                 d.mesh.trim().is_empty()

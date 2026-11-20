@@ -14,10 +14,37 @@ pub enum BiomeKind {
     MushroomPark,
     ClifftedDesert,
     CherryForest,
+    SpiritBlossom,
+    BloodForest,
+}
+
+/// Broad climate compatibility; warm regions form a buffer between extremes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BiomeClimate {
+    Cold,
+    Warm,
+    Hot,
+}
+impl BiomeClimate {
+    pub const fn allows_neighbor(self, other: Self) -> bool {
+        !matches!(
+            (self, other),
+            (Self::Cold, Self::Hot) | (Self::Hot, Self::Cold)
+        )
+    }
 }
 
 impl BiomeKind {
-    pub const ALL: [Self; 8] = [
+    pub const fn climate(self) -> BiomeClimate {
+        match self {
+            Self::Highland => BiomeClimate::Cold,
+            Self::Desert | Self::ClifftedDesert => BiomeClimate::Hot,
+            _ => BiomeClimate::Warm,
+        }
+    }
+
+    pub const ALL: [Self; 10] = [
         Self::Ocean,
         Self::Plains,
         Self::Forest,
@@ -26,6 +53,8 @@ impl BiomeKind {
         Self::MushroomPark,
         Self::ClifftedDesert,
         Self::CherryForest,
+        Self::SpiritBlossom,
+        Self::BloodForest,
     ];
 
     pub const fn file_name(self) -> &'static str {
@@ -38,6 +67,8 @@ impl BiomeKind {
             Self::MushroomPark => "mushroom_park.json",
             Self::ClifftedDesert => "cliffted_desert.json",
             Self::CherryForest => "cherry_forest.json",
+            Self::SpiritBlossom => "spirit_blossom.json",
+            Self::BloodForest => "blood_forest.json",
         }
     }
 }
@@ -45,9 +76,40 @@ impl BiomeKind {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BiomeDefinitions {
-    pub entries: [BiomeDefinition; 8],
+    #[serde(deserialize_with = "deserialize_entries")]
+    pub entries: [BiomeDefinition; 10],
     #[serde(default = "super::LandscapeDefinitions::legacy_v5")]
     pub landscapes: super::LandscapeDefinitions,
+}
+
+/// Historic snapshots contain eight entries. Append the new profile without
+/// changing saved terrain: spirit_blossom_revision independently gates generation.
+fn deserialize_entries<'de, D>(deserializer: D) -> Result<[BiomeDefinition; 10], D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    if !deserializer.is_human_readable() {
+        return <[BiomeDefinition; 10]>::deserialize(deserializer);
+    }
+    let mut entries = Vec::<BiomeDefinition>::deserialize(deserializer)?;
+    if entries.len() == 8 {
+        entries.push(
+            serde_json::from_str(include_str!("../../../../assets/biome/spirit_blossom.json"))
+                .map_err(serde::de::Error::custom)?,
+        );
+    }
+    if entries.len() == 9 {
+        entries.push(
+            serde_json::from_str(include_str!("../../../../assets/biome/blood_forest.json"))
+                .map_err(serde::de::Error::custom)?,
+        );
+    }
+    entries.try_into().map_err(|entries: Vec<BiomeDefinition>| {
+        serde::de::Error::custom(format!(
+            "expected 8/9 legacy or 10 biome profiles, got {}",
+            entries.len()
+        ))
+    })
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -226,6 +288,8 @@ impl BiomeDefinitions {
                 include_str!("../../../../assets/biome/mushroom_park.json"),
                 include_str!("../../../../assets/biome/cliffted_desert.json"),
                 include_str!("../../../../assets/biome/cherry_forest.json"),
+                include_str!("../../../../assets/biome/spirit_blossom.json"),
+                include_str!("../../../../assets/biome/blood_forest.json"),
             ];
             let mut result = Self {
                 entries: files

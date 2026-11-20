@@ -578,16 +578,7 @@ fn attach_with_depth(
 }
 
 fn line_of_sight(h: &Habitat, from: [f64; 3], to: [f64; 3]) -> bool {
-    if !super::navigation::valid_point(from) || !super::navigation::valid_point(to) {
-        return false;
-    }
-    let length = distance(from, to).sqrt();
-    let count = (length / 0.2).ceil().clamp(1.0, 128.0) as usize;
-    (1..=count).all(|index| {
-        let t = index as f64 / count as f64;
-        let at = std::array::from_fn(|i| from[i] + (to[i] - from[i]) * t);
-        h.block(at.map(|v| v.floor() as i64)).is_some() && shape_contains(h, at).is_none()
-    })
+    super::perception::visible(h, from, to)
 }
 
 fn corner_goal(h: &Habitat, a: &Creature) -> Option<[i64; 3]> {
@@ -640,13 +631,13 @@ fn shelter(h: &Habitat, a: &Creature) -> Option<bool> {
     let z = center[2].floor() as i64;
     for y in top..top + 16 {
         let material = h.block([x, y, z])?;
-        if matches!(material, 7..=9 | 132 | 133 | 15 | 80 | 88 | 96) {
+        if matches!(material, 7..=9 | 132 | 133 | 310..=312 | 15 | 80 | 88 | 96) {
             continue;
         }
         if terra_voxel::MaterialId::from_raw(material).is_some_and(|m| m.is_solid()) {
             return Some((1..=2).all(|dy| {
                 h.block([x, y + dy, z]).is_some_and(|m| {
-                    !matches!(m, 7..=9 | 132 | 133 | 15 | 80 | 88 | 96)
+                    !matches!(m, 7..=9 | 132 | 133 | 310..=312 | 15 | 80 | 88 | 96)
                         && terra_voxel::MaterialId::from_raw(m).is_some_and(|m| m.is_solid())
                 })
             }));
@@ -3150,6 +3141,19 @@ mod tests {
                 .is_some()
             );
             animal.age = 10.0;
+            // A soft cache expiry does not queue another search while a valid
+            // route remains. Validate the genuinely unmoved/stalled route first
+            // without granting any A* budget, leaving a real pending retry.
+            assert!(
+                super::super::navigation::ground_waypoint(
+                    &animal,
+                    &habitat,
+                    [11.5, 3.0, 7.5],
+                    false,
+                    Some(&mut navigation),
+                )
+                .is_none()
+            );
             assert!(navigation.needs_search(animal.id, animal.age));
             animal.needs.goal = Some(NeedGoal {
                 kind: NeedKind::Shelter,

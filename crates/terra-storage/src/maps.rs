@@ -6,9 +6,15 @@
 //! TRMAP003 additionally stores exact per-cell raster inputs and a stable palette
 //! fingerprint. Unknown-source legacy pixels can coexist with recolorable cells;
 //! the fingerprint describes only cells whose source is known, not the whole tile.
+//! TRMAP004 adds Spirit Blossom; TRMAP005 adds Blood Forest. Older sources retain
+//! their original stride and receive zero weights only for the missing biomes.
 //! The writer canonicalizes only f64 endpoint roundoff; stored fractions stay [0, 1].
 //! No map migration modifies the independent waypoint book or exploration mask.
+#[cfg(test)]
+mod blood_migration_tests;
 pub mod domains;
+#[cfg(test)]
+mod spirit_migration_tests;
 
 use std::{
     fs,
@@ -21,8 +27,16 @@ const MAGIC: &[u8; 8] = b"TRMAP001";
 const FILE_BYTES: usize = 8 + 16 + TILE_BYTES + 8;
 const RELIEF_MAGIC: &[u8; 8] = b"TRMAP002";
 const RELIEF_BYTES: usize = TILE_SIZE * TILE_SIZE * 2 + TILE_SIZE * TILE_SIZE / 8;
-const SOURCE_MAGIC: &[u8; 8] = b"TRMAP003";
-const SAMPLE_BYTES: usize = 2 + 2 + 1 + 1 + 8 * 4 + 4 + 4;
+const LEGACY_SOURCE_MAGIC: &[u8; 8] = b"TRMAP003";
+const SPIRIT_SOURCE_MAGIC: &[u8; 8] = b"TRMAP004";
+const SOURCE_MAGIC: &[u8; 8] = b"TRMAP005";
+const LEGACY_SAMPLE_BYTES: usize = 2 + 2 + 1 + 1 + 8 * 4 + 4 + 4;
+const SPIRIT_SAMPLE_BYTES: usize = LEGACY_SAMPLE_BYTES + 4;
+const SAMPLE_BYTES: usize = SPIRIT_SAMPLE_BYTES + 4;
+const LEGACY_SOURCE_BYTES: usize =
+    FILE_BYTES + 1 + 8 + RELIEF_BYTES + TILE_SIZE * TILE_SIZE * LEGACY_SAMPLE_BYTES;
+const SPIRIT_SOURCE_BYTES: usize =
+    FILE_BYTES + 1 + 8 + RELIEF_BYTES + TILE_SIZE * TILE_SIZE * SPIRIT_SAMPLE_BYTES;
 const SOURCE_BYTES: usize =
     FILE_BYTES + 1 + 8 + RELIEF_BYTES + TILE_SIZE * TILE_SIZE * SAMPLE_BYTES;
 // Legacy climate mixes and redistributes fractions in f64 before storing f32.
@@ -139,7 +153,17 @@ pub fn load_cached(root: &Path, coordinate: [i64; 2]) -> Result<Option<CachedMap
     file.take(SOURCE_BYTES as u64 + 1)
         .read_to_end(&mut bytes)
         .map_err(|e| e.to_string())?;
-    let has_source = bytes.len() == SOURCE_BYTES && &bytes[..8] == SOURCE_MAGIC;
+    let stored_biomes = if bytes.len() == LEGACY_SOURCE_BYTES && &bytes[..8] == LEGACY_SOURCE_MAGIC
+    {
+        Some(8)
+    } else if bytes.len() == SPIRIT_SOURCE_BYTES && &bytes[..8] == SPIRIT_SOURCE_MAGIC {
+        Some(9)
+    } else if bytes.len() == SOURCE_BYTES && &bytes[..8] == SOURCE_MAGIC {
+        Some(10)
+    } else {
+        None
+    };
+    let has_source = stored_biomes.is_some();
     let legacy_relief = bytes.len() == FILE_BYTES + RELIEF_BYTES && &bytes[..8] == RELIEF_MAGIC;
     let legacy_color = bytes.len() == FILE_BYTES && &bytes[..8] == MAGIC;
     if !has_source && !legacy_relief && !legacy_color {
@@ -177,19 +201,30 @@ pub fn load_cached(root: &Path, coordinate: [i64; 2]) -> Result<Option<CachedMap
         water.copy_from_slice(&bytes[start..end]);
         Box::new(MapRelief { heights, water })
     });
-    let source = if has_source {
+    let source = if let Some(biomes) = stored_biomes {
         let mut cells = [MapSample::default(); TILE_SIZE * TILE_SIZE];
         let start = relief_start + RELIEF_BYTES;
+        let stride = 6 + (biomes + 2) * 4;
         for (index, (sample, bytes)) in cells
             .iter_mut()
-            .zip(bytes[start..bytes.len() - 8].chunks_exact(SAMPLE_BYTES))
+            .zip(bytes[start..bytes.len() - 8].chunks_exact(stride))
             .enumerate()
         {
             if bytes[5] > 3 {
                 return Err("Invalid map sample flags".into());
             }
             let number = |offset| f32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap());
-            let mut fractions = std::array::from_fn(|axis| number(6 + axis * 4));
+            let mut fractions = std::array::from_fn(|axis| {
+                if axis < 10 {
+                    if axis < biomes {
+                        number(6 + axis * 4)
+                    } else {
+                        0.0
+                    }
+                } else {
+                    number(6 + (biomes + axis - 10) * 4)
+                }
+            });
             check_fractions(&mut fractions, coordinate, index, false)?;
             *sample = MapSample {
                 material: u16::from_le_bytes(bytes[..2].try_into().unwrap()),
@@ -198,8 +233,8 @@ pub fn load_cached(root: &Path, coordinate: [i64; 2]) -> Result<Option<CachedMap
                 known: bytes[5] & 1 != 0,
                 canopy: bytes[5] & 2 != 0,
                 biome_weights: std::array::from_fn(|axis| fractions[axis]),
-                shore: fractions[8],
-                snow: fractions[9],
+                shore: fractions[10],
+                snow: fractions[11],
             };
         }
         Some(Box::new(MapRasterSource {
@@ -261,8 +296,8 @@ pub fn save_cached(root: &Path, cached: &CachedMapTile) -> Result<(), String> {
     }
     for (index, sample) in source.cells.iter().enumerate() {
         let mut fractions = std::array::from_fn(|axis| match axis {
-            0..8 => sample.biome_weights[axis],
-            8 => sample.shore,
+            0..10 => sample.biome_weights[axis],
+            10 => sample.shore,
             _ => sample.snow,
         });
         check_fractions(&mut fractions, cached.tile.coordinate, index, true)?;
@@ -278,7 +313,7 @@ pub fn save_cached(root: &Path, cached: &CachedMapTile) -> Result<(), String> {
 }
 
 fn check_fractions(
-    fractions: &mut [f32; 10],
+    fractions: &mut [f32; 12],
     coordinate: [i64; 2],
     sample: usize,
     writing: bool,
@@ -287,8 +322,8 @@ fn check_fractions(
     for (field, value) in fractions.iter_mut().enumerate() {
         if !value.is_finite() || !(-tolerance..=1.0 + tolerance).contains(&f64::from(*value)) {
             let name = match field {
-                0..8 => format!("biome_weights[{field}]"),
-                8 => "shore".into(),
+                0..10 => format!("biome_weights[{field}]"),
+                10 => "shore".into(),
                 _ => "snow".into(),
             };
             return Err(format!(
@@ -434,7 +469,7 @@ mod tests {
             known: true,
             canopy: true,
             water_depth: 3,
-            biome_weights: [0.0, 0.25, 0.75, 0.0, 0.0, 0.0, 0.0, 0.0],
+            biome_weights: [0.0, 0.25, 0.75, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             shore: 0.125,
             snow: 0.5,
         };
@@ -541,8 +576,10 @@ mod tests {
         let mut sample = MapSample {
             known: true,
             material: 1,
-            biome_weights: [ocean, plains, forest, desert, highland, mushroom, 0.0, 0.0]
-                .map(|value| value as f32),
+            biome_weights: [
+                ocean, plains, forest, desert, highland, mushroom, 0.0, 0.0, 0.0, 0.0,
+            ]
+            .map(|value| value as f32),
             shore: -f64::EPSILON as f32,
             ..Default::default()
         };

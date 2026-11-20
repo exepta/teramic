@@ -1,0 +1,31 @@
+{
+  "id": "blood_stalker",
+  "title": "Blood Stalker",
+  "variant_titles": [],
+  "health": 28,
+  "food": 0,
+  "water": 0,
+  "size": [
+    1.5,
+    0.95,
+    1.65
+  ],
+  "speed": 1.8,
+  "group_size": 1,
+  "sleeps": false,
+  "spawn": {
+    "biomes": [
+      "blood_forest"
+    ],
+    "herd_size": [
+      1,
+      1
+    ]
+  },
+  "combat": {
+    "damage": 5.0,
+    "aggro_radius": 19.0,
+    "reach": 1.7,
+    "cooldown": 1.5
+  }
+}

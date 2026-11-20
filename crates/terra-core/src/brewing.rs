@@ -81,45 +81,53 @@ pub fn recipes() -> &'static [BrewingRecipe] {
         const SOURCES: [(&str, &str); POTION_COUNT] = [
             (
                 "regeneration",
-                include_str!("../../../assets/brewing/regeneration.json"),
+                include_str!("../../../assets/crafting/processes/brewing/regeneration.json"),
             ),
             (
                 "strength",
-                include_str!("../../../assets/brewing/strength.json"),
+                include_str!("../../../assets/crafting/processes/brewing/strength.json"),
             ),
-            ("speed", include_str!("../../../assets/brewing/speed.json")),
+            (
+                "speed",
+                include_str!("../../../assets/crafting/processes/brewing/speed.json"),
+            ),
             (
                 "nightvision",
-                include_str!("../../../assets/brewing/nightvision.json"),
+                include_str!("../../../assets/crafting/processes/brewing/nightvision.json"),
             ),
             (
                 "fire_resistance",
-                include_str!("../../../assets/brewing/fire_resistance.json"),
+                include_str!("../../../assets/crafting/processes/brewing/fire_resistance.json"),
             ),
             (
                 "regeneration_strength",
-                include_str!("../../../assets/brewing/regeneration_strength.json"),
+                include_str!(
+                    "../../../assets/crafting/processes/brewing/regeneration_strength.json"
+                ),
             ),
             (
                 "poison",
-                include_str!("../../../assets/brewing/poison.json"),
+                include_str!("../../../assets/crafting/processes/brewing/poison.json"),
             ),
-            ("slow", include_str!("../../../assets/brewing/slow.json")),
+            (
+                "slow",
+                include_str!("../../../assets/crafting/processes/brewing/slow.json"),
+            ),
             (
                 "freeze",
-                include_str!("../../../assets/brewing/freeze.json"),
+                include_str!("../../../assets/crafting/processes/brewing/freeze.json"),
             ),
             (
                 "bleeding",
-                include_str!("../../../assets/brewing/bleeding.json"),
+                include_str!("../../../assets/crafting/processes/brewing/bleeding.json"),
             ),
             (
                 "rotten",
-                include_str!("../../../assets/brewing/rotten.json"),
+                include_str!("../../../assets/crafting/processes/brewing/rotten.json"),
             ),
             (
                 "on_fire",
-                include_str!("../../../assets/brewing/on_fire.json"),
+                include_str!("../../../assets/crafting/processes/brewing/on_fire.json"),
             ),
         ];
         SOURCES
@@ -130,7 +138,7 @@ pub fn recipes() -> &'static [BrewingRecipe] {
                 assert!(builtin.valid());
                 std::fs::read_to_string(
                     crate::asset_directory()
-                        .join("brewing")
+                        .join("crafting/processes/brewing")
                         .join(format!("{name}.json")),
                 )
                 .ok()

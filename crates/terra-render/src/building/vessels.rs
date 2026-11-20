@@ -12,6 +12,8 @@ struct Assets {
     liquid: Handle<Mesh>,
     stream: Handle<Mesh>,
     material: Handle<StandardMaterial>,
+    tar: Handle<StandardMaterial>,
+    bile: Handle<StandardMaterial>,
 }
 
 #[derive(Component)]
@@ -37,6 +39,21 @@ fn setup(
             base_color: Color::srgba(0.16, 0.57, 0.78, 0.82),
             perceptual_roughness: 0.18,
             alpha_mode: AlphaMode::Blend,
+            cull_mode: None,
+            ..default()
+        }),
+        bile: materials.add(StandardMaterial {
+            base_color: Color::srgba(0.56, 0.62, 0.08, 0.90),
+            perceptual_roughness: 0.18,
+            reflectance: 0.6,
+            alpha_mode: AlphaMode::Blend,
+            cull_mode: None,
+            ..default()
+        }),
+        tar: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.035, 0.028, 0.022),
+            perceptual_roughness: 0.16,
+            reflectance: 0.55,
             cull_mode: None,
             ..default()
         }),
@@ -94,15 +111,22 @@ pub(super) fn is_vessel(item: ItemKind) -> bool {
         ItemKind::GlassBottle | ItemKind::WaterBottle | ItemKind::Potion(_)
     ) || matches!(
         item,
-        ItemKind::Tool(terra_core::ToolKind::Bucket | terra_core::ToolKind::WaterBucket)
+        ItemKind::Tool(
+            terra_core::ToolKind::Bucket
+                | terra_core::ToolKind::WaterBucket
+                | terra_core::ToolKind::TarBucket
+                | terra_core::ToolKind::BileBucket
+        )
     ) || farm_kind(item) == Some(FarmToolKind::WateringCan)
 }
 
 pub(super) fn base(item: ItemKind) -> ItemKind {
     match item {
-        ItemKind::Tool(terra_core::ToolKind::WaterBucket) => {
-            ItemKind::Tool(terra_core::ToolKind::Bucket)
-        }
+        ItemKind::Tool(
+            terra_core::ToolKind::WaterBucket
+            | terra_core::ToolKind::TarBucket
+            | terra_core::ToolKind::BileBucket,
+        ) => ItemKind::Tool(terra_core::ToolKind::Bucket),
         ItemKind::WaterBottle => ItemKind::GlassBottle,
         _ => item.preview_item(),
     }
@@ -113,7 +137,12 @@ fn default_fill(item: ItemKind) -> f32 {
         f32::from(units) / f32::from(tool.watering_capacity())
     } else if matches!(
         item,
-        ItemKind::WaterBottle | ItemKind::Tool(terra_core::ToolKind::WaterBucket)
+        ItemKind::WaterBottle
+            | ItemKind::Tool(
+                terra_core::ToolKind::WaterBucket
+                    | terra_core::ToolKind::TarBucket
+                    | terra_core::ToolKind::BileBucket
+            )
     ) {
         1.
     } else {
@@ -126,7 +155,12 @@ fn profile(item: ItemKind) -> Option<(Vec3, f32, f32)> {
         Some((Vec3::new(0.35, 0.105, 0.5), 0.145, 0.47))
     } else if matches!(
         item,
-        ItemKind::Tool(terra_core::ToolKind::Bucket | terra_core::ToolKind::WaterBucket)
+        ItemKind::Tool(
+            terra_core::ToolKind::Bucket
+                | terra_core::ToolKind::WaterBucket
+                | terra_core::ToolKind::TarBucket
+                | terra_core::ToolKind::BileBucket
+        )
     ) {
         Some((Vec3::new(0.5, 0.18, 0.5), 0.22, 0.4075))
     } else if matches!(item, ItemKind::GlassBottle | ItemKind::WaterBottle) {
@@ -189,7 +223,15 @@ fn update(
     motion: Option<Res<VesselMotion>>,
     time: Res<Time>,
     roots: Query<(Entity, &HeldItem, &Transform, &GlobalTransform)>,
-    mut parts: Query<(&Part, &mut Transform, &mut Visibility), Without<HeldItem>>,
+    mut parts: Query<
+        (
+            &Part,
+            &mut Transform,
+            &mut Visibility,
+            &mut MeshMaterial3d<StandardMaterial>,
+        ),
+        Without<HeldItem>,
+    >,
 ) {
     let Some(assets) = assets else {
         return;
@@ -209,6 +251,13 @@ fn update(
         };
         let water = liquid_pose(held.item, fill).unwrap();
         let active = motion.is_some_and(|motion| motion.pouring);
+        let material = if held.item == ItemKind::Tool(terra_core::ToolKind::TarBucket) {
+            &assets.tar
+        } else if held.item == ItemKind::Tool(terra_core::ToolKind::BileBucket) {
+            &assets.bile
+        } else {
+            &assets.material
+        };
         let spout = if farm_kind(held.item) == Some(FarmToolKind::WateringCan) {
             Vec3::new(0.87, 0.75, 0.5)
         } else {
@@ -236,10 +285,13 @@ fn update(
             (false, water, fill.is_finite() && fill > 0.001),
             (true, stream, active),
         ] {
-            if let Some((_, mut transform, mut visibility)) = parts
+            if let Some((_, mut transform, mut visibility, mut surface)) = parts
                 .iter_mut()
-                .find(|(part, _, _)| part.root == root && part.stream == is_stream)
+                .find(|(part, _, _, _)| part.root == root && part.stream == is_stream)
             {
+                if surface.0 != *material {
+                    surface.0 = material.clone();
+                }
                 if *transform != next {
                     *transform = next;
                 }
@@ -262,7 +314,7 @@ fn update(
                     } else {
                         assets.liquid.clone()
                     }),
-                    MeshMaterial3d(assets.material.clone()),
+                    MeshMaterial3d(material.clone()),
                     next,
                     if visible {
                         Visibility::Inherited
@@ -284,6 +336,7 @@ mod tests {
     fn filled_held_vessels_reuse_empty_shells_and_actual_bounded_levels() {
         for item in [
             ItemKind::Tool(terra_core::ToolKind::WaterBucket),
+            ItemKind::Tool(terra_core::ToolKind::TarBucket),
             ItemKind::Tool(terra_core::ToolKind::WoodWateringCan),
             ItemKind::WaterBottle,
         ] {

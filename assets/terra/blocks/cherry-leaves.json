@@ -8,13 +8,54 @@
   "bevel_width": 0.0,
   "materials": {
     "Pink sakura blossoms": {
-      "texture_pattern": "blossom_canopy",
-      "base_color": [1.0, 0.32, 0.58, 1.0]
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "Pink sakura blossoms_top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "leaf_cluster": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
     }
   },
-  "face_materials": ["Pink sakura blossoms", "Pink sakura blossoms", "Pink sakura blossoms", "Pink sakura blossoms", "Pink sakura blossoms", "Pink sakura blossoms"],
+  "face_materials": [
+    "Pink sakura blossoms",
+    "Pink sakura blossoms",
+    "Pink sakura blossoms",
+    "Pink sakura blossoms_top",
+    "Pink sakura blossoms",
+    "Pink sakura blossoms"
+  ],
   "hardness": 0.3,
   "resistance": 0.5,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Pink sakura blossoms": "textures/foliage/cherry_pink_side.png",
+    "Pink sakura blossoms_top": "textures/foliage/cherry_pink_top.png",
+    "leaf_cluster": "textures/foliage/cherry_pink_cluster.png"
+  },
+  "foliage_cluster": {
+    "material": "leaf_cluster"
+  }
 }

@@ -152,7 +152,10 @@ impl Drop for NativeOsPointer {
     }
 }
 
-fn os_pointer(world: &mut World, commands: &[tilt_ui::serde_json::Value]) -> Result<(), String> {
+pub(crate) fn os_pointer(
+    world: &mut World,
+    commands: &[tilt_ui::serde_json::Value],
+) -> Result<(), String> {
     if !world.contains_resource::<NativeOsPointer>() {
         let mut child = Command::new("python3")
             .arg("tools/ui/wayland_pointer.py")

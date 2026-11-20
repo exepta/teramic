@@ -1,0 +1,110 @@
+[
+  {
+    "id": 317,
+    "name": "Blossom Bush",
+    "model": "assets/terra/blocks/models/blossom_bush.glb",
+    "sha256": "4a4d7282717d7edc9a41a222d372349849ec4bea7fea1e4b0b5f1409156dafa8"
+  },
+  {
+    "id": 309,
+    "name": "Blossom Petal Block",
+    "model": "assets/terra/blocks/models/blossom_petal_block.glb",
+    "sha256": "08f52722c7ddddde18a61c67815cb952dfd8da8bc888a48f9fed11264d01081b"
+  },
+  {
+    "id": 315,
+    "name": "Glowing Lantern Stone",
+    "model": "assets/terra/blocks/models/glowing_lantern_stone.glb",
+    "sha256": "377f386e364b0c77823f75706b31bf18b91723028cd41dc5a6ca91ec0d7f737f"
+  },
+  {
+    "id": 316,
+    "name": "Glowing Spirit Flowers",
+    "model": "assets/terra/blocks/models/glowing_spirit_flowers.glb",
+    "sha256": "1b048584cb42e2383a66d20ee43bb05caf6829c3e66f91398a60b218c4993ed6"
+  },
+  {
+    "id": 321,
+    "name": "Hanging Blossom Lantern",
+    "model": "assets/terra/blocks/models/hanging_blossom_lantern.glb",
+    "sha256": "548837fe1d0cbdf569423480c3f61617ce197a107c352deda05691ab74748a1c"
+  },
+  {
+    "id": 312,
+    "name": "Lavender Blossom Leaves",
+    "model": "assets/terra/blocks/models/lavender_blossom_leaves.glb",
+    "sha256": "bbf3541199dd334d9020b0fd62532f0e3bbf120616bf5993f6a5da99c03a5f8d"
+  },
+  {
+    "id": 320,
+    "name": "Lily Pad",
+    "model": "assets/terra/blocks/models/lily_pad.glb",
+    "sha256": "4bc486a7faa27f7f7ba877cfa85aaec1a7c9e1324b7ae4cdbba138597f277068"
+  },
+  {
+    "id": 319,
+    "name": "Lotus Flower",
+    "model": "assets/terra/blocks/models/lotus_flower.glb",
+    "sha256": "41b6e12b94941733fd47702d3262ab8fdc2a3e487a304517fa50d4879aa9c11f"
+  },
+  {
+    "id": 322,
+    "name": "Petal Ground Cover",
+    "model": "assets/terra/blocks/models/petal_ground_cover.glb",
+    "sha256": "e8bfc9418d984e4699dfbf6c1a5e1dc431d6b07886a1d556b1c4be94a70e7b99"
+  },
+  {
+    "id": 310,
+    "name": "Pink Blossom Leaves",
+    "model": "assets/terra/blocks/models/pink_blossom_leaves.glb",
+    "sha256": "560c52a06378dcbd9509331ad6c31b653e79ed6d7ae979ba282be29e3bfdc65d"
+  },
+  {
+    "id": 307,
+    "name": "Spirit Blossom Dirt",
+    "model": "assets/terra/blocks/models/spirit_blossom_dirt.glb",
+    "sha256": "9bcd7307c07648b6b300af64b760025c78fb128e4c62e6d037e27bab0c26ea9f"
+  },
+  {
+    "id": 306,
+    "name": "Spirit Blossom Grass",
+    "model": "assets/terra/blocks/models/spirit_blossom_grass.glb",
+    "sha256": "8540d7bf98cc488116a2111896061fc67ab2df3ae382297ca9318e6a31914748"
+  },
+  {
+    "id": 313,
+    "name": "Spirit Blossom Log",
+    "model": "assets/terra/blocks/models/spirit_blossom_log.glb",
+    "sha256": "30133d158fcd90338a4cd1bfa086587029c7050ad004f9a09c94d99f2d29001d"
+  },
+  {
+    "id": 314,
+    "name": "Spirit Blossom Planks",
+    "model": "assets/terra/blocks/models/spirit_blossom_planks.glb",
+    "sha256": "ab0699d1debc78e6dd6332ed2c630e4a93f9501b892a4bb9f8ce0dfd7557b1b0"
+  },
+  {
+    "id": 318,
+    "name": "Spirit Lantern Post",
+    "model": "assets/terra/blocks/models/spirit_lantern_post.glb",
+    "sha256": "f7234207ba873c1f960662fec7522cccbbfe9a31533a5a38f2cb220305ffe837"
+  },
+  {
+    "id": 323,
+    "name": "Spirit Shrine Stone",
+    "model": "assets/terra/blocks/models/spirit_shrine_stone.glb",
+    "sha256": "daffa20c3ee608fe552398002a1443466c18e9d6a88b4635426d0a897ac6f8cb"
+  },
+  {
+    "id": 308,
+    "name": "Spirit Stone",
+    "model": "assets/terra/blocks/models/spirit_stone.glb",
+    "sha256": "948a3d43dcbdbd23b44ab97d0601573243231eac132c600bb52b8b90f957ef7b"
+  },
+  {
+    "id": 311,
+    "name": "White Blossom Leaves",
+    "model": "assets/terra/blocks/models/white_blossom_leaves.glb",
+    "sha256": "a69a460bbe8ddaa51c639a724d03db6bda293d27946ff0f3430ab55f5342d099"
+  }
+]

@@ -58,7 +58,7 @@ pub fn eligible(chunks: &ChunkStore, journal: &EditJournal, foot: [i64; 3]) -> b
     journal.block(foot).is_none()
         && chunks
             .block_at(foot)
-            .is_some_and(|m| matches!(m, 6 | 10 | 36 | 134))
+            .is_some_and(|m| matches!(m, 6 | 10 | 36 | 134 | 313))
         && chunks
             .prepared_column([foot[0].div_euclid(16), foot[2].div_euclid(16)])
             .is_some_and(|column| column.felling_foot(foot))
@@ -366,13 +366,22 @@ pub(crate) fn worker_cut_one(
     let Some(&cell) = (if wood { &task.wood } else { &task.leaves }).last() else {
         return Ok(false);
     };
-    if chunks.block_at(cell).is_none() {
+    let Some(material) = chunks.block_at(cell) else {
         return Err(WaitReason::Unloaded);
-    }
+    };
     if !break_allowed(chunks, journal, owner, cell, &[]) {
         return Err(WaitReason::Protected);
     }
-    let extra = usize::from(wood) + usize::from(wood && !task.sapling_dropped);
+    // The saved plan's cell list is exact; using the actual material also keeps
+    // autumn/white crowns and historic wood skins instead of canonical species
+    // materials. Every player edit remains excluded by remove_owned below.
+    let correct_kind = if wood {
+        matches!(material, 6 | 10 | 36 | 134 | 313)
+    } else {
+        matches!(material, 7..=9 | 132 | 133 | 195 | 310..=312)
+    };
+    let sapling = !wood && crate::saplings::leaf_drop_roll(cell);
+    let extra = usize::from(wood || sapling);
     if journal.gameplay().drops.len() + extra + 6 > terra_core::MAX_WORLD_DROPS
         || journal
             .gameplay()
@@ -382,30 +391,29 @@ pub(crate) fn worker_cut_one(
     {
         return Err(WaitReason::StorageFull);
     }
-    let material = if wood {
-        task.species.wood()
-    } else {
-        task.species.leaves()
-    };
-    let removed = remove_owned(chunks, journal, properties, cell, material, task.planted)
-        .map_err(|_| WaitReason::Protected)?;
+    let removed = correct_kind
+        && remove_owned(chunks, journal, properties, cell, material, task.planted)
+            .map_err(|_| WaitReason::Protected)?;
     if wood {
         task.wood.pop();
     } else {
         task.leaves.pop();
     }
-    if removed && wood {
+    if removed && (wood || sapling) {
         let at = task.foot.map(|v| v as f64 + 0.5);
         let game = journal.gameplay_mut();
-        if !game.drop_one(at, ItemKind::Block(material)) {
+        let item = if wood {
+            ItemKind::Block(material)
+        } else {
+            ItemKind::Prop(task.species.sapling())
+        };
+        if !game.drop_one(at, item) {
             return Err(WaitReason::StorageFull);
         }
         task.drops.push(game.next_drop);
-        if !task.sapling_dropped {
-            if !game.drop_one(at, ItemKind::Prop(task.species.sapling())) {
-                return Err(WaitReason::StorageFull);
-            }
-            task.drops.push(game.next_drop);
+        if sapling {
+            // Retained serialized legacy flag; it no longer grants a free seed
+            // on the first log or suppresses any later independent leaf roll.
             task.sapling_dropped = true;
         }
     }
@@ -444,7 +452,7 @@ pub fn is_axe(tool: Option<ItemKind>) -> bool {
 
 struct Job {
     planted: Option<u64>,
-    sapling: Option<ItemKind>,
+    species: Option<terra_core::TreeSpecies>,
     origin: [i64; 3],
     drop_position: [f64; 3],
     material: u16,
@@ -489,7 +497,7 @@ impl Queue {
         }
         self.0.push_back(Job {
             planted: plan.planted,
-            sapling: plan.species.map(|s| ItemKind::Prop(s.sapling())),
+            species: plan.species,
             origin: plan.origin,
             drop_position: plan.foot.map(|v| v as f64 + 0.5),
             material: plan.material,
@@ -524,7 +532,7 @@ impl Queue {
             let result: Result<(), String> = (|| {
                 if !job.wood.is_empty()
                     && wood_left > 0
-                    && batch.drops + 1 + usize::from(job.sapling.is_some() && job.drops) <= 4
+                    && batch.drops + usize::from(job.drops) <= 4
                 {
                     // Existing block commits may also detach up to six torches.
                     // Stop before edits if the resource journal cannot retain drops.
@@ -571,14 +579,6 @@ impl Queue {
                         {
                             return Err("Natural wood drop capacity changed during felling".into());
                         }
-                        if job.drops
-                            && let Some(item) = job.sapling.take()
-                        {
-                            if !state.drop_one(job.drop_position, item) {
-                                return Err("Tree sapling drop capacity changed".into());
-                            }
-                            batch.drops += 1;
-                        }
                         let stats = state.player_stats.entry(job.owner).or_default();
                         stats.blocks_broken = stats.blocks_broken.saturating_add(removed as u64);
                         batch.wood += removed;
@@ -587,8 +587,23 @@ impl Queue {
                 }
                 if job.wood.is_empty() {
                     let ready = *job.leaves_at.get_or_insert(now + LEAF_DELAY);
-                    if now >= ready {
-                        for _ in 0..job.leaves.len().min(leaves_left) {
+                    if now >= ready && batch.drops + usize::from(job.drops) <= 4 {
+                        // At most one real sapling stack per bounded decay batch;
+                        // attached objects can additionally detach up to six drops
+                        // per committed cell, just as during trunk removal.
+                        let count = job.leaves.len().min(leaves_left);
+                        if journal.gameplay().drops.len() + 1 + count * 6
+                            > terra_core::MAX_WORLD_DROPS
+                            || journal
+                                .gameplay()
+                                .next_drop
+                                .checked_add((1 + count * 6) as u64)
+                                .is_none()
+                        {
+                            return Ok(());
+                        }
+                        let mut saplings = 0;
+                        for _ in 0..count {
                             let cell = *job.leaves.front().expect("bounded nonempty leaf batch");
                             if break_allowed(chunks, journal, job.owner, cell, &job.domains)
                                 && remove_owned(
@@ -601,9 +616,31 @@ impl Queue {
                                 )?
                             {
                                 batch.leaves += 1;
+                                if job.drops
+                                    && job.species.is_some()
+                                    && crate::saplings::leaf_drop_roll(cell)
+                                {
+                                    saplings += 1;
+                                }
                             }
                             job.leaves.pop_front();
                             leaves_left -= 1;
+                        }
+                        if saplings > 0
+                            && let Some(species) = job.species
+                        {
+                            if !journal.gameplay_mut().drop_stack(
+                                job.drop_position,
+                                ItemStack {
+                                    item: ItemKind::Prop(species.sapling()),
+                                    count: saplings,
+                                },
+                                [0.0, 1.8, 0.0],
+                                0.35,
+                            ) {
+                                return Err("Tree leaf drop capacity changed during decay".into());
+                            }
+                            batch.drops += 1;
                         }
                     }
                 }

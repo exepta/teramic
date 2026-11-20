@@ -258,14 +258,19 @@ fn pipes_do_not_create_a_source_from_finite_flowing_water() {
             journal.set_fluid(p, water).unwrap();
             pipe(&mut chunks, &mut journal, p, material, facing);
             assert_eq!(journal.fluid(p), Some(water));
+            let mut drained = 0;
             for _ in 0..32 {
-                simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+                let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+                drained += step.drained + step.absorbed;
+                assert_eq!(step.sourced + step.replenished, 0);
+                assert_eq!(u64::from(journal.fluid(p).unwrap().amount) + drained, 5);
             }
-            assert!(
-                journal
-                    .fluid(p)
-                    .is_none_or(|water| water.amount == 0 && !water.source)
+            let retained = journal.fluid(p).unwrap();
+            assert_eq!(
+                retained.amount, 0,
+                "An enclosing pipe must not sustain source-free exterior water"
             );
+            assert!(!retained.source);
             assert!(journal.fluid_cells().all(|(_, water)| !water.source));
         }
     }

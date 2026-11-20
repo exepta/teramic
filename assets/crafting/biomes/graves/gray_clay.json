@@ -1,0 +1,34 @@
+{
+  "id": "teramic::gray_clay",
+  "name": "Gray Clay",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 330
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "dye": {
+            "rgb": [
+              128,
+              128,
+              128
+            ]
+          }
+        },
+        "count": 1
+      }
+    ]
+  }
+}

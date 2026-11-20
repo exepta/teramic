@@ -18,6 +18,6 @@ pub use plugin::{TerraWorldPlugin, WorldMode};
 pub use resources::{
     BlockEditRequest, ChunkFoci, ChunkFocus, ChunkStore, GenerationStatus, LoadedSection,
     PreparedColumnChanged, PropRemoveRequest, SectionEditApplied, SectionPublished, SectionRemoved,
-    StreamingSet, StreamingSettings, WaterPublished, WorldAccess, WorldGeneration, WorldTerrain,
-    reset_replica,
+    StreamingRadiusLimit, StreamingSet, StreamingSettings, WaterPublished, WorldAccess,
+    WorldGeneration, WorldTerrain, reset_replica,
 };

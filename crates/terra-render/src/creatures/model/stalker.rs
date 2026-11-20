@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn coplanar_overlap_regression_detects_the_old_moss_spacing() {
-        let mut moss = Builder::default();
+        let mut moss = crate::players::model::Builder::default();
         for y in [0.0, -0.075] {
             moss.voxel([0.0, y, 0.0], [0.033, 0.09, 0.035], BARK[0])
                 .unwrap();

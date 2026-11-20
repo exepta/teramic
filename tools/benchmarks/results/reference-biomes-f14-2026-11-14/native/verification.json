@@ -1,0 +1,1046 @@
+{
+  "status": "passed",
+  "ecology_revision": 6,
+  "fixture_edits": 0,
+  "world": "fresh WorldConfig revisions, requested seed/time, current biome JSON snapshots",
+  "scenes": {
+    "picker-plains": {
+      "inspection": {
+        "anchor": [
+          128.5,
+          85.05980682373047,
+          -767.5
+        ],
+        "biome_weights": [
+          0.0,
+          0.8299403564642683,
+          0.0014682319873046527,
+          0.06681422161078257,
+          0.062229113913084284,
+          0.03568617619578752,
+          0.0,
+          0.00072293522233578,
+          0.0,
+          0.0031389646064367512
+        ],
+        "camera": [
+          76.17410278320312,
+          113.05980682373047,
+          -715.174072265625
+        ],
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "picker-plains",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              128,
+              84,
+              -768
+            ],
+            1
+          ],
+          [
+            [
+              128,
+              86,
+              -768
+            ],
+            0
+          ]
+        ],
+        "status": "passed",
+        "verified_voxel_probes": 2
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "2d2e7719a73d4e32e2f9d244943982300b46af5418d2bb0603f936d146ef29df"
+        }
+      }
+    },
+    "picker-desert": {
+      "inspection": {
+        "anchor": [
+          -1919.5,
+          28.049606323242188,
+          -1919.5
+        ],
+        "biome_weights": [
+          0.0,
+          0.008486949559390333,
+          0.0,
+          0.9915130504406097,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "camera": [
+          -1971.825927734375,
+          56.04960632324219,
+          -1867.174072265625
+        ],
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "picker-desert",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              -1920,
+              27,
+              -1920
+            ],
+            4
+          ],
+          [
+            [
+              -1920,
+              29,
+              -1920
+            ],
+            0
+          ]
+        ],
+        "status": "passed",
+        "verified_voxel_probes": 2
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "e1e2b713dbc06fbd38cb664e30535f0aae85cf4879f6a369cfd59005af7ae39a"
+        }
+      }
+    },
+    "picker-cherry-forest": {
+      "inspection": {
+        "anchor": [
+          -1151.5,
+          10.011448860168457,
+          1024.5
+        ],
+        "biome_weights": [
+          0.16767484385908404,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.832325156140916,
+          0.0,
+          0.0
+        ],
+        "camera": [
+          -1195.340576171875,
+          40.01144790649414,
+          1068.340576171875
+        ],
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "picker-cherry-forest",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              -1152,
+              9,
+              1024
+            ],
+            1
+          ],
+          [
+            [
+              -1152,
+              11,
+              1024
+            ],
+            0
+          ]
+        ],
+        "status": "passed",
+        "verified_voxel_probes": 2
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "50041d55a3eaf7ba788783e4423656d2cdb46de299442cf0cf3ef316570b94de"
+        }
+      }
+    },
+    "picker-highlands": {
+      "inspection": {
+        "anchor": [
+          128.5,
+          109.76179504394531,
+          -127.5
+        ],
+        "biome_weights": [
+          0.0,
+          0.0001918979724752442,
+          6.496347171151715e-05,
+          0.0006463318551572843,
+          0.7222222222222222,
+          0.0006065646719965773,
+          0.0,
+          0.0,
+          0.0,
+          0.27626801980643706
+        ],
+        "camera": [
+          71.93145751953125,
+          151.7617950439453,
+          -70.93145751953125
+        ],
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "picker-highlands",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              128,
+              109,
+              -128
+            ],
+            1
+          ],
+          [
+            [
+              128,
+              110,
+              -128
+            ],
+            0
+          ]
+        ],
+        "status": "passed",
+        "verified_voxel_probes": 2
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "0bdb8281efdc6c23b1357be2d956ff056a7567286e52c64d239805c9b11c23c6"
+        }
+      }
+    },
+    "picker-blood-forest": {
+      "inspection": {
+        "anchor": [
+          -639.5,
+          29.535579681396484,
+          640.5
+        ],
+        "biome_weights": [
+          0.0,
+          0.0,
+          0.054817403246326606,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.9451825967536734
+        ],
+        "camera": [
+          -615.5,
+          64.08000183105469,
+          640.5
+        ],
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "picker-blood-forest",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              -640,
+              29,
+              640
+            ],
+            400
+          ],
+          [
+            [
+              -640,
+              30,
+              640
+            ],
+            0
+          ],
+          [
+            [
+              -648,
+              45,
+              640
+            ],
+            406
+          ],
+          [
+            [
+              -616,
+              64,
+              640
+            ],
+            0
+          ]
+        ],
+        "status": "passed",
+        "verified_voxel_probes": 4
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "112f3107259db25f4cda7b629766688e2e6e5aeded76faefb4ac4afb1f743191"
+        }
+      }
+    },
+    "picker-spirit-blossom": {
+      "inspection": {
+        "anchor": [
+          -1279.5,
+          30.973648071289062,
+          768.5
+        ],
+        "biome_weights": [
+          0.022293810326786012,
+          0.0,
+          0.0015720664698433181,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.9747199697741792,
+          0.0014141534291914825
+        ],
+        "camera": [
+          -1323.340576171875,
+          60.97364807128906,
+          812.3406372070312
+        ],
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "picker-spirit-blossom",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              -1280,
+              30,
+              768
+            ],
+            306
+          ],
+          [
+            [
+              -1280,
+              31,
+              768
+            ],
+            0
+          ]
+        ],
+        "status": "passed",
+        "verified_voxel_probes": 2
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "7c05e9a901e603e839db775f589c791b97f2c71592d054498f318e14b2fe0d41"
+        }
+      }
+    },
+    "picker-ocean": {
+      "inspection": {
+        "anchor": [
+          1280.5,
+          8.0,
+          -511.5
+        ],
+        "biome_weights": [
+          0.73036302849936,
+          0.0024652362745224182,
+          0.0056201032068382605,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.26155163201927933,
+          0.0
+        ],
+        "camera": [
+          1229.5882568359375,
+          32.0,
+          -460.58831787109375
+        ],
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "picker-ocean",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              1280,
+              -7,
+              -512
+            ],
+            19
+          ],
+          [
+            [
+              1280,
+              8,
+              -512
+            ],
+            0
+          ]
+        ],
+        "status": "passed",
+        "verified_voxel_probes": 2
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "2f5728287fa6948742d74eab33d1b289efc6438f4e586b2c59c7cb6d7b9ecd0a"
+        }
+      }
+    },
+    "picker-forest": {
+      "inspection": {
+        "anchor": [
+          -1535.5,
+          32.100643157958984,
+          -255.5
+        ],
+        "biome_weights": [
+          0.0,
+          0.06369339329508235,
+          0.9363066067049178,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "camera": [
+          -1579.340576171875,
+          70.10064697265625,
+          -211.6593780517578
+        ],
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "picker-forest",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              -1536,
+              31,
+              -256
+            ],
+            1
+          ],
+          [
+            [
+              -1536,
+              33,
+              -256
+            ],
+            0
+          ]
+        ],
+        "status": "passed",
+        "verified_voxel_probes": 2
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "049ae62be24ac48e80c1571e4c0659c93ad9b1e54cc40224ec29ff832e172a80"
+        }
+      }
+    },
+    "reference-cactus": {
+      "inspection": {
+        "cactus": {
+          "bounds": [
+            [
+              -1817,
+              28,
+              -1862
+            ],
+            [
+              -1817,
+              35,
+              -1860
+            ]
+          ],
+          "face_connected": true,
+          "height": 8,
+          "origin": [
+            -1817,
+            28,
+            -1862
+          ],
+          "sand_supported": true,
+          "voxel_count": 12
+        },
+        "captures": {
+          "close": {
+            "camera": [
+              -1808.5,
+              35.0,
+              -1851.5
+            ],
+            "camera_in_loaded_air": true,
+            "clear_loaded_voxel_sightline": true,
+            "verified_voxel_probes": 14
+          },
+          "overview": {
+            "camera": [
+              -1798.5,
+              44.0,
+              -1839.5
+            ],
+            "camera_in_loaded_air": true,
+            "clear_loaded_voxel_sightline": true,
+            "verified_voxel_probes": 14
+          }
+        },
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "reference-cactus",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              -1817,
+              28,
+              -1862
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              29,
+              -1862
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              30,
+              -1862
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              31,
+              -1862
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              32,
+              -1862
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              32,
+              -1861
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              32,
+              -1860
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              33,
+              -1862
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              33,
+              -1860
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              34,
+              -1862
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              34,
+              -1860
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              35,
+              -1862
+            ],
+            422
+          ],
+          [
+            [
+              -1817,
+              27,
+              -1862
+            ],
+            4
+          ],
+          [
+            [
+              -1817,
+              36,
+              -1862
+            ],
+            0
+          ]
+        ],
+        "status": "passed",
+        "tile": [
+          -57,
+          -59
+        ]
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "7e7455ed4293a607451412bfd47d94ca9ef4d37b591a99dbbf5e791dd738376f"
+        },
+        "close": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "048d092e6bf3afe077e4dd083841d7918a642a143b2ccbf2fa3e1d9bca3b84b8"
+        }
+      }
+    },
+    "reference-plains": {
+      "inspection": {
+        "cactus": null,
+        "captures": {
+          "close": {
+            "camera": [
+              -137.5,
+              92.5,
+              -273.5
+            ],
+            "camera_in_loaded_air": true,
+            "clear_loaded_voxel_sightline": true,
+            "verified_voxel_probes": 6
+          },
+          "overview": {
+            "camera": [
+              -131.5,
+              97.5,
+              -265.5
+            ],
+            "camera_in_loaded_air": true,
+            "clear_loaded_voxel_sightline": true,
+            "verified_voxel_probes": 6
+          }
+        },
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "reference-plains",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              -143,
+              90,
+              -278
+            ],
+            426
+          ],
+          [
+            [
+              -142,
+              90,
+              -279
+            ],
+            426
+          ],
+          [
+            [
+              -141,
+              90,
+              -278
+            ],
+            426
+          ],
+          [
+            [
+              -141,
+              90,
+              -277
+            ],
+            426
+          ],
+          [
+            [
+              -140,
+              90,
+              -275
+            ],
+            426
+          ],
+          [
+            [
+              -139,
+              89,
+              -276
+            ],
+            426
+          ]
+        ],
+        "status": "passed",
+        "tile": [
+          -5,
+          -9
+        ]
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "5f4d294d89c684e0784aa55fc6298e6eb3f4c0e7410d153bb37ce145d064b8a7"
+        },
+        "close": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "2b44d23ffad88aed21d61535107f63c9a9d76312113281a3d87c9c67c7601afd"
+        }
+      }
+    },
+    "reference-desert": {
+      "inspection": {
+        "cactus": null,
+        "captures": {
+          "close": {
+            "camera": [
+              -1887.5,
+              25.5,
+              -1928.5
+            ],
+            "camera_in_loaded_air": true,
+            "clear_loaded_voxel_sightline": true,
+            "verified_voxel_probes": 6
+          },
+          "overview": {
+            "camera": [
+              -1881.5,
+              30.5,
+              -1920.5
+            ],
+            "camera_in_loaded_air": true,
+            "clear_loaded_voxel_sightline": true,
+            "verified_voxel_probes": 6
+          }
+        },
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "reference-desert",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              -1893,
+              23,
+              -1934
+            ],
+            428
+          ],
+          [
+            [
+              -1892,
+              23,
+              -1935
+            ],
+            428
+          ],
+          [
+            [
+              -1891,
+              23,
+              -1934
+            ],
+            428
+          ],
+          [
+            [
+              -1891,
+              23,
+              -1933
+            ],
+            428
+          ],
+          [
+            [
+              -1890,
+              23,
+              -1933
+            ],
+            428
+          ],
+          [
+            [
+              -1889,
+              23,
+              -1932
+            ],
+            428
+          ]
+        ],
+        "status": "passed",
+        "tile": [
+          -60,
+          -61
+        ]
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "2e80a7a79fa31b655ff9b8205447bcd75c44bbfddf01682a1ee2d830de5766ee"
+        },
+        "close": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "25961739de49f4705a7f117b794be697eae5fe62ea28694402ab02195d34208a"
+        }
+      }
+    },
+    "reference-spirit": {
+      "inspection": {
+        "cactus": null,
+        "captures": {
+          "close": {
+            "camera": [
+              -1156.5,
+              32.5,
+              614.5
+            ],
+            "camera_in_loaded_air": true,
+            "clear_loaded_voxel_sightline": true,
+            "verified_voxel_probes": 17
+          },
+          "overview": {
+            "camera": [
+              -1150.5,
+              37.5,
+              606.5
+            ],
+            "camera_in_loaded_air": true,
+            "clear_loaded_voxel_sightline": true,
+            "verified_voxel_probes": 17
+          }
+        },
+        "ecology_revision": 6,
+        "fixture_edits": 0,
+        "scene": "reference-spirit",
+        "seed": 42042,
+        "source_cells": [
+          [
+            [
+              -1168,
+              30,
+              618
+            ],
+            316
+          ],
+          [
+            [
+              -1167,
+              30,
+              617
+            ],
+            316
+          ],
+          [
+            [
+              -1167,
+              31,
+              620
+            ],
+            316
+          ],
+          [
+            [
+              -1166,
+              30,
+              618
+            ],
+            316
+          ],
+          [
+            [
+              -1166,
+              31,
+              619
+            ],
+            316
+          ],
+          [
+            [
+              -1165,
+              31,
+              619
+            ],
+            316
+          ],
+          [
+            [
+              -1165,
+              31,
+              621
+            ],
+            316
+          ],
+          [
+            [
+              -1160,
+              30,
+              618
+            ],
+            316
+          ],
+          [
+            [
+              -1159,
+              30,
+              617
+            ],
+            316
+          ],
+          [
+            [
+              -1159,
+              31,
+              620
+            ],
+            316
+          ],
+          [
+            [
+              -1159,
+              31,
+              625
+            ],
+            316
+          ],
+          [
+            [
+              -1158,
+              30,
+              618
+            ],
+            316
+          ],
+          [
+            [
+              -1158,
+              31,
+              619
+            ],
+            316
+          ],
+          [
+            [
+              -1158,
+              31,
+              624
+            ],
+            316
+          ],
+          [
+            [
+              -1157,
+              31,
+              619
+            ],
+            316
+          ],
+          [
+            [
+              -1157,
+              31,
+              621
+            ],
+            316
+          ],
+          [
+            [
+              -1157,
+              31,
+              625
+            ],
+            316
+          ]
+        ],
+        "status": "passed",
+        "tile": [
+          -37,
+          19
+        ]
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "0f868b8c6e7d05c67695afa64188de8abe194a317cfb1b1a83cd9f07327fc9eb"
+        },
+        "close": {
+          "width": 1920,
+          "height": 1080,
+          "sha256": "2d4527f7fe8ab2865b014f75e41fc496bf574ed94a9f3ea28b2562a52dba15ec"
+        }
+      }
+    }
+  }
+}

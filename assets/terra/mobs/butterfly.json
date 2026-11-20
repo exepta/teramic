@@ -1,0 +1,36 @@
+{
+  "id": "butterfly",
+  "title": "Butterfly",
+  "variant_titles": [
+    "Blossom Butterfly",
+    "Petal Butterfly",
+    "Wisteria Butterfly",
+    "Spirit Butterfly",
+    "Goldenbloom Butterfly",
+    "Moonpetal Butterfly",
+    "Sakurawing Butterfly"
+  ],
+  "health": 2,
+  "food": 0,
+  "water": 0,
+  "size": [
+    0.11,
+    0.11,
+    0.15
+  ],
+  "speed": 0.75,
+  "group_size": 4,
+  "sleeps": false,
+  "spawn": {
+    "biomes": [
+      "plains",
+      "forest",
+      "cherry_forest",
+      "spirit_blossom"
+    ],
+    "herd_size": [
+      1,
+      4
+    ]
+  }
+}

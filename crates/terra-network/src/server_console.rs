@@ -140,7 +140,7 @@ fn console_locate(text: &str, world: &mut ChatWorld) {
     let target = match parse_command(&format!("/{text}")) {
         Ok(Some(target)) => target,
         _ => {
-            world.console.line("Usage: locate biome <name> | locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost>. Origin is the world spawn; use as <player> locate ... to search near a player.");
+            world.console.line("Usage: locate biome <name> | locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost|teramic::cemetery|teramic::grave_dungeon>. Origin is the world spawn; use as <player> locate ... to search near a player.");
             return;
         }
     };

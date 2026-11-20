@@ -1,0 +1,28 @@
+{
+  "id": "teramic::hanging_blossom_lantern",
+  "name": "Hanging Blossom Lantern",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 321
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 314
+        },
+        "count": 2
+      },
+      {
+        "item": {
+          "block": 315
+        },
+        "count": 1
+      }
+    ]
+  }
+}

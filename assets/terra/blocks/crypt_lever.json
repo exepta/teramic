@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 389,
+  "name": "Crypt Lever",
+  "description": "An ornamental crypt lever for crypt entrances and dungeon chambers.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_lever.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/crypt_lever.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.26,
+        0,
+        0.28
+      ],
+      "maximum": [
+        0.74,
+        0.12,
+        0.72
+      ]
+    }
+  ]
+}

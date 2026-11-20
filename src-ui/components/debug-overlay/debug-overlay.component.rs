@@ -144,6 +144,11 @@ pub fn update_debug_overlay(
             terra_core::creatures::CreatureBehavior::Ink => "Versprueht Tinte",
             terra_core::creatures::CreatureBehavior::Ceiling => "An der Decke",
             terra_core::creatures::CreatureBehavior::Descend => "Seilt sich ab",
+            terra_core::creatures::CreatureBehavior::Burrowed => "Unter dem Sand",
+            terra_core::creatures::CreatureBehavior::Tremor => "Bodenbeben / Angriffswarnung",
+            terra_core::creatures::CreatureBehavior::Emerge => "Taucht auf",
+            terra_core::creatures::CreatureBehavior::Retreat => "Gräbt sich ein",
+            terra_core::creatures::CreatureBehavior::Spit => "Speit Galle",
         }
         .into();
         let (intention, destination, path) = inspection_labels(
@@ -451,6 +456,8 @@ pub fn update_debug_overlay(
                     BiomeKind::MushroomPark => "Mushroom Park",
                     BiomeKind::ClifftedDesert => "Cliffted Desert",
                     BiomeKind::CherryForest => "Cherry Forest",
+                    BiomeKind::SpiritBlossom => "Spirit Blossom",
+                    BiomeKind::BloodForest => "Blood Forest",
                 }
                 .into()
             },
@@ -975,7 +982,12 @@ mod tests {
         }
         assert_eq!(app.world().resource::<DebugOverlay>().block_name, "--");
 
-        let terrain = terra_world::TerraGenerator::new(terra_core::WorldConfig::default()).unwrap();
+        // This fixture checks player/camera ownership with legacy climate names.
+        let terrain = terra_world::TerraGenerator::new(terra_core::WorldConfig {
+            landscape_revision: 1,
+            ..Default::default()
+        })
+        .unwrap();
         let camera_biome = terrain.biome_at(-0.5, -0.5).weights.dominant();
         let player_position = (-16..=16)
             .flat_map(|x| (-16..=16).map(move |z| (x, z)))

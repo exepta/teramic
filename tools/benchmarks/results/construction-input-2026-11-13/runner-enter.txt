@@ -1,0 +1,2 @@
+Isolated saved-world construction run: /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/saved-construction/run.qM0otU
+Saved-world construction passed: confirmation=enter, server job, save/reload; original save unchanged=True

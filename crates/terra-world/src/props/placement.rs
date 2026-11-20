@@ -37,6 +37,8 @@ pub fn ground_support(material: u16) -> bool {
     terra_voxel::MaterialId::from_raw(material).is_some_and(|m| {
         m.is_solid()
             && !crate::segments::is_segment(material)
+            && !terra_core::roads::is_shape(material)
+            && !terra_core::roads::is_tar(material)
             && !matches!(material, 14 | 28 | 29 | 59..=100)
     })
 }
@@ -58,9 +60,9 @@ pub fn supported(prop: &WorldProp, mut block: impl FnMut([i64; 3]) -> Option<u16
     }
     let material = block(support(prop))?;
     let anchor = if prop.kind.sapling().is_some() {
-        matches!(material, 1 | 2 | terra_core::farming::FARMLAND)
+        matches!(material, 1 | 2 | 306 | 307 | terra_core::farming::FARMLAND)
     } else if prop.wall_attached() {
-        matches!(material, 6 | 10 | 36 | 134)
+        matches!(material, 6 | 10 | 36 | 134 | 313)
     } else {
         ground_support(material)
     };

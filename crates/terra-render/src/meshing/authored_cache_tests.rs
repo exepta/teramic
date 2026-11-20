@@ -2,19 +2,27 @@ use super::*;
 
 fn uncached(
     block: &crate::blocks::BlockTemplate,
+    material: u16,
     side: usize,
     mask: u8,
     offset: Vec3,
 ) -> BTreeMap<usize, MeshBatch> {
     let mut batches = BTreeMap::new();
     for primitive in &block.faces[side] {
-        append(
-            &mut batches,
+        let batch = batches
+            .entry(primitive.material)
+            .or_insert_with(|| MeshBatch {
+                material: primitive.material,
+                ..default()
+            });
+        append_connected(
+            batch,
             primitive,
             offset,
-            Quat::IDENTITY,
-            Some((mask, block.bevel_width)),
+            mask,
+            block.bevel_width,
             None,
+            material == 1 && side == 3,
         )
         .unwrap();
     }
@@ -70,7 +78,7 @@ fn cached_authored_faces_keep_all_neighbor_masks_uvs_triangles_and_tangent_frame
                 cache
                     .append(&mut actual, 1, block, side, offset, mask)
                     .unwrap();
-                equivalent(&actual, &uncached(block, side, mask, offset));
+                equivalent(&actual, &uncached(block, 1, side, mask, offset));
             }
         }
     }
@@ -93,10 +101,57 @@ fn authored_face_cache_is_composition_owned_bounded_and_falls_back_for_new_keys(
         let mut actual = BTreeMap::new();
         let offset = Vec3::new(3.0, 4.0, 5.0);
         cache.append(&mut actual, id, block, 0, offset, 42).unwrap();
-        assert_eq!(actual, uncached(block, 0, 42, offset));
+        assert_eq!(actual, uncached(block, id, 0, 42, offset));
         assert_eq!(cache.0.len(), AuthoredFaceCache::LIMIT);
     }
     drop(cache);
     let next_composition = AuthoredFaceCache::default();
     assert!(next_composition.0.is_empty());
+}
+
+#[test]
+fn imported_grass_tops_join_as_a_flat_turf_plane_without_per_cell_mounds_or_normal_rims() {
+    let templates = crate::blocks::authored_terrain_templates();
+    let block = &templates.blocks[&1];
+    assert!(
+        block.faces[3]
+            .iter()
+            .flat_map(|p| p.positions.iter())
+            .any(|p| p[1] < 0.99),
+        "fixture must exercise the original rounded authored rim"
+    );
+    let mut cache = AuthoredFaceCache::default();
+    for mask in [0b00_1000, 0b00_1010, 0b10_1000, 0b00_1001, 0b01_1000] {
+        let mut batches = BTreeMap::new();
+        cache
+            .append(&mut batches, 1, block, 3, Vec3::ZERO, mask)
+            .unwrap();
+        for batch in batches.values() {
+            for (point, normal) in batch.positions.iter().zip(&batch.normals) {
+                // The interior remains one plane even for tiles next to a cliff;
+                // only the actual free outer bevel is allowed to slope down.
+                if point[0] > 0.025 && point[0] < 0.975 && point[2] > 0.025 && point[2] < 0.975 {
+                    assert!(
+                        (point[1] - 1.0).abs() < 1e-6,
+                        "mound left on joined turf: mask={mask}, point={point:?}"
+                    );
+                }
+                if mask == 0b00_1000 {
+                    assert_eq!(*normal, [0.0, 1.0, 0.0]);
+                    assert_eq!(point[1], 1.0);
+                }
+            }
+        }
+    }
+    // An isolated cube keeps its authored exterior silhouette.
+    let mut batches = BTreeMap::new();
+    cache
+        .append(&mut batches, 1, block, 3, Vec3::ZERO, 63)
+        .unwrap();
+    assert!(
+        batches
+            .values()
+            .flat_map(|b| &b.positions)
+            .any(|p| p[1] < 0.99)
+    );
 }

@@ -1737,7 +1737,8 @@ fn herd_occupancy_does_not_exclude_any_land_species() {
         std::collections::BTreeSet::from([
             CreatureKind::Sheep,
             CreatureKind::Cow,
-            CreatureKind::Pig
+            CreatureKind::Pig,
+            CreatureKind::Butterfly,
         ])
     );
 }
@@ -2192,4 +2193,89 @@ fn grazing_a_soil_growth_tuft_does_not_schedule_invalid_generic_forage_regrowth(
     assert!(cow.needs.food > 1.0);
     assert!(journal.prop_removed(section, prop.id));
     assert_eq!(journal.forage_regrowth().count(), 0);
+}
+
+#[test]
+fn spirit_fliers_move_in_loaded_air_and_never_enter_voxel_walls() {
+    let (terrain, chunks, mut journal) = fixture();
+    for y in 3..12 {
+        for x in 2..15 {
+            journal.record([x, y, 5], 3).unwrap();
+        }
+    }
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    for kind in [CreatureKind::Butterfly, CreatureKind::SpiritGloom] {
+        let mut a = animal(kind);
+        a.position = [8.5, 4.2, 8.5];
+        a.behavior = CreatureBehavior::Fly;
+        let start = a.position;
+        let mut traveled = 0.0;
+        for _ in 0..500 {
+            let old = a.position;
+            step_budgeted(&mut a, &habitat, &[], 0.1, false);
+            traveled += distance(old, a.position).sqrt();
+            assert!(a.valid(), "invalid {kind:?}: {a:?}");
+            assert!(habitat.clear(a.position, a.size(), false));
+            assert!(
+                chunks
+                    .block_at(a.position.map(|v| v.floor() as i64))
+                    .is_some()
+            );
+        }
+        assert!(
+            traveled > 5.0,
+            "{kind:?} should visibly fly, not remain idle"
+        );
+        assert!(distance(start, a.position) < 40.0_f64.powi(2));
+    }
+}
+
+#[test]
+fn spirit_aura_is_alive_only_nearby_and_does_not_include_other_animals() {
+    let mut spirit = animal(CreatureKind::SpiritGloom);
+    spirit.position = [10.0, 5.0, 10.0];
+    assert!(spirit::regeneration_near(
+        [10.0, 5.0, 16.0],
+        [&spirit].into_iter()
+    ));
+    assert!(!spirit::regeneration_near(
+        [10.0, 5.0, 16.01],
+        [&spirit].into_iter()
+    ));
+    spirit.health = 0.0;
+    assert!(!spirit::regeneration_near(
+        spirit.position,
+        [&spirit].into_iter()
+    ));
+    spirit.kind = CreatureKind::Butterfly;
+    spirit.health = 1.0;
+    assert!(!spirit::regeneration_near(
+        spirit.position,
+        [&spirit].into_iter()
+    ));
+}
+
+#[test]
+fn separation_preserves_spirit_flight_height_instead_of_grounding_it() {
+    let (terrain, chunks, journal) = fixture();
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    for kind in [CreatureKind::Butterfly, CreatureKind::SpiritGloom] {
+        let mut a = animal(kind);
+        a.position = [8.5, 3.5, 8.5];
+        a.behavior = CreatureBehavior::Fly;
+        let id = a.id;
+        let original = a.position;
+        let mut population = CreaturePopulation::default();
+        population.animals.insert(id, a);
+        navigation::separate(&mut population, &habitat, &[id], 0.1);
+        assert_eq!(population.animals[&id].position, original);
+    }
 }

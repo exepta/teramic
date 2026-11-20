@@ -1,0 +1,92 @@
+[
+  {
+    "source": "Gebäudevorlagen",
+    "de": "Gebäudevorlagen",
+    "en": "Building templates"
+  },
+  {
+    "source": "Vorlage wählen, Material im Stadtlager bereitstellen und einen Bauplatz festlegen.",
+    "de": "Vorlage wählen, Material im Stadtlager bereitstellen und einen Bauplatz festlegen.",
+    "en": "Choose a template, stock the town storage and select a building site."
+  },
+  {
+    "source": "Verfügbare Vorlagen",
+    "de": "Verfügbare Vorlagen",
+    "en": "Available templates"
+  },
+  {
+    "source": "Ausgewählt",
+    "de": "Ausgewählt",
+    "en": "Selected"
+  },
+  {
+    "source": "Materialbedarf der Vorlage",
+    "de": "Materialbedarf der Vorlage",
+    "en": "Template materials"
+  },
+  {
+    "source": "Bodenvorbereitung und Gerüste werden am Standort berechnet und im Bauauftrag ergänzt.",
+    "de": "Bodenvorbereitung und Gerüste werden am Standort berechnet und im Bauauftrag ergänzt.",
+    "en": "Ground preparation and scaffolding are calculated for the site and added to the building job."
+  },
+  {
+    "source": "Bauplatz und Ausrichtung",
+    "de": "Bauplatz und Ausrichtung",
+    "en": "Placement and orientation"
+  },
+  {
+    "source": "Bau beauftragen",
+    "de": "Bau beauftragen",
+    "en": "Queue building"
+  },
+  {
+    "source": "Eine Bauvorlage auswählen",
+    "de": "Eine Bauvorlage auswählen",
+    "en": "Select a building template"
+  },
+  {
+    "source": "Der Materialbedarf wird vor dem Beauftragen angezeigt.",
+    "de": "Der Materialbedarf wird vor dem Beauftragen angezeigt.",
+    "en": "Material requirements are shown before a job is queued."
+  },
+  {
+    "source": "Gespeicherte Vorlage für neue Häuser",
+    "de": "Gespeicherte Vorlage für neue Häuser",
+    "en": "Saved template for new homes"
+  },
+  {
+    "source": "Wohngebäude",
+    "de": "Wohngebäude",
+    "en": "Residential buildings"
+  },
+  {
+    "source": "Bauschritte",
+    "de": "Bauschritte",
+    "en": "Building steps"
+  },
+  {
+    "source": "Bauvorlagen konnten nicht geladen werden",
+    "de": "Bauvorlagen konnten nicht geladen werden",
+    "en": "Building templates could not be loaded"
+  },
+  {
+    "source": "Bauvorlagen werden geladen …",
+    "de": "Bauvorlagen werden geladen …",
+    "en": "Loading building templates …"
+  },
+  {
+    "source": "Diese Bauvorlage ist nicht mehr verfügbar. Bitte eine andere wählen.",
+    "de": "Diese Bauvorlage ist nicht mehr verfügbar. Bitte eine andere wählen.",
+    "en": "This building template is no longer available. Please choose another."
+  },
+  {
+    "source": "Temperate village house",
+    "de": "Dorfwohnhaus",
+    "en": "Temperate village house"
+  },
+  {
+    "source": "Spruce cottage",
+    "de": "Fichtenhütte",
+    "en": "Spruce cottage"
+  }
+]

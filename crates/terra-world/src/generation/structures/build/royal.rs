@@ -3,6 +3,7 @@ use super::*;
 use terra_core::{beds::DyeColor, castle};
 
 mod buildings;
+mod earthworks;
 mod fortifications;
 mod landscape;
 #[cfg(test)]
@@ -82,6 +83,7 @@ pub(super) fn plan(terrain: &TerraGenerator, region: [i64; 2], seed: u32) -> Opt
             bounds: [[0; 3]; 2],
             buildings: Vec::new(),
             containers: Vec::new(),
+            grave: None,
         },
         patches: BTreeMap::new(),
         objects: BTreeMap::new(),
@@ -102,7 +104,24 @@ pub(super) fn plan(terrain: &TerraGenerator, region: [i64; 2], seed: u32) -> Opt
         royal.kingdom();
     }
     royal.plant_courtyard_trees();
-    let marker = if outpost {
+    let marker = if royal.terrain_adapted() {
+        let role = if outpost {
+            BuildingRole::Watch
+        } else {
+            BuildingRole::Keep
+        };
+        let height = royal
+            .builder
+            .summary
+            .buildings
+            .iter()
+            .find(|building| building.role == role)
+            .map_or(
+                royal.floor(0, if outpost { -14 } else { -40 }),
+                |building| building.entrance[1] - royal.origin[1],
+            );
+        [0, height, if outpost { -14 } else { -47 }]
+    } else if outpost {
         [0, 3, -14]
     } else {
         [0, royal.floor(0, -40), -47]
@@ -196,6 +215,9 @@ impl Royal<'_, '_> {
         }
     }
     fn floor(&self, x: i64, z: i64) -> i64 {
+        if self.terrain_adapted() {
+            return self.natural_floor(x, z);
+        }
         if self.outpost {
             return if x * x + (z + 13) * (z + 13) < 90 {
                 3
@@ -240,6 +262,10 @@ impl Royal<'_, '_> {
         }
     }
     fn terrain(&mut self) {
+        if self.terrain_adapted() {
+            self.natural_paths();
+            return;
+        }
         let radius = if self.outpost { 31 } else { 72 };
         for z in -radius..=radius {
             for x in -radius..=radius {
@@ -301,6 +327,10 @@ impl Royal<'_, '_> {
         }
     }
     fn foundation(&mut self, x: i64, z: i64, w: i64, d: i64, y: i64) {
+        if self.terrain_adapted() {
+            self.bounded_foundation(x, z, w, d, y);
+            return;
+        }
         for dz in 0..=d {
             for dx in 0..=w {
                 let p = self.point([x + dx, 0, z + dz]);
@@ -314,6 +344,10 @@ impl Royal<'_, '_> {
         }
     }
     fn access(&mut self, door: [i64; 3]) {
+        if self.terrain_adapted() {
+            self.natural_access(door);
+            return;
+        }
         let [x, y, z] = door;
         self.foundation(x - 1, z + 1, 2, 2, y);
         self.fill([x - 1, y - 1, z + 1], [x + 1, y - 1, z + 3], 43);
@@ -381,7 +415,7 @@ impl Royal<'_, '_> {
             let y = self.floor(x, z);
             self.tower(x, z, y, 5, 15, true);
         }
-        self.gate(0, 70, 0, 5);
+        self.gate(0, 70, self.floor(0, 70), 5);
         self.inner_ward();
         let civilian_count = 50 + (self.builder.seed % 31) as usize;
         let military_count = 26 + ((self.builder.seed >> 7) % 39) as usize;
@@ -487,16 +521,49 @@ impl Royal<'_, '_> {
                 let r = x * x + z * z;
                 if (28 * 28..=30 * 30).contains(&r) && !(z > 24 && x.abs() < 5) {
                     let top = 4 + (x + z).rem_euclid(2);
-                    self.fill([x, 0, z], [x, top, z], 36);
-                    self.state([x, top + 1, z], 84, 0);
+                    let base = if self.terrain_adapted() {
+                        self.floor(x, z)
+                    } else {
+                        0
+                    };
+                    self.fill([x, base, z], [x, base + top, z], 36);
+                    self.state([x, base + top + 1, z], 84, 0);
                     if x.rem_euclid(9) == 0 || z.rem_euclid(9) == 0 {
-                        self.banner(x, 2, z);
+                        self.banner(
+                            x,
+                            if self.terrain_adapted() {
+                                self.floor(x, z) + 2
+                            } else {
+                                2
+                            },
+                            z,
+                        );
                     }
                 }
             }
         }
-        self.tower(0, -14, 3, 6, 14, true);
-        self.gate(0, 28, 0, 3);
+        self.tower(
+            0,
+            -14,
+            if self.terrain_adapted() {
+                self.floor(0, -14)
+            } else {
+                3
+            },
+            6,
+            14,
+            true,
+        );
+        self.gate(
+            0,
+            28,
+            if self.terrain_adapted() {
+                self.floor(0, 28)
+            } else {
+                0
+            },
+            3,
+        );
         let soldiers = 4 + ((self.builder.seed >> 7) % 7) as usize;
         self.house(-15, -2, 0, 15, 11, 5, BuildingRole::Barracks, soldiers, 0);
         self.stable(16, 11, 0);
@@ -505,18 +572,34 @@ impl Royal<'_, '_> {
         self.farm(-21, 15, 7, 12);
         // A shallow staircase rises to the central watchtower's stone plinth.
         for z in -5..=0 {
+            if self.terrain_adapted() {
+                break;
+            }
             let y = (-z + 1) / 2;
             self.fill([-2, y - 1, z], [2, y - 1, z], 43);
             self.fill([-2, y, z], [2, y + 3, z], 0);
         }
+        let camp_y = if self.terrain_adapted() {
+            self.local_floor(-3, 6, 6, 6, 0)
+        } else {
+            0
+        };
+        if self.terrain_adapted() {
+            self.foundation(-3, 6, 6, 6, camp_y);
+        }
         for x in -3_i64..=3 {
             for z in 6_i64..=12 {
                 if x * x + (z - 9) * (z - 9) <= 9 {
-                    self.set([x, 0, z], 43);
+                    self.set([x, camp_y, z], 43);
                 }
             }
         }
-        self.set([0, 0, 9], terra_core::campfire::MATERIAL);
-        self.summary(BuildingRole::Market, [0, 0, 12], [-3, -1, 6], [3, 2, 12]);
+        self.set([0, camp_y, 9], terra_core::campfire::MATERIAL);
+        self.summary(
+            BuildingRole::Market,
+            [0, camp_y, 12],
+            [-3, camp_y - 1, 6],
+            [3, camp_y + 2, 12],
+        );
     }
 }

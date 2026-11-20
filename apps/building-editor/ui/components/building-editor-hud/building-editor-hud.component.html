@@ -1,0 +1,4 @@
+@if (editorView.playing) {
+<div id="editor-hud" class="editor-hud"><div class="editor-toolbar"><icon name="home" size="32" /><div><h2 class="editor-subtitle">{{ editorView.labels.title }}</h2><p>{{ editorView.selected }} · {{ editorView.cell_count }} {{ editorView.labels.blocks }}</p><p>{{ editorView.dirty ? editorView.labels.modified : editorView.labels.saved }}</p></div><button id="editor-items" onclick="editor_command">{{ editorView.labels.items }}</button><button id="editor-menu" onclick="editor_command">{{ editorView.labels.menu }}</button></div><p class="editor-help">{{ editorView.labels.controls }}</p><p class="editor-help">{{ editorView.labels.envelope }}</p></div><div class="editor-crosshair">+</div>
+}
+@if (editorView.error) { <p id="editor-error" class="editor-error">{{ editorView.error }}</p> }

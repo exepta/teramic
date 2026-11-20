@@ -1,6 +1,8 @@
 //! Recorded animal cues and a bounded, body-listened environmental soundscape.
 mod acoustics;
 mod actions;
+mod ambience;
+mod beds;
 mod chests;
 mod clips;
 mod eating;
@@ -12,6 +14,7 @@ mod source;
 mod spiders;
 mod stalker;
 mod thunder;
+mod worm;
 
 use bevy::{audio::AddAudioSource, prelude::*};
 pub(crate) use chests::ChestAudioStatus;
@@ -47,6 +50,7 @@ pub(crate) fn install(app: &mut App) {
                 .after(terra_core::footsteps::WaterMotionSet),
         );
     smoke::install(app);
+    worm::install(app);
     app.add_systems(Update, thunder::update.after(scene::update));
     app.add_systems(
         Update,

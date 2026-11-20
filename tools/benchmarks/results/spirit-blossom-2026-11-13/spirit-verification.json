@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "seed": 42042,
+  "screens": {
+    "biome/picker-spirit-blossom-overview.png": {
+      "width": 1920,
+      "height": 1080,
+      "bytes": 3880196
+    },
+    "creatures/spirit-creatures-0.png": {
+      "width": 1920,
+      "height": 1080,
+      "bytes": 2735581
+    },
+    "creatures/spirit-creatures-1.png": {
+      "width": 1920,
+      "height": 1080,
+      "bytes": 2442105
+    },
+    "creatures/spirit-creatures-2.png": {
+      "width": 1920,
+      "height": 1080,
+      "bytes": 2267088
+    },
+    "creatures/spirit-creatures-3.png": {
+      "width": 1920,
+      "height": 1080,
+      "bytes": 2374949
+    }
+  },
+  "biome": "Real generated terrain and loaded block assets",
+  "creatures": "Actual animated renderer models in an explicit gallery; authoritative behavior is covered by Rust tests"
+}

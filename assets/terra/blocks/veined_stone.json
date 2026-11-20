@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 403,
+  "name": "Veined Stone",
+  "description": "Veined Stone from the crimson woodland.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "veined_stone": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "veined_stone": "textures/veined_stone.png"
+  },
+  "face_materials": [
+    "veined_stone",
+    "veined_stone",
+    "veined_stone",
+    "veined_stone",
+    "veined_stone",
+    "veined_stone"
+  ],
+  "surface": "rock"
+}

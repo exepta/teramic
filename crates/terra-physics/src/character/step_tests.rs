@@ -493,6 +493,177 @@ fn fixture(height: f32, stairs: bool, ceiling: Option<f32>) -> (App, Entity) {
 }
 
 #[test]
+fn real_capsule_walks_slowly_in_galle_and_on_wet_tar() {
+    let mut distances = Vec::new();
+    for material in [0, terra_core::bile::FLUID, terra_core::roads::WET_TAR] {
+        let (mut app, body) = fixture(0.5, false, None);
+        if material != 0 {
+            app.world_mut()
+                .resource_scope(|world, mut journal: Mut<EditJournal>| {
+                    let mut chunks = world.resource_mut::<ChunkStore>();
+                    for x in 5..=7 {
+                        for z in 7..=14 {
+                            let p = [
+                                x,
+                                if material == terra_core::bile::FLUID {
+                                    1
+                                } else {
+                                    0
+                                },
+                                z,
+                            ];
+                            let (owner, local) = terra_voxel::global_to_section(p);
+                            chunks
+                                .loaded
+                                .get_mut(&owner)
+                                .unwrap()
+                                .data
+                                .set_block(local, material)
+                                .unwrap();
+                            journal.record(p, material).unwrap();
+                            let volume = if material == terra_core::bile::FLUID {
+                                8
+                            } else {
+                                64
+                            };
+                            let age = if material == terra_core::bile::FLUID {
+                                terra_core::bile::FINE
+                            } else {
+                                0
+                            };
+                            journal
+                                .set_object_state(
+                                    p,
+                                    Some(terra_world::edits::BlockObjectState {
+                                        facing: if material == terra_core::bile::FLUID {
+                                            terra_core::bile::facing(volume, age)
+                                        } else {
+                                            terra_core::roads::tar_state(volume.div_ceil(8), 0)
+                                        },
+                                        liquid: Some(terra_world::edits::LiquidState {
+                                            origin: p,
+                                            volume,
+                                            age,
+                                            source: true,
+                                        }),
+                                        ..Default::default()
+                                    }),
+                                )
+                                .unwrap();
+                        }
+                    }
+                    for (p, section) in &mut chunks.loaded {
+                        section.mesh_epoch = journal.mesh_epoch(*p);
+                    }
+                });
+            let deadline = Instant::now() + Duration::from_secs(10);
+            loop {
+                app.update();
+                if app
+                    .world()
+                    .resource::<TerrainCollisionState>()
+                    .ready_for_aabb(
+                        Vec3::new(5., -0.2, 7.),
+                        Vec3::new(7., 4., 15.),
+                        app.world().resource(),
+                        app.world().resource(),
+                    )
+                {
+                    break;
+                }
+                assert!(
+                    Instant::now() < deadline,
+                    "Sticky-surface collision was not rebuilt"
+                );
+                std::thread::sleep(Duration::from_millis(1));
+            }
+        }
+        app.world_mut().resource_mut::<Drive>().missing_collision = 0;
+        app.world_mut().resource_mut::<Drive>().input.direction = Vec3::Z;
+        let before = app.world().get::<Transform>(body).unwrap().translation;
+        for _ in 0..45 {
+            app.update();
+        }
+        let after = app.world().get::<Transform>(body).unwrap().translation;
+        assert_eq!(app.world().resource::<Drive>().missing_collision, 0);
+        distances.push(after.z - before.z);
+    }
+    assert!(
+        distances[0] > 3.0,
+        "The control player did not walk: {distances:?}"
+    );
+    for distance in &distances[1..] {
+        assert!(
+            *distance > 0.7 && *distance < distances[0] * 0.65,
+            "Viscous liquid did not slow walking: {distances:?}"
+        );
+    }
+}
+
+#[test]
+fn real_capsule_glides_on_ice_but_stops_on_stone_without_input() {
+    let mut distances = Vec::new();
+    for ice in [false, true] {
+        let (mut app, body) = fixture(0.5, false, None);
+        if ice {
+            app.world_mut()
+                .resource_scope(|world, mut journal: Mut<EditJournal>| {
+                    let mut chunks = world.resource_mut::<ChunkStore>();
+                    for x in 5..=7 {
+                        for z in 7..=14 {
+                            terra_world::streaming::commit_block_edit(
+                                &mut chunks,
+                                &mut journal,
+                                &terra_world::streaming::BlockEditRequest {
+                                    position: [x, 0, z],
+                                    expected_material: 3,
+                                    material: 49,
+                                },
+                                &Default::default(),
+                            )
+                            .unwrap();
+                        }
+                    }
+                    for (p, section) in &mut chunks.loaded {
+                        section.mesh_epoch = journal.mesh_epoch(*p);
+                    }
+                });
+            let deadline = Instant::now() + Duration::from_secs(10);
+            loop {
+                app.update();
+                if app
+                    .world()
+                    .resource::<TerrainCollisionState>()
+                    .ready_for_aabb(
+                        Vec3::new(5., -0.2, 7.),
+                        Vec3::new(7., 3., 15.),
+                        app.world().resource(),
+                        app.world().resource(),
+                    )
+                {
+                    break;
+                }
+                assert!(Instant::now() < deadline, "Ice collision was not rebuilt");
+                std::thread::sleep(Duration::from_millis(1));
+            }
+        }
+        app.world_mut().get_mut::<LinearVelocity>(body).unwrap().0 = Vec3::Z * 4.;
+        let before = app.world().get::<Transform>(body).unwrap().translation;
+        for _ in 0..30 {
+            app.update();
+        }
+        let after = app.world().get::<Transform>(body).unwrap().translation;
+        assert!(app.world().get::<CharacterGrounded>(body).unwrap().0);
+        distances.push(after.z - before.z);
+    }
+    assert!(distances[0].abs() < 0.02, "Stone: {distances:?}");
+    assert!(
+        distances[1] > 0.8 && distances[1] < 2.2,
+        "Ice: {distances:?}"
+    );
+}
+
+#[test]
 fn creative_flight_collides_with_walls_floor_and_ceiling_while_spectator_passes_through() {
     for direction in [Vec3::X, Vec3::Y, Vec3::NEG_Y] {
         for mode in [

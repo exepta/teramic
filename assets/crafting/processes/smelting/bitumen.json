@@ -1,0 +1,13 @@
+{
+  "id": 10,
+  "key": "teramic::smelt_bitumen",
+  "name": "Heat coal tar binder",
+  "input": {
+    "dust": "coal"
+  },
+  "output": {
+    "item": "bitumen",
+    "count": 1
+  },
+  "seconds": 8
+}

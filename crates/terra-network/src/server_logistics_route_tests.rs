@@ -587,7 +587,9 @@ fn attached_insertion_funnel_keeps_inventory_routing_and_preserves_rejected_loos
         let item = if compatible {
             terra_core::crusher::recipes()[0].input
         } else {
-            ItemKind::Block(3)
+            let dirt = ItemKind::Block(2);
+            assert!(terra_core::crusher::recipe_for(dirt).is_none());
+            dirt
         };
         assert!(journal.gameplay_mut().drop_stack(
             [8.5, 3.7, 8.5],

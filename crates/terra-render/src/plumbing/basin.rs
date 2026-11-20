@@ -1,7 +1,8 @@
 //! Reservoir surfaces use the exact material and vertex contracts of river water.
+use crate::particle_fluids::{FluidMaterial, HydraulicMaterials};
 use crate::water::{
-    biome::{ATTRIBUTE_BIOME_TINT, WaterTint},
-    material::{ATTRIBUTE_WAVE_WEIGHT, WaterAssets, WaterMaterial},
+    biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_BLOOD_WEIGHT, WaterTint},
+    material::ATTRIBUTE_WAVE_WEIGHT,
 };
 use bevy::{
     asset::RenderAssetUsages,
@@ -20,7 +21,8 @@ use terra_world::{
 struct SurfaceGeometry {
     positions: Vec<[f32; 3]>,
     depth_shore: Vec<[f32; 2]>,
-    tints: Vec<[f32; 3]>,
+    tints: Vec<[f32; 4]>,
+    blood: Vec<f32>,
     waves: Vec<f32>,
     indices: Vec<u32>,
 }
@@ -39,6 +41,7 @@ impl SurfaceGeometry {
         .with_inserted_attribute(Mesh::ATTRIBUTE_UV_1, vec![[0.0; 2]; self.positions.len()])
         .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, vec![[0.0; 4]; self.positions.len()])
         .with_inserted_attribute(ATTRIBUTE_BIOME_TINT, self.tints.clone())
+        .with_inserted_attribute(ATTRIBUTE_BLOOD_WEIGHT, self.blood.clone())
         .with_inserted_attribute(ATTRIBUTE_WAVE_WEIGHT, self.waves.clone())
         .with_inserted_indices(Indices::U32(self.indices.clone()))
     }
@@ -103,7 +106,12 @@ impl SurfaceGeometry {
                             let tint = tints
                                 .entry(origin)
                                 .or_insert_with(|| WaterTint::new(terrain, origin));
-                            self.tints.push(tint.at([
+                            self.tints.push(tint.payload([
+                                px - origin[0] as f32,
+                                0.0,
+                                pz - origin[2] as f32,
+                            ]));
+                            self.blood.push(tint.blood_at([
                                 px - origin[0] as f32,
                                 0.0,
                                 pz - origin[2] as f32,
@@ -135,15 +143,20 @@ struct BasinSurface {
 }
 
 pub(super) fn install(app: &mut App) {
-    app.add_systems(Startup, setup.after(crate::water::material::setup_water))
+    app.add_systems(Startup, setup.after(crate::particle_fluids::setup_surface))
         .add_systems(Update, update);
 }
-fn setup(mut commands: Commands, assets: Res<WaterAssets>, mut meshes: ResMut<Assets<Mesh>>) {
+fn setup(
+    mut commands: Commands,
+    assets: Res<HydraulicMaterials>,
+    mut meshes: ResMut<Assets<Mesh>>,
+) {
     let mesh = meshes.add(
         SurfaceGeometry {
             positions: vec![[0.0; 3]; 3],
             depth_shore: vec![[0.0; 2]; 3],
-            tints: vec![[0.0; 3]; 3],
+            tints: vec![[0.0; 4]; 3],
+            blood: vec![0.0; 3],
             waves: vec![0.0; 3],
             indices: vec![0, 1, 2],
         }
@@ -152,7 +165,7 @@ fn setup(mut commands: Commands, assets: Res<WaterAssets>, mut meshes: ResMut<As
     let entity = commands
         .spawn((
             Mesh3d(mesh.clone()),
-            MeshMaterial3d::<WaterMaterial>(assets.0.clone()),
+            MeshMaterial3d::<FluidMaterial>(assets.0[0].clone()),
             Transform::default(),
             Visibility::Hidden,
             NotShadowCaster,
@@ -308,7 +321,7 @@ mod tests {
             ];
             assert_eq!(
                 *tint,
-                WaterTint::new(&terrain, origin).at([
+                WaterTint::new(&terrain, origin).payload([
                     p[0] - origin[0] as f32,
                     0.0,
                     p[2] - origin[2] as f32
@@ -323,11 +336,15 @@ mod tests {
             assert!((b - a).cross(c - a).y > 0.0);
         }
         let mesh = geometry.mesh();
+        assert!(
+            matches!(mesh.attribute(ATTRIBUTE_BIOME_TINT), Some(bevy::mesh::VertexAttributeValues::Float32x4(values)) if values.len() == geometry.positions.len())
+        );
         for attribute in [
             Mesh::ATTRIBUTE_UV_0,
             Mesh::ATTRIBUTE_UV_1,
             Mesh::ATTRIBUTE_COLOR,
             ATTRIBUTE_BIOME_TINT,
+            ATTRIBUTE_BLOOD_WEIGHT,
             ATTRIBUTE_WAVE_WEIGHT,
         ] {
             assert!(mesh.attribute(attribute).is_some());
@@ -335,17 +352,25 @@ mod tests {
     }
 
     #[test]
-    fn reservoir_entity_uses_the_existing_river_material_handle() {
+    fn reservoir_entity_uses_the_shared_confined_fluid_material_handle() {
         let mut app = App::new();
-        let handle = Handle::<WaterMaterial>::default();
+        let handle = Handle::<FluidMaterial>::default();
         app.init_resource::<Assets<Mesh>>()
-            .insert_resource(WaterAssets(handle.clone()))
+            .insert_resource(HydraulicMaterials(std::array::from_fn(|_| handle.clone())))
             .add_systems(Startup, setup);
         app.update();
+        let startup_mesh = app
+            .world()
+            .resource::<Assets<Mesh>>()
+            .get(&app.world().resource::<BasinSurface>().mesh)
+            .unwrap();
+        assert!(
+            matches!(startup_mesh.attribute(ATTRIBUTE_BIOME_TINT), Some(bevy::mesh::VertexAttributeValues::Float32x4(values)) if values == &vec![[0.; 4]; 3])
+        );
         let entity = app.world().resource::<BasinSurface>().entity;
         assert_eq!(
             app.world()
-                .get::<MeshMaterial3d<WaterMaterial>>(entity)
+                .get::<MeshMaterial3d<FluidMaterial>>(entity)
                 .unwrap()
                 .0,
             handle

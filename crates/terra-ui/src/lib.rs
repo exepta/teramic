@@ -1,15 +1,22 @@
 //! TiltUI catalog and game HUD integration.
 mod biome_previews;
+mod building_jobs;
+pub use building_jobs::{
+    BuildModeUiAction, BuildModeView, BuildingUiAction, BuildingView, KingdomResourcesView,
+};
 mod cadence;
 mod character;
 mod chat;
 mod choice_labels;
 mod debug;
+mod editor_catalog;
 mod fonts;
 mod frames;
+pub use frames::MenuLayoutPlugin;
 mod hud_layout;
 mod hud_visibility;
 mod inventory;
+pub use editor_catalog::{creative_items, item_metadata, item_preview_key};
 mod inventory_portrait;
 pub use inventory_portrait::InventoryPortraitRotation;
 mod kingdom;
@@ -19,7 +26,9 @@ pub mod menu;
 pub mod minimap;
 mod mob_health;
 mod npc_work;
-pub use npc_work::{NpcWorkUiAction, NpcWorkView};
+mod work_areas;
+pub use npc_work::{NpcWorkInputSet, NpcWorkUiAction, NpcWorkView};
+pub use work_areas::{WorkAreaUiAction, WorkAreasView};
 mod multiplayer;
 mod pets;
 mod plugin;

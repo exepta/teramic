@@ -11,6 +11,7 @@ pub(super) struct GameplayPanels<'w> {
     pets: Option<Res<'w, crate::pets::PetMenuState>>,
     kingdom: Option<Res<'w, crate::kingdom::KingdomMenuState>>,
     trains: Option<Res<'w, crate::trains::TrainUiState>>,
+    npc_work: Option<Res<'w, crate::npc_work::WorkUiState>>,
 }
 
 pub(super) fn keyboard_navigation(
@@ -26,6 +27,13 @@ pub(super) fn keyboard_navigation(
         return;
     }
     if draft.rebinding.is_some() || draft.consumed_escape {
+        return;
+    }
+    if panels
+        .npc_work
+        .as_ref()
+        .is_some_and(|work| work.blocks_input() || work.consumed_escape)
+    {
         return;
     }
     if panels
@@ -108,6 +116,9 @@ pub(super) fn actions(world: &mut World) {
         }
     }
     let playing = !startup
+        && !world
+            .get_resource::<crate::npc_work::WorkUiState>()
+            .is_some_and(|work| work.blocks_input() && !work.selection_active())
         && !world
             .get_resource::<crate::trains::TrainUiState>()
             .is_some_and(|trains| trains.blocks_input())

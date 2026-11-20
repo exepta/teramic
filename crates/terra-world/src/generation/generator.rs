@@ -6,6 +6,7 @@ use terra_voxel::VoxelSample;
 #[derive(Clone)]
 pub struct TerraGenerator {
     pub(super) advanced: std::sync::Arc<super::advanced::AdvancedSampler>,
+    pub(super) biome_regions: std::sync::Arc<super::biomes::RegionCache>,
     pub(super) rivers: std::sync::Arc<super::rivers::RiverCache>,
     pub(super) cave_portals: std::sync::Arc<super::caves::CaveCache>,
     pub(super) cave_biomes: std::sync::Arc<super::cave_biomes::CaveBiomeCache>,
@@ -16,6 +17,7 @@ pub struct TerraGenerator {
     pub(super) planted_appearances: std::sync::Arc<super::vegetation::PlantedAppearanceSource>,
     pub(super) tree_appearances: std::sync::Arc<super::vegetation::TreeAppearanceCache>,
     pub(super) structures: std::sync::Arc<super::structures::StructureCache>,
+    pub(super) natural_features: std::sync::Arc<super::natural_features::NaturalCache>,
     config: WorldConfig,
     pub(super) hills: Perlin,
     pub(super) mountains: Perlin,
@@ -28,9 +30,11 @@ impl TerraGenerator {
     pub fn new(config: WorldConfig) -> Result<Self, ConfigError> {
         config.validate()?;
         let seed = config.seed.0;
-        let climate = ClimateSampler::new(seed, config.biome_scale, config.ocean_scale);
+        let climate = ClimateSampler::new(seed, config.biome_scale, config.ocean_scale)
+            .larger_regions(config.landscape_revision >= 8);
         Ok(Self {
             advanced: std::sync::Arc::new(super::advanced::AdvancedSampler::new(&config)),
+            biome_regions: Default::default(),
             rivers: Default::default(),
             cave_portals: Default::default(),
             cave_biomes: Default::default(),
@@ -41,6 +45,7 @@ impl TerraGenerator {
             tree_appearances: Default::default(),
             planted_appearances: Default::default(),
             structures: Default::default(),
+            natural_features: Default::default(),
             config,
             hills: Perlin::new(layer_seed(seed, 1)),
             mountains: Perlin::new(layer_seed(seed, 2)),
@@ -75,7 +80,10 @@ impl TerraGenerator {
         let depth = height - y;
         let (mut density, formation) = self.cave_density_with_column(position, column);
         let mut material = self.column_material(column, depth, density);
-        let reserved_air = self.connected_hydrology()
+        // Spirit terrain can move portals into cave-ecology decoration sites,
+        // including legacy landscape profiles without connected hydrology.
+        // Keep their walking volume clear while retaining old saved-world output.
+        let reserved_air = (self.connected_hydrology() || self.config.spirit_blossom_revision > 0)
             && column
                 .river_cavity
                 .or(column.cave_cavity)
@@ -102,6 +110,14 @@ impl TerraGenerator {
             && y.floor() <= ground + f64::from(column.seagrass_height)
         {
             material = terra_voxel::MaterialId::Seagrass;
+            density = -0.5;
+        }
+        if density > 0.0
+            && let Some(decoration) = self
+                .blood_decoration(position, column)
+                .or_else(|| self.spirit_decoration(position, column))
+        {
+            material = decoration;
             density = -0.5;
         }
         VoxelSample::new(density as f32, material)
@@ -332,9 +348,17 @@ impl TerrainGenerator for TerraGenerator {
                 material,
             };
         }
+        if position.iter().all(|v| v.is_finite())
+            && let Some(material) = self.natural_material_at(position.map(|v| v.floor() as i64))
+        {
+            return VoxelSample {
+                density: -1.0,
+                material,
+            };
+        }
         let column = self.surface_column(position[0], position[2]);
         let mut sample = self.sample_with_column(position, column);
-        if (sample.material == 3
+        if (matches!(sample.material, 3 | 308)
             || self.config.cave_structure_revision >= 4 && matches!(sample.material, 13 | 57 | 58))
             && sample.density <= 0.0
             && self.config.ores.enabled

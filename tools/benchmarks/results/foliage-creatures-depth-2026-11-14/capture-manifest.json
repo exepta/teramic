@@ -1,0 +1,72 @@
+[
+  {
+    "file": "captures/foliage-0.png",
+    "source": "target/foliage-creatures/run.T4zXBe/foliage/foliage-0.png",
+    "sha256": "3e125a999317f8dcb6e3665ec62f5833f1036d77e2a0c8a8764e57d350df346e"
+  },
+  {
+    "file": "captures/foliage-1.png",
+    "source": "target/foliage-creatures/run.T4zXBe/foliage/foliage-1.png",
+    "sha256": "abbbfd3728e4957a28971506baf0ed8143ed44d57b5f2361710ab626cffd45b9"
+  },
+  {
+    "file": "captures/foliage-3.png",
+    "source": "target/foliage-creatures/run.T4zXBe/foliage/foliage-3.png",
+    "sha256": "b29e23cf1a1acfaf379b010b445ae03f115a6faef7eeda516c91d3438dad1857"
+  },
+  {
+    "file": "captures/eyes-0-open.png",
+    "source": "target/foliage-creatures/run.T4zXBe/eyes/eyes-0-open.png",
+    "sha256": "93b1a15e6a34494a13d84a57b2aeee1db5cc5ab59a8719579b43ba21e18c2bd3"
+  },
+  {
+    "file": "captures/eyes-1-half-blink.png",
+    "source": "target/foliage-creatures/run.T4zXBe/eyes/eyes-1-half-blink.png",
+    "sha256": "55d3625abaa5052cb0807080f2f11fb7cecf6333d108ec75ebbf97e8ee99233f"
+  },
+  {
+    "file": "captures/eyes-2-closed.png",
+    "source": "target/foliage-creatures/run.T4zXBe/eyes/eyes-2-closed.png",
+    "sha256": "0d7a4a9b719392f824a14554276f3932310a37090d3bb2faf15214fcd3b00005"
+  },
+  {
+    "file": "captures/eyes-3-after-blink.png",
+    "source": "target/foliage-creatures/run.T4zXBe/eyes/eyes-3-after-blink.png",
+    "sha256": "19141dd00e08fb9d3475ed63e0cacf135b871597d141ab2f905aa56ef69aa9ed"
+  },
+  {
+    "file": "captures/horses-0.png",
+    "source": "target/voxel-creatures/run.rx3Vgh/horse/horses-0.png",
+    "sha256": "10b89a68ba633c526fc40ac4b80d8d50b7fe35d0b2abf07aad5611b60d3cff1f"
+  },
+  {
+    "file": "captures/horses-2.png",
+    "source": "target/voxel-creatures/run.rx3Vgh/horse/horses-2.png",
+    "sha256": "691d84990901eef1415927050fef794d66fdf73966d82aaf0d78a3c2029df295"
+  },
+  {
+    "file": "captures/spiders-3.png",
+    "source": "target/voxel-creatures/run.rx3Vgh/spiders/spiders-3.png",
+    "sha256": "368a1e250b731a9ea200f4e97bed4e48670996bdc9fedcb1efceae23d0bde1c2"
+  },
+  {
+    "file": "captures/reference-birch-overview.png",
+    "source": "target/reference-biomes/run.BbKQeU/captures/reference-birch-overview.png",
+    "sha256": "49d6b11165a2e8c0619d837ac7c9910bfeff8c54e8fb00e9b84f8999c5b09baa"
+  },
+  {
+    "file": "captures/reference-birch-close.png",
+    "source": "target/reference-biomes/run.BbKQeU/captures/reference-birch-close.png",
+    "sha256": "8b10b60ba45e4463654a5949333069e76aebfc73f8bc9778d98bf4ee99c66564"
+  },
+  {
+    "file": "captures/picker-forest-overview.png",
+    "source": "target/reference-biomes/run.BbKQeU/captures/picker-forest-overview.png",
+    "sha256": "92f89f427f4ce1f4d57408fa78b413d08be06f1411a74ba2d752bcfdf140717d"
+  },
+  {
+    "file": "captures/picker-cherry-forest-overview.png",
+    "source": "target/reference-biomes/run.BbKQeU/captures/picker-cherry-forest-overview.png",
+    "sha256": "adb67bea6b16777f1238181dd48e7c7c71d8f00d08b43eae7f55b12a288a14d1"
+  }
+]

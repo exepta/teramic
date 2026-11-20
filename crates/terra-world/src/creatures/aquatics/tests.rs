@@ -20,7 +20,7 @@ fn spawn_kind(seed: u64, water: SpawnWater, depth: f64, biome: &str) -> Option<K
     )
 }
 
-fn fixture() -> (TerraGenerator, ChunkStore, EditJournal) {
+pub(super) fn fixture() -> (TerraGenerator, ChunkStore, EditJournal) {
     let terrain = TerraGenerator::new(WorldConfig {
         base_height: 3.0,
         hill_amplitude: 0.0,
@@ -61,7 +61,7 @@ fn fixture() -> (TerraGenerator, ChunkStore, EditJournal) {
     }
     (terrain, chunks, EditJournal::default())
 }
-fn animal(kind: Kind, slot: u8) -> Creature {
+pub(super) fn animal(kind: Kind, slot: u8) -> Creature {
     Creature {
         id: creature_id([0, 0], slot).unwrap(),
         kind,
@@ -372,7 +372,7 @@ fn swimming_stays_submerged_and_never_enters_unloaded_voxels_or_an_edited_wall()
         for _ in 0..80 {
             step(&mut a, &h, &[], &bears::PreyIndex::default(), 0.1);
             assert!(
-                h.clear(a.position, a.size(), true),
+                h.clear_rotated(a.position, a.size(), true, f64::from(a.yaw)),
                 "{kind:?}: {:?}",
                 a.position
             );

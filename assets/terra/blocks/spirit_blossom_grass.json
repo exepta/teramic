@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": 306,
+  "name": "Spirit Blossom Grass",
+  "description": "Turquoise turf over violet earth from the Spirit Blossom sanctuary.",
+  "creative_category": "terrain",
+  "hardness": 1.4,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "spirit_blossom_grass": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "spirit_blossom_grass_bottom": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "spirit_blossom_grass_side": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "spirit_blossom_grass": "textures/spirit_blossom_grass.png",
+    "spirit_blossom_grass_bottom": "textures/spirit_blossom_grass_bottom.png",
+    "spirit_blossom_grass_side": "textures/spirit_blossom_grass_side.png"
+  },
+  "face_materials": [
+    "spirit_blossom_grass_side",
+    "spirit_blossom_grass_side",
+    "spirit_blossom_grass_bottom",
+    "spirit_blossom_grass",
+    "spirit_blossom_grass_side",
+    "spirit_blossom_grass_side"
+  ],
+  "surface": "turf"
+}

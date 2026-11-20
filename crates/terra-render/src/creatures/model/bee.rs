@@ -1,5 +1,5 @@
 use super::{Part, shape};
-use crate::players::model::Builder;
+use crate::creatures::model::voxel::Builder;
 use bevy::prelude::*;
 
 pub(super) fn parts() -> Result<Vec<(Part, Vec3, Mesh)>, String> {

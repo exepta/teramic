@@ -24,6 +24,9 @@ pub fn is_shape(material: u16) -> bool {
     (FIRST..=LAST).contains(&material)
         || matches!(material, 104..=105 | 136..=138 | BALLAST_STAIRS | BALLAST_SLAB)
         || crate::locomotive_parts::is_metal_shape(material)
+        || crate::roads::is_shape(material)
+        || crate::street::is_shape(material)
+        || crate::roads::is_tar(material)
 }
 pub fn is_fence(material: u16) -> bool {
     (90..=97).contains(&material) || material == 138
@@ -38,9 +41,9 @@ pub fn is_stair(material: u16) -> bool {
         || matches!(material, 104 | 136 | BALLAST_STAIRS)
         || crate::locomotive_parts::is_stair(material)
 }
-/// Saved sand fences keep their ID and shape, but cannot be obtained anymore.
+/// Saved sand fences and in-world tar coatings are not inventory building items.
 pub fn obtainable(material: u16) -> bool {
-    material != 95
+    material != 95 && material != crate::bile::FLUID && !crate::roads::is_tar(material)
 }
 
 pub const DOUBLE_SLAB: u8 = 9;
@@ -180,7 +183,11 @@ pub fn placement_at(material: u16, normal: [i8; 3], direction: [f64; 3], hit: [f
 }
 
 pub fn valid_facing(material: u16, facing: u8) -> bool {
-    if is_slab(material) {
+    if material == crate::roads::WET_TAR {
+        true // Packed liquid amount and drying stage, never an orientation.
+    } else if material == crate::roads::DRIED_TAR {
+        facing < 8
+    } else if is_slab(material) {
         facing <= LAST_MIXED_SLAB
     } else if is_stair(material) {
         facing < 24
@@ -219,6 +226,12 @@ pub fn stair_basis(facing: u8) -> [[i8; 3]; 3] {
 }
 
 pub fn placement_facing(material: u16, support_normal: [i8; 3], direction: [f64; 3]) -> u8 {
+    if crate::street::is_shape(material) {
+        return crate::street::placement_facing(material, [0; 3], direction, |_| None);
+    }
+    if crate::roads::is_shape(material) {
+        return crate::roads::placement_facing(material, direction);
+    }
     if is_slab(material) {
         return match support_normal {
             [0, -1, 0] => 4,
@@ -315,6 +328,19 @@ fn rotate_box(shape: ShapeBox, basis: [[i8; 3]; 3]) -> ShapeBox {
 /// Shared bounded profile for rendering, ray casting and physics. Neighbor order:
 /// -X,+X,-Y,+Y,-Z,+Z. Corners are evaluated in the stair's support plane.
 pub fn placed_boxes(material: u16, facing: u8, neighbors: [Option<(u16, u8)>; 6]) -> Vec<ShapeBox> {
+    if crate::roads::is_tar(material) {
+        return vec![ShapeBox {
+            minimum: [0.0; 3],
+            maximum: [1.0, f64::from(crate::roads::tar_height(facing)), 1.0],
+            hinged: false,
+        }];
+    }
+    if crate::roads::is_shape(material) || crate::street::is_shape(material) {
+        return boxes(material)
+            .iter()
+            .map(|bounds| bounds.rotated_y(facing))
+            .collect();
+    }
     if let Some(grate) = crate::locomotive_parts::grate_boxes(material, facing) {
         return grate;
     }
@@ -475,6 +501,19 @@ pub fn placed_boxes(material: u16, facing: u8, neighbors: [Option<(u16, u8)>; 6]
     result
 }
 pub fn base_material(material: u16) -> Option<u16> {
+    if crate::street::is_shape(material) {
+        return Some(crate::street::BLOCK);
+    }
+    if crate::roads::is_tar(material) {
+        return Some(102);
+    }
+    if crate::roads::is_shape(material) {
+        return Some(if material == crate::roads::CURB {
+            12
+        } else {
+            crate::roads::ASPHALT
+        });
+    }
     if matches!(material, BALLAST_STAIRS | BALLAST_SLAB) {
         return Some(BALLAST);
     }
@@ -489,6 +528,20 @@ pub fn base_material(material: u16) -> Option<u16> {
     }
 }
 pub fn boxes(material: u16) -> &'static [ShapeBox] {
+    if crate::street::is_shape(material) {
+        return crate::street::boxes(material);
+    }
+    if crate::roads::is_tar(material) {
+        static FULL: [ShapeBox; 1] = [ShapeBox {
+            minimum: [0.0; 3],
+            maximum: [1.0; 3],
+            hinged: false,
+        }];
+        return &FULL;
+    }
+    if crate::roads::is_shape(material) {
+        return crate::roads::boxes(material);
+    }
     if crate::locomotive_parts::is_metal_shape(material) {
         return crate::locomotive_parts::base_boxes(material);
     }

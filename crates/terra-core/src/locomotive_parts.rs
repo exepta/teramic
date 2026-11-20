@@ -733,7 +733,10 @@ mod tests {
             assert!(model.is_file(), "{}", model.display());
             assert!(
                 crate::asset_directory()
-                    .join(format!("crafting/{}.json", definition.slug))
+                    .join(format!(
+                        "crafting/transport/trains/{}.json",
+                        definition.slug
+                    ))
                     .is_file()
             );
         }

@@ -1,4 +1,5 @@
-//! Shadow-only cube shells omit subpixel relief, retaining leaf cutouts and wind.
+//! Shadow-only opaque cube shells omit subpixel relief. Foliage casts with its
+//! visible geometry so cutouts, outlying leaves and wind match every render pass.
 //! Middle/far depth batches preserve complete opaque geometry.
 use crate::{
     blocks::TemplateSet,
@@ -105,6 +106,8 @@ fn exact_materials(
                 && !templates.water_material(slot)
                 && !templates.glass_material(slot)
                 && !templates.torch_material(slot)
+                && !templates.fog_material(slot)
+                && !templates.bile_material(slot)
                 && !templates.torch_palette.contains_key(&slot)
                 && !templates.ore_materials.values().any(|&ore| ore == slot)
                 && !foliage.materials.contains_key(&slot)
@@ -262,7 +265,17 @@ pub(crate) fn append(
     let mut shadows = BTreeMap::new();
     let mut flat_shadows = BTreeMap::new();
     let mut source_materials = BTreeMap::<(usize, bool), BTreeSet<usize>>::new();
-    let mut masked_materials = BTreeSet::new();
+    let foliage_materials: BTreeSet<_> = terra_voxel::MaterialId::FOLIAGE
+        .iter()
+        .filter_map(|id| templates.blocks.get(id))
+        .flat_map(|block| block.face_materials)
+        .chain(
+            templates
+                .foliage_clusters
+                .values()
+                .flat_map(|cluster| cluster.slots()),
+        )
+        .collect();
     // Color batches can combine model and cube geometry with shared materials.
     // Keep those casters intact rather than replacing the model's shadow too.
     let model_materials: BTreeSet<_> = templates
@@ -271,6 +284,14 @@ pub(crate) fn append(
         .flat_map(|block| block.model.iter().map(|primitive| primitive.material))
         .collect();
     for &face in faces {
+        // A cube proxy would erase the silhouette of projecting leaf clusters.
+        // Keep the real leaf batch as caster, including conifer geometry. Also
+        // protect shared slots: upload replaces casters by material, not by ID.
+        if terra_voxel::MaterialId::FOLIAGE.contains(&face.material)
+            || matches!(face.material, 399 | terra_core::fog_blocks::MATERIAL)
+        {
+            continue;
+        }
         if let Some(original) = templates.blocks.get(&face.material) {
             let flat = original.render_kind == crate::blocks::definitions::BlockRenderKind::Cube
                 && templates.opaque_cube_lods.contains(&face.material)
@@ -288,15 +309,21 @@ pub(crate) fn append(
                 original
             };
             if block.render_kind != crate::blocks::definitions::BlockRenderKind::Cube
+                || foliage_materials.contains(&block.face_materials[face.side])
+                || foliage_materials.contains(&original.face_materials[face.side])
                 || model_materials.contains(&original.face_materials[face.side])
                 || authored
-                    && original.faces[face.side]
-                        .iter()
-                        .any(|primitive| model_materials.contains(&primitive.material))
+                    && original.faces[face.side].iter().any(|primitive| {
+                        model_materials.contains(&primitive.material)
+                            || foliage_materials.contains(&primitive.material)
+                    })
                 || block.side_cap.is_some_and(|cap| {
-                    face.side / 2 != 1 && model_materials.contains(&cap.material)
+                    face.side / 2 != 1
+                        && (model_materials.contains(&cap.material)
+                            || foliage_materials.contains(&cap.material))
                 })
                 || templates.water_material(block.face_materials[face.side])
+                || templates.bile_material(block.face_materials[face.side])
                 || templates.glass_material(block.face_materials[face.side])
                 || templates
                     .ore_materials
@@ -304,9 +331,6 @@ pub(crate) fn append(
                     .is_some_and(|material| block.face_materials.contains(material))
             {
                 continue;
-            }
-            if matches!(face.material, 7..=9 | 132 | 133 | 195) {
-                masked_materials.insert(block.face_materials[face.side]);
             }
             let sources = source_materials
                 .entry((block.face_materials[face.side], flat))
@@ -348,33 +372,29 @@ pub(crate) fn append(
                 || vec![batch.material],
                 |sources| sources.into_iter().collect(),
             );
-        // Opaque depth casters need only position; cutout foliage keeps its UVs
-        // and original wind shader. No reduced color or collision geometry.
-        if flat || !masked_materials.contains(&batch.material) {
-            if !flat {
-                recessed_shell(&mut batch)?;
+        // Only opaque cubes reach this path. Their depth casters need position
+        // alone; the original color and collision geometry remain unchanged.
+        if !flat {
+            recessed_shell(&mut batch)?;
+        }
+        batch.normals = Vec::new();
+        batch.tangents = Vec::new();
+        batch.uvs = Vec::new();
+        // The shared depth-only material is two-sided: cave ceilings still
+        // block sunlight without submitting every triangle twice.
+        if let Some(combined) = &mut opaque {
+            let base = u32::try_from(combined.positions.len())
+                .map_err(|_| "Shadow mesh index overflow")?;
+            combined.positions.extend(batch.positions);
+            for index in batch.indices {
+                combined.indices.push(
+                    base.checked_add(index)
+                        .ok_or("Shadow mesh index overflow")?,
+                );
             }
-            batch.normals = Vec::new();
-            batch.tangents = Vec::new();
-            batch.uvs = Vec::new();
-            // The shared depth-only material is two-sided: cave ceilings still
-            // block sunlight without submitting every triangle twice.
-            if let Some(combined) = &mut opaque {
-                let base = u32::try_from(combined.positions.len())
-                    .map_err(|_| "Shadow mesh index overflow")?;
-                combined.positions.extend(batch.positions);
-                for index in batch.indices {
-                    combined.indices.push(
-                        base.checked_add(index)
-                            .ok_or("Shadow mesh index overflow")?,
-                    );
-                }
-                combined.shadow_sources.extend(batch.shadow_sources);
-            } else {
-                opaque = Some(batch);
-            }
+            combined.shadow_sources.extend(batch.shadow_sources);
         } else {
-            batches.push(batch);
+            opaque = Some(batch);
         }
     }
     if let Some(batch) = opaque {
@@ -791,48 +811,110 @@ mod tests {
         assert_eq!(batches[0].shadow_sources, vec![4]);
     }
     #[test]
-    fn proxy_is_a_separate_tiny_masked_shell_without_changing_color_geometry() {
+    fn foliage_keeps_real_cutout_wind_and_outlying_geometry_as_its_shadow_caster() {
+        for material in terra_voxel::MaterialId::FOLIAGE {
+            for flat in [false, true] {
+                let mut templates = TemplateSet::default();
+                let block = crate::blocks::BlockTemplate {
+                    render_kind: crate::blocks::definitions::BlockRenderKind::Cube,
+                    face_materials: [4; 6],
+                    side_cap: None,
+                    faces: Default::default(),
+                    model: vec![],
+                    details: vec![],
+                    bevel_width: 0.0,
+                    surface: None,
+                };
+                templates.blocks.insert(material, block.clone());
+                if flat {
+                    // Even stale coarse metadata must never flatten masked foliage.
+                    templates.cube_lods.insert(material, block);
+                    templates.opaque_cube_lods.insert(material);
+                }
+                let faces = [BlockFace {
+                    minimum: [0; 3],
+                    width: 1,
+                    height: 1,
+                    side: 3,
+                    u_axis: 0,
+                    v_axis: 2,
+                    material,
+                    edge_mask: 15,
+                    occupied_neighbor: false,
+                }];
+                let positions = vec![[-0.1, 1.0, 0.0], [1.1, 1.1, 0.0], [0.5, 1.0, 1.0]];
+                let normals = vec![[0., 1., 0.]; 3];
+                let uvs = vec![[0.2, 0.1], [0.4, 0.1], [0.3, 0.4]];
+                let colors = vec![[1., 0.8, 0.5, 0.25]; 3];
+                let mut batches = vec![MeshBatch {
+                    positions: positions.clone(),
+                    normals: normals.clone(),
+                    uvs: uvs.clone(),
+                    colors: colors.clone(),
+                    indices: vec![0, 1, 2],
+                    material: 4,
+                    ..default()
+                }];
+                append(&mut batches, &faces, &templates, DetailLevel::Near).unwrap();
+                assert_eq!(batches.len(), 1, "foliage {material}, flat={flat}");
+                let batch = &batches[0];
+                assert!(!batch.shadow_only && batch.shadow_sources.is_empty());
+                assert_eq!(batch.positions, positions);
+                assert_eq!(batch.normals, normals);
+                assert_eq!(batch.uvs, uvs);
+                assert_eq!(batch.colors, colors);
+                assert_eq!(batch.indices, [0, 1, 2]);
+            }
+        }
+    }
+
+    #[test]
+    fn opaque_proxies_never_replace_a_shared_leaf_material_slot() {
         let mut templates = TemplateSet::default();
-        templates.blocks.insert(
+        templates.foliage_clusters.insert(
             7,
-            crate::blocks::BlockTemplate {
-                render_kind: crate::blocks::definitions::BlockRenderKind::Cube,
-                face_materials: [4; 6],
-                side_cap: None,
-                faces: Default::default(),
-                model: vec![],
-                details: vec![],
-                bevel_width: 0.22,
-                surface: None,
+            crate::blocks::FoliageClusterMaterials {
+                leaves: 8,
+                needles: Some(9),
             },
         );
-        let faces = [BlockFace {
-            minimum: [0; 3],
-            width: 16,
-            height: 8,
-            side: 3,
-            u_axis: 0,
-            v_axis: 2,
-            material: 7,
-            edge_mask: 15,
-            occupied_neighbor: false,
-        }];
-        let original = MeshBatch {
-            positions: vec![[0.; 3]; 100],
-            material: 4,
-            ..default()
-        };
-        let mut batches = vec![original];
+        let mut faces = Vec::new();
+        for (material, slot) in [(7, 4), (1, 4), (3, 6), (4, 8), (5, 9)] {
+            templates.blocks.insert(
+                material,
+                crate::blocks::BlockTemplate {
+                    render_kind: crate::blocks::definitions::BlockRenderKind::Cube,
+                    face_materials: [slot; 6],
+                    side_cap: None,
+                    faces: Default::default(),
+                    model: vec![],
+                    details: vec![],
+                    bevel_width: 0.0,
+                    surface: None,
+                },
+            );
+            faces.push(BlockFace {
+                minimum: [0; 3],
+                width: 1,
+                height: 1,
+                side: 3,
+                u_axis: 0,
+                v_axis: 2,
+                material,
+                edge_mask: 15,
+                occupied_neighbor: false,
+            });
+        }
+        let mut batches = Vec::new();
         append(&mut batches, &faces, &templates, DetailLevel::Near).unwrap();
-        assert_eq!(batches.len(), 2);
-        assert!(!batches[0].shadow_only);
-        assert_eq!(batches[0].positions.len(), 100);
-        assert!(batches[1].shadow_only);
-        assert_eq!(batches[1].material, 4);
-        assert_eq!(batches[1].positions.len(), 4);
-        assert_eq!(batches[1].indices.len(), 6);
-        assert_eq!(batches[1].uvs[2], [16., 8.]);
-        assert!(batches[1].indices.iter().all(|&i| (i as usize) < 4));
+        assert_eq!(
+            batches.len(),
+            1,
+            "the independent stone slot still gets a proxy"
+        );
+        assert!(batches[0].shadow_only);
+        assert_eq!(batches[0].shadow_sources, [6]);
+        assert!(batches[0].normals.is_empty() && batches[0].uvs.is_empty());
     }
 
     #[test]

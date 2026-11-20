@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": 311,
+  "name": "White Blossom Leaves",
+  "description": "Pearl-white blossoms with pale blue centers.",
+  "creative_category": "nature",
+  "hardness": 0.3,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "white_blossom_leaves": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "white_blossom_leaves_top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "leaf_cluster": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    }
+  },
+  "textures": {
+    "white_blossom_leaves": "textures/foliage/spirit_pearl_side.png",
+    "white_blossom_leaves_top": "textures/foliage/spirit_pearl_top.png",
+    "leaf_cluster": "textures/foliage/spirit_pearl_cluster.png"
+  },
+  "face_materials": [
+    "white_blossom_leaves",
+    "white_blossom_leaves",
+    "white_blossom_leaves",
+    "white_blossom_leaves_top",
+    "white_blossom_leaves",
+    "white_blossom_leaves"
+  ],
+  "foliage_cluster": {
+    "material": "leaf_cluster"
+  }
+}

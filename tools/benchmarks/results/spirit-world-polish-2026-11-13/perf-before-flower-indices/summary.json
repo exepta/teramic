@@ -1,0 +1,953 @@
+{
+  "before": {
+    "fps": 179.6785503664166,
+    "frame_p95_ms": 6.6479859999999995,
+    "frame_p99_ms": 7.628356,
+    "diagnostics": {
+      "render/atmosphere_environment/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.004980050813008113,
+        "p95": 0.00516,
+        "p99": 0.00528
+      },
+      "render/atmosphere_luts/compute_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 182528.0,
+        "p95": 182528.0,
+        "p99": 182528.0
+      },
+      "render/atmosphere_luts/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.24643590447154376,
+        "p95": 0.24856,
+        "p99": 0.27868
+      },
+      "render/auxiliary_views/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.0030001219512195134,
+        "p95": 0.00324,
+        "p99": 0.00344
+      },
+      "render/bin_unpacking/compute_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 7872.0,
+        "p95": 7872.0,
+        "p99": 7872.0
+      },
+      "render/bin_unpacking/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.07634539634146309,
+        "p95": 0.07832,
+        "p99": 0.25476
+      },
+      "render/clustering/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.036914329268292786,
+        "p95": 0.03856,
+        "p99": 0.03992
+      },
+      "render/early_mesh_preprocessing/compute_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 6080.0,
+        "p95": 6080.0,
+        "p99": 6080.0
+      },
+      "render/early_mesh_preprocessing/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.02040093495934962,
+        "p95": 0.02104,
+        "p99": 0.02184
+      },
+      "render/lightprobe_copy/compute_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 98304.0,
+        "p95": 98304.0,
+        "p99": 98304.0
+      },
+      "render/lightprobe_copy/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.00801410569105694,
+        "p95": 0.009,
+        "p99": 0.00964
+      },
+      "render/lightprobe_downsampling_first_pass/compute_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 6144.0,
+        "p95": 6144.0,
+        "p99": 6144.0
+      },
+      "render/lightprobe_downsampling_first_pass/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.004104156504065077,
+        "p95": 0.00436,
+        "p99": 0.00456
+      },
+      "render/lightprobe_downsampling_second_pass/compute_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 1536.0,
+        "p95": 1536.0,
+        "p99": 1536.0
+      },
+      "render/lightprobe_downsampling_second_pass/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.002377235772357713,
+        "p95": 0.00252,
+        "p99": 0.0026
+      },
+      "render/lightprobe_irradiance_map/compute_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 6144.0,
+        "p95": 6144.0,
+        "p99": 6144.0
+      },
+      "render/lightprobe_irradiance_map/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.37441112804877974,
+        "p95": 0.39764,
+        "p99": 0.52352
+      },
+      "render/lightprobe_radiance_map/compute_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 132096.0,
+        "p95": 132096.0,
+        "p99": 132096.0
+      },
+      "render/lightprobe_radiance_map/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.19733298780487804,
+        "p95": 0.20088,
+        "p99": 0.2386
+      },
+      "render/main_opaque_pass_3d/clipper_primitives_out": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 542356.1847052845,
+        "p95": 543006.0,
+        "p99": 543068.0
+      },
+      "render/main_opaque_pass_3d/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 1.1146130182926848,
+        "p95": 1.17356,
+        "p99": 1.3962
+      },
+      "render/main_opaque_pass_3d/fragment_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 2449574.3297764226,
+        "p95": 2454616.0,
+        "p99": 2456586.0
+      },
+      "render/main_opaque_pass_3d/vertex_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 6650944.0,
+        "p95": 6650944.0,
+        "p99": 6650944.0
+      },
+      "render/main_transparent_pass_3d/clipper_primitives_out": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 341.0,
+        "p95": 341.0,
+        "p99": 341.0
+      },
+      "render/main_transparent_pass_3d/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.2738977743902444,
+        "p95": 0.27824,
+        "p99": 0.28
+      },
+      "render/main_transparent_pass_3d/fragment_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 11601617.081300814,
+        "p95": 11605443.0,
+        "p99": 11605443.0
+      },
+      "render/main_transparent_pass_3d/vertex_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 1749.0,
+        "p95": 1749.0,
+        "p99": 1749.0
+      },
+      "render/per_view_shadow_pass/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.014138546747967436,
+        "p95": 0.01744,
+        "p99": 0.02068
+      },
+      "render/render_sky/clipper_primitives_out": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 1.0,
+        "p95": 1.0,
+        "p99": 1.0
+      },
+      "render/render_sky/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.049522459349592984,
+        "p95": 0.05008,
+        "p99": 0.05304
+      },
+      "render/render_sky/fragment_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 2073600.0,
+        "p95": 2073600.0,
+        "p99": 2073600.0
+      },
+      "render/render_sky/vertex_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 3.0,
+        "p95": 3.0,
+        "p99": 3.0
+      },
+      "render/taa/clipper_primitives_out": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 1.0,
+        "p95": 1.0,
+        "p99": 1.0
+      },
+      "render/taa/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.09893356707317122,
+        "p95": 0.09988,
+        "p99": 0.11888
+      },
+      "render/taa/fragment_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 2073600.0,
+        "p95": 2073600.0,
+        "p99": 2073600.0
+      },
+      "render/taa/vertex_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 3.0,
+        "p95": 3.0,
+        "p99": 3.0
+      },
+      "render/tonemapping/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.04346496951219541,
+        "p95": 0.04384,
+        "p99": 0.054
+      },
+      "render/ui/clipper_primitives_out": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 4.0,
+        "p95": 4.0,
+        "p99": 4.0
+      },
+      "render/ui/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.0027241158536585154,
+        "p95": 0.00292,
+        "p99": 0.00304
+      },
+      "render/ui/fragment_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 144.0,
+        "p95": 144.0,
+        "p99": 144.0
+      },
+      "render/ui/vertex_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 8.0,
+        "p95": 8.0,
+        "p99": 8.0
+      },
+      "render/uniform_allocation/compute_shader_invocations": {
+        "samples": 3936,
+        "unit": "count",
+        "mean": 20736.0,
+        "p95": 20736.0,
+        "p99": 20736.0
+      },
+      "render/uniform_allocation/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.11206867886178871,
+        "p95": 0.11588,
+        "p99": 0.15032
+      },
+      "render/upscaling/elapsed_gpu": {
+        "samples": 3936,
+        "unit": "ms",
+        "mean": 0.01955807926829272,
+        "p95": 0.02,
+        "p99": 0.03204
+      }
+    }
+  },
+  "on": {
+    "fps": 142.13949199795445,
+    "frame_p95_ms": 8.284510000000001,
+    "frame_p99_ms": 10.603545,
+    "diagnostics": {
+      "render/atmosphere_environment/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.0049792176656151075,
+        "p95": 0.00524,
+        "p99": 0.00544
+      },
+      "render/atmosphere_luts/compute_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 182528.0,
+        "p95": 182528.0,
+        "p99": 182528.0
+      },
+      "render/atmosphere_luts/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.24536295268138839,
+        "p95": 0.2472,
+        "p99": 0.27504
+      },
+      "render/auxiliary_views/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.002962574132492088,
+        "p95": 0.0032,
+        "p99": 0.00336
+      },
+      "render/bin_unpacking/compute_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 7808.0,
+        "p95": 7808.0,
+        "p99": 7808.0
+      },
+      "render/bin_unpacking/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.07569895268138793,
+        "p95": 0.07912,
+        "p99": 0.08832
+      },
+      "render/clustering/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.03673605047318615,
+        "p95": 0.0386,
+        "p99": 0.04016
+      },
+      "render/early_mesh_preprocessing/compute_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 6080.0,
+        "p95": 6080.0,
+        "p99": 6080.0
+      },
+      "render/early_mesh_preprocessing/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.020379671924290153,
+        "p95": 0.02116,
+        "p99": 0.02152
+      },
+      "render/lightprobe_copy/compute_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 98304.0,
+        "p95": 98304.0,
+        "p99": 98304.0
+      },
+      "render/lightprobe_copy/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.00800507255520506,
+        "p95": 0.00876,
+        "p99": 0.00952
+      },
+      "render/lightprobe_downsampling_first_pass/compute_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 6144.0,
+        "p95": 6144.0,
+        "p99": 6144.0
+      },
+      "render/lightprobe_downsampling_first_pass/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.00411897791798111,
+        "p95": 0.00432,
+        "p99": 0.00452
+      },
+      "render/lightprobe_downsampling_second_pass/compute_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 1536.0,
+        "p95": 1536.0,
+        "p99": 1536.0
+      },
+      "render/lightprobe_downsampling_second_pass/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.0024574006309148566,
+        "p95": 0.00252,
+        "p99": 0.0026
+      },
+      "render/lightprobe_irradiance_map/compute_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 6144.0,
+        "p95": 6144.0,
+        "p99": 6144.0
+      },
+      "render/lightprobe_irradiance_map/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.3734962523659309,
+        "p95": 0.42616,
+        "p99": 0.4846
+      },
+      "render/lightprobe_radiance_map/compute_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 132096.0,
+        "p95": 132096.0,
+        "p99": 132096.0
+      },
+      "render/lightprobe_radiance_map/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.19728735646687717,
+        "p95": 0.21888,
+        "p99": 0.27176
+      },
+      "render/main_opaque_pass_3d/clipper_primitives_out": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 473092.7296529969,
+        "p95": 473613.0,
+        "p99": 473687.0
+      },
+      "render/main_opaque_pass_3d/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 1.3833467003154591,
+        "p95": 1.42676,
+        "p99": 1.56744
+      },
+      "render/main_opaque_pass_3d/fragment_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 2445433.996214511,
+        "p95": 2450545.0,
+        "p99": 2452971.0
+      },
+      "render/main_opaque_pass_3d/vertex_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 10196942.0,
+        "p95": 10196942.0,
+        "p99": 10196942.0
+      },
+      "render/main_transparent_pass_3d/clipper_primitives_out": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 156.0,
+        "p95": 156.0,
+        "p99": 156.0
+      },
+      "render/main_transparent_pass_3d/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.08746174132492097,
+        "p95": 0.08972,
+        "p99": 0.0914
+      },
+      "render/main_transparent_pass_3d/fragment_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 3587568.7943217666,
+        "p95": 3587577.0,
+        "p99": 3587577.0
+      },
+      "render/main_transparent_pass_3d/vertex_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 1101.0,
+        "p95": 1101.0,
+        "p99": 1101.0
+      },
+      "render/per_view_shadow_pass/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.013700290220820187,
+        "p95": 0.01396,
+        "p99": 0.02068
+      },
+      "render/render_sky/clipper_primitives_out": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 1.0,
+        "p95": 1.0,
+        "p99": 1.0
+      },
+      "render/render_sky/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.0494082145110409,
+        "p95": 0.04996,
+        "p99": 0.05036
+      },
+      "render/render_sky/fragment_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 2073600.0,
+        "p95": 2073600.0,
+        "p99": 2073600.0
+      },
+      "render/render_sky/vertex_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 3.0,
+        "p95": 3.0,
+        "p99": 3.0
+      },
+      "render/taa/clipper_primitives_out": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 1.0,
+        "p95": 1.0,
+        "p99": 1.0
+      },
+      "render/taa/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.09781939432176648,
+        "p95": 0.09972,
+        "p99": 0.1014
+      },
+      "render/taa/fragment_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 2073600.0,
+        "p95": 2073600.0,
+        "p99": 2073600.0
+      },
+      "render/taa/vertex_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 3.0,
+        "p95": 3.0,
+        "p99": 3.0
+      },
+      "render/tonemapping/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.04280320504731852,
+        "p95": 0.04336,
+        "p99": 0.0438
+      },
+      "render/ui/clipper_primitives_out": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 4.0,
+        "p95": 4.0,
+        "p99": 4.0
+      },
+      "render/ui/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.0028287192429022473,
+        "p95": 0.00304,
+        "p99": 0.00312
+      },
+      "render/ui/fragment_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 144.0,
+        "p95": 144.0,
+        "p99": 144.0
+      },
+      "render/ui/vertex_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 8.0,
+        "p95": 8.0,
+        "p99": 8.0
+      },
+      "render/uniform_allocation/compute_shader_invocations": {
+        "samples": 3170,
+        "unit": "count",
+        "mean": 20992.0,
+        "p95": 20992.0,
+        "p99": 20992.0
+      },
+      "render/uniform_allocation/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.11307698422712913,
+        "p95": 0.118,
+        "p99": 0.14124
+      },
+      "render/upscaling/elapsed_gpu": {
+        "samples": 3170,
+        "unit": "ms",
+        "mean": 0.019062246056782355,
+        "p95": 0.01972,
+        "p99": 0.02016
+      }
+    }
+  },
+  "off": {
+    "fps": 142.96643585212175,
+    "frame_p95_ms": 9.581585,
+    "frame_p99_ms": 10.707757,
+    "diagnostics": {
+      "render/atmosphere_environment/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.004974929492949309,
+        "p95": 0.0052,
+        "p99": 0.00536
+      },
+      "render/atmosphere_luts/compute_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 182528.0,
+        "p95": 182528.0,
+        "p99": 182528.0
+      },
+      "render/atmosphere_luts/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.2460391719171914,
+        "p95": 0.2474,
+        "p99": 0.2758
+      },
+      "render/auxiliary_views/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.003027038703870357,
+        "p95": 0.00324,
+        "p99": 0.00348
+      },
+      "render/bin_unpacking/compute_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 7808.0,
+        "p95": 7808.0,
+        "p99": 7808.0
+      },
+      "render/bin_unpacking/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.07439087908790863,
+        "p95": 0.0782,
+        "p99": 0.08432
+      },
+      "render/clustering/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.03699866786678675,
+        "p95": 0.03868,
+        "p99": 0.04016
+      },
+      "render/early_mesh_preprocessing/compute_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 6080.0,
+        "p95": 6080.0,
+        "p99": 6080.0
+      },
+      "render/early_mesh_preprocessing/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.020162868286828603,
+        "p95": 0.02088,
+        "p99": 0.02128
+      },
+      "render/lightprobe_copy/compute_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 98304.0,
+        "p95": 98304.0,
+        "p99": 98304.0
+      },
+      "render/lightprobe_copy/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.007960984098409894,
+        "p95": 0.00896,
+        "p99": 0.00936
+      },
+      "render/lightprobe_downsampling_first_pass/compute_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 6144.0,
+        "p95": 6144.0,
+        "p99": 6144.0
+      },
+      "render/lightprobe_downsampling_first_pass/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.004137329732973287,
+        "p95": 0.00444,
+        "p99": 0.0046
+      },
+      "render/lightprobe_downsampling_second_pass/compute_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 1536.0,
+        "p95": 1536.0,
+        "p99": 1536.0
+      },
+      "render/lightprobe_downsampling_second_pass/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.002356111611161091,
+        "p95": 0.00252,
+        "p99": 0.00256
+      },
+      "render/lightprobe_irradiance_map/compute_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 6144.0,
+        "p95": 6144.0,
+        "p99": 6144.0
+      },
+      "render/lightprobe_irradiance_map/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.37177143714371413,
+        "p95": 0.37508,
+        "p99": 0.40672
+      },
+      "render/lightprobe_radiance_map/compute_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 132096.0,
+        "p95": 132096.0,
+        "p99": 132096.0
+      },
+      "render/lightprobe_radiance_map/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.1967441704170412,
+        "p95": 0.19964,
+        "p99": 0.23424
+      },
+      "render/main_opaque_pass_3d/clipper_primitives_out": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 473092.7494749475,
+        "p95": 473613.0,
+        "p99": 473683.0
+      },
+      "render/main_opaque_pass_3d/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 1.3843691329132919,
+        "p95": 1.43236,
+        "p99": 1.54
+      },
+      "render/main_opaque_pass_3d/fragment_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 2445840.2334233425,
+        "p95": 2450992.0,
+        "p99": 2453367.0
+      },
+      "render/main_opaque_pass_3d/vertex_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 10196942.0,
+        "p95": 10196942.0,
+        "p99": 10196942.0
+      },
+      "render/main_transparent_pass_3d/clipper_primitives_out": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 150.0,
+        "p95": 150.0,
+        "p99": 150.0
+      },
+      "render/main_transparent_pass_3d/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.04912558055805574,
+        "p95": 0.05,
+        "p99": 0.05052
+      },
+      "render/main_transparent_pass_3d/fragment_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 2107488.688268827,
+        "p95": 2108142.0,
+        "p99": 2108142.0
+      },
+      "render/main_transparent_pass_3d/vertex_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 1093.0,
+        "p95": 1093.0,
+        "p99": 1093.0
+      },
+      "render/per_view_shadow_pass/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.014336837683768384,
+        "p95": 0.0178,
+        "p99": 0.0204
+      },
+      "render/render_sky/clipper_primitives_out": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 1.0,
+        "p95": 1.0,
+        "p99": 1.0
+      },
+      "render/render_sky/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.049432775277527576,
+        "p95": 0.0498,
+        "p99": 0.05044
+      },
+      "render/render_sky/fragment_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 2073600.0,
+        "p95": 2073600.0,
+        "p99": 2073600.0
+      },
+      "render/render_sky/vertex_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 3.0,
+        "p95": 3.0,
+        "p99": 3.0
+      },
+      "render/taa/clipper_primitives_out": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 1.0,
+        "p95": 1.0,
+        "p99": 1.0
+      },
+      "render/taa/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.1059012781278127,
+        "p95": 0.10808,
+        "p99": 0.11144
+      },
+      "render/taa/fragment_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 2073600.0,
+        "p95": 2073600.0,
+        "p99": 2073600.0
+      },
+      "render/taa/vertex_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 3.0,
+        "p95": 3.0,
+        "p99": 3.0
+      },
+      "render/tonemapping/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.043667674767476794,
+        "p95": 0.04356,
+        "p99": 0.04564
+      },
+      "render/ui/clipper_primitives_out": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 4.0,
+        "p95": 4.0,
+        "p99": 4.0
+      },
+      "render/ui/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.0028788598859886393,
+        "p95": 0.00308,
+        "p99": 0.00316
+      },
+      "render/ui/fragment_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 144.0,
+        "p95": 144.0,
+        "p99": 144.0
+      },
+      "render/ui/vertex_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 8.0,
+        "p95": 8.0,
+        "p99": 8.0
+      },
+      "render/uniform_allocation/compute_shader_invocations": {
+        "samples": 3333,
+        "unit": "count",
+        "mean": 20992.0,
+        "p95": 20992.0,
+        "p99": 20992.0
+      },
+      "render/uniform_allocation/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.11416867686768667,
+        "p95": 0.11896,
+        "p99": 0.14284
+      },
+      "render/upscaling/elapsed_gpu": {
+        "samples": 3333,
+        "unit": "ms",
+        "mean": 0.01936316831683168,
+        "p95": 0.02,
+        "p99": 0.0212
+      }
+    }
+  },
+  "interpretation": {
+    "transparent_pass_reduction_percent": 68.06774296737909,
+    "estimated_mist_incremental_pass_ms": 0.03833616076686523,
+    "total_fps_improvement_claim": false,
+    "notes": "GPU numbers describe individual passes, not total frame latency. Model geometry changed relative to baseline; ON/OFF uses the same binary, fixed world, camera and settings. No Cargo compilation ran during either sample."
+  }
+}

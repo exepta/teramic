@@ -1,4 +1,4 @@
-use crate::players::model::Builder;
+use self::voxel::Builder;
 use bevy::prelude::*;
 use terra_core::creatures::CreatureKind as Kind;
 
@@ -6,17 +6,25 @@ mod aquatic;
 mod bear;
 mod bee;
 mod clownfish;
+mod eyes;
+mod forest;
 mod horse;
 mod mammal;
+pub(super) mod sandworm;
 mod shape;
 pub(super) mod soldier;
 mod spider;
+mod spirit;
 mod stalker;
 mod villager;
+mod voxel;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(super) enum Part {
     Body,
+    SpiritGlow,
+    SpiritArm(f32),
+    SpiritOrbit(f32),
     Head,
     Leg(f32),
     Tail,
@@ -34,13 +42,33 @@ pub(super) enum Part {
     StalkerForearm(f32),
     StalkerHand(f32),
     StalkerEyes,
+    SkeletonEyes,
+    ThornGlow { head: bool },
     VillagerArm(f32),
     MilitaryWeapon(f32),
     MilitaryTabard,
+    WormSegment(u8),
+    WormMound,
+    WormDust,
+    WormRipple(u8),
+    WormMandible(u8),
+    WormSpit(u8),
 }
 
 pub(super) fn parts(kind: Kind) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
     parts_variant(kind, 0)
+}
+
+/// Cache key only; the persisted profession and immutable sex stay independent.
+pub(super) fn villager_variant(role: u8, sex: terra_core::creatures::CreatureSex) -> u8 {
+    let role = role % terra_core::creatures::villagers::ROLE_COUNT;
+    if terra_core::creatures::villagers::is_civilian(role)
+        && (sex == terra_core::creatures::CreatureSex::Female) != villager::female(role)
+    {
+        role + terra_core::creatures::villagers::ROLE_COUNT
+    } else {
+        role
+    }
 }
 pub(super) fn parts_variant(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
     if kind == Kind::Fish && variant >= 2 {
@@ -48,6 +76,16 @@ pub(super) fn parts_variant(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, 
     }
     match kind {
         Kind::Bee => bee::parts(),
+        Kind::Butterfly => spirit::butterfly(variant),
+        Kind::SpiritGloom => spirit::gloom(variant),
+        Kind::SpiritFox => spirit::fox(),
+        Kind::Skeleton => forest::skeleton(variant),
+        Kind::Raven => forest::raven(),
+        Kind::BloodSlime => forest::slime(),
+        Kind::BloodStalker => forest::stalker(),
+        Kind::BloodWisp => forest::wisp(),
+        Kind::ThornBrute => forest::brute(),
+        Kind::SandWorm => sandworm::parts(),
         Kind::Fish => clownfish::parts(),
         Kind::Cow | Kind::Pig | Kind::Sheep => mammal::parts(kind),
         Kind::Bear => bear::parts(),
@@ -62,6 +100,11 @@ pub(super) fn parts_variant(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, 
         Kind::SmallSpider | Kind::MediumSpider | Kind::LargeSpider => spider::parts(kind),
         Kind::Stalker => stalker::parts(),
         Kind::Villager => {
+            let count = terra_core::creatures::villagers::ROLE_COUNT;
+            if variant >= count {
+                let role = variant % count;
+                return villager::parts_for_sex(role, !villager::female(role));
+            }
             if let Some(loadout) =
                 terra_core::creatures::soldiers::SoldierLoadout::from_role(variant)
             {
@@ -176,7 +219,10 @@ mod tests {
                         .map(|p| p[0])
                         .fold(f32::NEG_INFINITY, f32::max)
                         - positions.iter().map(|p| p[0]).fold(f32::INFINITY, f32::min);
-                    assert!((0.50..0.53).contains(&width), "narrow barrel: {width}");
+                    assert!(
+                        (0.57..0.595).contains(&width),
+                        "muscular chest inside reference hitbox: {width}"
+                    );
                 }
             }
             assert!(vertices < 16000);
@@ -189,18 +235,20 @@ mod tests {
         for kind in Kind::ALL {
             let parts = parts(kind).unwrap();
             let (part_limit, extent_limit, vertex_limit) = match kind {
+                Kind::SandWorm => (58, 23.0, 24_000),
                 Kind::Stalker => (11, 3.0, 64_000),
                 // Residents use the same cached, detailed reference meshes as
                 // their profession variants; the dedicated role test enforces
                 // this budget independently for every civilian silhouette.
                 Kind::Villager => (6, 2.5, 50_000),
+                Kind::BloodStalker => (12, 2.5, 16_000),
                 _ if kind.is_spider() => (12, 2.5, 16_000),
                 _ => (8, 2.5, 16_000),
             };
             assert!(parts.len() <= part_limit, "{kind:?}");
             let mut total = 0;
             let mut triangles = 0;
-            for (_, offset, mesh) in parts {
+            for (part, offset, mesh) in parts {
                 let count = mesh.count_vertices();
                 total += count;
                 assert!(mesh.indices().unwrap().iter().all(|i| i < count));
@@ -226,6 +274,24 @@ mod tests {
                         (normal.length_squared() - 1.0).abs() < 0.001,
                         "{kind:?}: {normal}"
                     );
+                    let faceted_worm = kind == Kind::SandWorm
+                        && matches!(
+                            part,
+                            Part::WormRipple(_)
+                                | Part::WormSegment(_)
+                                | Part::Head
+                                | Part::WormMandible(_)
+                                | Part::Jaw
+                        );
+                    if !faceted_worm {
+                        // Voxel sculptures have axis-aligned faces. The worm's
+                        // plates, hooked fangs and projected waves are faceted.
+                        assert!(
+                            normal.abs().max_element() > 0.99999
+                                && normal.abs().element_sum() < 1.00001,
+                            "{kind:?}: every face must be axis-aligned in its local joint frame: {normal}"
+                        );
+                    }
                 }
                 let indices: Vec<_> = mesh.indices().unwrap().iter().collect();
                 triangles += indices.len() / 3;
@@ -248,13 +314,16 @@ mod tests {
         let fish = parts_variant(Kind::Fish, 2).unwrap();
         assert_eq!(fish.len(), 2);
         let total: usize = fish.iter().map(|(_, _, m)| m.count_vertices()).sum();
-        // The established river fish is deliberately unchanged, including its geometry budget.
-        assert_eq!(total, 936);
-        assert_eq!(
-            fish.iter()
-                .map(|(_, _, m)| m.indices().unwrap().len() / 3)
-                .sum::<usize>(),
-            468
+        // Body scales receive the shared bevel treatment; eyes and thin fins keep
+        // their economical planar geometry and two-part articulation.
+        assert!(total <= 3_000, "River fish vertex budget: {total}");
+        let triangles = fish
+            .iter()
+            .map(|(_, _, m)| m.indices().unwrap().len() / 3)
+            .sum::<usize>();
+        assert!(
+            triangles <= 1_400,
+            "River fish triangle budget: {triangles}"
         );
         for (_, _, mesh) in fish {
             assert!(
@@ -341,11 +410,26 @@ mod tests {
             );
         }
         let vertices: usize = parts.iter().map(|(_, _, mesh)| mesh.count_vertices()).sum();
-        assert!((10_000..16_000).contains(&vertices), "{vertices}");
+        assert!(vertices < 16_000, "{vertices}");
+        let colors = parts
+            .iter()
+            .flat_map(|(_, _, mesh)| {
+                let Some(VertexAttributeValues::Float32x4(colors)) =
+                    mesh.attribute(Mesh::ATTRIBUTE_COLOR)
+                else {
+                    panic!("bear coat colors")
+                };
+                colors.iter().map(|color| color.map(f32::to_bits))
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        assert!(
+            colors.len() >= 12,
+            "Coat layers, muzzle, eyes and claws retain their palette"
+        );
     }
 
     #[test]
-    fn bevels_are_closed_and_outward_facing() {
+    fn voxel_outline_is_closed_and_outward_facing() {
         let mut builder = Builder::default();
         shape::rounded(&mut builder, [0.0; 3], [0.8, 0.7, 1.2], 0.12, [0.8; 3]).unwrap();
         let mesh = builder.finish().unwrap();
@@ -359,10 +443,14 @@ mod tests {
         else {
             panic!()
         };
-        assert_eq!(positions.len(), 120);
-        for (positions, normals) in positions.chunks_exact(4).zip(normals.chunks_exact(4)) {
-            let center = positions.iter().map(|p| Vec3::from_array(*p)).sum::<Vec3>() / 4.0;
-            assert!(center.dot(Vec3::from_array(normals[0])) > 0.0);
+        assert!(mesh.indices().unwrap().len() / 3 <= 1_024);
+        let indices: Vec<_> = mesh.indices().unwrap().iter().collect();
+        for triangle in indices.chunks_exact(3) {
+            let [a, b, c] =
+                [triangle[0], triangle[1], triangle[2]].map(|i| Vec3::from_array(positions[i]));
+            let center = (a + b + c) / 3.0;
+            assert!(center.dot((b - a).cross(c - a)) > 0.0);
+            assert!(center.dot(Vec3::from_array(normals[triangle[0]])) > 0.0);
         }
     }
 }

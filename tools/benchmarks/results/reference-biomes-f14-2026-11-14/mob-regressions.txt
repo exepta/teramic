@@ -1,0 +1,142 @@
+   Compiling smol_str v0.2.2
+   Compiling memchr v2.8.3
+   Compiling bevy_reflect v0.20.0
+   Compiling ctrlc v3.5.2
+   Compiling aho-corasick v1.1.5
+   Compiling bevy_ecs v0.20.0
+   Compiling bevy_app v0.20.0
+   Compiling bevy_time v0.20.0
+   Compiling bevy_math v0.20.0
+   Compiling rustix v1.1.5
+   Compiling linux-raw-sys v0.12.1
+   Compiling bevy_diagnostic v0.20.0
+   Compiling regex-syntax v0.8.11
+   Compiling polling v3.11.0
+   Compiling regex-automata v0.4.18
+   Compiling async-io v2.6.0
+   Compiling stable_deref_trait v1.2.1
+   Compiling bevy_asset v0.20.0
+   Compiling bevy_shape v0.20.0
+   Compiling bevy_curve v0.20.0
+   Compiling yoke v0.8.3
+   Compiling bevy_color v0.20.0
+   Compiling bevy_transform v0.20.0
+   Compiling bevy_image v0.20.0
+   Compiling bevy_mesh v0.20.0
+   Compiling matchers v0.2.0
+   Compiling bevy_input v0.20.0
+   Compiling tracing-subscriber v0.3.23
+   Compiling zerovec v0.11.8
+   Compiling bevy_window v0.20.0
+   Compiling bevy_camera v0.20.0
+   Compiling bevy_log v0.20.0
+   Compiling logos-codegen v0.16.1
+   Compiling logos-derive v0.16.1
+   Compiling tinystr v0.8.4
+   Compiling icu_locale_core v2.3.0
+   Compiling logos v0.16.1
+   Compiling lalrpop-util v0.23.2
+   Compiling potential_utf v0.1.6
+   Compiling zerotrie v0.2.5
+   Compiling icu_provider v2.3.1
+   Compiling wgsl-parse v0.6.0
+   Compiling icu_collections v2.3.0
+   Compiling bevy_gizmos v0.20.0
+   Compiling wesl v0.6.0
+   Compiling icu_properties v2.3.0
+   Compiling icu_locale_fallback v2.3.0
+   Compiling bevy_light v0.20.0
+   Compiling bevy_shader v0.20.0
+   Compiling bevy_material v0.20.0
+   Compiling bevy_extract v0.20.0
+   Compiling fontique v0.11.1
+   Compiling bevy_render v0.20.0
+   Compiling icu_segmenter v2.3.0
+   Compiling icu_normalizer v2.3.0
+   Compiling parley_data v0.11.1
+   Compiling parley v0.11.1
+   Compiling bevy_clipboard v0.20.0
+   Compiling bevy_text v0.20.0
+   Compiling bevy_core_pipeline v0.20.0
+   Compiling serde_json v1.0.154
+   Compiling bevy_sprite v0.20.0
+   Compiling gltf-json v1.4.1
+   Compiling gltf v1.4.1
+   Compiling bevy_world_serialization v0.20.0
+   Compiling no_std_io2 v0.9.4
+   Compiling lightyear_utils v0.31.0
+   Compiling bevy_gltf v0.20.0
+   Compiling lightyear_serde v0.31.0
+   Compiling bevy_a11y v0.20.0
+   Compiling bevy_sprite_render v0.20.0
+   Compiling bevy_input_focus v0.20.0
+   Compiling bevy_ui v0.20.0
+   Compiling lightyear_core v0.31.0
+   Compiling bevy_pbr v0.20.0
+   Compiling bevy_gizmos_render v0.20.0
+   Compiling lightyear_link v0.31.0
+   Compiling bevy_ui_render v0.20.0
+   Compiling bevy_post_process v0.20.0
+   Compiling bevy_anti_alias v0.20.0
+   Compiling bevy_internal v0.20.0
+   Compiling bevy v0.20.0
+   Compiling lightyear_connection v0.31.0
+   Compiling lightyear_transport v0.31.0
+   Compiling heapless v0.8.0
+   Compiling rstar v0.13.0
+   Compiling aeronet_io v0.22.0-rc.1
+   Compiling glam_matrix_extras v0.4.0
+   Compiling parry3d v0.31.1
+   Compiling bevy_heavy v0.6.0
+   Compiling terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+   Compiling lightyear_messages v0.31.0
+   Compiling bevy_transform_interpolation v0.6.0
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+   Compiling avian3d v0.8.0
+   Compiling lightyear_sync v0.31.0
+   Compiling lightyear_netcode v0.31.0
+   Compiling lightyear_udp v0.31.0
+   Compiling terra-physics v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-physics)
+   Compiling lightyear v0.31.0
+   Compiling terra-network v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-network)
+   Compiling terra-player v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-player)
+   Compiling terra-render v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-render)
+error[E0689]: can't call method `max` on ambiguous numeric type `{float}`
+  --> crates/terra-render/src/creatures/model/spider.rs:21:52
+   |
+21 |     let mut body = Builder::with_cell_size(cell[0].max(cell[1]).max(cell[2]));
+   |                                                    ^^^
+
+error[E0277]: `creatures::model::Part` doesn't implement `std::fmt::Debug`
+   --> crates/terra-render/src/creatures/model/voxel/tests.rs:142:77
+    |
+142 |                 axis_surface_named(&mesh, &format!("Villager/{sex:?}/{role}/{part:?}"));
+    |                                                                             ^^^^^^^^ `creatures::model::Part` cannot be formatted using `{:?}` because it doesn't implement `std::fmt::Debug`
+    |
+    = help: the trait `std::fmt::Debug` is not implemented for `creatures::model::Part`
+    = note: add `#[derive(Debug)]` to `creatures::model::Part` or manually `impl std::fmt::Debug for creatures::model::Part`
+help: consider annotating `creatures::model::Part` with `#[derive(Debug)]`
+   --> crates/terra-render/src/creatures/model.rs:21:1
+    |
+ 21 + #[derive(Debug)]
+ 22 | pub(super) enum Part {
+    |
+
+error[E0277]: `creatures::model::Part` doesn't implement `std::fmt::Debug`
+   --> crates/terra-render/src/creatures/model/voxel/tests.rs:155:72
+    |
+155 |                 axis_surface_named(&mesh, &format!("{kind:?}/{variant}/{part:?}"));
+    |                                                                        ^^^^^^^^ `creatures::model::Part` cannot be formatted using `{:?}` because it doesn't implement `std::fmt::Debug`
+    |
+    = help: the trait `std::fmt::Debug` is not implemented for `creatures::model::Part`
+    = note: add `#[derive(Debug)]` to `creatures::model::Part` or manually `impl std::fmt::Debug for creatures::model::Part`
+help: consider annotating `creatures::model::Part` with `#[derive(Debug)]`
+   --> crates/terra-render/src/creatures/model.rs:21:1
+    |
+ 21 + #[derive(Debug)]
+ 22 | pub(super) enum Part {
+    |
+
+Some errors have detailed explanations: E0277, E0689.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `terra-render` (lib test) due to 3 previous errors

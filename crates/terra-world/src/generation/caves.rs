@@ -1090,6 +1090,46 @@ mod tests {
     }
 
     #[test]
+    fn spirit_portal_keeps_cave_mushroom_out_of_its_walking_volume() {
+        let terrain = TerraGenerator::new(WorldConfig {
+            seed: terra_core::WorldSeed(7),
+            landscape_revision: 2,
+            rivers: false,
+            trees: false,
+            geology_revision: 0,
+            spirit_blossom_revision: 1,
+            blood_forest_revision: 0,
+            ..Default::default()
+        })
+        .unwrap();
+        let position = [-3712.5, 26.5, -4091.5];
+        let column = terrain.surface_column(position[0], position[2]);
+        let [floor, ceiling] = column.cave_cavity.expect("real generated entrance");
+        assert!(column.biome.weights.spirit_blossom > 0.8);
+        assert!(position[1] > floor && position[1] < ceiling);
+        assert!(!terrain.connected_hydrology());
+        let density = terrain.cave_density_with_column(position, column).0;
+        assert!(density > 0.0, "the portal CSG must already carve air");
+        assert_eq!(
+            terrain.cave_ecology_material(position, column, density),
+            Some(terra_voxel::MaterialId::CaveMushroom),
+            "the fixture must exercise a real floor-decoration candidate"
+        );
+        let ground = (floor - 0.5).floor();
+        assert!(
+            terrain
+                .sample_with_column([position[0], ground + 0.5, position[2]], column)
+                .density
+                <= 0.0
+        );
+        for y in [ground + 1.5, ground + 2.5] {
+            let sample = terrain.sample_with_column([position[0], y, position[2]], column);
+            assert!(sample.density > 0.0, "blocked portal at y={y}: {sample:?}");
+            assert_eq!(sample.material, terra_voxel::MaterialId::Air as u16);
+        }
+    }
+
+    #[test]
     fn entrances_have_walkable_floors_and_connect_to_variable_chambers_and_deep_caves() {
         for (landscape_revision, rivers) in [(2, false), (3, false), (3, true)] {
             for seed in [42042, 7, 98173] {

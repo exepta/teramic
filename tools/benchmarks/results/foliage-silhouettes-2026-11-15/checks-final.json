@@ -1,0 +1,141 @@
+[
+  {
+    "name": "fmt-final",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 8.32
+  },
+  {
+    "name": "tests-final",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "terra-render",
+      "-p",
+      "terra-world",
+      "-p",
+      "terra-voxel",
+      "--lib"
+    ],
+    "exit_code": 0,
+    "seconds": 393.94
+  },
+  {
+    "name": "fmt-fix",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all"
+    ],
+    "exit_code": 0,
+    "seconds": 8.04
+  },
+  {
+    "name": "clippy-final",
+    "command": [
+      "cargo",
+      "clippy",
+      "--workspace",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 60.07
+  },
+  {
+    "name": "check-final",
+    "command": [
+      "cargo",
+      "check",
+      "--workspace",
+      "--all-targets"
+    ],
+    "exit_code": 0,
+    "seconds": 42.92
+  },
+  {
+    "name": "build-final",
+    "command": [
+      "cargo",
+      "build",
+      "-p",
+      "terra-client",
+      "-p",
+      "terra-server",
+      "-p",
+      "terra-building-editor"
+    ],
+    "exit_code": 0,
+    "seconds": 374.37
+  },
+  {
+    "name": "fmt-silhouettes",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all"
+    ],
+    "exit_code": 0,
+    "seconds": 7.92
+  },
+  {
+    "name": "tests-render-silhouettes",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "terra-render",
+      "--lib"
+    ],
+    "exit_code": 0,
+    "seconds": 247.77
+  },
+  {
+    "name": "clippy-silhouettes",
+    "command": [
+      "cargo",
+      "clippy",
+      "--workspace",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 31.78
+  },
+  {
+    "name": "check-silhouettes",
+    "command": [
+      "cargo",
+      "check",
+      "--workspace",
+      "--all-targets"
+    ],
+    "exit_code": 0,
+    "seconds": 21.64
+  },
+  {
+    "name": "build-silhouettes",
+    "command": [
+      "cargo",
+      "build",
+      "-p",
+      "terra-client",
+      "-p",
+      "terra-server",
+      "-p",
+      "terra-building-editor"
+    ],
+    "exit_code": 0,
+    "seconds": 220.37
+  }
+]

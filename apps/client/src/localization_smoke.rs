@@ -1,4 +1,5 @@
 //! Opt-in native language selection through the production TiltUI handlers.
+mod category_layout;
 use bevy::{
     app::AppExit,
     prelude::*,
@@ -133,6 +134,7 @@ fn run(world: &mut World) {
                 2 => crate::menu_smoke::emit(world,"gameplay-options",None)?,
                 3 => {
                     if !world.resource::<OptionsView>().gameplay || !has_text(world,"Sprache") { return Ok(false); }
+                    category_layout::check(world,&state.output,"de")?;
                     capture(world,&mut state,"gameplay-de")?;
                 }
                 4 => crate::menu_smoke::emit(world,"game-language",Some("en"))?,
@@ -147,6 +149,7 @@ fn run(world: &mut World) {
                     use terra_core::Config;
                     let saved = terra_core::LanguagePreference::load(configs.join("profile-preferences").join(profile.uuid.simple().to_string()).join("language.toml")).map_err(|error|error.to_string())?;
                     if saved.language != terra_core::GameLanguage::English { return Err("Native language preference was not saved".into()); }
+                    category_layout::check(world,&state.output,"en")?;
                     capture(world,&mut state,"gameplay-en")?;
                 }
                 7 => crate::menu_smoke::emit(world,"back",None)?,

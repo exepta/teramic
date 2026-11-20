@@ -1,0 +1,22 @@
+{
+  "id": "teramic::recover_asphalt_cover",
+  "name": "Recover Asphalt Road Cover",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 431
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 432
+        },
+        "count": 8
+      }
+    ]
+  }
+}

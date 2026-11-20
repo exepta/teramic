@@ -1,6 +1,6 @@
 # TERAMIC: Offene Aufgaben
 
-Stand: 11.11.2026. Nur offene Features, Korrekturen und Abnahmen.
+Stand: 20.11.2026. Nur offene Features, Korrekturen und Abnahmen.
 Erledigte Aufgaben werden entfernt; die Umsetzungshistorie steht in
 [PATCH.md](PATCH.md). Bestehende IDs bleiben erhalten, neue IDs werden fortlaufend angehaengt.
 `F` = Feature, `O` = Optimierung/Fehlerkorrektur, `A` = Abnahme.
@@ -13,16 +13,23 @@ Neue Systeme brauchen passende Save/Reload-, Mehrspieler- und Besitzpruefungen;
 Wachstum, NPC-Arbeit und bewegte Fahrzeuge muessen begrenzt simuliert werden.
 F58/F61 sind umgesetzt; Bedienung und Grenzen stehen in [docs/npc-work.md](docs/npc-work.md).
 F72 mit Deutsch/Englisch steht in [docs/localization.md](docs/localization.md).
+F49/F80 mit lokaler Navigation und einmaliger Kingdom-Startbevoelkerung stehen in
+[docs/navigation-and-founding.md](docs/navigation-and-founding.md).
+F82 mit eigenstaendiger Editor-App sowie TAB-Baumodus und Stadtlager-HUD stehen in
+[docs/construction-mode-and-editor.md](docs/construction-mode-and-editor.md).
+F14 mit regionalem Wachstum, Tierklima und saisonalem Eis steht in
+[docs/climate-growth-ice.md](docs/climate-growth-ice.md).
+F68 mit Asphalt-Herstellung, Straßenformen und Rückbau steht in
+[docs/fantasy-nature-sandworm-ambience.md](docs/fantasy-nature-sandworm-ambience.md).
 
 ## 1. NPCs, Siedlungen Und Waldwirtschaft
+
+
+- [ ] **F81 Zufriedenheit Und Siedlungsstatistik:** Ein serverautoritaeres Zufriedenheits-/Statistiksystem fuer einzelne Villager und Kingdoms ergaenzen. Wohn-/Bettversorgung, Nahrung, Arbeitsbelastung, Sicherheit, Versorgung und erreichbare Arbeitsplaetze als nachvollziehbare Faktoren fuehren; bestehende Gesundheit/Beduerfnisse einbeziehen. Persoenliche Werte und Gruende sowie aggregierte Bevoelkerungs-, Berufs-, Versorgungs- und Sicherheitswerte im NPC-/Bergfried-UI darstellen. Auswirkungen auf Arbeit und Bindung schrittweise definieren, Grenzwerte/Hysterese, Rechte, begrenzte Updates sowie Save/Reload und Mehrspieler-Konsistenz pruefen.
 
 - [ ] **F78 Neutrale Nomaden:** Gelegentlich kleine NPC-Nomadengruppen in geladenen neutralen Gebieten erscheinen und umherziehen lassen. Kingdom-/Dorfgrenzen, erreichbare Wege, Tagesrhythmus und begrenzte Spawn-/Simulationsbudgets beachten; kein Erscheinen in Spielerbauten oder beanspruchten Gebieten.
 
 - [ ] **F79 Produktive Doerfer Und Bot-Doerfer:** Dorfaufbau um Berufsstationen, zugewiesene Arbeitsgebiete und echte Vorratstruhen erweitern. Holzfaeller und weitere unterstuetzte Arbeiter sollen ihre Arbeitsplaetze erreichen, Werkzeuge/Vorraete beziehen und Ertraege anliefern. Dorf-/Bot-Besitz und Rechte, begrenzte Simulation sowie Save/Reload erhalten.
-
-- [ ] **F80 Kingdom-Startbevoelkerung:** Bei erfolgreicher Kingdom-Gruendung genau einmal drei Schwertkaempfer, zwei Bogenschuetzen, drei Lanzentraeger und zehn zuweisbare Arbeitslose an sicheren erreichbaren Stellen erscheinen lassen. Alle NPCs dem Gruender/Kingdom zuordnen; atomare Gruendung, Spawn-Limits, Speicherstand und Schutz vor erneuter Vergabe beim Laden beachten.
-
-- [ ] **F49 Verbleibende Mob-/Villager-Navigation:** Reproduzierbare Restfaelle bei Hindernissen, Tueren, Hoehenwechseln, Ausweichbewegungen und festgefahrenen Zielen beheben. Bestehende begrenzte Navigation um verlaessliche Ankunft, Zielwechsel und Abbruchgruende erweitern. Berufs-, Pflanz- und Transportziele anbinden; sichtbare Aktionen an tatsaechlichen Fortschritt koppeln.
 
 ## 2. Zuege, Strassen Und Pferdekutschen
 
@@ -36,17 +43,11 @@ F72 mit Deutsch/Englisch steht in [docs/localization.md](docs/localization.md).
 
 ### Strassen Und Pferdekutschen
 
-- [ ] **F68 Teer-/Asphalt-Strassensystem:** Teer beziehungsweise Bitumen als Bindemittel mit Rezeptkette ergaenzen; Zuschlagmaterial und Bindemittel zu Asphalt verarbeiten. Items, Materialien, Rezepte und TMI-Anzeigen registrieren. Asphaltbloecke, duenne Strassendecken, Steigungen/Uebergaenge und Randsteine bereitstellen; Texturanschluesse, Kollisionen, Abbau und Materialrueckgabe definieren.
-
 - [ ] **F69 Gemeinsame Wege Und Transportrouten:** Strassen, Arbeitsplaetze, Lager, Bahnhoefe und Kutschenhalte an die bestehende Navigation anbinden. NPCs/Pferde sollen geeignete Wege bevorzugen. Fahrzeugbreite, Steigung, Durchfahrtshoehe und Claim-Rechte beachten; Umleitungen und unpassierbare Verbindungen anzeigen. Wiederverwendbare Suchergebnisse und begrenzte Aktualisierungen fuer viele Auftraege nutzen.
 
 - [ ] **F67 Pferdekutschen:** Kutsche mit Raedern, Deichsel, Geschirr und An-/Abkuppeln an vorhandene gezaehmte Pferde ergaenzen. Fahrersitz, Mitfahrer und echtes Ladungsinventar unterstuetzen. Lenkung, Rueckwaertsfahrt, Bremsen, Gespannkollisionen, Steigungen und Pferdeausdauer einbeziehen. Manuelle Fahrt und NPC-Routen an F69 anbinden; sichere Halte-/Anbindestellen sowie konsistente Speicherung von Gespann, Sitzen und Ladung vorsehen.
 
 ## 3. Spieler, Inventar Und Handwerk
-
-- [x] **F77 Charaktermodelle Und Kleidermaterialien:** Getrennte Auswahl von Leinen, Segeltuch, Leder und Wolle fuer Oberteil, Hose, Stiefel und Umhang, mit tatsaechlicher Gewebe-/Oberflaechendarstellung und lokalen sowie Serverprofilen. Umhang, Stiefeldetails und Spieler-/NPC-Gesichter an den Referenzen ueberarbeitet; 12 maennliche/14 weibliche Frisuren mit Strähnen, getrennte Augenfarben, korrigierte Haende und detailliertere Koerper, vier Editor-Tabs und drehbare Inventarfigur; alte Profile bleiben lesbar. Die menschliche gestalterische Abnahme ist unter A01 gesammelt; die Modelle sind nachmodelliert, keine importierten Original-3D-Assets. Siehe `docs/characters.md`.
-
-- [x] **F44 Inventar-Sortierbuttons:** Rucksack, Truhen/Doppeltruhen, verbundene Werkbank-Lager und Zuglager per Trichter-Dropup nach A-Z, ID oder Menge sortieren und gleiche Stapel zusammenfassen. Hotbar, reservierte Crafting-Slots und funktionale Maschinenplaetze bleiben erhalten. Serverautoritative atomare Transaktionen mit Revisionen, Rechten und leerem Cursor; auch Rucksacksortierung im Zugdialog. Siehe `docs/inventory-sorting.md`.
 
 - [ ] **F48 Tragbare Taschen Und Rucksaecke:** Taschen/Rucksaecke mit eigenem gespeichertem Inventar und passender Ausruestungs-/Taschenansicht ergaenzen. Slotbesitz, Zugriff, Verlust/Drop, Mehrspielertransaktionen und begrenzte Verschachtelung definieren; Inhalte beim Tragen, Ablegen und Zerstoeren erhalten.
 
@@ -60,15 +61,7 @@ F72 mit Deutsch/Englisch steht in [docs/localization.md](docs/localization.md).
 
 ### Natur Und Kreaturen
 
-- [ ] **F14 Verbleibendes Klimaabhaengiges Wachstum:** Vorhandene Dirt->Grass-Umwandlung und Tierverhalten an regionale Feuchtigkeit/Jahreszeiten anbinden. Kontrolliertes Gefrieren/Schmelzen von Eisblock 49 und dessen Rutschphysik ergaenzen; Spielerbauten und Wasserquellen erhalten.
-
-- [ ] **F35 Spirit Forest:** Wasserfallreiches Biom mit gruen-tuerkisem Laub, blaulich schimmernden leicht transparenten Spirit Mushrooms, seltenem Spirit Crystal und violetten Haengeranken vervollstaendigen. Lokale Nebelstellen aus erdaehnlichen Nebelbloecken unter Gras mit pulsierenden blauen Steinen ergaenzen; vorhandene Darstellungsbudgets verwenden.
-
-- [ ] **F37 Schmetterlinge:** Freundliche Tiere mit sieben Varianten in Cherry Forest, Forest und Plains ergaenzen. An bestehende Spawn-/Tier-Systeme anbinden und fuer Spinnen als echte Beute verwenden.
-
-- [ ] **F38 Spirit Gloom:** Zwei freundliche fliegende Varianten ausschliesslich im Spirit Forest ergaenzen. In der Naehe Regeneration I ueber das bestehende Effektsystem mit begrenzter Reichweite, Updatefrequenz und Aura-Stapelung vergeben.
-
-- [ ] **F39 Skelettkrieger:** Nachts im Spirit Forest ungeruestete Schwertkaempfer, Kaempfer mit Eisenruestung/Eisenschwert und unbewaffnete Varianten ergaenzen. Bei Tagesanbruch sichtbar eingraben und danach despawnen; bestehende KI, Navigation, Ausruestung und Spawn-Budgets verwenden.
+- [ ] **F39 Skelettkrieger:** Nachts im Spirit Blossom ungeruestete Schwertkaempfer, Kaempfer mit Eisenruestung/Eisenschwert und unbewaffnete Varianten ergaenzen. Bei Tagesanbruch sichtbar eingraben und danach despawnen; bestehende KI, Navigation, Ausruestung und Spawn-Budgets verwenden.
 
 - [ ] **F70 Weitere Unterwasserpflanzen:** Zusaetzliche Wand-/Deckenpflanzen fuer geeignete Unterwasserbereiche ergaenzen. Bestehende Prop-/Habitatregeln fuer Halt, Wasser, Sichtbarkeit, Entnahme und Darstellung erweitern.
 
@@ -119,3 +112,9 @@ F72 mit Deutsch/Englisch steht in [docs/localization.md](docs/localization.md).
 - [ ] **A06 Weltgenerierungs-Abnahme:** Viele neue Seeds, negative Koordinaten, extreme Kammern/Regionsecken, Seen/Fluesse, Schluchten und Oasenraender pruefen. Y-Grenzen, Grundstein, Erzhoehen und Salzbiom-Regeln erhalten; historische Welten von neuer Generierung trennen.
 
 - [ ] **A07 Kessel-Dropdown Nativ:** Zwoelfteiliges Rezept-Dropdown tatsaechlich oeffnen, zum siebten Eintrag scrollen und ihn anklicken. Sichtbarkeit im geclippten Popup und autoritativ gewaehltes Giftrezept pruefen.
+
+## 7. Release-Pipelines
+
+- [ ] **F83 Pull-Request-Prüfung einrichten.** Den für Teramic benötigten Stand von `preview-020` im TiltUI-Repository veröffentlichen und den Commit festlegen. Auf einem frischen GitHub-Actions-Runner diesen Commit und die Toolchain aus `rust-toolchain.toml` verwenden. Formatierung, Clippy und Workspace-Tests mit `Cargo.lock` ausführen.
+- [ ] **F84 Release-Pakete aus einem Versionstag bauen.** Client, Dedicated Server und Gebäudeeditor für die unterstützten Zielplattformen im Release-Profil bauen. Die jeweils benötigten Assets, Standardkonfigurationen und Lizenzen beilegen. Pakete versionieren und SHA-256-Prüfsummen erzeugen.
+- [ ] **A08 Release-Kandidaten abnehmen und veröffentlichen.** Pakete in einem leeren Verzeichnis entpacken und starten. Eine Welt laden, einen Client mit dem paketierten Server verbinden und im Editor ein Gebäude öffnen. Nach erfolgreicher Abnahme die geprüften Pakete samt Prüfsummen und Versionshinweisen als GitHub Release veröffentlichen.

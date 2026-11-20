@@ -8,13 +8,54 @@
   "bevel_width": 0.0,
   "materials": {
     "White sakura blossoms": {
-      "texture_pattern": "blossom_canopy",
-      "base_color": [1.0, 1.0, 1.0, 1.0]
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "White sakura blossoms_top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "leaf_cluster": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
     }
   },
-  "face_materials": ["White sakura blossoms", "White sakura blossoms", "White sakura blossoms", "White sakura blossoms", "White sakura blossoms", "White sakura blossoms"],
+  "face_materials": [
+    "White sakura blossoms",
+    "White sakura blossoms",
+    "White sakura blossoms",
+    "White sakura blossoms_top",
+    "White sakura blossoms",
+    "White sakura blossoms"
+  ],
   "hardness": 0.3,
   "resistance": 0.5,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "White sakura blossoms": "textures/foliage/cherry_white_side.png",
+    "White sakura blossoms_top": "textures/foliage/cherry_white_top.png",
+    "leaf_cluster": "textures/foliage/cherry_white_cluster.png"
+  },
+  "foliage_cluster": {
+    "material": "leaf_cluster"
+  }
 }

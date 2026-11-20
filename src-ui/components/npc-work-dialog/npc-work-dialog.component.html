@@ -1,0 +1,22 @@
+@if (npcWorkView.visible && npcWorkView.direct) {
+<div id="npc-work-backdrop" class="npc-direct-backdrop">
+  <div id="npc-work-dialog" class="npc-direct-dialog">
+    <ornate-frame></ornate-frame>
+    <div class="npc-direct-heading"><icon name="user" size="26" /><h1>{{ localizedUi.npcWorkView.name }}</h1><button id="npc-work-close" [title]="i18n.text_schlie_en_b808f6e97075" onclick="npc_work_command"><icon name="close" size="18" /></button></div>
+    <div id="npc-work-dialog-scroll" class="npc-direct-scroll">
+      <div class="npc-direct-inventory"><h2>{{ i18n.text_inventar_der_arbeitskraft_8918abb744f3 }}</h2><p>{{ i18n.text_werkzeuge_und_fracht_werden_durch_de_2035ae124c84 }}</p>
+      @if (npcWorkView.inventory_ready) {
+        <div id="npc-work-inventory" class="npc-direct-slots">
+          @for (slot of localizedUi.npcWorkView.private_inventory; track slot.id) {
+            <div class="npc-direct-slot" [title]="slot.label">
+              @if (!slot.empty) { <img class="npc-direct-item" [alt]="slot.preview_key" /><p class="npc-direct-count">{{ slot.count }}</p> }
+            </div>
+          }
+        </div>
+      } @else { <p>{{ i18n.text_inventar_wird_geladen_oder_ist_au_er_67d0d8c33446 }}</p> }
+      </div>
+      <npc-work-panel></npc-work-panel>
+    </div>
+  </div>
+</div>
+}

@@ -1,0 +1,12 @@
+{
+  "worlds/Test/session.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "worlds/Test/world.toml": "86350191b3403b0bacc25fc1299e7fdbd53958bf05490f72e8b0f8270206f964",
+  "worlds/Test/.write.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "worlds/Test/level.data": "4a00a681e30f2244489eb4f846bd573b5618b5b08c21bce93fc9092a848732af",
+  "worlds/Test/regions/r.-1.-1.region": "59e6649a4590e02607c38f1aea690929b5c2a4ef9418ab7b79c8f8f0760477af",
+  "worlds/Test/regions/r.-2.-1.region": "eb50cb6348f910628aabaff93496098852f94c307f863e58a5d97f1fe59b451e",
+  "worlds/Test/regions/r.-1.-2.region": "66b4418a1fb11254ab41b7dd81e9e95c2e2c9595390841453494246d6c11abce",
+  "worlds/Test/regions/r.-3.-3.region": "913cfb9a1c43c342b873ec0c71ecfa77c7d0f9bb7463a27c4a2b7ea04fbbe62c",
+  "worlds/Test/regions/r.-2.-2.region": "fce630952df2ccf3b7d27449207cf7f145c3e85e92fca7d2231f0113d1e2f495",
+  "worlds/Test/players/3daf7669-97e1-469c-9017-354f4ca07906.data": "4abe7d74385d644abc3b56bf31a8e013ccb8f2413cff00d413f5b20d0d5347d5"
+}

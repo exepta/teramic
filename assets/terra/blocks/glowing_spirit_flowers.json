@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 316,
+  "name": "Glowing Spirit Flowers",
+  "description": "Small cyan flowers that softly illuminate the sanctuary.",
+  "creative_category": "nature",
+  "hardness": 0.3,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/glowing_spirit_flowers.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      0.45,
+      0.8,
+      1
+    ],
+    "intensity": 70,
+    "range": 5,
+    "falloff": "soft_core",
+    "flicker": 0.035,
+    "cave_intensity": 0.6,
+    "shadows": false
+  }
+}

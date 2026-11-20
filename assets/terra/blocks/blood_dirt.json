@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 401,
+  "name": "Blood Dirt",
+  "description": "Blood Dirt from the crimson woodland.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "blood_dirt": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "blood_dirt": "textures/blood_dirt.png"
+  },
+  "face_materials": [
+    "blood_dirt",
+    "blood_dirt",
+    "blood_dirt",
+    "blood_dirt",
+    "blood_dirt",
+    "blood_dirt"
+  ],
+  "surface": "earth"
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": 423,
+  "name": "Meadow Daisies",
+  "description": "Meadow Daisies, shaped for the regional biome flora.",
+  "creative_category": "nature",
+  "hardness": 0.15,
+  "resistance": 0.4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/meadow_daisies.glb",
+  "textures": {
+    "leaf_light": "textures/meadow_daisies.png",
+    "petal": "textures/meadow_daisies.png",
+    "leaf": "textures/meadow_daisies.png",
+    "stem": "textures/meadow_daisies.png",
+    "gold": "textures/meadow_daisies.png",
+    "pink": "textures/meadow_daisies.png"
+  },
+  "struct_block": true,
+  "collision_boxes": []
+}

@@ -39,14 +39,14 @@ impl Contact {
         if wet && !self.wet {
             result.push((
                 Kind::Splash,
-                (0.2 + (-velocity.y).max(0.0) * 0.12).clamp(0.2, 2.0),
+                (0.16 + (-velocity.y).max(0.0) * 0.07).clamp(0.16, 0.7),
                 velocity,
             ));
         }
         self.wake -= dt;
         self.bubble -= dt;
         if wet && !submerged && velocity.xz().length() > 0.25 && self.wake <= 0.0 {
-            self.wake = 0.18;
+            self.wake = 0.25;
             result.push((
                 Kind::Wake,
                 (velocity.xz().length() * 0.12).clamp(0.15, 0.8),
@@ -85,6 +85,7 @@ struct Scene<'w, 's> {
     animals: Option<Res<'w, ReplicatedCreatures>>,
     players: Option<Res<'w, ReplicatedPlayers>>,
     session: Option<Res<'w, ClientSession>>,
+    mode: Option<Res<'w, terra_player::ControllerMode>>,
     bodies: Query<'w, 's, &'static Transform, With<terra_player::PlayerBody>>,
 }
 fn update(scene: Scene, mut state: ResMut<Contacts>, mut events: MessageWriter<WaterMotion>) {
@@ -141,13 +142,15 @@ fn update(scene: Scene, mut state: ResMut<Contacts>, mut events: MessageWriter<W
             });
         }
     };
-    for body in &scene.bodies {
-        actor(
-            (0, 0),
-            body.translation - Vec3::Y * terra_physics::character::PLAYER_HALF_HEIGHT,
-            1.6,
-            true,
-        );
+    if scene.mode.as_deref() != Some(&terra_player::ControllerMode::Fly) {
+        for body in &scene.bodies {
+            actor(
+                (0, 0),
+                body.translation - Vec3::Y * terra_physics::character::PLAYER_HALF_HEIGHT,
+                1.6,
+                true,
+            );
+        }
     }
     if let Some(players) = &scene.players {
         for (id, t) in &players.players {
@@ -163,9 +166,8 @@ fn update(scene: Scene, mut state: ResMut<Contacts>, mut events: MessageWriter<W
     }
     if let Some(animals) = &scene.animals {
         for (id, t) in &animals.creatures {
-            use terra_core::creatures::{CreatureBehavior, CreatureKind};
-            if t.current.kind == CreatureKind::Bee || t.current.behavior == CreatureBehavior::InNest
-            {
+            use terra_core::creatures::CreatureBehavior;
+            if t.current.kind.is_flying() || t.current.behavior == CreatureBehavior::InNest {
                 continue;
             }
             actor(
@@ -181,6 +183,112 @@ fn update(scene: Scene, mut state: ResMut<Contacts>, mut events: MessageWriter<W
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn actual_flight_through_water_emits_nothing_but_walking_entry_remains_bounded() {
+        use terra_voxel::{BlockSection, SectionPos};
+        use terra_world::{TerraGenerator, streaming::LoadedSection};
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            base_height: -16.,
+            sea_level: -24.,
+            hill_amplitude: 0.,
+            mountain_amplitude: 0.,
+            biomes: false,
+            rivers: false,
+            caves: false,
+            trees: false,
+            ..Default::default()
+        })
+        .unwrap();
+        let mut data = BlockSection::empty(SectionPos::default()).unwrap();
+        data.set_block([3, 2, 3], 27).unwrap();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            SectionPos::default(),
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        // A raw FluidWater block only identifies a fluid container. This cell
+        // is above the generated reservoir, so give it actual saved occupancy.
+        let mut journal = EditJournal::default();
+        journal
+            .set_fluid(
+                [3, 2, 3],
+                terra_world::water::FluidCell {
+                    amount: 8,
+                    source: true,
+                    flow: [0; 2],
+                },
+            )
+            .unwrap();
+        let habitat = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        assert!(habitat.wet([3.5, 2.05, 3.5]));
+        assert!(!habitat.wet([3.5, 3.15, 3.5]));
+        let mut app = App::new();
+        app.init_resource::<Time>()
+            .init_resource::<WorldAccess>()
+            .insert_resource(journal)
+            .insert_resource(WorldTerrain(terrain))
+            .insert_resource(chunks)
+            .insert_resource(terra_player::ControllerMode::Fly)
+            .add_message::<WaterMotion>();
+        install(&mut app);
+        let body = app
+            .world_mut()
+            .spawn((terra_player::PlayerBody, Transform::from_xyz(3.5, 4., 3.5)))
+            .id();
+        let frame = |app: &mut App| {
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(std::time::Duration::from_millis(50));
+            app.update();
+        };
+        frame(&mut app);
+        app.world_mut()
+            .get_mut::<Transform>(body)
+            .unwrap()
+            .translation
+            .y = 2.0 + terra_physics::character::PLAYER_HALF_HEIGHT;
+        frame(&mut app);
+        assert_eq!(
+            app.world_mut()
+                .resource_mut::<Messages<WaterMotion>>()
+                .drain()
+                .count(),
+            0
+        );
+        assert!(app.world().resource::<Contacts>().actors.is_empty());
+        app.insert_resource(terra_player::ControllerMode::Walk);
+        app.world_mut()
+            .get_mut::<Transform>(body)
+            .unwrap()
+            .translation
+            .y = 4.;
+        frame(&mut app);
+        app.world_mut()
+            .get_mut::<Transform>(body)
+            .unwrap()
+            .translation
+            .y = 2.0 + terra_physics::character::PLAYER_HALF_HEIGHT;
+        frame(&mut app);
+        let events: Vec<_> = app
+            .world_mut()
+            .resource_mut::<Messages<WaterMotion>>()
+            .drain()
+            .collect();
+        assert_eq!(events.iter().filter(|e| e.kind == Kind::Splash).count(), 1);
+        assert!(events.iter().all(|e| e.strength <= 0.7));
+    }
+
     #[test]
     fn body_entry_scales_with_impact_and_fish_never_bubble() {
         let entry = |speed: f32| {

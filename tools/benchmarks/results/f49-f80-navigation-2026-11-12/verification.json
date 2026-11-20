@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-12",
+  "status": "passed",
+  "workspace_library_and_binary_tests": {
+    "passed": 4717,
+    "failed": 0,
+    "ignored": 10,
+    "measured": 0,
+    "filtered": 1
+  },
+  "known_exclusion": "original_glb_loads_through_the_named_reader_with_uvs_tangents_and_pbr_images: missing FIVERR/VoxelGrassBlock glb file.glb",
+  "native": {
+    "status": "passed",
+    "transport": "real localhost UDP",
+    "input": "native KDE uinput",
+    "stages": [
+      "Found",
+      "Rename",
+      "Save",
+      "Reload",
+      "Dissolve"
+    ],
+    "stable_starter_ids": [
+      144115188075855904,
+      144115188075855905,
+      144115188075855906,
+      144115188075855907,
+      144115188075855908,
+      144115188075855909,
+      144115188075855910,
+      144115188075855911,
+      144115188075855912,
+      144115188075855913,
+      144115188075855914,
+      144115188075855915,
+      144115188075855916,
+      144115188075855917,
+      144115188075855918,
+      144115188075855919,
+      144115188075855920,
+      144115188075855921
+    ],
+    "roles": {
+      "10": 3,
+      "11": 3,
+      "12": 2,
+      "15": 10
+    },
+    "screenshots": 6,
+    "capture_size": [
+      1600,
+      900
+    ],
+    "isolated_run_directory": "target/kingdom-starters/run.59jhPo"
+  },
+  "headless": {
+    "status": "passed",
+    "display_environment_unset": true,
+    "loaded_sections": 27
+  },
+  "cargo": {
+    "fmt_check": "passed",
+    "workspace_check": "passed",
+    "clippy_all_targets_deny_warnings": "passed",
+    "client_server_build": "passed",
+    "workspace_doctests": "passed (no doctest cases)"
+  },
+  "protocol": 136,
+  "founding_receipt_index": "ID23"
+}

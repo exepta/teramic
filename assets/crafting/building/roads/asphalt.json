@@ -1,0 +1,30 @@
+{
+  "id": "teramic::asphalt",
+  "name": "Mix asphalt",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 431
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": "road_aggregate",
+        "count": 4
+      },
+      {
+        "item": {
+          "block": 4
+        },
+        "count": 1
+      },
+      {
+        "item": "bitumen",
+        "count": 1
+      }
+    ]
+  }
+}

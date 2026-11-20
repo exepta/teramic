@@ -1,0 +1,10 @@
+{
+  "format_exit": 0,
+  "workspace_all_targets_check_exit": 0,
+  "workspace_all_targets_clippy_deny_warnings_exit": 0,
+  "client_build_exit": 0,
+  "server_build_exit": 0,
+  "world_tests_exit": 0,
+  "headless_tests_exit": 0,
+  "saved_replay_exit": 0
+}

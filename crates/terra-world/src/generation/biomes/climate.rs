@@ -12,8 +12,11 @@ pub(in crate::generation) struct ClimateSampler {
     continents: Perlin,
     mushrooms: Perlin,
     cherries: Perlin,
+    spirit_blossom: Perlin,
+    blood_forest: Perlin,
     scale: f64,
     ocean_scale: f64,
+    region_multiplier: f64,
 }
 
 impl ClimateSampler {
@@ -31,9 +34,21 @@ impl ClimateSampler {
             continents: Perlin::new(layer_seed(seed, 13)),
             mushrooms: Perlin::new(layer_seed(seed, 14)),
             cherries: Perlin::new(layer_seed(seed, 271)),
+            spirit_blossom: Perlin::new(layer_seed(seed, 735)),
+            blood_forest: Perlin::new(layer_seed(seed, 912)),
             scale,
             ocean_scale,
+            region_multiplier: 1.0,
         }
+    }
+
+    pub fn larger_regions(mut self, enabled: bool) -> Self {
+        if enabled {
+            self.scale *= 2.0;
+            self.ocean_scale *= 2.0;
+            self.region_multiplier = 2.0;
+        }
+        self
     }
 
     pub fn sample(&self, x: f64, z: f64) -> BiomeSample {
@@ -70,13 +85,18 @@ impl ClimateSampler {
                 mushroom_park,
                 cliffted_desert: 0.0,
                 cherry_forest: 0.0,
+                spirit_blossom: 0.0,
+                blood_forest: 0.0,
             },
         }
     }
 
     /// Coherent humid, temperate woodland regions, sampled in global coordinates.
     pub fn with_cherries(&self, mut biome: BiomeSample, x: f64, z: f64) -> BiomeSample {
-        let patch = self.cherries.get([x / 720.0 + 11.7, z / 720.0 - 8.3]);
+        let patch = self.cherries.get([
+            x / (720.0 * self.region_multiplier) + 11.7,
+            z / (720.0 * self.region_multiplier) - 8.3,
+        ]);
         let climate = smoothstep(0.25, 0.42, biome.temperature)
             * (1.0 - smoothstep(0.72, 0.88, biome.temperature))
             * smoothstep(0.35, 0.57, biome.humidity);
@@ -88,11 +108,51 @@ impl ClimateSampler {
         biome
     }
 
+    /// Large coherent sanctuaries, with a continuous climate-weight transition.
+    /// Called only for the saved Spirit Blossom revision, never for historic saves.
+    pub fn with_spirit_blossom(&self, mut biome: BiomeSample, x: f64, z: f64) -> BiomeSample {
+        let patch = self.spirit_blossom.get([
+            x / (1350.0 * self.region_multiplier) + 7.8,
+            z / (1350.0 * self.region_multiplier) - 19.2,
+        ]);
+        let climate = smoothstep(0.24, 0.44, biome.humidity)
+            * (1.0 - smoothstep(0.74, 0.90, biome.temperature));
+        let fraction = smoothstep(0.13, 0.37, patch) * climate;
+        let w = &mut biome.weights;
+        // Profile-based landscapes can already contribute Spirit Forest. Keep
+        // that cover while transferring the additional sanctuary's woodland.
+        w.spirit_blossom += (w.forest + w.plains + w.cherry_forest + w.mushroom_park) * fraction;
+        w.forest *= 1.0 - fraction;
+        w.plains *= 1.0 - fraction;
+        w.cherry_forest *= 1.0 - fraction;
+        w.mushroom_park *= 1.0 - fraction;
+        biome
+    }
+
+    /// Independent large crimson regions; all boundaries retain continuous weights.
+    pub fn with_blood_forest(&self, mut biome: BiomeSample, x: f64, z: f64) -> BiomeSample {
+        let patch = self.blood_forest.get([
+            x / (1150.0 * self.region_multiplier) - 17.3,
+            z / (1150.0 * self.region_multiplier) + 43.8,
+        ]);
+        let fraction = smoothstep(0.12, 0.37, patch) * smoothstep(0.22, 0.48, biome.humidity);
+        let w = &mut biome.weights;
+        w.blood_forest = (w.forest + w.plains + w.cherry_forest + w.mushroom_park) * fraction;
+        w.forest *= 1.0 - fraction;
+        w.plains *= 1.0 - fraction;
+        w.cherry_forest *= 1.0 - fraction;
+        w.mushroom_park *= 1.0 - fraction;
+        biome
+    }
+
     /// Interior islands in existing hot/dry regions, never isolated desert patches.
     pub fn with_cliffs(&self, mut biome: BiomeSample, x: f64, z: f64) -> BiomeSample {
         let parent = biome.weights.desert;
         if parent > 0.7 {
-            let patch = self.uplands.get([x / 1024.0 + 19.7, z / 1024.0 - 31.4]);
+            let patch = self.uplands.get([
+                x / (1024.0 * self.region_multiplier) + 19.7,
+                z / (1024.0 * self.region_multiplier) - 31.4,
+            ]);
             let fraction = smoothstep(0.7, 0.9, parent) * smoothstep(-0.06, 0.38, patch);
             biome.weights.cliffted_desert = parent * fraction;
             biome.weights.desert -= biome.weights.cliffted_desert;

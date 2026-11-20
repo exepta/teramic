@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 386,
+  "name": "Glowing Purple Mushrooms",
+  "description": "Purple mushrooms that cast a faint light among old graves.",
+  "creative_category": "nature",
+  "hardness": 0.4,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/glowing_purple_mushrooms.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      0.69,
+      0.3,
+      1
+    ],
+    "intensity": 100,
+    "range": 6,
+    "falloff": "soft_core",
+    "flicker": 0.025,
+    "cave_intensity": 0.65,
+    "shadows": false,
+    "offset": [
+      0.505,
+      0.40025,
+      0.505
+    ]
+  }
+}

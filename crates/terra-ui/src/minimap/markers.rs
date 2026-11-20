@@ -6,6 +6,97 @@ pub(super) const ICON_SIZE: usize = SIDE + 2;
 const OUTLINE: [u8; 4] = [24, 29, 30, 255];
 const ALERT: [u8; 4] = [188, 61, 52, 255];
 type Sprite = [&'static str; SIDE];
+const SAND_WORM: Sprite = [
+    "    ooo    ",
+    "   yyyyy   ",
+    "  yeyyyey  ",
+    "  ywnnnwy  ",
+    "  ynnnnny  ",
+    "  yywwwyy  ",
+    "   yyyyy   ",
+    "   oyyo    ",
+    "   yyyyo   ",
+    "  yyyyoo   ",
+    " yyyyyy    ",
+];
+const SKELETON: Sprite = [
+    "   wwwww   ",
+    "  wwwwwww  ",
+    "  wewewew  ",
+    "   wwww    ",
+    "    www    ",
+    "  wwwwwww  ",
+    " w w w w w ",
+    " w  www  w ",
+    " w  w w  w ",
+    "    w w    ",
+    "   ww ww   ",
+];
+const RAVEN: Sprite = [
+    "   bbbbb   ",
+    "  bbbbbbb  ",
+    "  bwebbbbbb",
+    "  bbbbbbbbb",
+    "   bbbbb   ",
+    "  bbbbbbb  ",
+    " bbbbbbbbb ",
+    "bbbbbbbbbbb",
+    " bbbbbbbbb ",
+    "   bb bb   ",
+    "  bbb bbb  ",
+];
+const SLIME: Sprite = [
+    "       g   ",
+    "   ggggg   ",
+    "  ggggggg  ",
+    " ggggggggg ",
+    " ggegggegg ",
+    " ggggggggg ",
+    " ggggegggg ",
+    " ggggggggg ",
+    "ggggggggggg",
+    " ggggggggg ",
+    "           ",
+];
+const BUTTERFLY: Sprite = [
+    " ppp   ppp ",
+    "ppppp ppppp",
+    "pwwpp ppwwp",
+    "ppwppbppwpp",
+    " ppppbpppp ",
+    "  pppbppp  ",
+    " ppppbpppp ",
+    " pwwpbpwwp ",
+    "  pppbppp  ",
+    "   p b p   ",
+    "           ",
+];
+const GLOOM: Sprite = [
+    "     g     ",
+    "    gg     ",
+    "   wwwww   ",
+    "  wwwwwww  ",
+    " wwewweww  ",
+    "gwwwwwwwwwg",
+    "ggwwwwwwwgg",
+    "  wwwwwww  ",
+    "   wgwgw   ",
+    "   gg gg   ",
+    "           ",
+];
+const FOX: Sprite = [
+    " w       w ",
+    " www   www ",
+    " wgwwwwwgw ",
+    " wwwwwwwww ",
+    "  wewweww  ",
+    "   wwwww   ",
+    "    wnw    ",
+    "   ggggg   ",
+    "  ggggggg  ",
+    " gg     gg ",
+    "           ",
+];
 const VILLAGER: Sprite = [
     "   bbbbb   ",
     "  bbbbbbb  ",
@@ -260,6 +351,16 @@ pub(super) fn creature(
         CreatureKind::Horse => &HORSE,
         CreatureKind::Stalker => &STALKER,
         CreatureKind::Villager => &VILLAGER,
+        CreatureKind::Butterfly => &BUTTERFLY,
+        CreatureKind::SpiritGloom => &GLOOM,
+        CreatureKind::SpiritFox => &FOX,
+        CreatureKind::Skeleton => &SKELETON,
+        CreatureKind::Raven => &RAVEN,
+        CreatureKind::BloodSlime => &SLIME,
+        CreatureKind::BloodStalker => &SPIDER,
+        CreatureKind::BloodWisp => &GLOOM,
+        CreatureKind::ThornBrute => &STALKER,
+        CreatureKind::SandWorm => &SAND_WORM,
         CreatureKind::SmallSpider | CreatureKind::MediumSpider | CreatureKind::LargeSpider => {
             &SPIDER
         }
@@ -314,6 +415,26 @@ fn sample(sprite: &Sprite, x: i32, y: i32) -> u8 {
 
 fn palette(kind: CreatureKind, variant: u8, glyph: u8) -> [u8; 4] {
     let rgb = match (kind, glyph) {
+        (CreatureKind::SandWorm, b'y') => [240, 178, 66],
+        (CreatureKind::SandWorm, b'o') => [182, 88, 28],
+        (CreatureKind::Raven, b'b') => [60, 40, 80],
+        (CreatureKind::BloodSlime | CreatureKind::BloodWisp, b'g' | b'w') => [232, 43, 82],
+        (CreatureKind::BloodStalker | CreatureKind::ThornBrute, b'b' | b'm' | b'o') => {
+            [109, 29, 45]
+        }
+        (CreatureKind::BloodStalker | CreatureKind::ThornBrute, b'e') => [255, 52, 73],
+        (CreatureKind::SpiritGloom, b'g' | b'w') if variant == 1 => [175, 95, 229],
+        (CreatureKind::Butterfly, b'p') => [
+            [255, 107, 148],
+            [245, 240, 255],
+            [143, 56, 217],
+            [20, 130, 255],
+            [255, 171, 20],
+            [33, 171, 102],
+            [255, 66, 6],
+        ][usize::from(variant % 7)],
+        (CreatureKind::SpiritGloom | CreatureKind::SpiritFox, b'g') => [111, 222, 250],
+
         (CreatureKind::Villager, b'p') => [222, 171, 124],
         (CreatureKind::Villager, b'g') => [78, 132, 69],
         (CreatureKind::Villager, b'b') => [83, 61, 43],

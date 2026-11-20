@@ -1,0 +1,46 @@
+{
+  "id": "teramic::asphalt_entry",
+  "name": "Asphalt Lower Transition",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 434
+    },
+    "count": 16
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 431
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 431
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 431
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 431
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 431
+        },
+        "count": 1
+      }
+    ]
+  }
+}

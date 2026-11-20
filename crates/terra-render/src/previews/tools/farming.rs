@@ -30,7 +30,16 @@ fn stud(b: &mut Builder, point: [f32; 3], p: &Palette) -> Result<(), String> {
     b.voxel(point, [0.024, 0.024, 0.018], p.edge)
 }
 
+#[cfg(test)]
 pub(super) fn bucket(b: &mut Builder, p: &Palette, filled: bool) -> Result<(), String> {
+    bucket_with_liquid(b, p, filled.then_some([0.12, 0.52, 0.68]))
+}
+
+pub(super) fn bucket_with_liquid(
+    b: &mut Builder,
+    p: &Palette,
+    liquid: Option<[f32; 3]>,
+) -> Result<(), String> {
     // Twelve solid staves leave a genuine open top, with rim, bands and handle.
     b.voxel([0.5, 0.14, 0.5], [0.44, 0.075, 0.44], p.dark)?;
     for i in 0..12 {
@@ -52,14 +61,14 @@ pub(super) fn bucket(b: &mut Builder, p: &Palette, filled: bool) -> Result<(), S
             )?;
         }
     }
-    if filled {
+    if let Some(color) = liquid {
         let center = Vec3::new(0.5, 0.5875, 0.5);
         let rim = |angle: f32| center + Vec3::new(angle.sin(), 0.0, angle.cos()) * 0.22;
         for i in 0..12 {
             let angle = i as f32 * std::f32::consts::TAU / 12.;
             b.triangle(
                 [center, rim(angle), rim(angle + std::f32::consts::TAU / 12.)],
-                [0.12, 0.52, 0.68],
+                color,
             )?;
         }
     }

@@ -1,0 +1,51 @@
+@if (buildingView.visible) {
+<div id="building-local" class="building-local">
+  <div class="building-heading"><h2>{{ i18n.text_geb_udevorlagen_84ff314440ed }}</h2><button id="building-toggle-areas" [disabled]="!buildingView.can_show_areas" onclick="building_command"><icon name="scan" size="16" />@if (buildingView.areas_shown) { {{ i18n.text_gebiete_ausblenden_3aeabd1c8dd6 }} } @else { {{ i18n.text_gebiete_anzeigen_ed769cc6cdd7 }} }</button><button id="building-refresh" [disabled]="!buildingView.can_manage || buildingView.pending" [title]="i18n.text_bauauftr_ge_neu_laden_12c150ccbac4" onclick="building_command"><icon name="refresh" size="16" /></button></div>
+  <p>{{ i18n.text_vorlage_w_hlen_material_im_stadtlage_07594d6550bd }}</p>
+  <p class="building-hint">{{ i18n.text_1_handwerker_30_min_2_15_min_3_10_mi_e8f14cb3a143 }}</p>
+  @if (buildingView.error) { <p class="building-error">{{ localizedUi.buildingView.error }}</p> }
+  @if (buildingView.feedback) { <p class="building-feedback">{{ localizedUi.buildingView.feedback }}</p> }
+
+  <div class="building-catalog-grid">
+    <div class="building-card building-catalog-list">
+      <div class="building-heading"><icon name="home" size="16" /><h3>{{ i18n.text_verf_gbare_vorlagen_49ad929bea68 }}</h3></div>
+      <label for="building-category">{{ i18n.text_category_292c06f0045a }}</label><choice-box id="building-category" class="building-facing" onchange="building_category">@for (category of localizedUi.buildingView.categories; track category.id) { <option [value]="category.id" [selected]="category.selected">{{ category.name }}</option> }</choice-box>
+      <div id="building-template-list" class="building-template-list">
+        @for (template of localizedUi.buildingView.templates; track template.id) {
+          <button id="building-select-template" [class]="template.selected ? 'building-template-card selected' : 'building-template-card'" [disabled]="buildingView.pending" [title]="template.name" onclick="$set(buildingIntent.template, template.id); building_command">
+            <icon class="building-template-preview" name="home" size="64" [src]="template.preview" />
+            <div class="building-template-copy"><h3>{{ template.name }}</h3><p>{{ template.category }}</p><p>{{ template.category_path }}</p><p>{{ template.dimensions }}</p>@if (template.selected) { <p class="building-template-selected">{{ i18n.text_ausgew_hlt_569bbd50b0bf }}</p> }</div>
+          </button>
+        }
+      </div>
+      @if (buildingView.template_error) { <p class="building-error">{{ localizedUi.buildingView.template_error }}</p> }
+    </div>
+    <div id="building-template-details" class="building-card building-template-details">
+      @if (buildingView.template_selected) {
+        <div class="building-template-detail-title"><icon class="building-template-preview" name="home" size="64" [src]="buildingView.template_preview" /><div><h2>{{ localizedUi.buildingView.template_name }}</h2><p>{{ localizedUi.buildingView.template_category }}</p><p>{{ localizedUi.buildingView.template_dimensions }}</p><label>{{ i18n.text_bauschritte_b7ec3a233f73 }}</label><p>{{ localizedUi.buildingView.template_steps }}</p></div></div>
+        <button id="build-mode-from-keep" class="building-primary" [disabled]="!buildingView.can_manage || buildingView.pending" onclick="$set(buildModeIntent.template, buildingView.template_id); build_mode_action"><icon name="settings-wrench" size="16" />{{ i18n.text_im_baumodus_platzieren_7227f708510e }}</button>
+        <h3>{{ i18n.text_materialbedarf_der_vorlage_031a38665d5f }}</h3><p class="building-hint">{{ i18n.text_stadtlager_ben_tigt_53934e81606a }}</p>
+        <div id="building-template-materials" class="building-template-materials">@for (material of localizedUi.buildingView.template_materials; track material.identifier) {
+          <div class="building-material-entry"><img [alt]="material.preview_key" /><p>{{ material.label }}</p><p [class]="material.sufficient ? 'building-material-count building-material-enough' : 'building-material-count building-material-short'">{{ material.supply }}</p></div>
+        }</div>
+        <p class="building-hint">{{ i18n.text_bodenvorbereitung_und_ger_ste_werden_227f8ec8c7b7 }}</p>
+    <div class="building-card"><h3>{{ i18n.text_bauplatz_und_ausrichtung_4b95d9b5357f }}</h3><p>{{ i18n.text_standort_am_boden_ausw_hlen_freie_ha_af6978a5376f }}</p><p>{{ localizedUi.buildingView.origin }}</p><choice-box id="building-facing" class="building-facing" [disabled]="buildingView.pending" onchange="building_facing"><option value="0" [selected]="buildingView.facing == '0'">{{ i18n.text_ausrichtung_0_84740b9a75a1 }}</option><option value="1" [selected]="buildingView.facing == '1'">{{ i18n.text_ausrichtung_90_047f4be3f272 }}</option><option value="2" [selected]="buildingView.facing == '2'">{{ i18n.text_ausrichtung_180_e7ff05985547 }}</option><option value="3" [selected]="buildingView.facing == '3'">{{ i18n.text_ausrichtung_270_eac439e86170 }}</option></choice-box><div class="building-actions"><button id="building-pick-house" [disabled]="!buildingView.can_manage || buildingView.pending" onclick="building_command"><icon name="scan" size="16" />{{ i18n.text_hausstandort_w_hlen_f7360fbe9263 }}</button><button id="building-queue-house" class="building-primary" [disabled]="!buildingView.can_queue" onclick="building_command"><icon name="home" size="16" />{{ i18n.text_bau_beauftragen_bb8ab577f69d }}</button></div></div>
+      } @else { <h3>{{ i18n.text_eine_bauvorlage_ausw_hlen_9beee682900e }}</h3><p>{{ i18n.text_der_materialbedarf_wird_vor_dem_beau_7a5c8e4cc53e }}</p> }
+    </div>
+  </div>
+  <div class="building-planning-grid">
+    <div class="building-card"><h3>{{ i18n.text_stadtlager_f85c86c6971f }}</h3><p>{{ i18n.text_bereich_ausw_hlen_und_dort_truhen_mi_f38d0529ca15 }}</p><label>{{ i18n.text_gespeicherter_bereich_f7700c78b6f5 }}</label><p>{{ localizedUi.buildingView.storage }}</p><label>{{ i18n.text_auswahlentwurf_80c9be02e875 }}</label><p>{{ localizedUi.buildingView.storage_draft }}</p><div class="building-actions"><button id="building-pick-storage" [disabled]="!buildingView.can_manage || buildingView.pending" onclick="building_command"><icon name="scan" size="16" />{{ i18n.text_lagerbereich_w_hlen_e9dc8d505802 }}</button><button id="building-save-storage" [disabled]="!buildingView.can_save_storage" onclick="building_command"><icon name="check" size="16" />{{ i18n.text_stadtlager_speichern_794b5726d31e }}</button></div></div>
+
+    <div class="building-card"><h3>{{ i18n.text_automatisches_wohngebiet_8196c932adac }}</h3><p>{{ i18n.text_handwerker_w_hlen_geeignete_freie_ha_a37267f91b44 }}</p><label>{{ i18n.text_gespeicherter_bereich_f7700c78b6f5 }}</label><p>{{ localizedUi.buildingView.residential }}</p><label>{{ i18n.text_gespeicherte_vorlage_f_r_neue_h_user_830b419d98d5 }}</label><p>{{ localizedUi.buildingView.automatic_template }}</p><label>{{ i18n.text_auswahlentwurf_80c9be02e875 }}</label><p>{{ localizedUi.buildingView.residential_draft }}</p><div class="building-actions"><button id="building-pick-residential" [disabled]="!buildingView.can_manage || buildingView.pending" onclick="building_command"><icon name="scan" size="16" />{{ i18n.text_wohngebiet_w_hlen_cddc25c5df63 }}</button><button id="building-save-residential" [disabled]="!buildingView.can_save_residential" onclick="building_command">{{ i18n.text_wohngebiet_aktivieren_3ce8b8bee559 }}</button>@if (buildingView.residential_enabled) {<button id="building-disable-residential" [disabled]="!buildingView.can_manage || buildingView.pending" onclick="building_command">{{ i18n.text_automatik_stoppen_0e9684574061 }}</button>}</div></div>
+  </div>
+  <div class="building-card"><div class="building-heading"><h3>{{ i18n.text_handwerker_c64adc7b61f5 }}</h3><p>{{ localizedUi.buildingView.worker_count }}</p></div><p>{{ i18n.text_hier_handwerker_anmelden_oder_den_be_93a2534a22c3 }}</p><div class="building-workers">@for (worker of localizedUi.buildingView.workers; track worker.id) {<div class="building-worker"><div><h3>{{ worker.name }}</h3><p>{{ worker.status }}</p></div>@if (worker.registered) {<button id="building-remove-craftsman" [disabled]="!worker.can_assign || buildingView.pending" onclick="$set(buildingIntent.npc, worker.id); building_command">{{ i18n.text_abmelden_545f8be33bf0 }}</button>} @else {<button id="building-add-craftsman" [disabled]="!worker.can_assign || buildingView.pending" onclick="$set(buildingIntent.npc, worker.id); building_command">{{ i18n.text_als_handwerker_anmelden_c7198334761a }}</button>}</div>}</div></div>
+  <h3>{{ i18n.text_bauauftr_ge_9e2036ba382b }}</h3>
+  @if (buildingView.empty) {<p>{{ i18n.text_noch_keine_bauauftr_ge_4fe327cc463a }}</p>}
+  @for (job of localizedUi.buildingView.jobs; track job.id) {
+    <div class="building-card"><div class="building-job-heading"><h3>{{ job.template_name }}</h3><p>{{ job.location }}</p><p>{{ job.progress }}</p><p>{{ job.status }}</p><p>{{ job.workers }}</p></div>
+      @if (job.has_materials) {<label>{{ i18n.text_noch_ben_tigtes_material_f4200151e170 }}</label><div class="building-materials">@for (material of job.materials; track material.identifier) {<div class="building-job-material"><img [alt]="material.preview_key" /><p>{{ material.count }} × {{ material.label }}</p></div>}</div>}
+      @if (job.active) {<div class="building-actions">@if (job.enabled) {<button id="building-pause" [disabled]="!buildingView.can_manage || buildingView.pending" onclick="$set(buildingIntent.id, job.id); $set(buildingIntent.revision, job.revision); building_command">{{ i18n.text_pause_858e4ba7a29f }}</button>} @else {<button id="building-resume" [disabled]="!buildingView.can_manage || buildingView.pending" onclick="$set(buildingIntent.id, job.id); $set(buildingIntent.revision, job.revision); building_command">{{ i18n.text_fortsetzen_76f6db6d9811 }}</button>}<button id="building-cancel" class="building-danger" [disabled]="!buildingView.can_manage || buildingView.pending" onclick="$set(buildingIntent.id, job.id); $set(buildingIntent.revision, job.revision); building_command">{{ i18n.text_bauauftrag_abbrechen_65710f7d6d19 }}</button></div>}
+    </div>
+  }
+</div>
+}

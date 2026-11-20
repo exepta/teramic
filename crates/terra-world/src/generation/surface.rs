@@ -91,7 +91,21 @@ impl TerraGenerator {
         let snow_height = self.config().snow_height + (biome.temperature - 0.5) * 16.0;
         let snow = smoothstep(snow_height - 5.0, snow_height + 5.0, height);
         let coast = 1.0 - smoothstep(level, level + 3.0, height);
-        let mut shore = 1.0 - (1.0 - coast) * (1.0 - biome.aridity());
+        // A desert can lead a blend without owning half of its total weight.
+        // Use the same land identity as the HUD: otherwise those whole desert
+        // districts become meadows merely because several neighbours contribute.
+        let mut land = biome.weights;
+        land.ocean = 0.0;
+        let desert = matches!(
+            land.dominant(),
+            super::biomes::BiomeKind::Desert | super::biomes::BiomeKind::ClifftedDesert
+        );
+        let sand = if desert {
+            biome.aridity().max(0.6)
+        } else {
+            biome.aridity()
+        };
+        let mut shore = 1.0 - (1.0 - coast) * (1.0 - sand);
         if let Some(oasis) = oasis.filter(|oasis| dry && oasis.distance > oasis.radius * 0.9) {
             // A continuous dry-grass belt, not independently randomized green cells.
             shore *= 1.0 - smoothstep(0.12, 0.65, oasis.moisture());
@@ -127,10 +141,11 @@ impl TerraGenerator {
                 }
                 biome
             };
-            self.config()
-                .biome_definitions
-                .as_ref()
-                .map_or(biome, |definitions| biome.with_distribution(definitions))
+            if self.config().landscape_revision >= 9 {
+                self.regional_biome(x, z, biome)
+            } else {
+                self.apply_biome_overlays(x, z, biome)
+            }
         } else {
             BiomeSample {
                 temperature: 0.5,
@@ -144,8 +159,33 @@ impl TerraGenerator {
                     mushroom_park: 0.0,
                     cliffted_desert: 0.0,
                     cherry_forest: 0.0,
+                    spirit_blossom: 0.0,
+                    blood_forest: 0.0,
                 },
             }
+        }
+    }
+
+    pub(super) fn apply_biome_overlays(&self, x: f64, z: f64, biome: BiomeSample) -> BiomeSample {
+        let biome = if self.config().spirit_blossom_revision > 0 {
+            self.climate.with_spirit_blossom(biome, x, z)
+        } else {
+            biome
+        };
+        let biome = if self.config().blood_forest_revision > 0 {
+            self.climate.with_blood_forest(biome, x, z)
+        } else {
+            biome
+        };
+        let biome = self
+            .config()
+            .biome_definitions
+            .as_ref()
+            .map_or(biome, |definitions| biome.with_distribution(definitions));
+        if self.config().landscape_revision >= 8 {
+            biome.with_thermal_buffers()
+        } else {
+            biome
         }
     }
 
@@ -280,6 +320,21 @@ impl TerraGenerator {
                 }
             }
         }
+        if self.config().spirit_blossom_revision > 0 && biome.weights.spirit_blossom > 0.5 {
+            surface_material = if exposure > 0.5 {
+                MaterialId::SpiritStone
+            } else {
+                MaterialId::SpiritBlossomGrass
+            };
+        }
+        if let Some(material) = self.blood_surface_material(
+            [x, z],
+            biome.weights.blood_forest,
+            exposure,
+            surface_material,
+        ) {
+            surface_material = material;
+        }
         let mut column = SurfaceColumn {
             surface_shape: super::advanced::SurfaceShape {
                 strength: if self.config().landscape_revision >= 5
@@ -317,25 +372,7 @@ impl TerraGenerator {
             moss_entrance,
             moss_daylight_floor,
         };
-        if self.config().cave_structure_revision > 0
-            && let Some(level) = water_level
-        {
-            let ground = (height - 0.5).floor() as i64;
-            let support = [x.floor() as i64, ground, z.floor() as i64];
-            let material = self.column_material(column, height - ground as f64 - 0.5, -0.5);
-            if let Some(prop) = self.aquatic_prop(
-                support,
-                terra_voxel::global_to_section(support).0,
-                material as u16,
-                column,
-                level - ground as f64 - 1.0,
-            ) && prop.kind == crate::props::PropKind::Seagrass
-            {
-                column.seagrass_height = ((prop.bounds()[1][1] - prop.position[1]).ceil() as u8)
-                    .min((level - ground as f64 - 1.2).floor().max(0.0) as u8)
-                    .min(8);
-            }
-        }
+        column.seagrass_height = self.seagrass_segments_height(column, [x, z]);
         column
     }
 
@@ -361,6 +398,32 @@ impl TerraGenerator {
     ) -> MaterialId {
         if density > 0.0 {
             MaterialId::Air
+        } else if self.config().blood_forest_revision > 0
+            && matches!(
+                column.surface_material,
+                MaterialId::BloodGrass
+                    | MaterialId::BloodMoss
+                    | MaterialId::CrimsonMycelium
+                    | MaterialId::BloodStone
+            )
+        {
+            if depth > column.soil_depth || column.surface_material == MaterialId::BloodStone {
+                MaterialId::BloodStone
+            } else if column.height - depth >= (column.height - 0.5).floor() {
+                column.surface_material
+            } else {
+                MaterialId::BloodDirt
+            }
+        } else if self.config().spirit_blossom_revision > 0
+            && column.biome.weights.spirit_blossom > 0.5
+        {
+            if depth > column.soil_depth || column.surface_material == MaterialId::SpiritStone {
+                MaterialId::SpiritStone
+            } else if column.height - depth >= (column.height - 0.5).floor() {
+                MaterialId::SpiritBlossomGrass
+            } else {
+                MaterialId::SpiritBlossomDirt
+            }
         } else if self.config().landscape_revision >= 4
             && self.config().ocean_revision > 0
             && column.ocean.weights.iter().copied().sum::<f32>() > 0.1

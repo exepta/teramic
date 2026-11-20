@@ -1,0 +1,28 @@
+{
+  "id": "teramic::red_clay",
+  "name": "Red Clay",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 325
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "dye": "red"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

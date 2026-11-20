@@ -1,0 +1,63 @@
+2026-11-13T15:14:44.064423Z  INFO bevy_render::renderer: AdapterInfo { name: "AMD Radeon RX 6950 XT (RADV NAVI21)", vendor: 4098, device: 29605, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "radv", driver_info: "Mesa 26.2.5-arch3.1", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 64, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-13T15:14:44.186170Z  INFO terra_client::bootstrap: Smoke-test compute worker cap; IO and async policies are unchanged compute_thread_cap=4 compute_threads=16 async_threads=4 io_threads=4
+2026-11-13T15:14:44.194179Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-13T15:14:44.194214Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-13T15:14:44.195217Z  INFO bevy_winit::system: Creating new window TERAMIC (208v0)
+2026-11-13T15:14:44.195953Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-13T15:14:44.852271Z  INFO lightyear_netcode::client: client connecting to server 127.0.0.1:43907 [1/1]
+2026-11-13T15:14:44.852309Z  INFO lightyear_udp: UDP socket bound to 0.0.0.0:0
+2026-11-13T15:14:45.835462Z  INFO terra_ui::settings: Applied window presentation policy mode=Mailbox
+2026-11-13T15:14:45.840762Z  INFO terra_client::creature_audio::scene: Recorded animal/environment audio decoded clips=105
+2026-11-13T15:14:45.931926Z  INFO lightyear_udp::endpoint: Received UDP packet from new address 127.0.0.1:34914, Spawn new LinkOf entity=284v0 endpoint_entity=231v0
+2026-11-13T15:14:45.956216Z  INFO terra_render::weather::surfaces: Terrain wet material GPU binding mode legacy_smoke_control=false bindless=true
+2026-11-13T15:14:46.028699Z  INFO terra_render::water::raymarch: Water SSR hardware depth filtering ready; multisampled views retain the original path
+2026-11-13T15:14:46.030098Z  INFO terra_render::scene::caves::lights::soft_core: Torch soft-core attenuation installed in existing clustered PBR path
+2026-11-13T15:14:46.040460Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 47, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040484Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 48, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040493Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 51, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040500Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 42, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040506Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 49, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040512Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 50, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040518Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-oak-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T15:14:46.040524Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 44, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040530Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-belt-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T15:14:46.040536Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 36, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040542Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 39, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040555Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/oak-crafted-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T15:14:46.040568Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 34, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-13T15:14:46.040574Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 43, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040580Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone-strata-hd.png mip_levels=11 rebound_materials=1
+2026-11-13T15:14:46.040587Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 40, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040593Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 37, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040598Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/forged-iron-warm.png mip_levels=11 rebound_materials=0
+2026-11-13T15:14:46.040604Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 33, generation: 0} mip_levels=11 rebound_materials=1
+2026-11-13T15:14:46.040610Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 35, generation: 0} mip_levels=1 rebound_materials=1
+2026-11-13T15:14:46.040616Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 52, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040622Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/wood.png mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040627Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/stone.png mip_levels=10 rebound_materials=0
+2026-11-13T15:14:46.040633Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=textures/machinery-iron-hd.png mip_levels=11 rebound_materials=0
+2026-11-13T15:14:46.040639Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 41, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040645Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 38, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040650Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 53, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040656Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 45, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.040661Z  INFO terra_render::blocks::loading: Terrain texture mipmaps ready texture=model:1:AssetId<bevy_image::image::Image>{ index: 46, generation: 0} mip_levels=10 rebound_materials=1
+2026-11-13T15:14:46.082230Z  INFO terra_render::blocks::loading: Block template library ready blocks=305 materials=878
+2026-11-13T15:14:46.149335Z  INFO lightyear_netcode::server_plugin: New connection on netcode from 1 (284v0)
+2026-11-13T15:14:46.221607Z  INFO lightyear_netcode::client_plugin: Client Netcode(1) connected
+2026-11-13T15:14:46.235035Z  INFO terra_network::server: Player profile accepted (local, not verified online) player=1 uuid=3daf7669-97e1-469c-9017-354f4ca07906 name=Player-3daf7669
+2026-11-13T15:14:46.703131Z  INFO terra_network::client: Authoritative world synchronized player=Some(PlayerId(1))
+2026-11-13T15:14:48.338440Z  INFO terra_client::bootstrap: Integrated benchmark real TiltUI HUD ready minimap_enabled=true survival=false
+2026-11-13T15:14:48.347175Z  INFO terra_client::saved_construction_smoke: Saved construction is using the real saved player and kingdom uuid=Some(3daf7669-97e1-469c-9017-354f4ca07906) position=[8.955101, 27.694769, 39.11475] kingdom=Some(KingdomId(1))
+2026-11-13T15:14:48.347249Z  INFO terra_client::saved_construction_smoke: Saved construction acceptance step completed step=1
+2026-11-13T15:14:48.348777Z  WARN bevy_input_focus::tab_navigation: Tab navigation error: No tab group found for currently focused entity 208v0. Users will not be able to navigate back to this entity.
+2026-11-13T15:14:48.754520Z  INFO terra_client::saved_construction_smoke: Saved construction acceptance step completed step=2
+2026-11-13T15:14:50.860101Z  INFO terra_client::saved_construction_smoke: Saved construction acceptance step completed step=3
+2026-11-13T15:14:51.260200Z  INFO terra_client::saved_construction_smoke: Saved construction acceptance step completed step=4
+2026-11-13T15:14:51.298339Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/saved-construction/run.DpbPMf/captures/saved-construction-preview.png
+2026-11-13T15:14:52.725127Z  INFO terra_client::saved_construction_smoke: Saved construction acceptance step completed step=5
+2026-11-13T15:14:53.499909Z  INFO terra_client::saved_construction_smoke: Saved construction real placement and authoritative QueueHouse acknowledgement received job=2 origin=[4, 16, 22] template=village-house-temperate-v1 confirmation=Button
+2026-11-13T15:14:53.499945Z  INFO terra_client::saved_construction_smoke: Saved construction acceptance step completed step=6
+2026-11-13T15:14:53.537311Z  INFO bevy_render::view::window::screenshot: Screenshot saved to /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/saved-construction/run.DpbPMf/captures/saved-construction-queued.png
+2026-11-13T15:14:53.903980Z  INFO terra_client::saved_construction_smoke: Saved construction acceptance step completed step=7
+2026-11-13T15:14:54.314159Z  INFO terra_client::saved_construction_smoke: Saved construction acknowledged save and disk reload passed job=2
+2026-11-13T15:14:54.314178Z  INFO terra_client::saved_construction_smoke: Saved construction passed: real copied-world TAB, standard-house HTML selection, orange preview, ground click, authoritative job and acknowledged disk save job=2 captures=2 origin=[4, 16, 22]

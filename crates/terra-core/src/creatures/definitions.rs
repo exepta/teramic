@@ -41,6 +41,15 @@ pub struct MobCombat {
     pub poison_seconds: f32,
 }
 impl MobCombat {
+    /// Presentation and authority share a wind-up, impact, recovery cycle.
+    /// `Creature::timer` counts down from the complete configured cooldown.
+    pub fn melee_phase(self, remaining: f32) -> f32 {
+        (1.0 - remaining / self.cooldown).clamp(0.0, 1.0)
+    }
+    pub fn melee_impact_remaining(self) -> f32 {
+        self.cooldown * 0.58
+    }
+
     fn valid(self) -> bool {
         self.damage.is_finite()
             && (0.1..=100.0).contains(&self.damage)
@@ -189,6 +198,46 @@ pub fn get(kind: CreatureKind) -> &'static MobDefinition {
             (
                 "villager",
                 include_str!("../../../../assets/terra/mobs/villager.json"),
+            ),
+            (
+                "butterfly",
+                include_str!("../../../../assets/terra/mobs/butterfly.json"),
+            ),
+            (
+                "spirit_gloom",
+                include_str!("../../../../assets/terra/mobs/spirit_gloom.json"),
+            ),
+            (
+                "spirit_fox",
+                include_str!("../../../../assets/terra/mobs/spirit_fox.json"),
+            ),
+            (
+                "skeleton",
+                include_str!("../../../../assets/terra/mobs/skeleton.json"),
+            ),
+            (
+                "raven",
+                include_str!("../../../../assets/terra/mobs/raven.json"),
+            ),
+            (
+                "blood_slime",
+                include_str!("../../../../assets/terra/mobs/blood_slime.json"),
+            ),
+            (
+                "blood_stalker",
+                include_str!("../../../../assets/terra/mobs/blood_stalker.json"),
+            ),
+            (
+                "blood_wisp",
+                include_str!("../../../../assets/terra/mobs/blood_wisp.json"),
+            ),
+            (
+                "thorn_brute",
+                include_str!("../../../../assets/terra/mobs/thorn_brute.json"),
+            ),
+            (
+                "sand_worm",
+                include_str!("../../../../assets/terra/mobs/sand_worm.json"),
             ),
         ]
         .into_iter()

@@ -71,7 +71,7 @@ impl CreatureIntent {
                 Some(NeedKind::Water) => IntentReason::Water,
                 _ => match animal.behavior {
                     B::Hunt => IntentReason::Hunt,
-                    B::Attack => IntentReason::Attack,
+                    B::Attack | B::Spit => IntentReason::Attack,
                     B::Flee => IntentReason::Threat,
                     B::Wander | B::Swim | B::Fly => IntentReason::Explore,
                     B::Crawl | B::Climb | B::Ceiling => IntentReason::Surface,

@@ -1,0 +1,8 @@
+@if (workAreasView.visible) {
+<div id="work-area-overlay" [class]="workAreasView.construction ? 'work-area-overlay work-area-construction' : 'work-area-overlay'">
+  <div class="work-area-heading"><h3>{{ i18n.text_gespeicherte_gebiete_9ab2e933b11c }}</h3><button id="work-area-hide" [title]="i18n.text_gebiete_ausblenden_3aeabd1c8dd6" onclick="hide_work_areas"><icon name="close" size="16" /></button></div>
+  @if (!workAreasView.construction) { <p>{{ localizedUi.workAreasView.owner }}</p> }
+  <div class="work-area-items">@for (area of localizedUi.workAreasView.items; track area.kind) { <div [class]="area.class_name"><p>{{ area.label }}</p></div> }</div>
+  @if (!workAreasView.available) { <p>{{ i18n.text_keine_gespeicherten_gebiete_verf_gba_ce025e4dc90a }}</p> }
+</div>
+}

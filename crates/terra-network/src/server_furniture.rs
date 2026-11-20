@@ -77,7 +77,8 @@ impl Plan {
                 if self.edits.iter().any(|edit| {
                     edit.position == *position
                         && edit.material == material
-                        && matches!(edit.expected_material, 0 | 27 | 98)
+                        && (matches!(edit.expected_material, 0 | 98)
+                            || terra_world::targeting::displaceable_liquid(edit.expected_material))
                 }) && let Some(state) = state
                 {
                     state.facing = terra_core::beds::dyed_facing(state.facing, color);
@@ -2224,7 +2225,7 @@ mod tests {
         assert_eq!(app.world().resource::<EditJournal>().edited_blocks(), 0);
     }
     #[test]
-    fn matching_chests_merge_at_seams_reject_triples_and_split_after_removal() {
+    fn matching_chests_merge_at_seams_allow_adjacent_singles_and_split_after_removal() {
         let mut app = app();
         let a = [-1, 1, 8];
         let b = [0, 1, 8];
@@ -2233,7 +2234,15 @@ mod tests {
         let journal = app.world().resource::<EditJournal>();
         assert_eq!(journal.object_state(a).unwrap().peer, Some(b));
         assert!(journal.object_state(b).unwrap().secondary);
-        assert!(edit(&mut app, [1, 1, 8], 0, 29, 0.0).is_err());
+        edit(&mut app, [1, 1, 8], 0, 29, 0.0).unwrap();
+        assert!(
+            app.world()
+                .resource::<EditJournal>()
+                .object_state([1, 1, 8])
+                .unwrap()
+                .peer
+                .is_none()
+        );
         edit(&mut app, b, 29, 0, 0.0).unwrap();
         assert_eq!(
             app.world()

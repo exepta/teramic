@@ -37,7 +37,7 @@ for path in (ROOT / "src-ui").rglob("*.html"):
 
 assets = set()
 for directory in ["assets/terra/blocks", "assets/terra/items", "assets/crafting", "assets/biome"]:
-    for path in (ROOT / directory).glob("*.json"):
+    for path in (ROOT / directory).rglob("*.json"):
         data = json.loads(path.read_text())
         if isinstance(data, dict):
             for key in ["name", "display_name", "description"]:

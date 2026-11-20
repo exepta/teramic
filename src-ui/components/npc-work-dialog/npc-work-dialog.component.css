@@ -1,0 +1,22 @@
+.npc-direct-backdrop { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 24px; background-color: #130e0ca8; pointer-events: auto; z-index: 235; }
+.npc-direct-dialog { position: relative; width: 1100px; max-width: 100%; height: 90%; max-height: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 14px; padding: 34px 38px; color: #f1dfbd; box-sizing: border-box; }
+.npc-direct-heading { display: flex; align-items: center; gap: 10px; flex-shrink: 0; min-height: 36px; min-width: 0; }
+.npc-direct-heading h1 { flex-grow: 1; min-width: 0; font-family: serif; font-size: 24px; line-height: 30px; text-wrap: wrap; margin: 0; }
+.npc-direct-heading button { width: 34px; min-width: 34px; padding: 6px; flex-shrink: 0; }
+.npc-direct-scroll { min-height: 0; min-width: 0; flex-grow: 1; overflow-y: auto; padding-right: 12px; padding-bottom: 16px; display: flex; flex-direction: column; gap: 18px; }
+.npc-direct-scroll > npc-work-panel { width: 100%; min-width: 0; flex-shrink: 0; display: flex; flex-direction: column; align-self: stretch; }
+.npc-direct-inventory { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; min-width: 0; }
+.npc-direct-dialog h2 { margin: 0; font-family: serif; font-size: 18px; line-height: 23px; text-wrap: wrap; }
+.npc-direct-dialog h3 { margin: 0; font-size: 14px; line-height: 19px; text-wrap: wrap; }
+.npc-direct-dialog p, .npc-direct-dialog label { margin: 0; min-width: 0; max-width: 100%; font-size: 12px; line-height: 18px; text-wrap: wrap; }
+.npc-direct-dialog button { width: auto; display: flex; flex-direction: row; flex-grow: 0; flex-basis: auto; align-self: flex-start; align-items: center; justify-content: center; min-width: 0; max-width: 100%; min-height: 36px; height: auto; padding: 8px 12px; gap: 6px; flex-shrink: 0; background-color: #483020; color: #f2ddba; border: 1px solid #977347; border-radius: 3px; font-size: 13px; line-height: 18px; text-wrap: nowrap; box-sizing: border-box; }
+.npc-direct-dialog button::value { text-wrap: nowrap; flex-shrink: 0; text-align: center; font-size: 13px; line-height: 18px; }
+.npc-direct-dialog button:hover { background-color: #65472a; border-color: #bd9160; }
+.npc-direct-dialog button:disabled { opacity: 0.45; }
+.npc-direct-dialog input { min-width: 0; width: 100%; min-height: 34px; padding: 7px 9px; background-color: #1a120f; color: #ffedc9; border: 1px solid #977347; border-radius: 3px; font-size: 12px; line-height: 18px; box-sizing: border-box; }
+.npc-direct-dialog input::value { font-size: 12px; line-height: 18px; }
+.npc-direct-slots { display: grid; grid-template-columns: repeat(9, 1fr); gap: 7px; min-width: 0; width: 100%; }
+.npc-direct-slot { position: relative; height: 64px; min-width: 0; border: 2px solid #967752; border-radius: 4px; background-color: #291c15; display: flex; align-items: center; justify-content: center; padding: 5px; box-sizing: border-box; }
+.npc-direct-item { width: 44px; height: 44px; max-width: 100%; }
+.npc-direct-slot .npc-direct-count { position: absolute; right: 4px; bottom: 2px; color: #fff1cd; font-weight: bold; }
+@media (max-width: 780px) { .npc-direct-backdrop { padding: 10px; } .npc-direct-dialog { padding: 30px; height: 100%; } .npc-direct-slots { gap: 4px; } .npc-direct-slot { height: 50px; padding: 3px; } .npc-direct-item { width: 34px; height: 34px; } }

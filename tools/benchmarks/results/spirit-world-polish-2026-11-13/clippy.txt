@@ -1,0 +1,42 @@
+    Blocking waiting for file lock on build directory
+    Checking terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel)
+   Compiling terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+    Checking terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+    Checking terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+error: manual implementation of `.is_multiple_of()`
+  --> crates/terra-world/src/generation/structures/build/graves.rs:55:19
+   |
+55 |     let kind = if seed % 4 == 0 {
+   |                   ^^^^^^^^^^^^^ help: replace with: `seed.is_multiple_of(4)`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.97.0/index.html#manual_is_multiple_of
+   = note: `-D clippy::manual-is-multiple-of` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::manual_is_multiple_of)]`
+
+error: manual implementation of `.is_multiple_of()`
+   --> crates/terra-world/src/generation/structures/build/graves.rs:154:29
+    |
+154 |     b.set([x, y, z + 2], if variant % 3 == 0 { 367 } else { 366 });
+    |                             ^^^^^^^^^^^^^^^^ help: replace with: `variant.is_multiple_of(3)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.97.0/index.html#manual_is_multiple_of
+
+error: manual implementation of `.is_multiple_of()`
+   --> crates/terra-world/src/generation/structures/build/graves.rs:156:8
+    |
+156 |     if variant % 2 == 0 {
+    |        ^^^^^^^^^^^^^^^^ help: replace with: `variant.is_multiple_of(2)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.97.0/index.html#manual_is_multiple_of
+
+error: manual implementation of `.is_multiple_of()`
+   --> crates/terra-world/src/generation/structures/graves.rs:135:17
+    |
+135 |         Some(if seed % 4 == 0 {
+    |                 ^^^^^^^^^^^^^ help: replace with: `seed.is_multiple_of(4)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.97.0/index.html#manual_is_multiple_of
+
+error: could not compile `terra-world` (lib) due to 4 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `terra-world` (lib test) due to 4 previous errors

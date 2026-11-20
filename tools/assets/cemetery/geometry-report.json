@@ -1,0 +1,534 @@
+[
+  {
+    "id": 324,
+    "slug": "blue_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 325,
+    "slug": "red_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 326,
+    "slug": "green_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 327,
+    "slug": "yellow_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 328,
+    "slug": "white_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 329,
+    "slug": "black_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 330,
+    "slug": "gray_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 331,
+    "slug": "dark_gray_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 332,
+    "slug": "purple_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 333,
+    "slug": "pink_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 334,
+    "slug": "lime_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 335,
+    "slug": "turquoise_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 336,
+    "slug": "orange_clay",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 337,
+    "slug": "grave_stone",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 338,
+    "slug": "dark_grave_stone",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 339,
+    "slug": "cracked_grave_stone",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 340,
+    "slug": "ornate_grave_stone",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 341,
+    "slug": "moss_grave_stone",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 342,
+    "slug": "overgrown_grave_stone",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 343,
+    "slug": "crypt_brick",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 344,
+    "slug": "grave_stone_slab",
+    "vertices": 480,
+    "triangles": 220,
+    "collision_boxes": 1
+  },
+  {
+    "id": 345,
+    "slug": "ornate_grave_slab",
+    "vertices": 624,
+    "triangles": 300,
+    "collision_boxes": 1
+  },
+  {
+    "id": 346,
+    "slug": "mosaic_grave_slab",
+    "vertices": 480,
+    "triangles": 220,
+    "collision_boxes": 1
+  },
+  {
+    "id": 347,
+    "slug": "cracked_grave_slab",
+    "vertices": 960,
+    "triangles": 440,
+    "collision_boxes": 1
+  },
+  {
+    "id": 348,
+    "slug": "inscribed_grave_slab",
+    "vertices": 1931,
+    "triangles": 877,
+    "collision_boxes": 1
+  },
+  {
+    "id": 349,
+    "slug": "crypt_column",
+    "vertices": 720,
+    "triangles": 388,
+    "collision_boxes": 3
+  },
+  {
+    "id": 350,
+    "slug": "ornate_crypt_column",
+    "vertices": 1296,
+    "triangles": 684,
+    "collision_boxes": 3
+  },
+  {
+    "id": 351,
+    "slug": "crypt_capital",
+    "vertices": 288,
+    "triangles": 148,
+    "collision_boxes": 3
+  },
+  {
+    "id": 352,
+    "slug": "crypt_column_base",
+    "vertices": 288,
+    "triangles": 148,
+    "collision_boxes": 3
+  },
+  {
+    "id": 353,
+    "slug": "crypt_arch",
+    "vertices": 576,
+    "triangles": 280,
+    "collision_boxes": 5
+  },
+  {
+    "id": 354,
+    "slug": "mossy_crypt_arch",
+    "vertices": 768,
+    "triangles": 344,
+    "collision_boxes": 5
+  },
+  {
+    "id": 355,
+    "slug": "grave_relief_wall",
+    "vertices": 1536,
+    "triangles": 788,
+    "collision_boxes": 1
+  },
+  {
+    "id": 356,
+    "slug": "skull_relief",
+    "vertices": 1547,
+    "triangles": 701,
+    "collision_boxes": 1
+  },
+  {
+    "id": 357,
+    "slug": "cross_relief",
+    "vertices": 672,
+    "triangles": 308,
+    "collision_boxes": 1
+  },
+  {
+    "id": 358,
+    "slug": "crypt_wall_niche",
+    "vertices": 1416,
+    "triangles": 708,
+    "collision_boxes": 3
+  },
+  {
+    "id": 359,
+    "slug": "crypt_heraldic_banner",
+    "vertices": 2048,
+    "triangles": 948,
+    "collision_boxes": 0
+  },
+  {
+    "id": 360,
+    "slug": "crypt_torn_banner",
+    "vertices": 2048,
+    "triangles": 948,
+    "collision_boxes": 0
+  },
+  {
+    "id": 361,
+    "slug": "crypt_curtain",
+    "vertices": 1568,
+    "triangles": 740,
+    "collision_boxes": 0
+  },
+  {
+    "id": 362,
+    "slug": "gravestone_small",
+    "vertices": 960,
+    "triangles": 456,
+    "collision_boxes": 3
+  },
+  {
+    "id": 363,
+    "slug": "gravestone_medium",
+    "vertices": 960,
+    "triangles": 456,
+    "collision_boxes": 3
+  },
+  {
+    "id": 364,
+    "slug": "gravestone_large",
+    "vertices": 960,
+    "triangles": 456,
+    "collision_boxes": 3
+  },
+  {
+    "id": 365,
+    "slug": "grave_cross",
+    "vertices": 288,
+    "triangles": 132,
+    "collision_boxes": 2
+  },
+  {
+    "id": 366,
+    "slug": "bordered_grave",
+    "vertices": 1392,
+    "triangles": 600,
+    "collision_boxes": 5
+  },
+  {
+    "id": 367,
+    "slug": "sarcophagus_closed",
+    "vertices": 1056,
+    "triangles": 484,
+    "collision_boxes": 6
+  },
+  {
+    "id": 368,
+    "slug": "sarcophagus_open",
+    "vertices": 1760,
+    "triangles": 804,
+    "collision_boxes": 6
+  },
+  {
+    "id": 369,
+    "slug": "grave_lantern_post",
+    "vertices": 1092,
+    "triangles": 520,
+    "collision_boxes": 4
+  },
+  {
+    "id": 370,
+    "slug": "crypt_wall_torch",
+    "vertices": 436,
+    "triangles": 216,
+    "collision_boxes": 0
+  },
+  {
+    "id": 371,
+    "slug": "crypt_candles",
+    "vertices": 1416,
+    "triangles": 724,
+    "collision_boxes": 0
+  },
+  {
+    "id": 372,
+    "slug": "crypt_chandelier",
+    "vertices": 2364,
+    "triangles": 1220,
+    "collision_boxes": 0
+  },
+  {
+    "id": 373,
+    "slug": "soul_brazier",
+    "vertices": 1692,
+    "triangles": 792,
+    "collision_boxes": 3
+  },
+  {
+    "id": 374,
+    "slug": "skeleton_remains",
+    "vertices": 2763,
+    "triangles": 1297,
+    "collision_boxes": 0
+  },
+  {
+    "id": 375,
+    "slug": "bone_pile",
+    "vertices": 2448,
+    "triangles": 1116,
+    "collision_boxes": 0
+  },
+  {
+    "id": 376,
+    "slug": "grave_urn",
+    "vertices": 864,
+    "triangles": 464,
+    "collision_boxes": 1
+  },
+  {
+    "id": 377,
+    "slug": "ornate_crypt_chest",
+    "vertices": 1632,
+    "triangles": 748,
+    "collision_boxes": 9
+  },
+  {
+    "id": 378,
+    "slug": "crypt_books",
+    "vertices": 2688,
+    "triangles": 1232,
+    "collision_boxes": 0
+  },
+  {
+    "id": 379,
+    "slug": "grave_skull",
+    "vertices": 1067,
+    "triangles": 481,
+    "collision_boxes": 0
+  },
+  {
+    "id": 380,
+    "slug": "crypt_chain",
+    "vertices": 2592,
+    "triangles": 1440,
+    "collision_boxes": 0
+  },
+  {
+    "id": 381,
+    "slug": "dead_grass",
+    "vertices": 468,
+    "triangles": 260,
+    "collision_boxes": 0
+  },
+  {
+    "id": 382,
+    "slug": "thorn_bush",
+    "vertices": 1080,
+    "triangles": 612,
+    "collision_boxes": 0
+  },
+  {
+    "id": 383,
+    "slug": "hanging_ivy",
+    "vertices": 1260,
+    "triangles": 588,
+    "collision_boxes": 0
+  },
+  {
+    "id": 384,
+    "slug": "grave_moss",
+    "vertices": 1008,
+    "triangles": 432,
+    "collision_boxes": 0
+  },
+  {
+    "id": 385,
+    "slug": "dark_mushrooms",
+    "vertices": 2652,
+    "triangles": 1188,
+    "collision_boxes": 0
+  },
+  {
+    "id": 386,
+    "slug": "glowing_purple_mushrooms",
+    "vertices": 2652,
+    "triangles": 1188,
+    "collision_boxes": 0
+  },
+  {
+    "id": 387,
+    "slug": "blossoming_vines",
+    "vertices": 7980,
+    "triangles": 3468,
+    "collision_boxes": 0
+  },
+  {
+    "id": 388,
+    "slug": "crypt_pressure_plate",
+    "vertices": 192,
+    "triangles": 88,
+    "collision_boxes": 1
+  },
+  {
+    "id": 389,
+    "slug": "crypt_lever",
+    "vertices": 240,
+    "triangles": 132,
+    "collision_boxes": 1
+  },
+  {
+    "id": 390,
+    "slug": "crypt_wall_switch",
+    "vertices": 288,
+    "triangles": 132,
+    "collision_boxes": 2
+  },
+  {
+    "id": 391,
+    "slug": "crypt_portcullis",
+    "vertices": 768,
+    "triangles": 352,
+    "collision_boxes": 8
+  },
+  {
+    "id": 392,
+    "slug": "locked_crypt_gate",
+    "vertices": 960,
+    "triangles": 440,
+    "collision_boxes": 8
+  },
+  {
+    "id": 393,
+    "slug": "crypt_spike_trap",
+    "vertices": 528,
+    "triangles": 296,
+    "collision_boxes": 1
+  },
+  {
+    "id": 394,
+    "slug": "crypt_arrow_trap",
+    "vertices": 600,
+    "triangles": 296,
+    "collision_boxes": 1
+  },
+  {
+    "id": 395,
+    "slug": "soul_crystal_small",
+    "vertices": 360,
+    "triangles": 200,
+    "collision_boxes": 5
+  },
+  {
+    "id": 396,
+    "slug": "soul_crystal_large",
+    "vertices": 360,
+    "triangles": 200,
+    "collision_boxes": 5
+  },
+  {
+    "id": 397,
+    "slug": "active_rune_block",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 398,
+    "slug": "inactive_rune_block",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  },
+  {
+    "id": 399,
+    "slug": "mystic_mist_block",
+    "vertices": 96,
+    "triangles": 44,
+    "collision_boxes": 1
+  }
+]

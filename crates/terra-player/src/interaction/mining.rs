@@ -15,8 +15,16 @@ mod rail_placement;
 #[path = "rail_placement_tests.rs"]
 mod rail_placement_tests;
 
+#[cfg(test)]
+#[path = "chest_placement_tests.rs"]
+mod chest_placement_tests;
+#[cfg(test)]
+#[path = "tar_interaction_tests.rs"]
+mod tar_interaction_tests;
+
 #[derive(SystemParam)]
 pub(crate) struct EditRequests<'w> {
+    chests: MessageWriter<'w, terra_network::client::ChestPlaceRequest>,
     rail_placements: MessageWriter<'w, terra_network::client::RailPlacementRequest>,
     creatures: Option<ResMut<'w, terra_network::client::CreatureActions>>,
     player_attacks: Option<ResMut<'w, terra_network::client::PlayerAttacks>>,
@@ -102,6 +110,7 @@ pub(crate) struct EditPresentation<'w> {
     motion: ResMut<'w, InteractionMotion>,
     vessel: ResMut<'w, super::VesselMotion>,
     time: Option<Res<'w, Time>>,
+    cursor: Option<ResMut<'w, terra_network::client::BlockCursor>>,
 }
 
 #[derive(SystemParam)]
@@ -110,6 +119,7 @@ pub(crate) struct EditTarget<'w, 's> {
     world: Res<'w, TargetWorld>,
     block: Res<'w, TargetBlock>,
     blocked: Res<'w, crate::PlayerInputBlock>,
+    edit_blocked: Option<Res<'w, crate::WorldInteractionBlock>>,
     bodies: Query<'w, 's, &'static Transform, With<crate::PlayerBody>>,
     session: Option<Res<'w, terra_network::client::ClientSession>>,
     selected: Option<Res<'w, terra_network::client::SelectedInventorySlot>>,
@@ -122,7 +132,24 @@ pub(crate) struct EditTarget<'w, 's> {
     camera:
         Query<'w, 's, (&'static Transform, &'static crate::CameraLook), With<crate::TerraCamera>>,
     perspective: Option<Res<'w, crate::CameraPerspective>>,
+    mode: Option<Res<'w, crate::ControllerMode>>,
 }
+impl EditTarget<'_, '_> {
+    fn origin(&self, camera: &Transform) -> Vec3 {
+        super::targeting::interaction_origin(
+            camera.translation,
+            self.bodies.iter().next().map(|body| body.translation),
+            self.session
+                .as_ref()
+                .is_some_and(|session| session.ready && session.player.is_some()),
+            self.mode.as_deref().copied(),
+            self.perspective
+                .as_deref()
+                .is_some_and(|mode| mode.is_third_person()),
+        )
+    }
+}
+
 pub(crate) fn edit_target_block(
     keys: GameplayInput,
     target: EditTarget,
@@ -132,6 +159,14 @@ pub(crate) fn edit_target_block(
     palette: Res<super::BlockPalette>,
     mut presentation: EditPresentation,
 ) {
+    if let Some(cursor) = &mut presentation.cursor {
+        cursor.0 = target.block.0.and_then(|hit| {
+            let (camera, look) = target.camera.iter().next()?;
+            let eye = target.origin(camera).as_dvec3();
+            let ray = (look.rotation() * Vec3::NEG_Z).as_dvec3().normalize();
+            Some((hit, (eye + ray * hit.distance).to_array()))
+        });
+    }
     let delta = presentation
         .time
         .as_ref()
@@ -146,6 +181,7 @@ pub(crate) fn edit_target_block(
     let blocked = !input.captured
         || input.just_captured
         || target.blocked.0
+        || target.edit_blocked.as_ref().is_some_and(|block| block.0)
         || target.session.as_ref().is_some_and(|s| {
             !s.ready || !s.allow_build || s.error.is_some() || s.game_mode == GameMode::Spectator
         });
@@ -272,7 +308,7 @@ pub(crate) fn edit_target_block(
             }),
             WorldTarget::Block(hit) => chunks
                 .block_at(hit.position)
-                .filter(|m| *m != 0 && *m != MaterialId::FluidWater as u16)
+                .filter(|m| *m != 0 && !terra_world::targeting::displaceable_liquid(*m))
                 .map(|expected| MiningTarget::Block {
                     position: hit.position,
                     expected,
@@ -302,21 +338,7 @@ pub(crate) fn edit_target_block(
         };
         let journal = target.journal.as_ref()?;
         let (camera, look) = target.camera.iter().next()?;
-        let origin = if target
-            .perspective
-            .as_deref()
-            .is_some_and(|p| p.is_third_person())
-        {
-            target
-                .bodies
-                .iter()
-                .next()
-                .map_or(camera.translation, |body| {
-                    body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET
-                })
-        } else {
-            camera.translation
-        };
+        let origin = target.origin(camera);
         terra_world::slabs::targeted_half(
             &chunks,
             journal,
@@ -432,21 +454,7 @@ pub(crate) fn edit_target_block(
         if let Some(session) = target.session.as_deref()
             && let Some((camera, look)) = target.camera.iter().next()
         {
-            let origin = if target
-                .perspective
-                .as_deref()
-                .is_some_and(|p| p.is_third_person())
-            {
-                target
-                    .bodies
-                    .iter()
-                    .next()
-                    .map_or(camera.translation, |body| {
-                        body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET
-                    })
-            } else {
-                camera.translation
-            };
+            let origin = target.origin(camera);
             let limit = target.world.0.map_or(6.0, |hit| match hit {
                 WorldTarget::Block(hit) => hit.distance.min(6.0),
                 WorldTarget::Prop(hit) => hit.distance.min(6.0),
@@ -570,21 +578,7 @@ pub(crate) fn edit_target_block(
             target.session.as_deref(),
             target.selected.as_deref().and_then(|selected| selected.0),
         ) {
-            let origin = if target
-                .perspective
-                .as_deref()
-                .is_some_and(|p| p.is_third_person())
-            {
-                target
-                    .bodies
-                    .iter()
-                    .next()
-                    .map_or(camera.translation, |body| {
-                        body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET
-                    })
-            } else {
-                camera.translation
-            };
+            let origin = target.origin(camera);
             if let Some(position) = super::vessels::water_target(
                 &chunks,
                 journal,
@@ -623,8 +617,62 @@ pub(crate) fn edit_target_block(
         }
         return;
     }
+    if let Some(tool) = selected.and_then(ItemKind::tool_kind)
+        && (tool == terra_core::ToolKind::TarBucket
+            || tool.class() == Some(terra_core::block_properties::ToolClass::Shovel))
+        && (keys.pressed(Action::Place) || keys.pressed(Action::Use))
+        && !keys.pressed(Action::Break)
+    {
+        let pouring = tool == terra_core::ToolKind::TarBucket;
+        if let (Some(journal), Some(properties), Some((camera, look))) = (
+            target.journal.as_deref(),
+            target.properties.as_deref(),
+            target.camera.iter().next(),
+        ) {
+            let origin = target.origin(camera);
+            if let Some(position) = terra_world::roads::target(
+                &chunks,
+                journal,
+                properties,
+                origin.to_array().map(f64::from),
+                (look.rotation() * Vec3::NEG_Z).to_array().map(f64::from),
+                pouring,
+            ) {
+                presentation.preview.position = Some(position);
+                presentation.preview.material = if pouring {
+                    terra_core::roads::WET_TAR
+                } else {
+                    102
+                };
+                presentation.preview.valid = true;
+                if (!pouring && presentation.mining.repeat == 0.0)
+                    || (pouring
+                        && (keys.just_pressed(Action::Place) || keys.just_pressed(Action::Use)))
+                {
+                    presentation.mining.repeat = 0.35;
+                    presentation.motion.swinging = !pouring;
+                    presentation.motion.placing = pouring;
+                    presentation.motion.impulse = presentation.motion.impulse.wrapping_add(1);
+                    if pouring {
+                        presentation.vessel.pour(position);
+                    }
+                    requests.farming.write(FarmToolRequest {
+                        position,
+                        action: if pouring {
+                            terra_core::farming::FarmingAction::PourTar
+                        } else {
+                            terra_core::farming::FarmingAction::MakePath
+                        },
+                    });
+                }
+            }
+        }
+        return;
+    }
     if let Some(ItemKind::Tool(
-        tool @ (terra_core::ToolKind::Bucket | terra_core::ToolKind::WaterBucket),
+        tool @ (terra_core::ToolKind::Bucket
+        | terra_core::ToolKind::WaterBucket
+        | terra_core::ToolKind::BileBucket),
     )) = selected
         && (keys.pressed(Action::Place) || keys.pressed(Action::Use))
         && !keys.pressed(Action::Break)
@@ -635,25 +683,17 @@ pub(crate) fn edit_target_block(
             target.properties.as_deref(),
             target.camera.iter().next(),
         ) {
-            let origin = if target
-                .perspective
-                .as_deref()
-                .is_some_and(|p| p.is_third_person())
-            {
-                target
-                    .bodies
-                    .iter()
-                    .next()
-                    .map_or(camera.translation, |body| {
-                        body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET
-                    })
-            } else {
-                camera.translation
-            };
-            let filled = tool == terra_core::ToolKind::WaterBucket;
+            let origin = target.origin(camera);
+            let bile_filled = tool == terra_core::ToolKind::BileBucket;
+            let filled = tool == terra_core::ToolKind::WaterBucket || bile_filled;
             let ray_origin = origin.to_array().map(f64::from);
             let ray_direction = (look.rotation() * Vec3::NEG_Z).to_array().map(f64::from);
-            let position = if filled {
+            let acid_target =
+                terra_world::bile::target(&chunks, journal, ray_origin, ray_direction, bile_filled);
+            let using_bile = bile_filled || !filled && acid_target.is_some();
+            let position = if using_bile {
+                acid_target
+            } else if filled {
                 terra_world::water::buckets::target(
                     &chunks,
                     journal,
@@ -697,7 +737,13 @@ pub(crate) fn edit_target_block(
                 if ready {
                     requests.farming.write(FarmToolRequest {
                         position,
-                        action: if filled {
+                        action: if using_bile {
+                            if filled {
+                                terra_core::farming::FarmingAction::EmptyBileBucket
+                            } else {
+                                terra_core::farming::FarmingAction::FillBileBucket
+                            }
+                        } else if filled {
                             terra_core::farming::FarmingAction::EmptyBucket
                         } else {
                             terra_core::farming::FarmingAction::FillBucket
@@ -728,21 +774,7 @@ pub(crate) fn edit_target_block(
             })
             .or_else(|| target.block.0.map(|hit| hit.position));
         let water = target.camera.iter().next().and_then(|(camera, look)| {
-            let origin = if target
-                .perspective
-                .as_deref()
-                .is_some_and(|p| p.is_third_person())
-            {
-                target
-                    .bodies
-                    .iter()
-                    .next()
-                    .map_or(camera.translation, |body| {
-                        body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET
-                    })
-            } else {
-                camera.translation
-            };
+            let origin = target.origin(camera);
             target.journal.as_deref().and_then(|journal| {
                 super::vessels::water_target(
                     &chunks,
@@ -1138,25 +1170,22 @@ pub(crate) fn edit_target_block(
                 .session
                 .as_ref()
                 .is_some_and(|s| s.inventory.count(selected_item) > 0);
-        let plan = target.camera.iter().next().and_then(|(camera, look)| {
-            let origin = if target
-                .perspective
-                .as_deref()
-                .is_some_and(|p| p.is_third_person())
-            {
-                target
-                    .bodies
-                    .iter()
-                    .next()
-                    .map_or(camera.translation, |body| {
-                        body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET
-                    })
+        let chest_merge = if selected == 29
+            && (keys.keys.pressed(KeyCode::ShiftLeft) || keys.keys.pressed(KeyCode::ShiftRight))
+        {
+            if chunks.block_at(hit.position) == Some(29) && hit.normal[1] == 0 {
+                terra_core::containers::ChestMerge::Target(hit.position)
             } else {
-                camera.translation
-            };
+                terra_core::containers::ChestMerge::Separate
+            }
+        } else {
+            terra_core::containers::ChestMerge::Auto
+        };
+        let plan = target.camera.iter().next().and_then(|(camera, look)| {
+            let origin = target.origin(camera);
             target.journal.as_ref().and_then(|journal| {
                 let (yaw, pitch, _) = look.rotation().to_euler(EulerRot::YXZ);
-                terra_world::placement::propose(
+                terra_world::placement::propose_with_chest(
                     &chunks,
                     journal,
                     hit,
@@ -1166,6 +1195,7 @@ pub(crate) fn edit_target_block(
                         (look.rotation() * Vec3::NEG_Z).to_array().map(f64::from),
                     ),
                     [yaw, pitch],
+                    chest_merge,
                 )
                 .ok()
             })
@@ -1257,11 +1287,21 @@ pub(crate) fn edit_target_block(
         if valid && keys.just_pressed(Action::Place) {
             presentation.motion.placing = true;
             presentation.motion.impulse = presentation.motion.impulse.wrapping_add(1);
-            requests.blocks.write(BlockEditRequest {
-                position,
-                expected_material: expected,
-                material: selected,
-            });
+            if selected == 29 {
+                requests
+                    .chests
+                    .write(terra_network::client::ChestPlaceRequest {
+                        position,
+                        expected,
+                        merge: chest_merge,
+                    });
+            } else {
+                requests.blocks.write(BlockEditRequest {
+                    position,
+                    expected_material: expected,
+                    material: selected,
+                });
+            }
         }
     }
 }
@@ -1304,6 +1344,7 @@ mod tests {
             .add_message::<PropRemoveRequest>()
             .add_message::<MiningRequest>()
             .add_message::<PropPlaceRequest>()
+            .add_message::<terra_network::client::ChestPlaceRequest>()
             .add_message::<FarmToolRequest>()
             .add_message::<terra_network::client::TreeHarvestRequest>()
             .add_message::<terra_network::client::InventoryRequest>()
@@ -2435,28 +2476,30 @@ mod tests {
 
     #[test]
     fn placing_a_block_replaces_a_source_instead_of_stacking_on_it() {
-        let mut app = app();
-        app.world_mut()
-            .resource_mut::<ChunkStore>()
-            .loaded
-            .get_mut(&SectionPos::default())
-            .unwrap()
-            .data
-            .set_block([1, 0, 1], MaterialId::FluidWater as u16)
-            .unwrap();
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::KeyB);
-        app.update();
-        let requests: Vec<_> = app
-            .world_mut()
-            .resource_mut::<Messages<BlockEditRequest>>()
-            .drain()
-            .collect();
-        assert_eq!(requests.len(), 1);
-        assert_eq!(requests[0].position, [1, 0, 1]);
-        assert_eq!(requests[0].expected_material, MaterialId::FluidWater as u16);
-        assert_eq!(requests[0].material, MaterialId::Stone as u16);
+        for liquid in [MaterialId::FluidWater, MaterialId::Bile] {
+            let mut app = app();
+            app.world_mut()
+                .resource_mut::<ChunkStore>()
+                .loaded
+                .get_mut(&SectionPos::default())
+                .unwrap()
+                .data
+                .set_block([1, 0, 1], liquid as u16)
+                .unwrap();
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::KeyB);
+            app.update();
+            let requests: Vec<_> = app
+                .world_mut()
+                .resource_mut::<Messages<BlockEditRequest>>()
+                .drain()
+                .collect();
+            assert_eq!(requests.len(), 1);
+            assert_eq!(requests[0].position, [1, 0, 1]);
+            assert_eq!(requests[0].expected_material, liquid as u16);
+            assert_eq!(requests[0].material, MaterialId::Stone as u16);
+        }
     }
 
     #[test]

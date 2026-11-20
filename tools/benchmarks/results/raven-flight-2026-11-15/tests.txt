@@ -1,0 +1,13 @@
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Finished `test` profile [optimized + debuginfo] target(s) in 2m 13s
+     Running unittests src/lib.rs (target/debug/deps/terra_world-8abe7dd93f93dccd)
+
+running 5 tests
+test creatures::spirit::raven::tests::altitude_and_steering_continue_deterministically_after_save_reload ... ok
+test creatures::spirit::raven::tests::authoritative_raven_climbs_from_ground_and_cruises_above_actual_tree_crowns ... ok
+test creatures::spirit::raven::tests::crossing_open_water_keeps_the_cruising_band_above_the_surface ... ok
+test creatures::spirit::raven::tests::ravens_land_on_support_briefly_rest_and_take_off_again ... ok
+test creatures::spirit::raven::tests::unknown_sky_and_solid_roofs_limit_the_climb_without_chunk_requests ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 1477 filtered out; finished in 0.06s
+

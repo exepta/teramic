@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": 352,
+  "name": "Column Base",
+  "description": "Column Base for monumental entrances, arcades and vaulted halls.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_column_base.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/crypt_column_base.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.1,
+        0,
+        0.1
+      ],
+      "maximum": [
+        0.9,
+        0.22,
+        0.9
+      ]
+    },
+    {
+      "minimum": [
+        0.18,
+        0.22,
+        0.18
+      ],
+      "maximum": [
+        0.82,
+        0.4,
+        0.82
+      ]
+    },
+    {
+      "minimum": [
+        0.28,
+        0.4,
+        0.28
+      ],
+      "maximum": [
+        0.72,
+        1,
+        0.72
+      ]
+    }
+  ]
+}

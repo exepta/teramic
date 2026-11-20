@@ -97,7 +97,7 @@ pub(super) fn wind_displacement(
 pub fn wind_parameters(kind: PropKind, variant: u8, height: f32, scale: f32) -> [f32; 2] {
     let (range, flexibility) = match kind {
         PropKind::Grass => (0.53, 1.0),
-        PropKind::Bush if variant >= 128 => (0.65, 0.18),
+        PropKind::Bush if variant >= 128 => (0.65, 0.0),
         PropKind::Bush => (0.75, 0.65),
         kind if kind.sapling().is_some() => (0.9, 0.22),
         PropKind::Flower => (0.60, 0.55),

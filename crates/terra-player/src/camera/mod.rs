@@ -1,6 +1,9 @@
 mod capture;
 mod components;
+mod construction;
+pub use construction::ConstructionCamera;
 mod controller;
+pub(crate) mod damage;
 mod gait;
 mod movement;
 pub(crate) mod perspective;

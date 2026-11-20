@@ -67,7 +67,7 @@ fn connected_geometry_rebuilds_tangent_frames_from_its_mirrored_uvs() {
     let mut primitive = triangle(true);
     primitive.uvs[1][0] = -1.0;
     let mut batch = MeshBatch::default();
-    append_connected(&mut batch, &primitive, Vec3::ZERO, 63, 0.0, None).unwrap();
+    append_connected(&mut batch, &primitive, Vec3::ZERO, 63, 0.0, None, false).unwrap();
     assert_eq!(batch.tangents.len(), 3);
     for (&tangent, &normal) in batch.tangents.iter().zip(&batch.normals) {
         assert_frame(tangent, normal);

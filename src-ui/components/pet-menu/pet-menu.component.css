@@ -13,7 +13,7 @@
 .pet-choice { position: absolute; padding: 0px; border: 0px solid transparent; border-radius: 0px; background-color: transparent; color: #ddc49d; }
 .pet-choice icon { position: absolute; left: 27%; top: 22%; width: 46%; height: 40%; }
 .pet-choice-label { position: absolute; left: 5%; top: 70%; width: 90%; height: 25%; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.pet-choice-label p { font-size: 28px; text-align: start; text-wrap: nowrap; margin: 0px; color: #e9d1ab; }
+.pet-choice-label p { width: 100%; min-width: 0; max-width: 100%; font-size: 22px; line-height: 26px; text-align: center; text-wrap: wrap; margin: 0px; color: #e9d1ab; }
 .pet-choice.active, .pet-choice:hover { background-color: transparent; color: #ffe5a1; }
 .pet-choice.active p, .pet-choice:hover p { color: #ffe5a1; }
 .pet-paw { position: absolute; left: 34%; top: 15%; width: 32%; height: 36%; pointer-events: none; }
@@ -32,13 +32,13 @@
 .compact .pet-description .pet-description-title { font-size: 18px; }
 .compact .follow-description .pet-description-text { top: 2%; height: 78%; }
 .compact .rest-description .pet-description-text, .compact .none-description .pet-description-text { left: 8%; width: 84%; align-items: center; }
-.compact .pet-choice p { font-size: 20px; }
+.compact .pet-choice p { font-size: 16px; line-height: 18px; }
 .compact .pet-name { font-size: 14px; }
 .compact .pet-caption { gap: 2px; }
 .compact .pet-heart { height: 11px; }
 .tiny .pet-name { font-size: 11px; }
-.tiny .pet-choice p { font-size: 12px; }
-.tiny .pet-choice-label { top: 65%; }
+.tiny .pet-choice p { font-size: 9px; line-height: 10px; }
+.tiny .pet-choice-label { top: 60%; height: 38%; }
 .tiny .pet-follow .pet-choice-label { top: 72%; }
 .tiny .pet-heart { height: 8px; }
 .tiny .pet-hearts { gap: 1px; }

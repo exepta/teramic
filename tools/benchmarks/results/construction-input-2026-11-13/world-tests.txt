@@ -1,0 +1,52 @@
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Finished `test` profile [optimized + debuginfo] target(s) in 1m 04s
+     Running unittests src/lib.rs (target/debug/deps/terra_world-241b0ee1f61de9ef)
+
+running 44 tests
+test building_jobs::tests::all_rotations_preserve_ordinary_block_states_and_paired_furniture ... ok
+test building_jobs::tests::blocked_target_and_player_body_pause_work_before_earning_time_and_control_revision_stays_stable ... ok
+test building_jobs::tests::crews_top_up_to_four_without_stealing_paused_workers_or_double_assignment ... ok
+test building_jobs::tests::default_house_is_captured_from_the_authored_village_without_free_supplies ... ok
+test building_jobs::tests::defense_preserves_the_house_and_bags_and_only_active_onsite_crew_earn_work ... ok
+test building_jobs::tests::cancelled_craftsman_with_full_bag_returns_actual_stock_after_storage_has_room ... ok
+test building_jobs::tests::diagnostics::detailed_cells_distinguish_stale_voxels_unloaded_data_and_denied_claims ... ok
+test building_jobs::tests::diagnostics::detailed_planning_identifies_the_first_rejected_cell_without_mutation ... ok
+test building_jobs::tests::diagnostics::detailed_foundation_failure_reports_the_exact_unsupported_cell ... ok
+test building_jobs::tests::diagnostics::detailed_reservation_reports_the_existing_job_and_preserves_it ... ok
+test building_jobs::tests::diagnostics::legacy_wrapper_returns_the_exact_detailed_plan_or_error_in_every_facing ... ok
+test building_jobs::tests::five_onsite_projects_each_earn_the_full_elapsed_work_time ... ok
+test building_jobs::tests::far_loaded_storage_is_walked_to_the_site_and_back_for_the_next_real_ingredient ... ok
+test building_jobs::tests::missing_materials_unloaded_targets_and_outside_claims_never_spend_or_build ... ok
+test building_jobs::tests::one_to_four_onsite_craftsmen_have_exact_real_clock_rates_and_pause_never_spends_or_advances ... ok
+test building_jobs::tests::paired_town_chest_requires_both_halves_inside_the_authorized_storage_area ... ok
+test building_jobs::tests::partial_ledge_contact_recenters_by_physical_sweeps_but_never_crosses_missing_or_foreign_ground ... ok
+test building_jobs::tests::a_saved_house_finishes_from_resolved_steps_after_its_template_asset_is_removed ... ok
+test building_jobs::tests::prepared_ground::a_craftsman_excavates_a_four_metre_terrace_and_physically_finishes_the_house ... ok
+test building_jobs::tests::prepared_ground::four_block_terraces_have_one_persisted_removal_per_cell_in_every_facing ... ok
+test building_jobs::tests::prepared_ground::later_stone_edits_pause_floor_preparation_and_foundation_without_spending_materials ... ok
+test building_jobs::tests::prepared_ground::saved_soil_is_only_replaced_in_authored_floor_and_foundation_cells ... ok
+test building_jobs::tests::prepared_ground::saved_stone_other_terrain_and_above_ground_soil_are_still_protected ... ok
+test building_jobs::tests::prepared_ground::stale_ground_or_air_edits_never_hide_an_obstacle ... ok
+test building_jobs::tests::residential_automation_resolves_the_selected_real_template_and_never_falls_back_for_missing_ids ... ok
+test building_jobs::tests::resources::creative_funding_loss_pauses_progress_and_does_not_spend_or_refund_stock ... ok
+test building_jobs::tests::resources::creative_owner_builds_real_voxels_without_storage_costs_or_generated_refund_items_and_policy_survives_reload ... ok
+test building_jobs::tests::resources::entering_creative_preserves_paid_scaffold_refunds_and_never_refunds_later_free_materials ... ok
+test building_jobs::tests::resources::explicit_double_chest_steps_cost_two_items_initialize_both_inventories_and_do_not_link_neighbors ... ok
+test building_jobs::tests::resources::paid_native_spruce_basin_keeps_its_wood_across_replication_and_drop_cost_roundtrip ... ok
+test building_jobs::tests::resources::town_inventory_budget_marks_partial_results_instead_of_claiming_an_exact_truncated_total ... ok
+test building_jobs::tests::resources::town_stock_counts_real_selected_inventories_and_double_chests_exactly_once ... ok
+test building_jobs::tests::resources::unloaded_or_foreign_chest_halves_are_never_reported_as_available_town_inputs ... ok
+test building_jobs::tests::round_robin_does_not_let_four_jobs_without_workers_starve_another_kingdom ... ok
+test building_jobs::tests::prepared_ground::a_paid_craftsman_finishes_on_saved_grass_and_dirt_without_excavating_the_working_ring ... ok
+test building_jobs::tests::sites::a_valid_custom_floor_at_ground_level_is_prepared_once_and_physically_built ... ok
+test building_jobs::tests::sites::blueprint_ignores_mobile_npcs_mobs_and_natural_grass_props_without_moving_them ... ok
+test building_jobs::tests::sites::explicit_air_and_one_block_natural_terraces_generate_real_persisted_preparation ... ok
+test building_jobs::tests::sites::occupants_only_pause_real_construction_and_no_material_is_spent_until_they_leave ... ok
+test building_jobs::tests::sites::solid_buildings_trees_player_terrain_and_water_still_block_blueprints ... ok
+test building_jobs::tests::sites::a_real_craftsman_prepares_a_clay_terrace_and_physically_finishes_the_house ... ok
+test building_jobs::tests::creative_craftsman_physically_finishes_a_full_house_in_all_facings_without_town_storage_or_items ... ok
+test building_jobs::tests::full_authored_house_is_walked_built_roofed_furnished_and_scaffold_is_recovered_without_free_materials ... ok
+test building_jobs::tests::spruce_cottage_is_physically_built_in_all_facings_with_exact_paid_material_conservation ... ok
+
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 1347 filtered out; finished in 22.49s
+

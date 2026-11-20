@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": 438,
+  "name": "Dried Tar Road",
+  "description": "A cured tar film bonded to its compacted path. Its thickness preserves the amount poured.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.9375,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.9375,
+        0
+      ],
+      "maximum": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "materials": {
+    "Packed earth": {
+      "texture_pattern": "path_side",
+      "roughness": 1,
+      "reflectance": 0.1
+    },
+    "Tar surface": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    }
+  },
+  "textures": {
+    "Tar surface": "textures/dried_tar.png"
+  },
+  "face_materials": [
+    "Packed earth",
+    "Packed earth",
+    "Packed earth",
+    "Tar surface",
+    "Packed earth",
+    "Packed earth"
+  ],
+  "hardness": 1.4,
+  "resistance": 5,
+  "required_tool": "pickaxe",
+  "mining_level": 0
+}

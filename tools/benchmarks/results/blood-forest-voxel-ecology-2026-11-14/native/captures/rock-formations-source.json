@@ -1,0 +1,49 @@
+{
+  "center": [
+    16,
+    109,
+    19
+  ],
+  "ecology_revision": 5,
+  "extra": {
+    "bounds": [
+      [
+        12,
+        108,
+        14
+      ],
+      [
+        19,
+        111,
+        23
+      ]
+    ],
+    "formation_voxels": 143,
+    "material": 3
+  },
+  "fixture_edits": 0,
+  "scene": "rock-formations",
+  "seed": 42042,
+  "source_cells": [
+    [
+      16,
+      111,
+      18
+    ],
+    [
+      17,
+      111,
+      18
+    ],
+    [
+      15,
+      111,
+      19
+    ],
+    [
+      16,
+      111,
+      19
+    ]
+  ]
+}

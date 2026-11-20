@@ -155,6 +155,7 @@ fn update(
                             | terra_world::generation::TreeAppearance::Autumn
                             | terra_world::generation::TreeAppearance::Birch
                             | terra_world::generation::TreeAppearance::Apple
+                            | terra_world::generation::TreeAppearance::Cherry
                     )
                 )
                 || season.leaf_loss() >= 0.999
@@ -168,7 +169,10 @@ fn update(
                 .and_then(|t| t.blocks.get(&kind))
                 .and_then(|b| world.blocks.materials.get(b.face_materials[0]))
                 .and_then(|h| materials.get(h))
-                .map(|m| m.base_color.to_linear().to_f32_array());
+                .map(|m| {
+                    blossom_particle_color(kind)
+                        .unwrap_or_else(|| m.base_color.to_linear().to_f32_array())
+                });
             if let Some(mut color) = color {
                 for (channel, tint) in color[..3].iter_mut().zip(season.leaf_tint()) {
                     *channel *= tint;
@@ -263,6 +267,16 @@ fn random(mut seed: u64) -> f32 {
     ((seed ^ (seed >> 31)) >> 40) as f32 / 16_777_216.0
 }
 
+/// Particle geometry has no canopy texture, so preserve each flower palette.
+fn blossom_particle_color(material: u16) -> Option<[f32; 4]> {
+    match material {
+        132 | 310 => Some([0.95, 0.34, 0.65, 1.0]),
+        133 | 311 => Some([0.86, 0.82, 0.98, 1.0]),
+        312 => Some([0.57, 0.30, 0.88, 1.0]),
+        _ => None,
+    }
+}
+
 fn find_source(chunks: &ChunkStore, center: Vec3, sequence: u64) -> Option<(Vec3, u16)> {
     // Fixed budget: eight local columns, at most eighteen loaded-voxel probes
     // each. Never ask the procedural generator to manufacture foliage sources.
@@ -272,7 +286,8 @@ fn find_source(chunks: &ChunkStore, center: Vec3, sequence: u64) -> Option<(Vec3
         let z = (center.z + (random(seed ^ 0xf723) - 0.5) * 24.0).floor() as i64;
         let bottom = center.y.floor() as i64;
         for y in (bottom + 1..=bottom + 18).rev() {
-            if let Some(kind @ (7..=9 | 132 | 133 | 195)) = chunks.block_at([x, y, z])
+            if let Some(kind) = chunks.block_at([x, y, z])
+                && terra_voxel::MaterialId::FOLIAGE.contains(&kind)
                 && chunks.block_at([x, y - 1, z]) == Some(0)
             {
                 let position = Vec3::new(
@@ -436,7 +451,7 @@ mod tests {
 
     #[test]
     fn only_existing_loaded_foliage_emits_leaves_and_all_variants_survive() {
-        for kind in 7..=9 {
+        for kind in terra_voxel::MaterialId::FOLIAGE {
             let chunks = canopy(kind);
             let source = find_source(&chunks, Vec3::new(0.0, 2.0, 0.0), 0).unwrap();
             assert_eq!(source.1, kind);
@@ -448,6 +463,14 @@ mod tests {
         }
         assert!(find_source(&canopy(3), Vec3::ZERO, 0).is_none());
         assert!(find_source(&ChunkStore::default(), Vec3::ZERO, 0).is_none());
+    }
+
+    #[test]
+    fn spirit_petals_retain_three_colors_without_a_shared_white_texture() {
+        let colors = [310, 311, 312].map(|id| blossom_particle_color(id).unwrap());
+        assert_ne!(colors[0], colors[1]);
+        assert_ne!(colors[1], colors[2]);
+        assert_eq!(blossom_particle_color(7), None);
     }
 
     #[test]

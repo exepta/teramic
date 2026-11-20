@@ -1,0 +1,2 @@
+Isolated standalone building editor run: /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/building-editor/run.xW9BoY
+Standalone Building Editor passed: real voxel placement/removal, inventory catalog, house JSON import/save/reload, overwrite and language; ten screenshots

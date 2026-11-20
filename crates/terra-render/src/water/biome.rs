@@ -3,7 +3,9 @@ use terra_world::{TerraGenerator, generation::biomes::BiomeSample};
 
 /// Linear scattering colors. Ocean, plains and forest retain the original tint.
 pub(crate) const DEFAULT_TINT: [f32; 3] = [0.025, 0.20, 0.16];
-pub(crate) const CHERRY_TINT: [f32; 3] = [0.20, 0.15, 0.18];
+pub(crate) const CHERRY_TINT: [f32; 3] = [0.42, 0.16, 0.29];
+pub(crate) const SPIRIT_TINT: [f32; 3] = [0.26, 0.68, 0.61];
+pub(crate) const BLOOD_TINT: [f32; 3] = [0.46, 0.065, 0.115];
 pub(crate) const COLORS: [[f32; 3]; 6] = [
     DEFAULT_TINT,
     DEFAULT_TINT,
@@ -13,9 +15,12 @@ pub(crate) const COLORS: [[f32; 3]; 6] = [
     [0.27, 0.15, 0.38],
 ];
 
-/// COLOR and both UV sets already carry depth, current and waterfall metadata.
+/// RGB scattering plus explicit Spirit glow weight. COLOR and both UV sets
+/// already carry depth, current and waterfall metadata.
 pub(crate) const ATTRIBUTE_BIOME_TINT: MeshVertexAttribute =
-    MeshVertexAttribute::new("Water_BiomeTint", 1_883_214_071, VertexFormat::Float32x3);
+    MeshVertexAttribute::new("Water_BiomeTint", 1_883_214_071, VertexFormat::Float32x4);
+pub(crate) const ATTRIBUTE_BLOOD_WEIGHT: MeshVertexAttribute =
+    MeshVertexAttribute::new("Water_BloodWeight", 1_883_214_073, VertexFormat::Float32);
 
 pub(super) fn biome_tint(sample: BiomeSample) -> [f32; 3] {
     let mut weights = sample.weights.values();
@@ -26,13 +31,21 @@ pub(super) fn biome_tint(sample: BiomeSample) -> [f32; 3] {
             .zip(COLORS)
             .map(|(weight, color)| weight as f32 * color[channel])
             .sum();
-        original + weights[7] as f32 * CHERRY_TINT[channel]
+        original
+            + weights[7] as f32 * CHERRY_TINT[channel]
+            + weights[8] as f32 * SPIRIT_TINT[channel]
+            + weights[9] as f32 * BLOOD_TINT[channel]
     })
 }
 
 /// Shared world-space corners keep adjacent sections, including negative ones,
 /// continuous while requiring only four biome queries per uploaded water batch.
-pub(crate) struct WaterTint([[f32; 3]; 4], [f32; 4]);
+pub(crate) struct WaterTint(
+    [[f32; 3]; 4],
+    #[allow(dead_code)] [f32; 4],
+    [f32; 4],
+    [f32; 4],
+);
 
 impl WaterTint {
     pub(crate) fn new(terrain: &TerraGenerator, origin: [i64; 3]) -> Self {
@@ -45,9 +58,12 @@ impl WaterTint {
         Self(
             samples.map(biome_tint),
             samples.map(|sample| sample.weights.ocean as f32),
+            samples.map(|sample| sample.weights.spirit_blossom as f32),
+            samples.map(|sample| sample.weights.blood_forest as f32),
         )
     }
 
+    #[cfg(test)]
     pub(crate) fn ocean_at(&self, point: [f32; 3]) -> f32 {
         let x = (point[0] / 16.0).clamp(0.0, 1.0);
         let z = (point[2] / 16.0).clamp(0.0, 1.0);
@@ -56,6 +72,24 @@ impl WaterTint {
         near * (1.0 - z) + far * z
     }
 
+    /// Separate scalar keeps Spirit glow and blood viscosity independently
+    /// continuous, including a mixed boundary between the two special biomes.
+    pub(crate) fn blood_at(&self, point: [f32; 3]) -> f32 {
+        let x = (point[0] / 16.).clamp(0., 1.);
+        let z = (point[2] / 16.).clamp(0., 1.);
+        (self.3[0] * (1. - x) + self.3[1] * x) * (1. - z)
+            + (self.3[2] * (1. - x) + self.3[3] * x) * z
+    }
+
+    /// Explicit Spirit weight avoids guessing emission from a mixed RGB hue.
+    pub(crate) fn payload(&self, point: [f32; 3]) -> [f32; 4] {
+        let color = self.at(point);
+        let x = (point[0] / 16.).clamp(0., 1.);
+        let z = (point[2] / 16.).clamp(0., 1.);
+        let weight = (self.2[0] * (1. - x) + self.2[1] * x) * (1. - z)
+            + (self.2[2] * (1. - x) + self.2[3] * x) * z;
+        [color[0], color[1], color[2], weight]
+    }
     pub(crate) fn at(&self, point: [f32; 3]) -> [f32; 3] {
         let x = (point[0] / 16.0).clamp(0.0, 1.0);
         let z = (point[2] / 16.0).clamp(0.0, 1.0);
@@ -85,6 +119,8 @@ mod tests {
                 mushroom_park: weights[5],
                 cliffted_desert: 0.0,
                 cherry_forest: 0.0,
+                spirit_blossom: 0.0,
+                blood_forest: 0.0,
             },
         }
     }
@@ -113,6 +149,58 @@ mod tests {
     }
 
     #[test]
+    fn spirit_water_blends_continuously_with_existing_biomes() {
+        let mut spirit = sample([0.0; 6]);
+        spirit.weights.spirit_blossom = 1.0;
+        assert_eq!(biome_tint(spirit), SPIRIT_TINT);
+        let mut previous = DEFAULT_TINT;
+        for step in 0..=100 {
+            let weight = f64::from(step) / 100.0;
+            let mut mixed = sample([0.0, 0.0, 1.0 - weight, 0.0, 0.0, 0.0]);
+            mixed.weights.spirit_blossom = weight;
+            let color = biome_tint(mixed);
+            for channel in 0..3 {
+                let expected = DEFAULT_TINT[channel] * (1.0 - weight as f32)
+                    + SPIRIT_TINT[channel] * weight as f32;
+                assert!((color[channel] - expected).abs() < 1e-6);
+                assert!((color[channel] - previous[channel]).abs() < 0.007);
+            }
+            previous = color;
+        }
+    }
+
+    #[test]
+    fn blood_color_and_viscosity_blend_independently_from_spirit_glow() {
+        let mut red = sample([0.; 6]);
+        red.weights.blood_forest = 1.0;
+        let color = biome_tint(red);
+        assert_eq!(color, BLOOD_TINT);
+        // Readable carmine scattering under canopy fill, without Spirit emission.
+        let luminance = color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722;
+        assert!((0.14..0.20).contains(&luminance));
+        assert!(color[0] > color[2] && color[2] > color[1]);
+        let tint = WaterTint([BLOOD_TINT; 4], [0.; 4], [0.25; 4], [0., 1., 0., 1.]);
+        for x in 0..=16 {
+            let point = [x as f32, 0., 7.];
+            assert_eq!(tint.payload(point)[3], 0.25);
+            assert!((tint.blood_at(point) - x as f32 / 16.).abs() < 1e-6);
+        }
+        for weight in [0.0, 0.25, 0.5, 0.75, 1.0] {
+            let mut mixed = sample([0., 0., 1. - weight, 0., 0., 0.]);
+            mixed.weights.blood_forest = weight;
+            let color = biome_tint(mixed);
+            for i in 0..3 {
+                assert!(
+                    (color[i]
+                        - (DEFAULT_TINT[i] * (1. - weight as f32) + BLOOD_TINT[i] * weight as f32))
+                        .abs()
+                        < 1e-6
+                );
+            }
+        }
+    }
+
+    #[test]
     fn water_tint_matches_across_sections_and_vertical_falls() {
         let terrain = TerraGenerator::new(Default::default()).unwrap();
         for x in [-512, -32, -16, 0, 16, 496] {
@@ -123,17 +211,42 @@ mod tests {
                 let below = WaterTint::new(&terrain, [x, -32, z]);
                 for step in 0..=32 {
                     let p = step as f32 * 0.5;
-                    assert_eq!(a.at([16.0, 4.0, p]), b.at([0.0, 9.0, p]));
-                    assert_eq!(a.at([p, 4.0, 16.0]), c.at([p, 9.0, 0.0]));
-                    assert_eq!(a.at([p, 0.0, p]), below.at([p, 16.0, p]));
+                    assert_eq!(a.payload([16.0, 4.0, p]), b.payload([0.0, 9.0, p]));
+                    assert_eq!(a.payload([p, 4.0, 16.0]), c.payload([p, 9.0, 0.0]));
+                    assert_eq!(a.payload([p, 0.0, p]), below.payload([p, 16.0, p]));
+                    assert_eq!(a.blood_at([16., 4., p]), b.blood_at([0., 9., p]));
+                    assert_eq!(a.blood_at([p, 4., 16.]), c.blood_at([p, 9., 0.]));
                 }
             }
         }
     }
 
     #[test]
+    fn spirit_glow_weight_is_explicit_smooth_and_zero_for_other_biomes() {
+        let tinted = WaterTint([DEFAULT_TINT; 4], [0.; 4], [0., 1., 0., 1.], [0.; 4]);
+        for x in 0..=16 {
+            let value = tinted.payload([x as f32, 0., 7.]);
+            assert!((value[3] - x as f32 / 16.).abs() < 1e-6);
+        }
+        let ordinary = WaterTint([CHERRY_TINT; 4], [0.; 4], [0.; 4], [0.; 4]);
+        assert_eq!(
+            ordinary.payload([8., 0., 8.]),
+            [CHERRY_TINT[0], CHERRY_TINT[1], CHERRY_TINT[2], 0.]
+        );
+        const {
+            assert!(CHERRY_TINT[0] > CHERRY_TINT[1] && CHERRY_TINT[2] > CHERRY_TINT[1]);
+            assert!(SPIRIT_TINT[1] > SPIRIT_TINT[0] && SPIRIT_TINT[2] > SPIRIT_TINT[0]);
+        }
+    }
+
+    #[test]
     fn interpolation_is_smooth_and_bounded() {
-        let tint = WaterTint([COLORS[1], COLORS[3], COLORS[4], COLORS[5]], [0.0; 4]);
+        let tint = WaterTint(
+            [COLORS[1], COLORS[3], COLORS[4], COLORS[5]],
+            [0.0; 4],
+            [0.0; 4],
+            [0.0; 4],
+        );
         let mut previous = tint.at([0.0, 1.0, 8.0]);
         for step in 1..=160 {
             let color = tint.at([step as f32 * 0.1, 1.0, 8.0]);

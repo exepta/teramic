@@ -62,7 +62,7 @@ impl EditJournal {
             return Err(FluidError::InvalidCell);
         }
         Ok(if cell.amount == 0 && self.block(global).is_some() {
-            self.write_fluid_override(global, cell, true, true)?
+            self.write_fluid_override(global, cell, true, true, true)?
         } else {
             self.write_fluid(global, cell)?
         })
@@ -79,7 +79,19 @@ impl EditJournal {
         if !cell.validate() {
             return Err(FluidError::InvalidCell);
         }
-        Ok(self.write_fluid(global, cell)?)
+        Ok(self.write_fluid_override(global, cell, true, false, false)?)
+    }
+    #[cfg(feature = "bevy")]
+    pub(crate) fn set_receded_fluid(
+        &mut self,
+        global: [i64; 3],
+        cell: FluidCell,
+        pin_empty: bool,
+    ) -> Result<bool, FluidError> {
+        if !cell.validate() {
+            return Err(FluidError::InvalidCell);
+        }
+        Ok(self.write_fluid_override(global, cell, true, pin_empty, false)?)
     }
     pub(super) fn write_fluid(
         &mut self,
@@ -94,7 +106,7 @@ impl EditJournal {
         cell: FluidCell,
         wake_simulation: bool,
     ) -> Result<bool, BlockError> {
-        self.write_fluid_override(global, cell, wake_simulation, false)
+        self.write_fluid_override(global, cell, wake_simulation, false, true)
     }
     fn write_fluid_override(
         &mut self,
@@ -102,13 +114,14 @@ impl EditJournal {
         cell: FluidCell,
         wake_simulation: bool,
         force_empty: bool,
+        explicit: bool,
     ) -> Result<bool, BlockError> {
         let recorded = self.fluid(global);
         let previous = recorded.unwrap_or_default();
         // A deliberately emptied natural source is a dry override, unlike an
         // ordinary sleeping/drained cell. It shares the existing saved fluid map.
-        let retain_empty = self.block(global).is_some_and(crate::water::can_hold_fluid)
-            && (recorded.is_some() || force_empty);
+        let retain_empty = force_empty
+            || self.block(global).is_some_and(crate::water::can_hold_fluid) && recorded.is_some();
         if (previous == cell || (previous.amount == 0 && cell.amount == 0))
             && (recorded.is_some() || !retain_empty)
         {
@@ -130,6 +143,16 @@ impl EditJournal {
         if wake_simulation {
             self.wake_fluid_neighbors(global);
         }
+        #[cfg(feature = "bevy")]
+        if explicit {
+            if previous.source != cell.source {
+                self.fluid_sources.invalidate_from(global);
+            } else {
+                self.fluid_sources.invalidate_around(global);
+            }
+        }
+        #[cfg(not(feature = "bevy"))]
+        let _ = explicit;
         Ok(true)
     }
     pub(super) fn invalidate_water(&mut self, global: [i64; 3]) -> Result<(), BlockError> {
@@ -138,7 +161,10 @@ impl EditJournal {
     pub(super) fn invalidate_water_geometry(&mut self, global: [i64; 3]) -> Result<(), BlockError> {
         // A neighboring stair/fence shape also reads its own adjacent blocks.
         // Only solid/object edits need this wider halo; fluid ticks retain one.
-        self.invalidate_water_halo(global, 2)
+        self.invalidate_water_halo(global, 2)?;
+        #[cfg(feature = "bevy")]
+        self.fluid_sources.invalidate_around(global);
+        Ok(())
     }
     fn invalidate_water_halo(&mut self, global: [i64; 3], radius: usize) -> Result<(), BlockError> {
         let (owner, local) = global_to_section(global);

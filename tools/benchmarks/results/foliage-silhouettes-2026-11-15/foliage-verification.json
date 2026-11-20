@@ -1,0 +1,85 @@
+{
+  "status": "passed",
+  "scope": "Native fixture rendering: ten leaf materials and four eyelid poses. Not a natural-world population, navigation or AI test.",
+  "resolution": [
+    1920,
+    1080
+  ],
+  "client_sha256": "e1b5f902efd96d2e002d307a9fb91fe003abc3822e64af4bbbbad08b23200b64",
+  "config_sha256": {
+    "client.toml": "2b8e9f1c4b551e5a6c22955d91314f2675a4db5a263acbf7ffedaafbc9693f63",
+    "graphics.toml": "8899fa1aaa03ea4b3ff85563902e176994c108e30ab5a691a0186c5d7504e6af",
+    "server.toml": "27e4e5ec800addaeeef3414ec27167a5fcd73cdea12e8c0380f4a62831fc6724",
+    "world.toml": "8fedac2998811dfa614eb6adba6c08ca8fb27aa286894bcb57b1abcd8805bcb1"
+  },
+  "scenes": {
+    "foliage": {
+      "count": 7,
+      "marker": "Foliage gallery passed: ten leaf materials, seven native views",
+      "captures": [
+        {
+          "file": "foliage-0.png",
+          "bytes": 2121510,
+          "sha256": "01b4548f5128e68095c09def9b373e0ac5ba1ef0e1dd9a55f32d514cca381b5c"
+        },
+        {
+          "file": "foliage-1.png",
+          "bytes": 2028105,
+          "sha256": "36d541a4aec196d4b67e07a25362a48e40306f57ea3b49f5cdcc600d18a522f4"
+        },
+        {
+          "file": "foliage-2.png",
+          "bytes": 2155069,
+          "sha256": "204f9b0e2bb2cffd177a33f38c0f9e238ccd66dd65c748c1707827af4bd7a9eb"
+        },
+        {
+          "file": "foliage-3.png",
+          "bytes": 2223338,
+          "sha256": "f00d7ac1b70b27288d47049816d7c8788b77c3c28d475684a924bc0556ebf8fd"
+        },
+        {
+          "file": "foliage-4.png",
+          "bytes": 2197119,
+          "sha256": "26b630dedc3345edf71497ca6b86c054794995155ea92871ecacaa28094c4d63"
+        },
+        {
+          "file": "foliage-5.png",
+          "bytes": 2300840,
+          "sha256": "206db98f4b947edb67330af39aa584abd8c56c9146deee65b1271e47e94072c4"
+        },
+        {
+          "file": "foliage-6.png",
+          "bytes": 2292203,
+          "sha256": "10d7d77954bfb9cf3c5dbb5a20b0e2fb56e58ce314f5d8429d4d0f446914a99b"
+        }
+      ]
+    },
+    "eyes": {
+      "count": 4,
+      "marker": "Eye gallery passed: open, half-blink, closed, after-blink",
+      "captures": [
+        {
+          "file": "eyes-0-open.png",
+          "bytes": 1973967,
+          "sha256": "93b1a15e6a34494a13d84a57b2aeee1db5cc5ab59a8719579b43ba21e18c2bd3"
+        },
+        {
+          "file": "eyes-1-half-blink.png",
+          "bytes": 1976602,
+          "sha256": "55d3625abaa5052cb0807080f2f11fb7cecf6333d108ec75ebbf97e8ee99233f"
+        },
+        {
+          "file": "eyes-2-closed.png",
+          "bytes": 1979912,
+          "sha256": "0d7a4a9b719392f824a14554276f3932310a37090d3bb2faf15214fcd3b00005"
+        },
+        {
+          "file": "eyes-3-after-blink.png",
+          "bytes": 1976590,
+          "sha256": "19141dd00e08fb9d3475ed63e0cacf135b871597d141ab2f905aa56ef69aa9ed"
+        }
+      ]
+    }
+  },
+  "total_captures": 11
+}

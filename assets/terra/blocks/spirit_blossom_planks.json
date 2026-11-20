@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 314,
+  "name": "Spirit Blossom Planks",
+  "description": "Pale purple timber sawn from spirit blossom logs.",
+  "creative_category": "terrain",
+  "hardness": 1.4,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0.025,
+  "materials": {
+    "spirit_blossom_planks": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/ghost_planks_normal.png"
+    }
+  },
+  "textures": {
+    "spirit_blossom_planks": "textures/block_palette/ghost_planks.png"
+  },
+  "face_materials": [
+    "spirit_blossom_planks",
+    "spirit_blossom_planks",
+    "spirit_blossom_planks",
+    "spirit_blossom_planks",
+    "spirit_blossom_planks",
+    "spirit_blossom_planks"
+  ]
+}

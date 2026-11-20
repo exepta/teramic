@@ -1,0 +1,55 @@
+{
+  "status": "passed",
+  "screens": {
+    "npc-direct-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 730541
+    },
+    "npc-selection-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 1552897
+    },
+    "npc-selection-en-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 562713
+    },
+    "npc-direct-en-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 696260
+    },
+    "npc-direct-de-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 209919
+    },
+    "npc-direct-en-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 214568
+    },
+    "npc-direct-en-compact-paused": {
+      "width": 960,
+      "height": 640,
+      "bytes": 202396
+    },
+    "npc-lumberjack-missing-station-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 211605
+    },
+    "npc-lumberjack-profession-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 697617
+    }
+  },
+  "input": "real target raycasts and frame-controlled gameplay/HTML handlers",
+  "transport": "real local UDP server",
+  "private_inventory": true,
+  "kingdom_hotkey": true,
+  "responsive_geometry": true
+}

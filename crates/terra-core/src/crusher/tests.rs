@@ -28,7 +28,7 @@ fn all_crushing_recipes_are_valid_unique_and_conserve_one_input_per_completion()
         assert_eq!(state.completed, 1);
         assert!(valid_inventory(&inventory) && state.valid());
     }
-    assert_eq!(recipes().len(), 19);
+    assert_eq!(recipes().len(), 20);
     assert_ne!(catalog_fingerprint(), 0);
 }
 

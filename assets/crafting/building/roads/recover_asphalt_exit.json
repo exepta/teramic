@@ -1,0 +1,22 @@
+{
+  "id": "teramic::recover_asphalt_exit",
+  "name": "Recover Asphalt Upper Transition",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 431
+    },
+    "count": 3
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 435
+        },
+        "count": 4
+      }
+    ]
+  }
+}

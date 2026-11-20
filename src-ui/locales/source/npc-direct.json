@@ -1,0 +1,92 @@
+[
+  {
+    "source": "Inventar der Arbeitskraft",
+    "de": "Inventar der Arbeitskraft",
+    "en": "Worker inventory"
+  },
+  {
+    "source": "Werkzeuge und Fracht werden durch den Arbeitsauftrag verwaltet.",
+    "de": "Werkzeuge und Fracht werden durch den Arbeitsauftrag verwaltet.",
+    "en": "Tools and cargo are managed by the work order."
+  },
+  {
+    "source": "Inventar wird geladen oder ist außer Reichweite.",
+    "de": "Inventar wird geladen oder ist außer Reichweite.",
+    "en": "Inventory is loading or out of reach."
+  },
+  {
+    "source": "Arbeitsgebiet in der Welt wählen",
+    "de": "Arbeitsgebiet in der Welt wählen",
+    "en": "Select work area in the world"
+  },
+  {
+    "source": "Lager in der Welt wählen",
+    "de": "Lager in der Welt wählen",
+    "en": "Select storage in the world"
+  },
+  {
+    "source": "Arbeitsauftrag: Auswahlmodus",
+    "de": "Arbeitsauftrag: Auswahlmodus",
+    "en": "Work order: selection mode"
+  },
+  {
+    "source": "Bewegen und Umschauen bleiben möglich. Die Welt wird nicht verändert.",
+    "de": "Bewegen und Umschauen bleiben möglich. Die Welt wird nicht verändert.",
+    "en": "Movement and looking around remain available. The world is not changed."
+  },
+  {
+    "source": "Arbeitsgebiet wählen: Linksklick auf die erste Ecke. ESC bricht ab.",
+    "de": "Arbeitsgebiet wählen: Linksklick auf die erste Ecke. ESC bricht ab.",
+    "en": "Select work area: left-click the first corner. ESC cancels."
+  },
+  {
+    "source": "Arbeitsgebiet wählen: Linksklick auf die zweite Ecke. ESC bricht ab.",
+    "de": "Arbeitsgebiet wählen: Linksklick auf die zweite Ecke. ESC bricht ab.",
+    "en": "Select work area: left-click the second corner. ESC cancels."
+  },
+  {
+    "source": "Lager wählen: Linksklick auf eine Truhe oder passende Berufsstation. ESC bricht ab.",
+    "de": "Lager wählen: Linksklick auf eine Truhe oder passende Berufsstation. ESC bricht ab.",
+    "en": "Select storage: left-click a chest or matching profession station. ESC cancels."
+  },
+  {
+    "source": "Einen geladenen Block anvisieren",
+    "de": "Einen geladenen Block anvisieren",
+    "en": "Aim at a loaded block"
+  },
+  {
+    "source": "Leer",
+    "de": "Leer",
+    "en": "Empty"
+  },
+  {
+    "source": "Gegenstand",
+    "de": "Gegenstand",
+    "en": "Item"
+  },
+  {
+    "source": "Open Kingdom",
+    "de": "Königreich öffnen",
+    "en": "Open Kingdom"
+  },
+  {
+    "source": "Arbeitsauftrag",
+    "de": "Arbeitsauftrag",
+    "en": "Work order"
+  },
+  {
+    "source": "Bei Oberflächenberufen wird die Ebene über dem Boden mit ausgewählt.",
+    "de": "Bei Oberflächenberufen wird die Ebene über dem Boden mit ausgewählt.",
+    "en": "Surface professions also include the layer above the ground."
+  },
+  {
+    "source": "Holzfäller-Station benötigt",
+    "de": "Holzfäller-Station benötigt",
+    "en": "Lumberjack Station required"
+  },
+  {
+    "source": "Missing profession station",
+    "de": "Berufsstation fehlt",
+    "en": "Missing profession station"
+  }
+]

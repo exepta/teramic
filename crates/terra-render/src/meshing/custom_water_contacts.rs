@@ -11,7 +11,10 @@ impl ModelSnapshot {
         let Ok(origin) = section.origin() else {
             return false;
         };
-        self.water_contacts.iter().any(|(cell, &wet)| {
+        self.water_plants.iter().any(|(cell, plant)| {
+            let global = std::array::from_fn(|axis| origin[axis] + i64::from(cell[axis]));
+            plant.offset != plant.offset(global, journal)
+        }) || self.water_contacts.iter().any(|(cell, &wet)| {
             let global = std::array::from_fn(|axis| origin[axis] + i64::from(cell[axis]));
             wet != journal.fluid(global).is_some_and(|water| water.amount == 8)
         })
@@ -24,6 +27,10 @@ impl ModelSnapshot {
         let Ok(origin) = section.origin() else {
             return;
         };
+        for (cell, plant) in &mut self.water_plants {
+            let global = std::array::from_fn(|axis| origin[axis] + i64::from(cell[axis]));
+            plant.offset = plant.offset(global, journal);
+        }
         for (cell, wet) in &mut self.water_contacts {
             let global = std::array::from_fn(|axis| origin[axis] + i64::from(cell[axis]));
             *wet = journal.fluid(global).is_some_and(|water| water.amount == 8);

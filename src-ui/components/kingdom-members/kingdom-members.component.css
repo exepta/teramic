@@ -1,0 +1,4 @@
+.keep-permissions { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.keep-permissions > div { display: flex; flex-direction: row; align-items: center; gap: 10px; min-width: 0; padding: 6px 0; border-bottom: 1px solid #5d462e; }
+.keep-permissions label { flex-grow: 1; min-width: 0; }
+.keep-permissions p { flex-shrink: 0; font-size: 17px; }

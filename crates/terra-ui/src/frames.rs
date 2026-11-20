@@ -4,11 +4,31 @@ use bevy::{
     ui::widget::{ImageNode, NodeImageMode},
 };
 use tilt_ui::{ElementClasses, ElementId};
+mod categories;
+mod labels;
+
+/// Shared caption and category sizing for the game menus and standalone editor.
+pub struct MenuLayoutPlugin;
+
+impl Plugin for MenuLayoutPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            PostUpdate,
+            (
+                labels::wrap_control_captions,
+                categories::equalize_category_widths,
+            )
+                .chain()
+                .before(bevy::ui::UiSystems::Prepare),
+        );
+    }
+}
 
 #[derive(Component, PartialEq)]
 pub(crate) struct CatalogGridCapacity(pub usize);
 
 pub(crate) fn install(app: &mut App) {
+    app.add_plugins(MenuLayoutPlugin);
     app.add_systems(
         PostUpdate,
         (

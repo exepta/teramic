@@ -21,3 +21,6 @@ serde_json.workspace = true
 # The painted-albedo asset test decodes PNG without relying on client features.
 bevy = { workspace = true, features = ["png"] }
 wesl = "=0.6.0"
+
+# Validate fully composed native vertex shaders without requiring a GPU.
+naga = { version = "=30.0.1", features = ["wgsl-in"] }

@@ -1,0 +1,49 @@
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Finished `test` profile [optimized + debuginfo] target(s) in 1m 30s
+     Running unittests src/lib.rs (target/world-validation/debug/deps/terra_world-241b0ee1f61de9ef)
+
+running 41 tests
+test generation::structures::build::graves::adapted::tests::local_foundations_reject_large_fill_or_cut_before_writing ... ok
+test generation::structures::build::graves::tests::old_revisions_and_non_spirit_regions_cannot_spawn_graves ... ok
+test generation::structures::build::graves::adapted::tests::terrain_path_preserves_individual_treads_and_joins_natural_ground ... ok
+test generation::structures::build::tests::foundation_probes_real_cave_skylights_and_ravines_not_just_the_unchanged_heightfield ... ok
+test generation::structures::build::tests::road_doglegs_reject_impossible_endpoint_grades_before_writing_disconnected_steps ... ok
+test generation::structures::build::tests::real_water_bridges_keep_both_travel_axes_clear_and_place_rails_outside_the_three_wide_deck ... ok
+test generation::structures::build::tests::climate_building_styles_use_real_distinct_roofs_windows_and_reachable_interiors ... ok
+test generation::structures::build::village::tests::bridge_clearance_uses_full_deck_top_and_each_lanes_own_water_level ... ok
+test generation::structures::build::village::tests::clamped_bridge_decks_reject_submerged_origins_before_emitting_a_segment ... ok
+test generation::structures::build::royal::earthworks::tests::hillside_roadworks_never_construct_a_filled_royal_circle ... ok
+test generation::structures::build::village::tests::dirt_path_steps_face_uphill_for_all_axes_and_both_height_directions ... ok
+test generation::structures::build::graves::tests::rising_approach_terrain_replaces_last_treads_with_a_flush_landing ... ok
+test generation::structures::build::village::tests::graded_street_crossings_cannot_overwrite_an_existing_tread_or_side_lane ... ok
+test generation::structures::build::graves::adapted::tests::site_preserves_outdoor_soil_and_rock_between_rooms_instead_of_a_filled_cuboid ... ok
+test generation::structures::build::village::tests::modern_gables_have_in_plane_framed_attic_windows_without_replacing_the_roof ... ok
+test generation::structures::build::graves::tests::actual_stair_collision_has_third_block_steps_and_flush_landings_in_both_directions ... ok
+test generation::structures::build::village::tests::rotated_modern_roofs_and_tower_treads_face_the_actual_rise ... ok
+test generation::structures::build::graves::adapted::tests::all_variants_have_distinct_functional_floors_real_loot_and_collision_clear_routes ... ok
+test generation::structures::build::royal::earthworks::tests::revised_kingdom_and_outpost_leave_the_ground_between_buildings_untouched ... ok
+test generation::structures::build::village::tests::revision_two_keeps_its_existing_furniture_and_new_decor_does_not_overwrite_tombstones ... ok
+test generation::structures::build::village::populated::tests::street_lights_are_bounded_supported_and_do_not_retrofit_old_layouts ... ok
+test generation::structures::build::royal::vegetation::tests::authored_gardens_generate_the_same_harvestable_props_with_or_without_mesh_and_respect_edits ... ok
+test generation::structures::build::royal::tests::saved_revision_five_still_uses_its_original_village_generator_and_old_limits ... ok
+test generation::structures::build::graves::tests::natural_spirit_sites_reach_all_levels_through_the_public_voxel_generator ... ok
+test generation::structures::build::graves::tests::all_three_tombs_have_connected_clear_supported_routes_and_real_treasure ... ok
+test generation::structures::build::village::populated::tests::residents_are_cached_order_independent_and_old_settlement_voxels_are_not_retrofitted ... ok
+test generation::structures::build::graves::adapted::tests::real_revision_ten_graves_stream_every_room_stair_treasure_and_exterior_approach ... ok
+test generation::structures::build::royal::tests::revision_seven_doors_fill_real_jambs_with_closed_leaves_across_both_wall_axes ... ok
+test generation::structures::build::royal::tests::winter_terraces_temperate_ring_and_palisade_outpost_are_distinct_real_layouts ... ok
+test generation::structures::build::royal::tests::revision_seven_hillside_fields_keep_natural_heights_and_perimeters_get_grass_slopes ... ok
+test generation::structures::build::village::tests::seeded_street_layouts_have_reachable_oriented_roles_and_preserve_revision_one ... ok
+test generation::structures::build::royal::tests::revision_seven_stronghold_toggles_are_independent_and_do_not_reroll_disabled_sites ... ok
+test generation::structures::build::royal::tests::real_hillside_gate_roads_join_natural_ground_without_grass_overhangs_or_terminal_walls ... ok
+test generation::structures::build::village::tests::furnished_houses_keep_authored_machine_fronts_and_peer_axes_in_all_rotations_and_styles ... ok
+test generation::structures::build::royal::tests::keep_stairwells_reach_all_four_stories_and_winter_ward_gate_meets_its_ramp ... ok
+test generation::structures::build::village::populated::tests::every_size_has_exact_civic_quotas_plus_residential_houses_and_distinct_seeded_streets ... ok
+test generation::structures::build::royal::tests::authored_strongholds_have_exact_seeded_initial_populations_real_beds_and_capture_markers ... ok
+test generation::structures::build::royal::vegetation::tests::new_courtyards_have_real_trees_and_lanterns_without_touching_legacy_plans ... ok
+test generation::structures::build::village::populated::tests::populated_villages_fit_real_default_terrain_for_three_seeds ... ok
+test generation::structures::build::village::tests::revision_four_terrain_preserves_all_village_styles_for_three_real_seeds ... ok
+test generation::structures::build::village::tests::default_terrain_discovers_all_village_styles_for_three_real_seeds ... ok
+
+test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 1401 filtered out; finished in 2.90s
+

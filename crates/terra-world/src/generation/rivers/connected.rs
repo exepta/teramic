@@ -13,7 +13,12 @@ impl TerraGenerator {
             return None;
         }
         let region = region_at(x, z);
-        let path = self.connected_path(region)?;
+        let path = if self.config().river_terrain_revision >= 7 {
+            self.macro_path_at(x, z)
+                .or_else(|| self.connected_path(region))?
+        } else {
+            self.connected_path(region)?
+        };
         let course = path.points.map(|p| {
             let [x, z] = path.frame.world(p[0], p[2]);
             [x, p[1], z]
@@ -69,8 +74,31 @@ impl TerraGenerator {
     }
 
     pub(super) fn connected_river_at(&self, x: f64, z: f64) -> Option<RiverSample> {
-        let path = self.connected_path(region_at(x, z))?;
-        let main = self.sample_drainage(&path, x, z, None).map(|mut sample| {
+        let local = self
+            .connected_path(region_at(x, z))
+            .and_then(|path| self.sample_network(&path, x, z));
+        if self.config().river_terrain_revision >= 7 {
+            return select_network_sample(
+                self.macro_path_at(x, z)
+                    .and_then(|path| self.sample_network(&path, x, z))
+                    .map(|mut sample| {
+                        sample.roof_blend = 0.0;
+                        sample.covered = false;
+                        sample
+                    }),
+                local,
+            );
+        }
+        local
+    }
+
+    pub(super) fn sample_network(
+        &self,
+        path: &super::network::RiverNetwork,
+        x: f64,
+        z: f64,
+    ) -> Option<RiverSample> {
+        let main = self.sample_drainage(path, x, z, None).map(|mut sample| {
             if !path.tributaries.is_empty() {
                 let along = path.frame.project(x, z)[1];
                 let accumulated: f64 = path
@@ -86,6 +114,9 @@ impl TerraGenerator {
                 // Additional drainage widens the same real channel gradually;
                 // no new water source or independent simulation is introduced.
                 sample.width += (accumulated / 50_176.0).sqrt().min(4.0) * 0.35;
+                if self.config().river_terrain_revision >= 5 {
+                    sample.width = super::width::clamp_half_width(sample.width);
+                }
             }
             sample
         });
@@ -105,13 +136,16 @@ impl TerraGenerator {
     }
 
     pub(in crate::generation) fn connected_lake_at(&self, x: f64, z: f64) -> Option<OasisSample> {
+        if let Some(sample) = self.macro_lake_at(x, z) {
+            return Some(sample);
+        }
         let lake = self.connected_path(region_at(x, z))?.lake?;
         if (x - lake.center[0]).abs().max((z - lake.center[1]).abs())
-            > lake.radius * 1.9 + BANK_REACH
+            > lake.radius * 1.9 * self.spirit_water_area_scale(x, z).sqrt() + BANK_REACH
         {
             return None;
         }
-        let sample = lake.sample(x, z);
+        let sample = self.spirit_lake_sample(lake, x, z);
         (sample.distance < sample.radius + BANK_REACH).then_some(sample)
     }
 
@@ -120,6 +154,11 @@ impl TerraGenerator {
         center: [f64; 2],
         reach: f64,
     ) -> bool {
+        if let Some(sample) = self.macro_lake_at(center[0], center[1])
+            && sample.distance < sample.radius + BANK_REACH + reach * 2.4
+        {
+            return true;
+        }
         self.connected_path(region_at(center[0], center[1]))
             .and_then(|path| path.lake)
             .is_some_and(|lake| {
@@ -164,52 +203,64 @@ impl TerraGenerator {
 
     pub(super) fn brook_conflicts_with_region(&self, brook: &RiverPath) -> bool {
         let points = brook.points.map(|p| brook.frame.world(p[0], p[2]));
-        let reach = brook.width * 1.38 + 1.2 + 12.0 + 2.0;
+        let reach = if self.config().river_terrain_revision >= 5 {
+            super::width::MAX_HALF_WIDTH + 12.0 + 2.0
+        } else {
+            brook.width * 1.38 + 1.2 + 12.0 + 2.0
+        };
         let bounds = course_bounds(&points, reach);
         let lower = region_at(bounds[0][0], bounds[0][1]);
         let upper = region_at(bounds[1][0], bounds[1][1]);
         debug_assert!(upper[0] - lower[0] <= 1 && upper[1] - lower[1] <= 1);
         for z in lower[1]..=upper[1] {
             for x in lower[0]..=upper[0] {
-                let Some(regional) = self.connected_path([x, z]) else {
-                    continue;
-                };
-                if regional.lake.is_some_and(|lake| {
-                    let reach = lake.radius * 1.9 + BANK_REACH;
-                    overlaps(
-                        bounds,
-                        [
-                            [lake.center[0] - reach, lake.center[1] - reach],
-                            [lake.center[0] + reach, lake.center[1] + reach],
-                        ],
-                    )
-                }) {
-                    return true;
-                }
-                if !self.config().rivers {
-                    continue;
-                }
-                for course in std::iter::once(&regional.main)
-                    .chain(regional.tributaries.iter().map(|tributary| &tributary.path))
-                    .chain(regional.distributaries.iter().map(|branch| &branch.path))
-                {
-                    let regional_points = course.points.map(|p| course.frame.world(p[0], p[2]));
-                    let regional_reach = course.width * 1.38 + 7.0 + 36.0;
-                    if !overlaps(bounds, course_bounds(&regional_points, regional_reach)) {
+                let local = self.connected_path([x, z]);
+                let broad =
+                    self.macro_path_at((x as f64 + 0.5) * REGION, (z as f64 + 0.5) * REGION);
+                for regional in local.into_iter().chain(broad) {
+                    if regional.lake.is_some_and(|lake| {
+                        let reach = lake.radius * 1.9 + BANK_REACH;
+                        overlaps(
+                            bounds,
+                            [
+                                [lake.center[0] - reach, lake.center[1] - reach],
+                                [lake.center[0] + reach, lake.center[1] + reach],
+                            ],
+                        )
+                    }) {
+                        return true;
+                    }
+                    if !self.config().rivers {
                         continue;
                     }
-                    // Both immutable courses have 48 segments. AABB rejection is
-                    // deliberately conservative, including every dry-bank apron.
-                    // This runs once before caching the complete brook, not per voxel.
-                    for pair in points.windows(2) {
-                        let brook_bounds = segment_bounds(pair[0], pair[1], reach);
-                        if regional_points.windows(2).any(|other| {
-                            overlaps(
-                                brook_bounds,
-                                segment_bounds(other[0], other[1], regional_reach),
-                            )
-                        }) {
-                            return true;
+                    for course in std::iter::once(&regional.main)
+                        .chain(regional.tributaries.iter().map(|tributary| &tributary.path))
+                        .chain(regional.distributaries.iter().map(|branch| &branch.path))
+                    {
+                        let regional_points = course.points.map(|p| course.frame.world(p[0], p[2]));
+                        let regional_reach = if self.config().river_terrain_revision >= 6 {
+                            super::width::MAX_HALF_WIDTH + 56.0 + 2.0
+                        } else if self.config().river_terrain_revision >= 5 {
+                            super::width::MAX_HALF_WIDTH + 36.0 + 2.0
+                        } else {
+                            course.width * 1.38 + 7.0 + 36.0
+                        };
+                        if !overlaps(bounds, course_bounds(&regional_points, regional_reach)) {
+                            continue;
+                        }
+                        // Both immutable courses have 48 segments. AABB rejection is
+                        // deliberately conservative, including every dry-bank apron.
+                        // This runs once before caching the complete brook, not per voxel.
+                        for pair in points.windows(2) {
+                            let brook_bounds = segment_bounds(pair[0], pair[1], reach);
+                            if regional_points.windows(2).any(|other| {
+                                overlaps(
+                                    brook_bounds,
+                                    segment_bounds(other[0], other[1], regional_reach),
+                                )
+                            }) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -219,17 +270,31 @@ impl TerraGenerator {
     }
 
     fn build_connected_path(&self, cell: [i64; 2]) -> Option<super::network::RiverNetwork> {
+        self.build_catchment(
+            cell,
+            [cell[0] as f64 * REGION, cell[1] as f64 * REGION],
+            REGION,
+            false,
+        )
+    }
+
+    pub(super) fn build_catchment(
+        &self,
+        cell: [i64; 2],
+        origin: [f64; 2],
+        extent: f64,
+        large: bool,
+    ) -> Option<super::network::RiverNetwork> {
         let seed = layer_seed(
             self.config().seed.0
                 ^ (cell[0] as u64).wrapping_mul(0x9e3779b97f4a7c15)
                 ^ (cell[1] as u64).wrapping_mul(0xbf58476d1ce4e5b9),
             171,
         );
-        let origin = [cell[0] as f64 * REGION, cell[1] as f64 * REGION];
         let probes: [([f64; 2], f64); 49] = std::array::from_fn(|index| {
             let point = [
-                origin[0] + MARGIN + (index % 7) as f64 * (REGION - 2.0 * MARGIN) / 6.0,
-                origin[1] + MARGIN + (index / 7) as f64 * (REGION - 2.0 * MARGIN) / 6.0,
+                origin[0] + MARGIN + (index % 7) as f64 * (extent - 2.0 * MARGIN) / 6.0,
+                origin[1] + MARGIN + (index / 7) as f64 * (extent - 2.0 * MARGIN) / 6.0,
             ];
             (
                 point,
@@ -240,52 +305,101 @@ impl TerraGenerator {
                 ),
             )
         });
-        let mut coastal: Vec<_> = probes
-            .iter()
-            .filter(|(point, height)| {
-                *height < self.config().sea_level - 1.0
-                    && self.climate_biome_at(point[0], point[1]).weights.ocean >= 0.35
-            })
-            .collect();
-        // Prefer a real shore rather than extending the visible course far
-        // across a deep ocean bed. Connectivity is checked in bounded world space.
-        coastal.sort_unstable_by(|a, b| b.1.total_cmp(&a.1));
-        let coastal = coastal
-            .into_iter()
-            .take(3)
-            .find(|(point, _)| self.connected_ocean_outlet(*point));
-        let (mouth, mouth_height, coast, inland_lake) = if let Some(&(point, height)) = coastal {
-            (point, height, true, None)
+        let (source, mouth, coast, inland_lake) = if large && extent > 24_000.0 {
+            let route = self.long_macro_endpoints(&probes, seed)?;
+            (route.source, route.mouth, route.coast, route.lake)
         } else {
-            let mut inland: Vec<_> = probes
+            let mut coastal: Vec<_> = probes
                 .iter()
-                .filter(|(_, height)| *height > self.config().sea_level + 5.0)
+                .filter(|(point, height)| {
+                    *height < self.config().sea_level - 1.0
+                        && self.climate_biome_at(point[0], point[1]).weights.ocean >= 0.35
+                })
                 .collect();
-            inland.sort_unstable_by(|a, b| a.1.total_cmp(&b.1));
-            let (point, height, lake) =
-                inland.into_iter().take(3).find_map(|&(point, height)| {
-                    self.build_regional_lake(point, seed)
-                        .map(|lake| (point, height, lake))
-                })?;
-            (point, height, false, Some(lake))
-        };
-        let aridity = self.climate_biome_at(mouth[0], mouth[1]).aridity();
-        if aridity > 0.55 && !seed.is_multiple_of(7) {
-            return None;
-        }
-        let &(source, _) = probes
-            .iter()
-            .filter(|(point, height)| {
-                distance(*point, mouth) >= 800.0
-                    && *height > mouth_height + 3.0
-                    && *height > self.config().sea_level + 6.0
-            })
-            .max_by(|a, b| {
-                let rank = |p: &([f64; 2], f64)| {
-                    distance(p.0, mouth) + (p.1 - mouth_height).min(80.0) * 2.0
+            // Prefer a real shore rather than extending the visible course far
+            // across a deep ocean bed. Connectivity is checked in bounded world space.
+            coastal.sort_unstable_by(|a, b| b.1.total_cmp(&a.1));
+            let coastal = coastal
+                .into_iter()
+                .take(3)
+                .find(|(point, _)| self.connected_ocean_outlet(*point));
+            let (mut mouth, mouth_height, coast, inland_lake) =
+                if let Some(&(point, height)) = coastal {
+                    (point, height, true, None)
+                } else {
+                    let mut inland: Vec<_> = probes
+                        .iter()
+                        .filter(|(_, height)| *height > self.config().sea_level + 5.0)
+                        .collect();
+                    inland.sort_unstable_by(|a, b| a.1.total_cmp(&b.1));
+                    let (point, height, lake) =
+                        inland.into_iter().take(3).find_map(|&(point, height)| {
+                            self.build_regional_lake(point, seed)
+                                .map(|lake| (point, height, lake))
+                        })?;
+                    (point, height, false, Some(lake))
                 };
-                rank(a).total_cmp(&rank(b))
-            })?;
+            let aridity = self.climate_biome_at(mouth[0], mouth[1]).aridity();
+            if aridity > 0.55 && !seed.is_multiple_of(7) {
+                return None;
+            }
+            let mut sources: Vec<_> = probes
+                .iter()
+                .filter(|(point, height)| {
+                    distance(*point, mouth)
+                        >= if large {
+                            if extent > 24_000.0 {
+                                17_000.0
+                            } else {
+                                extent * 0.48
+                            }
+                        } else if self.config().river_terrain_revision >= 7 {
+                            160.0
+                        } else {
+                            800.0
+                        }
+                        && *height > mouth_height + 3.0
+                        && *height > self.config().sea_level + 6.0
+                })
+                .collect();
+            let desired = [240.0, 480.0, 850.0, 1400.0][((seed >> 20) % 4) as usize];
+            let rank = |p: &([f64; 2], f64)| {
+                if !large && self.config().river_terrain_revision >= 7 {
+                    -(distance(p.0, mouth) - desired).abs() + (p.1 - mouth_height).min(80.0) * 0.15
+                } else {
+                    distance(p.0, mouth) + (p.1 - mouth_height).min(80.0) * 2.0
+                }
+            };
+            // Stable ascending order followed by reversal also preserves the old
+            // max_by contract: the last equally ranked source probe wins.
+            sources.sort_by(|a, b| rank(a).total_cmp(&rank(b)));
+            sources.reverse();
+            let &(source, _) =
+                sources
+                    .into_iter()
+                    .take(if large { 8 } else { 1 })
+                    .find(|(source, _)| {
+                        if !large {
+                            return true;
+                        }
+                        if coast {
+                            self.macro_shore(*source, mouth).is_some_and(|shore| {
+                                distance(*source, shore)
+                                    >= if extent > 24000.0 {
+                                        17000.0
+                                    } else {
+                                        extent * 0.48
+                                    }
+                            })
+                        } else {
+                            self.dry_macro_line(*source, mouth)
+                        }
+                    })?;
+            if large && coast {
+                mouth = self.macro_shore(source, mouth)?;
+            }
+            (source, mouth, coast, inland_lake)
+        };
         let length = distance(source, mouth);
         let step = length / (POINTS - 1) as f64;
         let frame = DrainageFrame {
@@ -320,7 +434,7 @@ impl TerraGenerator {
             lake.center
                 .into_iter()
                 .zip(origin)
-                .all(|(c, o)| c - reach > o && c + reach < o + REGION)
+                .all(|(c, o)| c - reach > o && c + reach < o + extent)
         });
         let lake_anchor = lake.map(|lake| frame.project(lake.center[0], lake.center[1]));
         let phase = f64::from(seed % 1024) * std::f64::consts::TAU / 1024.0;
@@ -337,10 +451,14 @@ impl TerraGenerator {
                 (cross * weight, 1.0 - (-((t - anchor) / 0.14).powi(2)).exp())
             });
             let x = bend
-                + (z * 0.009 + phase).sin()
-                    * (t * std::f64::consts::PI).sin()
-                    * (22.0 + f64::from((seed >> 12) % 30))
-                    * meander;
+                + if self.config().river_terrain_revision >= 6 {
+                    super::fantasy::meander(z, t, phase, seed) * meander
+                } else {
+                    (z * 0.009 + phase).sin()
+                        * (t * std::f64::consts::PI).sin()
+                        * (22.0 + f64::from((seed >> 12) % 30))
+                        * meander
+                };
             [x, 0.0, z]
         });
         let mut ground = [0.0; POINTS];
@@ -353,15 +471,28 @@ impl TerraGenerator {
                 self.climate_biome_at(world[0], world[1]),
             );
             let mut support = f64::INFINITY;
-            for along in [-0.5, -0.25, 0.0, 0.25, 0.5] {
+            let subdivisions = if large {
+                (step / 24.0).ceil().clamp(4.0, 64.0) as i32
+            } else {
+                4
+            };
+            for sub in 0..=subdivisions {
+                let along = f64::from(sub) / f64::from(subdivisions) - 0.5;
                 let at = (index as f64 + along).clamp(0.0, (POINTS - 1) as f64);
                 let a = at.floor() as usize;
                 let b = (a + 1).min(POINTS - 1);
                 let center_x = points[a][0] + (points[b][0] - points[a][0]) * at.fract();
-                for cross in (-24..=24).step_by(3) {
+                for cross in (-24..=24).step_by(if large { 12 } else { 3 }) {
                     let [x, z] = frame.world(center_x + f64::from(cross), at * step);
-                    support =
-                        support.min(self.base_height_with_biome(x, z, self.climate_biome_at(x, z)));
+                    let height = self.base_height_with_biome(x, z, self.climate_biome_at(x, z));
+                    if large
+                        && cross == 0
+                        && at * step < length - 96.0
+                        && height < self.config().sea_level - 0.5
+                    {
+                        return None;
+                    }
+                    support = support.min(height);
                 }
             }
             caps[index] = (support - 3.0).max(self.config().sea_level);
@@ -416,7 +547,11 @@ impl TerraGenerator {
             frame,
             lake,
         };
-        Some(self.regional_network(main, &probes))
+        if large {
+            self.macro_network(main, &probes, seed)
+        } else {
+            Some(self.regional_network(main, &probes))
+        }
     }
 
     pub(super) fn connected_ocean_outlet(&self, mouth: [f64; 2]) -> bool {

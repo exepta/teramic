@@ -1,0 +1,21 @@
+{
+  "center": [
+    -687,
+    36,
+    499
+  ],
+  "ecology_revision": 5,
+  "extra": {
+    "material": 418
+  },
+  "fixture_edits": 0,
+  "scene": "blood-props",
+  "seed": 42042,
+  "source_cells": [
+    [
+      -687,
+      36,
+      499
+    ]
+  ]
+}

@@ -1,4 +1,4 @@
-//! Bounded resting shallow pools; source creation stays confined to closed 2x2 basins.
+//! Bounded shallow pools with conservative gradual local pressure exchange.
 use super::*;
 use crate::water::space::FluidSpace;
 use std::collections::{BTreeMap, BTreeSet, HashSet, VecDeque};
@@ -13,15 +13,6 @@ const FULL: FluidCell = FluidCell {
     flow: [0; 2],
     source: false,
 };
-
-fn cells(origin: Cell) -> [Cell; 4] {
-    [
-        [origin[0], origin[1], origin[2]],
-        [origin[0] + 1, origin[1], origin[2]],
-        [origin[0], origin[1], origin[2] + 1],
-        [origin[0] + 1, origin[1], origin[2] + 1],
-    ]
-}
 
 /// Physical support cannot be inferred from can_hold_fluid: open machinery and
 /// tanks intentionally seal terrain fluid voxels, but do not provide a full roof.
@@ -60,6 +51,35 @@ fn solid_space(sampler: &mut Sampler<'_>, journal: &EditJournal, p: Cell) -> Opt
         vec![]
     };
     Some(FluidSpace { solids })
+}
+
+/// A full liquid layer supports the next layer only while its loaded column
+/// reaches a real sealed surface. A full falling packet is not a solid floor.
+fn floor_supported(
+    sampler: &mut Sampler<'_>,
+    journal: &EditJournal,
+    mut p: Cell,
+) -> Result<bool, terra_voxel::SectionPos> {
+    for _ in 0..64 {
+        let Some(floor) = solid_space(sampler, journal, p) else {
+            return Err(global_to_section(p).0);
+        };
+        if !floor
+            .wet_boxes(1.)
+            .iter()
+            .any(|void| void.maximum[1] >= 1. - EPSILON)
+        {
+            return Ok(true);
+        }
+        let Some(water) = sampler.cell(journal, p) else {
+            return Err(global_to_section(p).0);
+        };
+        if water.amount != FLUID_CAPACITY {
+            return Ok(false);
+        }
+        p[1] -= 1;
+    }
+    Ok(false)
 }
 
 pub(super) const MAX_POOL_CELLS: usize = 64;
@@ -120,21 +140,16 @@ impl Resting {
                 }
             }
             let below = [p[0], p[1] - 1, p[2]];
-            match solid_space(sampler, journal, below) {
-                Some(floor)
-                    if floor
-                        .wet_boxes(1.)
-                        .iter()
-                        .any(|void| void.maximum[1] >= 1. - EPSILON) =>
-                {
+            match floor_supported(sampler, journal, below) {
+                Ok(false) => {
                     return Proof {
                         waiting: None,
                         ..proof
                     };
                 }
-                Some(_) => {}
-                None => {
-                    proof.waiting.get_or_insert(global_to_section(below).0);
+                Ok(true) => {}
+                Err(section) => {
+                    proof.waiting.get_or_insert(section);
                 }
             }
             for direction in [[-1, 0, 0], [1, 0, 0], [0, 0, -1], [0, 0, 1]] {
@@ -228,12 +243,7 @@ impl Resting {
         let locally_open = sampler
             .cell(journal, above)
             .is_some_and(|cell| cell.amount > 0)
-            || solid_space(sampler, journal, below).is_some_and(|floor| {
-                floor
-                    .wet_boxes(1.)
-                    .iter()
-                    .any(|void| void.maximum[1] >= 1. - EPSILON)
-            })
+            || matches!(floor_supported(sampler, journal, below), Ok(false))
             || [[-1, 0, 0], [1, 0, 0], [0, 0, -1], [0, 0, 1]]
                 .into_iter()
                 .any(|direction| {
@@ -305,30 +315,113 @@ impl Resting {
         {
             return Ok(false);
         }
-        let origin = [
-            positions.iter().map(|p| p[0]).min().unwrap(),
-            p[1],
-            positions.iter().map(|p| p[2]).min().unwrap(),
-        ];
-        let two_by_two = positions.as_slice() == cells(origin).as_slice();
-        let promote =
-            two_by_two && ((old[0].source && old[3].source) || (old[1].source && old[2].source));
-        let total: u16 = old.iter().map(|cell| u16::from(cell.amount)).sum();
+        if !old.iter().any(|cell| cell.source)
+            && positions
+                .iter()
+                .zip(&old)
+                .any(|(&p, &cell)| supply::model_intake(sampler, journal, p, cell))
+        {
+            return Ok(false);
+        }
+        let total: u16 = old.iter().map(|c| u16::from(c.amount)).sum();
+        let mut next = old.clone();
+        let mut removed = 0u64;
+        for cell in &mut next {
+            cell.flow = [0; 2];
+            if cell.source && cell.amount > bank_capacity {
+                removed += u64::from(cell.amount - bank_capacity);
+                cell.amount = bank_capacity;
+            }
+        }
+        let index: BTreeMap<_, _> = positions.iter().enumerate().map(|(i, &p)| (p, i)).collect();
+        // Relax only touching cells by one eighth per step. A distant dry member
+        // of the same basin cannot instantly acquire the source's full height.
+        for (i, &p) in positions.iter().enumerate() {
+            for d in [[1, 0, 0], [0, 0, 1], [-1, 0, 0], [0, 0, -1]] {
+                let q = std::array::from_fn(|a| p[a] + d[a]);
+                let Some(&j) = index.get(&q) else { continue };
+                if old[j].source || next[j].amount >= bank_capacity {
+                    continue;
+                }
+                let difference = old[i].amount.saturating_sub(old[j].amount);
+                if difference < if old[i].source { 1 } else { 2 } || next[i].amount == 0 {
+                    continue;
+                }
+                if !old[i].source {
+                    next[i].amount -= 1;
+                }
+                next[j].amount += 1;
+                next[j].flow = [d[0] as i8, d[2] as i8];
+            }
+        }
+        // Propagate one unit of pressure through the connected wet portion of
+        // the basin. Quantized neighbor heads alone can leave a permanent
+        // staircase. A dry path still fills one frontier cell at a time, and a
+        // finite donor pays exactly the amount its recipient receives.
         let supplied = old.iter().any(|cell| cell.source);
-        let count = positions.len() as u16;
-        let next: Vec<_> = old
+        let goals: Vec<_> = old
             .iter()
             .enumerate()
-            .map(|(index, old)| FluidCell {
-                amount: if supplied {
+            .map(|(i, cell)| {
+                if cell.source {
+                    cell.amount
+                } else if supplied {
                     bank_capacity
                 } else {
-                    (total / count + u16::from(index < (total % count) as usize)) as u8
-                },
-                source: promote || old.source,
-                flow: [0; 2],
+                    (total / old.len() as u16 + u16::from(i < total as usize % old.len())) as u8
+                }
             })
             .collect();
+        for donor in 0..next.len() {
+            if !next[donor].source && next[donor].amount <= goals[donor] {
+                continue;
+            }
+            let mut parents = vec![usize::MAX; next.len()];
+            parents[donor] = donor;
+            let mut queue = VecDeque::from([donor]);
+            let mut recipient = None;
+            while let Some(i) = queue.pop_front() {
+                if next[i].amount < goals[i] && !next[i].source {
+                    recipient = Some(i);
+                    break;
+                }
+                for d in [[1, 0, 0], [0, 0, 1], [-1, 0, 0], [0, 0, -1]] {
+                    let q = std::array::from_fn(|a| positions[i][a] + d[a]);
+                    if let Some(&j) = index.get(&q)
+                        && parents[j] == usize::MAX
+                    {
+                        parents[j] = i;
+                        queue.push_back(j);
+                    }
+                }
+            }
+            let Some(mut recipient) = recipient else {
+                continue;
+            };
+            let mut path = vec![recipient];
+            while parents[recipient] != donor {
+                recipient = parents[recipient];
+                path.push(recipient);
+            }
+            path.reverse();
+            let target = *path
+                .iter()
+                .find(|&&i| next[i].amount == 0)
+                .unwrap_or_else(|| path.last().unwrap());
+            if next[target].amount >= bank_capacity {
+                continue;
+            }
+            if !next[donor].source {
+                next[donor].amount -= 1;
+            }
+            next[target].amount += 1;
+            let from = positions[parents[target]];
+            next[target].flow = [
+                (positions[target][0] - from[0]) as i8,
+                (positions[target][2] - from[2]) as i8,
+            ];
+            break;
+        }
         let updates: Vec<_> = positions
             .iter()
             .copied()
@@ -341,8 +434,8 @@ impl Resting {
             step.changed |= journal.set_simulated_fluid(p, cell)?;
         }
         let after = next.iter().map(|cell| u64::from(cell.amount)).sum::<u64>();
-        let added = after.saturating_sub(u64::from(total));
-        step.drained += u64::from(total).saturating_sub(after);
+        let added = (after + removed).saturating_sub(u64::from(total));
+        step.drained += removed;
         step.sourced += added;
         step.transferred += added;
         self.handled.extend(positions.iter().copied());
@@ -356,7 +449,10 @@ impl Resting {
     }
 }
 
-fn preflight(journal: &EditJournal, updates: &[(Cell, FluidCell)]) -> Result<(), FluidError> {
+pub(super) fn preflight(
+    journal: &EditJournal,
+    updates: &[(Cell, FluidCell)],
+) -> Result<(), FluidError> {
     let mut fluid = BTreeMap::<_, u64>::new();
     let mut meshes = BTreeMap::<_, u64>::new();
     for &(p, _) in updates {

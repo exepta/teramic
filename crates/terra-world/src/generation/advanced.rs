@@ -141,6 +141,9 @@ pub(super) struct AdvancedSampler {
     ocean_scale: f64,
     sea_level: f64,
     amplitude: f64,
+    fantasy_relief: bool,
+    regional_mountains: bool,
+    regional_variety: bool,
     cache: Mutex<FieldCache>,
 }
 
@@ -179,10 +182,23 @@ impl AdvancedSampler {
                 .map_or_else(LandscapeDefinitions::legacy_v5, |definitions| {
                     definitions.landscapes.clone()
                 }),
-            biome_scale: config.biome_scale,
-            ocean_scale: config.ocean_scale,
+            biome_scale: config.biome_scale
+                * if config.landscape_revision >= 8 {
+                    2.0
+                } else {
+                    1.0
+                },
+            ocean_scale: config.ocean_scale
+                * if config.landscape_revision >= 8 {
+                    2.0
+                } else {
+                    1.0
+                },
             sea_level: config.sea_level,
             amplitude: ((config.hill_amplitude + config.mountain_amplitude) / 60.0).clamp(0.0, 2.0),
+            fantasy_relief: config.landscape_revision >= 6,
+            regional_mountains: config.landscape_revision >= 7,
+            regional_variety: config.landscape_revision >= 8,
             cache: Default::default(),
         }
     }
@@ -296,7 +312,50 @@ impl AdvancedSampler {
             peaks_valleys,
             ridge_strength,
         };
-        let weights = profile_weights(fields, district, d);
+        let mut weights = if self.regional_mountains {
+            // A separate broad field confines mountain families to occasional
+            // ranges. Ridged noise alone is high across most of the continent.
+            let region =
+                unit(field(&self.broad, wx - 5317.0, wz + 4123.0, d.region_scale * 2.0) * 1.75);
+            profile_weights_scaled(fields, district, d, smoothstep(0.60, 0.79, region))
+        } else {
+            profile_weights(fields, district, d)
+        };
+        if self.regional_variety {
+            let cold = 1.0 - smoothstep(0.28, 0.40, temperature);
+            let hot = smoothstep(0.60, 0.72, temperature);
+            let lost = (weights[4] + weights[5]) * (1.0 - cold) + weights[8] * (1.0 - hot);
+            weights[4] *= cold;
+            weights[5] *= cold;
+            weights[8] *= hot;
+            weights[2] += lost * humidity;
+            weights[0] += lost * (1.0 - humidity);
+        }
+        // Shared local districts vary the relief within a biome without changing
+        // its label. Two samples per cached terrain node, never per voxel.
+        let district = if self.regional_variety {
+            field(&self.smooth, wx + 1881.0, wz - 377.0, 1250.0)
+        } else {
+            0.0
+        };
+        let wrinkles = if self.regional_variety {
+            field(&self.broad, wx - 533.0, wz + 977.0, 145.0)
+        } else {
+            0.0
+        };
+        let fantasy = self.fantasy_relief.then(|| {
+            super::fantasy_relief::Fields::new(
+                field(&self.smooth, wx + 1371.0, wz - 943.0, d.region_scale * 0.44),
+                field(&self.ridge, wx - 719.0, wz + 359.0, d.region_scale * 0.16),
+                field(&self.broad, wx + 3071.0, wz + 1213.0, d.region_scale * 0.52),
+                field(
+                    &self.smooth,
+                    wx - 2147.0,
+                    wz - 1811.0,
+                    d.region_scale * 0.31,
+                ),
+            )
+        });
         let mut height = 0.0;
         let mut overhangs = 0.0;
         for (profile, weight) in d.profiles.iter().zip(weights) {
@@ -350,6 +409,56 @@ impl AdvancedSampler {
             shape -= valley * profile.erosion * 0.13;
             shape += (ridged - 0.5) * profile.ridge_strength * 0.14;
             shape += broad * profile.roughness * (1.0 - erosion * profile.erosion) * 0.12;
+            if let Some(fantasy) = fantasy {
+                use super::fantasy_relief::Style;
+                let style = match profile.kind {
+                    TerrainKind::Plains => Style::Plains,
+                    TerrainKind::RollingPlains => Style::Hills,
+                    TerrainKind::Forest => Style::Forest,
+                    TerrainKind::MountainForest | TerrainKind::FantasyMountains => Style::Mountain,
+                    TerrainKind::SnowyHighlands => Style::Alpine,
+                    TerrainKind::CherryGrove => Style::Grove,
+                    TerrainKind::SpiritForest => Style::Spirit,
+                    TerrainKind::Desert => Style::Desert,
+                    TerrainKind::Ocean => unreachable!("ocean has its unchanged seabed path"),
+                };
+                shape = if self.regional_mountains
+                    && !matches!(
+                        profile.kind,
+                        TerrainKind::MountainForest
+                            | TerrainKind::FantasyMountains
+                            | TerrainKind::SnowyHighlands
+                    ) {
+                    // Lowland biomes keep soft relief rather than inheriting
+                    // the new cliffs and rock shelves from every fantasy style.
+                    let softness = if matches!(
+                        profile.kind,
+                        TerrainKind::Plains | TerrainKind::RollingPlains
+                    ) {
+                        0.65
+                    } else {
+                        0.80
+                    };
+                    0.5 + (shape - 0.5) * softness
+                } else {
+                    fantasy.shape(style, shape, broad, erosion * profile.erosion)
+                };
+            }
+            if self.regional_variety {
+                let mountain = matches!(
+                    profile.kind,
+                    TerrainKind::MountainForest
+                        | TerrainKind::FantasyMountains
+                        | TerrainKind::SnowyHighlands
+                );
+                if mountain {
+                    shape += wrinkles * 0.045 + district * 0.055;
+                } else {
+                    let undulation = 0.25 + smoothstep(-0.55, 0.55, district) * 1.05;
+                    let basin = (1.0 - smoothstep(-0.65, -0.15, district)) * 0.10;
+                    shape = 0.5 + (shape - 0.5) * undulation + wrinkles * 0.11 - basin;
+                }
+            }
             shape = 0.5 + (shape - 0.5) * self.amplitude;
             shape = shape.clamp(0.0, 1.0);
             let target = profile.min_height + (profile.max_height - profile.min_height) * shape;
@@ -400,6 +509,15 @@ impl AdvancedSampler {
 }
 
 fn profile_weights(f: TerrainFields, district: f64, d: &LandscapeDefinitions) -> [f64; 10] {
+    profile_weights_scaled(f, district, d, 1.0)
+}
+
+fn profile_weights_scaled(
+    f: TerrainFields,
+    district: f64,
+    d: &LandscapeDefinitions,
+    mountain_permission: f64,
+) -> [f64; 10] {
     let marine = 1.0 - smoothstep(-0.16, 0.20, f.continentalness);
     let ocean_weight = d.get(TerrainKind::Ocean).weight;
     let ocean = marine * ocean_weight / (marine * ocean_weight + (1.0 - marine));
@@ -411,6 +529,11 @@ fn profile_weights(f: TerrainFields, district: f64, d: &LandscapeDefinitions) ->
         0.74,
         f.ridge_strength * 0.55 + unit(f.peaks_valleys) * 0.45,
     ) * (1.0 - smoothstep(0.55, 0.90, f.erosion) * 0.70);
+    let mountain = if mountain_permission < 1.0 {
+        mountain * mountain_permission.max(0.0)
+    } else {
+        mountain
+    };
     let cold = 1.0 - smoothstep(0.24, 0.45, f.temperature);
     let fantasy = mountain * smoothstep(-0.15, 0.70, f.peaks_valleys) * (1.0 - cold * 0.6);
     let snowy = mountain * cold;
@@ -527,11 +650,12 @@ impl TerraGenerator {
             return match self.climate_biome_at(x, z).weights.dominant() {
                 BiomeKind::Ocean => TerrainKind::Ocean,
                 BiomeKind::Plains => TerrainKind::Plains,
-                BiomeKind::Forest => TerrainKind::Forest,
+                BiomeKind::Forest | BiomeKind::BloodForest => TerrainKind::Forest,
                 BiomeKind::Desert | BiomeKind::ClifftedDesert => TerrainKind::Desert,
                 BiomeKind::Highland => TerrainKind::SnowyHighlands,
                 BiomeKind::MushroomPark => TerrainKind::SpiritForest,
                 BiomeKind::CherryForest => TerrainKind::CherryGrove,
+                BiomeKind::SpiritBlossom => TerrainKind::SpiritForest,
             };
         }
         self.advanced.sample(x, z).profile()
@@ -547,22 +671,60 @@ impl TerraGenerator {
             {
                 self.config().base_height
             } else {
-                self.advanced.height(x, z)
+                self.advanced_height(x, z)
             };
         }
         self.base_height_with_biome(x, z, self.climate_biome_at(x, z))
     }
 
     pub(super) fn advanced_height(&self, x: f64, z: f64) -> f64 {
-        self.advanced.height(x, z)
+        self.spirit_terraced_height(x, z, self.advanced.height(x, z))
     }
 
     pub(super) fn advanced_biome(&self, x: f64, z: f64) -> BiomeSample {
-        let sample = self.advanced.sample(x, z);
+        self.biome_from_node(self.advanced.sample(x, z))
+    }
+
+    /// Region centres need only one noise evaluation, independent of the
+    /// sixteen-node interpolation stencil used for local terrain.
+    pub(super) fn biome_at_region_center(&self, x: f64, z: f64) -> BiomeSample {
+        self.biome_from_node(self.advanced.node(x, z))
+    }
+
+    fn biome_from_node(&self, sample: TerrainNode) -> BiomeSample {
         let f = sample.fields;
         let w = sample.weights;
         let ocean = w[9];
         let land = 1.0 - ocean;
+        if self.config().landscape_revision >= 7 {
+            let mushrooms =
+                w[2] * smoothstep(0.50, 0.82, f.humidity) * (1.0 - unit(f.weirdness)) * 0.75;
+            let cliffs = if self.config().geology_revision > 0 {
+                // Ridge interiors must be able to become a visible Cliffted
+                // Desert, including the selected-biome world creation path.
+                w[8] * smoothstep(0.40, 0.75, f.ridge_strength)
+            } else {
+                0.0
+            };
+            // The biome's label and vegetation must describe the actual relief:
+            // a warm mountain range is not mislabeled as a flat Plains biome.
+            return BiomeSample {
+                temperature: f.temperature,
+                humidity: f.humidity,
+                weights: BiomeWeights {
+                    ocean,
+                    plains: w[0] + w[1],
+                    forest: w[2] + w[3] - mushrooms,
+                    highland: w[4] + w[5],
+                    desert: w[8] - cliffs,
+                    cliffted_desert: cliffs,
+                    cherry_forest: w[6],
+                    spirit_blossom: w[7],
+                    mushroom_park: mushrooms,
+                    blood_forest: 0.0,
+                },
+            };
+        }
         let desert = land
             * smoothstep(0.56, 0.78, f.temperature)
             * (1.0 - smoothstep(0.25, 0.49, f.humidity));
@@ -593,6 +755,8 @@ impl TerraGenerator {
                 forest: (forest - cherry_forest - mushroom_park).max(0.0),
                 plains: rest - forest,
                 cherry_forest,
+                spirit_blossom: 0.0,
+                blood_forest: 0.0,
                 mushroom_park,
                 cliffted_desert,
             },
@@ -617,5 +781,8 @@ impl TerraGenerator {
     }
 }
 
+#[cfg(test)]
+#[path = "advanced/region_tests.rs"]
+mod region_tests;
 #[cfg(test)]
 mod tests;

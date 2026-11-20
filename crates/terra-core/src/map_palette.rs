@@ -6,14 +6,14 @@ pub struct MapPalette {
     /// Indexed by the existing block ID. Empty until block assets are ready.
     pub colors: Vec<[f32; 3]>,
     /// The renderer's grass tint, in `BiomeWeights::values()` order.
-    pub biome_colors: [[f32; 3]; 8],
+    pub biome_colors: [[f32; 3]; 10],
     /// The grass block uses the painted face-group model rather than neutral turf.
     pub authored_grass: bool,
     /// Authored upper-face albedo after its surface palette, before biome tint.
     /// Separate from `colors` so cave cartography keeps its existing albedos.
     pub surface_grass: Option<[f32; 3]>,
     /// The water shader's linear scattering tint, in the same biome order.
-    pub water_colors: [[f32; 3]; 8],
+    pub water_colors: [[f32; 3]; 10],
     pub revision: u64,
 }
 
@@ -27,7 +27,7 @@ impl MapPalette {
                 hash = (hash ^ u64::from(*byte)).wrapping_mul(0x100000001b3);
             }
         };
-        bytes(b"terra-map-albedo-2");
+        bytes(b"terra-map-albedo-4");
         bytes(&(self.colors.len() as u64).to_le_bytes());
         for color in self
             .colors
@@ -52,11 +52,22 @@ impl MapPalette {
     }
 
     /// Painted grass already supplies the forest albedo; other biomes are relative.
-    pub fn authored_grass_tint(&self, color: [f32; 3]) -> [f32; 3] {
-        std::array::from_fn(|axis| {
-            (color[axis] / self.biome_colors[2][axis].max(f32::EPSILON)).clamp(0.65, 1.6)
-        })
+    pub fn authored_grass_tint(&self, color: [f32; 3], blossom_weight: f32) -> [f32; 3] {
+        relative_grass_tint(color, self.biome_colors[2], blossom_weight)
     }
+}
+
+/// Preserve the established green-biome palette, while allowing the blossom
+/// forests to shift painted green turf into lilac and turquoise. The weight is
+/// interpolated with the climate field, so neither section nor biome boundaries
+/// introduce a hue step. Multipliers stay bounded for saturated colors.
+pub fn relative_grass_tint(color: [f32; 3], forest: [f32; 3], blossom_weight: f32) -> [f32; 3] {
+    let blend = blossom_weight.clamp(0.0, 1.0);
+    std::array::from_fn(|axis| {
+        let relative = color[axis] / forest[axis].max(f32::EPSILON);
+        let ordinary = relative.clamp(0.65, 1.6);
+        ordinary + (relative.clamp(0.25, 8.0) - ordinary) * blend
+    })
 }
 
 #[cfg(test)]
@@ -66,14 +77,33 @@ mod tests {
     #[test]
     fn authored_grass_preserves_forest_albedo_and_bounds_relative_biomes() {
         let palette = MapPalette {
-            biome_colors: [[0.2, 0.5, 0.1]; 8],
+            biome_colors: [[0.2, 0.5, 0.1]; 10],
             ..Default::default()
         };
-        assert_eq!(palette.authored_grass_tint([0.2, 0.5, 0.1]), [1.0; 3]);
+        assert_eq!(palette.authored_grass_tint([0.2, 0.5, 0.1], 0.0), [1.0; 3]);
         assert_eq!(
-            palette.authored_grass_tint([0.01, 0.5, 0.9]),
+            palette.authored_grass_tint([0.01, 0.5, 0.9], 0.0),
             [0.65, 1.0, 1.6]
         );
+    }
+
+    #[test]
+    fn blossom_tints_extend_hue_range_only_inside_their_smooth_weight() {
+        let forest = [0.20, 0.54, 0.09];
+        let lilac = [0.38, 0.41, 0.60];
+        let ordinary = relative_grass_tint(lilac, forest, 0.0);
+        let blossom = relative_grass_tint(lilac, forest, 1.0);
+        assert_eq!(ordinary[2], 1.6);
+        assert!(blossom[2] > 6.0);
+        for step in 0..=10 {
+            let weight = step as f32 / 10.0;
+            let tint = relative_grass_tint(lilac, forest, weight);
+            for axis in 0..3 {
+                let expected = ordinary[axis] + (blossom[axis] - ordinary[axis]) * weight;
+                assert!((tint[axis] - expected).abs() < 1e-6);
+                assert!((0.25..=8.0).contains(&tint[axis]));
+            }
+        }
     }
 
     #[test]

@@ -1,0 +1,777 @@
+[
+  {
+    "source": "Blue Clay",
+    "de": "Blauer Lehm",
+    "en": "Blue Clay"
+  },
+  {
+    "source": "Blue Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Blauer Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Blue Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Red Clay",
+    "de": "Roter Lehm",
+    "en": "Red Clay"
+  },
+  {
+    "source": "Red Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Roter Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Red Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Green Clay",
+    "de": "Grüner Lehm",
+    "en": "Green Clay"
+  },
+  {
+    "source": "Green Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Grüner Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Green Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Yellow Clay",
+    "de": "Gelber Lehm",
+    "en": "Yellow Clay"
+  },
+  {
+    "source": "Yellow Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Gelber Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Yellow Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "White Clay",
+    "de": "Weißer Lehm",
+    "en": "White Clay"
+  },
+  {
+    "source": "White Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Weißer Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "White Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Black Clay",
+    "de": "Schwarzer Lehm",
+    "en": "Black Clay"
+  },
+  {
+    "source": "Black Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Schwarzer Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Black Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Gray Clay",
+    "de": "Grauer Lehm",
+    "en": "Gray Clay"
+  },
+  {
+    "source": "Gray Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Grauer Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Gray Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Dark Gray Clay",
+    "de": "Dunkelgrauer Lehm",
+    "en": "Dark Gray Clay"
+  },
+  {
+    "source": "Dark Gray Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Dunkelgrauer Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Dark Gray Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Purple Clay",
+    "de": "Lila Lehm",
+    "en": "Purple Clay"
+  },
+  {
+    "source": "Purple Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Lila Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Purple Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Pink Clay",
+    "de": "Rosa Lehm",
+    "en": "Pink Clay"
+  },
+  {
+    "source": "Pink Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Rosa Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Pink Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Lime Clay",
+    "de": "Limettengrüner Lehm",
+    "en": "Lime Clay"
+  },
+  {
+    "source": "Lime Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Limettengrüner Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Lime Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Turquoise Clay",
+    "de": "Türkiser Lehm",
+    "en": "Turquoise Clay"
+  },
+  {
+    "source": "Turquoise Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Türkiser Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Turquoise Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Orange Clay",
+    "de": "Oranger Lehm",
+    "en": "Orange Clay"
+  },
+  {
+    "source": "Orange Clay for colorful walls, floors and ornamental patterns.",
+    "de": "Oranger Lehm für farbige Wände, Böden und Ziermuster.",
+    "en": "Orange Clay for colorful walls, floors and ornamental patterns."
+  },
+  {
+    "source": "Grave Stone",
+    "de": "Grabmauerstein",
+    "en": "Grave Stone"
+  },
+  {
+    "source": "Grave Stone for the weathered walls of old graves and crypts.",
+    "de": "Grabmauerstein für die verwitterten Mauern alter Gräber und Krypten.",
+    "en": "Grave Stone for the weathered walls of old graves and crypts."
+  },
+  {
+    "source": "Dark Grave Stone",
+    "de": "Dunkler Grabmauerstein",
+    "en": "Dark Grave Stone"
+  },
+  {
+    "source": "Dark Grave Stone for the weathered walls of old graves and crypts.",
+    "de": "Dunkler Grabmauerstein für die verwitterten Mauern alter Gräber und Krypten.",
+    "en": "Dark Grave Stone for the weathered walls of old graves and crypts."
+  },
+  {
+    "source": "Cracked Dark Stone",
+    "de": "Rissiger Grabmauerstein",
+    "en": "Cracked Dark Stone"
+  },
+  {
+    "source": "Cracked Dark Stone for the weathered walls of old graves and crypts.",
+    "de": "Rissiger Grabmauerstein für die verwitterten Mauern alter Gräber und Krypten.",
+    "en": "Cracked Dark Stone for the weathered walls of old graves and crypts."
+  },
+  {
+    "source": "Ornate Stone",
+    "de": "Zierstein",
+    "en": "Ornate Stone"
+  },
+  {
+    "source": "Ornate Stone for the weathered walls of old graves and crypts.",
+    "de": "Zierstein für die verwitterten Mauern alter Gräber und Krypten.",
+    "en": "Ornate Stone for the weathered walls of old graves and crypts."
+  },
+  {
+    "source": "Moss Veined Stone",
+    "de": "Moosstein",
+    "en": "Moss Veined Stone"
+  },
+  {
+    "source": "Moss Veined Stone for the weathered walls of old graves and crypts.",
+    "de": "Moosstein für die verwitterten Mauern alter Gräber und Krypten.",
+    "en": "Moss Veined Stone for the weathered walls of old graves and crypts."
+  },
+  {
+    "source": "Overgrown Stone",
+    "de": "Bemooster Stein",
+    "en": "Overgrown Stone"
+  },
+  {
+    "source": "Overgrown Stone for the weathered walls of old graves and crypts.",
+    "de": "Bemooster Stein für die verwitterten Mauern alter Gräber und Krypten.",
+    "en": "Overgrown Stone for the weathered walls of old graves and crypts."
+  },
+  {
+    "source": "Crypt Brick",
+    "de": "Kryptastein",
+    "en": "Crypt Brick"
+  },
+  {
+    "source": "Crypt Brick for the weathered walls of old graves and crypts.",
+    "de": "Kryptastein für die verwitterten Mauern alter Gräber und Krypten.",
+    "en": "Crypt Brick for the weathered walls of old graves and crypts."
+  },
+  {
+    "source": "Stone Floor Slab",
+    "de": "Steinplatte",
+    "en": "Stone Floor Slab"
+  },
+  {
+    "source": "Stone Floor Slab for cemetery paths and crypt floors.",
+    "de": "Steinplatte für Friedhofswege und Kryptenböden.",
+    "en": "Stone Floor Slab for cemetery paths and crypt floors."
+  },
+  {
+    "source": "Ornate Floor Slab",
+    "de": "Zierplatte",
+    "en": "Ornate Floor Slab"
+  },
+  {
+    "source": "Ornate Floor Slab for cemetery paths and crypt floors.",
+    "de": "Zierplatte für Friedhofswege und Kryptenböden.",
+    "en": "Ornate Floor Slab for cemetery paths and crypt floors."
+  },
+  {
+    "source": "Mosaic Floor Slab",
+    "de": "Mosaikplatte",
+    "en": "Mosaic Floor Slab"
+  },
+  {
+    "source": "Mosaic Floor Slab for cemetery paths and crypt floors.",
+    "de": "Mosaikplatte für Friedhofswege und Kryptenböden.",
+    "en": "Mosaic Floor Slab for cemetery paths and crypt floors."
+  },
+  {
+    "source": "Cracked Floor Slab",
+    "de": "Rissige Platte",
+    "en": "Cracked Floor Slab"
+  },
+  {
+    "source": "Cracked Floor Slab for cemetery paths and crypt floors.",
+    "de": "Rissige Platte für Friedhofswege und Kryptenböden.",
+    "en": "Cracked Floor Slab for cemetery paths and crypt floors."
+  },
+  {
+    "source": "Inscribed Grave Slab",
+    "de": "Grabplatte mit Inschrift",
+    "en": "Inscribed Grave Slab"
+  },
+  {
+    "source": "Inscribed Grave Slab for cemetery paths and crypt floors.",
+    "de": "Grabplatte mit Inschrift für Friedhofswege und Kryptenböden.",
+    "en": "Inscribed Grave Slab for cemetery paths and crypt floors."
+  },
+  {
+    "source": "Crypt Column",
+    "de": "Kryptasäule",
+    "en": "Crypt Column"
+  },
+  {
+    "source": "Crypt Column for monumental entrances, arcades and vaulted halls.",
+    "de": "Kryptasäule für mächtige Eingänge, Arkaden und Gewölbehallen.",
+    "en": "Crypt Column for monumental entrances, arcades and vaulted halls."
+  },
+  {
+    "source": "Ornate Crypt Column",
+    "de": "Ziersäule",
+    "en": "Ornate Crypt Column"
+  },
+  {
+    "source": "Ornate Crypt Column for monumental entrances, arcades and vaulted halls.",
+    "de": "Ziersäule für mächtige Eingänge, Arkaden und Gewölbehallen.",
+    "en": "Ornate Crypt Column for monumental entrances, arcades and vaulted halls."
+  },
+  {
+    "source": "Column Capital",
+    "de": "Säulenkapitell",
+    "en": "Column Capital"
+  },
+  {
+    "source": "Column Capital for monumental entrances, arcades and vaulted halls.",
+    "de": "Säulenkapitell für mächtige Eingänge, Arkaden und Gewölbehallen.",
+    "en": "Column Capital for monumental entrances, arcades and vaulted halls."
+  },
+  {
+    "source": "Column Base",
+    "de": "Säulenbasis",
+    "en": "Column Base"
+  },
+  {
+    "source": "Column Base for monumental entrances, arcades and vaulted halls.",
+    "de": "Säulenbasis für mächtige Eingänge, Arkaden und Gewölbehallen.",
+    "en": "Column Base for monumental entrances, arcades and vaulted halls."
+  },
+  {
+    "source": "Crypt Arch",
+    "de": "Kryptabogen",
+    "en": "Crypt Arch"
+  },
+  {
+    "source": "Crypt Arch for monumental entrances, arcades and vaulted halls.",
+    "de": "Kryptabogen für mächtige Eingänge, Arkaden und Gewölbehallen.",
+    "en": "Crypt Arch for monumental entrances, arcades and vaulted halls."
+  },
+  {
+    "source": "Mossy Crypt Arch",
+    "de": "Bemooster Kryptabogen",
+    "en": "Mossy Crypt Arch"
+  },
+  {
+    "source": "Mossy Crypt Arch for monumental entrances, arcades and vaulted halls.",
+    "de": "Bemooster Kryptabogen für mächtige Eingänge, Arkaden und Gewölbehallen.",
+    "en": "Mossy Crypt Arch for monumental entrances, arcades and vaulted halls."
+  },
+  {
+    "source": "Grave Relief Wall",
+    "de": "Reliefwand",
+    "en": "Grave Relief Wall"
+  },
+  {
+    "source": "Grave Relief Wall carved with a memorial ornament.",
+    "de": "Reliefwand mit einem eingemeißelten Gedenkmotiv.",
+    "en": "Grave Relief Wall carved with a memorial ornament."
+  },
+  {
+    "source": "Skull Relief",
+    "de": "Totenkopfrelief",
+    "en": "Skull Relief"
+  },
+  {
+    "source": "Skull Relief carved with a memorial ornament.",
+    "de": "Totenkopfrelief mit einem eingemeißelten Gedenkmotiv.",
+    "en": "Skull Relief carved with a memorial ornament."
+  },
+  {
+    "source": "Cross Relief",
+    "de": "Kreuzrelief",
+    "en": "Cross Relief"
+  },
+  {
+    "source": "Cross Relief carved with a memorial ornament.",
+    "de": "Kreuzrelief mit einem eingemeißelten Gedenkmotiv.",
+    "en": "Cross Relief carved with a memorial ornament."
+  },
+  {
+    "source": "Candle Wall Niche",
+    "de": "Wandnische",
+    "en": "Candle Wall Niche"
+  },
+  {
+    "source": "A recessed stone alcove lit by a group of warm candles.",
+    "de": "Eine zurückgesetzte Steinnische, erhellt von einer Gruppe warmer Kerzen.",
+    "en": "A recessed stone alcove lit by a group of warm candles."
+  },
+  {
+    "source": "Heraldic Crypt Banner",
+    "de": "Wappenbanner",
+    "en": "Heraldic Crypt Banner"
+  },
+  {
+    "source": "Heraldic Crypt Banner in faded purple cloth with golden trim.",
+    "de": "Wappenbanner aus verblasstem violettem Stoff mit goldener Einfassung.",
+    "en": "Heraldic Crypt Banner in faded purple cloth with golden trim."
+  },
+  {
+    "source": "Torn Crypt Banner",
+    "de": "Verschlissenes Stoffbanner",
+    "en": "Torn Crypt Banner"
+  },
+  {
+    "source": "Torn Crypt Banner in faded purple cloth with golden trim.",
+    "de": "Verschlissenes Stoffbanner aus verblasstem violettem Stoff mit goldener Einfassung.",
+    "en": "Torn Crypt Banner in faded purple cloth with golden trim."
+  },
+  {
+    "source": "Velvet Crypt Curtain",
+    "de": "Edler Vorhang",
+    "en": "Velvet Crypt Curtain"
+  },
+  {
+    "source": "Velvet Crypt Curtain in faded purple cloth with golden trim.",
+    "de": "Edler Vorhang aus verblasstem violettem Stoff mit goldener Einfassung.",
+    "en": "Velvet Crypt Curtain in faded purple cloth with golden trim."
+  },
+  {
+    "source": "Small Gravestone",
+    "de": "Kleiner Grabstein",
+    "en": "Small Gravestone"
+  },
+  {
+    "source": "Small Gravestone with a carved memorial and a weathered stone base.",
+    "de": "Kleiner Grabstein mit einem gemeißelten Gedenkzeichen und verwittertem Steinsockel.",
+    "en": "Small Gravestone with a carved memorial and a weathered stone base."
+  },
+  {
+    "source": "Medium Gravestone",
+    "de": "Mittlerer Grabstein",
+    "en": "Medium Gravestone"
+  },
+  {
+    "source": "Medium Gravestone with a carved memorial and a weathered stone base.",
+    "de": "Mittlerer Grabstein mit einem gemeißelten Gedenkzeichen und verwittertem Steinsockel.",
+    "en": "Medium Gravestone with a carved memorial and a weathered stone base."
+  },
+  {
+    "source": "Large Gravestone",
+    "de": "Großer Grabstein",
+    "en": "Large Gravestone"
+  },
+  {
+    "source": "Large Gravestone with a carved memorial and a weathered stone base.",
+    "de": "Großer Grabstein mit einem gemeißelten Gedenkzeichen und verwittertem Steinsockel.",
+    "en": "Large Gravestone with a carved memorial and a weathered stone base."
+  },
+  {
+    "source": "Grave Cross",
+    "de": "Kreuzgrab",
+    "en": "Grave Cross"
+  },
+  {
+    "source": "Grave Cross with a carved memorial and a weathered stone base.",
+    "de": "Kreuzgrab mit einem gemeißelten Gedenkzeichen und verwittertem Steinsockel.",
+    "en": "Grave Cross with a carved memorial and a weathered stone base."
+  },
+  {
+    "source": "Bordered Grave",
+    "de": "Grab mit Umrandung",
+    "en": "Bordered Grave"
+  },
+  {
+    "source": "A stone-bordered resting place with flowers growing in the earth.",
+    "de": "Eine steinerne Ruhestätte mit Blumen in der eingefassten Erde.",
+    "en": "A stone-bordered resting place with flowers growing in the earth."
+  },
+  {
+    "source": "Closed Sarcophagus",
+    "de": "Geschlossener Sarkophag",
+    "en": "Closed Sarcophagus"
+  },
+  {
+    "source": "A sealed stone sarcophagus decorated with golden bands.",
+    "de": "Ein geschlossener Steinsarkophag mit goldenen Bändern.",
+    "en": "A sealed stone sarcophagus decorated with golden bands."
+  },
+  {
+    "source": "Open Sarcophagus",
+    "de": "Offener Sarkophag",
+    "en": "Open Sarcophagus"
+  },
+  {
+    "source": "An open stone sarcophagus with an old lid and scattered bones.",
+    "de": "Ein offener Steinsarkophag mit einem alten Deckel und verstreuten Knochen.",
+    "en": "An open stone sarcophagus with an old lid and scattered bones."
+  },
+  {
+    "source": "Grave Lantern Post",
+    "de": "Friedhofslaterne",
+    "en": "Grave Lantern Post"
+  },
+  {
+    "source": "Grave Lantern Post casts warm light over paths and chambers.",
+    "de": "Friedhofslaterne taucht Wege und Kammern in warmes Licht.",
+    "en": "Grave Lantern Post casts warm light over paths and chambers."
+  },
+  {
+    "source": "Crypt Wall Torch",
+    "de": "Kryptawandfackel",
+    "en": "Crypt Wall Torch"
+  },
+  {
+    "source": "Crypt Wall Torch casts warm light over paths and chambers.",
+    "de": "Kryptawandfackel taucht Wege und Kammern in warmes Licht.",
+    "en": "Crypt Wall Torch casts warm light over paths and chambers."
+  },
+  {
+    "source": "Candle Group",
+    "de": "Kerzengruppe",
+    "en": "Candle Group"
+  },
+  {
+    "source": "Candle Group casts warm light over paths and chambers.",
+    "de": "Kerzengruppe taucht Wege und Kammern in warmes Licht.",
+    "en": "Candle Group casts warm light over paths and chambers."
+  },
+  {
+    "source": "Crypt Chandelier",
+    "de": "Kronleuchter",
+    "en": "Crypt Chandelier"
+  },
+  {
+    "source": "Crypt Chandelier casts warm light over paths and chambers.",
+    "de": "Kronleuchter taucht Wege und Kammern in warmes Licht.",
+    "en": "Crypt Chandelier casts warm light over paths and chambers."
+  },
+  {
+    "source": "Soul Brazier",
+    "de": "Seelenlicht",
+    "en": "Soul Brazier"
+  },
+  {
+    "source": "A stone brazier filled with violet spirit light.",
+    "de": "Eine steinerne Feuerschale voller violettem Geisterlicht.",
+    "en": "A stone brazier filled with violet spirit light."
+  },
+  {
+    "source": "Skeleton Remains",
+    "de": "Skelettreste",
+    "en": "Skeleton Remains"
+  },
+  {
+    "source": "Skeleton Remains for furnishing ancient graves and crypt chambers.",
+    "de": "Skelettreste zur Ausstattung alter Gräber und Kryptenkammern.",
+    "en": "Skeleton Remains for furnishing ancient graves and crypt chambers."
+  },
+  {
+    "source": "Bone Pile",
+    "de": "Knochenhaufen",
+    "en": "Bone Pile"
+  },
+  {
+    "source": "Bone Pile for furnishing ancient graves and crypt chambers.",
+    "de": "Knochenhaufen zur Ausstattung alter Gräber und Kryptenkammern.",
+    "en": "Bone Pile for furnishing ancient graves and crypt chambers."
+  },
+  {
+    "source": "Grave Urn",
+    "de": "Graburne",
+    "en": "Grave Urn"
+  },
+  {
+    "source": "Grave Urn for furnishing ancient graves and crypt chambers.",
+    "de": "Graburne zur Ausstattung alter Gräber und Kryptenkammern.",
+    "en": "Grave Urn for furnishing ancient graves and crypt chambers."
+  },
+  {
+    "source": "Ornate Crypt Chest",
+    "de": "Verzierte Truhe",
+    "en": "Ornate Crypt Chest"
+  },
+  {
+    "source": "An ornate chest for storing valuables in a crypt.",
+    "de": "Eine verzierte Truhe zur Aufbewahrung von Wertgegenständen in einer Krypta.",
+    "en": "An ornate chest for storing valuables in a crypt."
+  },
+  {
+    "source": "Old Book Stack",
+    "de": "Bücherstapel",
+    "en": "Old Book Stack"
+  },
+  {
+    "source": "Old Book Stack for furnishing ancient graves and crypt chambers.",
+    "de": "Bücherstapel zur Ausstattung alter Gräber und Kryptenkammern.",
+    "en": "Old Book Stack for furnishing ancient graves and crypt chambers."
+  },
+  {
+    "source": "Grave Skull",
+    "de": "Schädel",
+    "en": "Grave Skull"
+  },
+  {
+    "source": "Grave Skull for furnishing ancient graves and crypt chambers.",
+    "de": "Schädel zur Ausstattung alter Gräber und Kryptenkammern.",
+    "en": "Grave Skull for furnishing ancient graves and crypt chambers."
+  },
+  {
+    "source": "Hanging Crypt Chain",
+    "de": "Hängende Kette",
+    "en": "Hanging Crypt Chain"
+  },
+  {
+    "source": "Hanging Crypt Chain for furnishing ancient graves and crypt chambers.",
+    "de": "Hängende Kette zur Ausstattung alter Gräber und Kryptenkammern.",
+    "en": "Hanging Crypt Chain for furnishing ancient graves and crypt chambers."
+  },
+  {
+    "source": "Dead Grass",
+    "de": "Totes Gras",
+    "en": "Dead Grass"
+  },
+  {
+    "source": "Dead Grass from the overgrown grounds of old burial sites.",
+    "de": "Totes Gras vom überwucherten Gelände alter Begräbnisstätten.",
+    "en": "Dead Grass from the overgrown grounds of old burial sites."
+  },
+  {
+    "source": "Thorn Bush",
+    "de": "Dornenbusch",
+    "en": "Thorn Bush"
+  },
+  {
+    "source": "Thorn Bush from the overgrown grounds of old burial sites.",
+    "de": "Dornenbusch vom überwucherten Gelände alter Begräbnisstätten.",
+    "en": "Thorn Bush from the overgrown grounds of old burial sites."
+  },
+  {
+    "source": "Hanging Ivy",
+    "de": "Hängender Efeu",
+    "en": "Hanging Ivy"
+  },
+  {
+    "source": "Hanging Ivy from the overgrown grounds of old burial sites.",
+    "de": "Hängender Efeu vom überwucherten Gelände alter Begräbnisstätten.",
+    "en": "Hanging Ivy from the overgrown grounds of old burial sites."
+  },
+  {
+    "source": "Moss Cover",
+    "de": "Moosbewuchs",
+    "en": "Moss Cover"
+  },
+  {
+    "source": "Moss Cover from the overgrown grounds of old burial sites.",
+    "de": "Moosbewuchs vom überwucherten Gelände alter Begräbnisstätten.",
+    "en": "Moss Cover from the overgrown grounds of old burial sites."
+  },
+  {
+    "source": "Dark Mushrooms",
+    "de": "Dunkle Pilze",
+    "en": "Dark Mushrooms"
+  },
+  {
+    "source": "Dark Mushrooms from the overgrown grounds of old burial sites.",
+    "de": "Dunkle Pilze vom überwucherten Gelände alter Begräbnisstätten.",
+    "en": "Dark Mushrooms from the overgrown grounds of old burial sites."
+  },
+  {
+    "source": "Glowing Purple Mushrooms",
+    "de": "Purpurne Leuchtpilze",
+    "en": "Glowing Purple Mushrooms"
+  },
+  {
+    "source": "Purple mushrooms that cast a faint light among old graves.",
+    "de": "Violette Pilze, die schwaches Licht zwischen alten Gräbern verbreiten.",
+    "en": "Purple mushrooms that cast a faint light among old graves."
+  },
+  {
+    "source": "Blossoming Vines",
+    "de": "Blühende Ranken",
+    "en": "Blossoming Vines"
+  },
+  {
+    "source": "Blossoming Vines from the overgrown grounds of old burial sites.",
+    "de": "Blühende Ranken vom überwucherten Gelände alter Begräbnisstätten.",
+    "en": "Blossoming Vines from the overgrown grounds of old burial sites."
+  },
+  {
+    "source": "Stone Pressure Plate",
+    "de": "Steindruckplatte",
+    "en": "Stone Pressure Plate"
+  },
+  {
+    "source": "An ornamental stone pressure plate for crypt entrances and dungeon chambers.",
+    "de": "Steindruckplatte als Dekoration für Krypteneingänge und Grabkammern.",
+    "en": "An ornamental stone pressure plate for crypt entrances and dungeon chambers."
+  },
+  {
+    "source": "Crypt Lever",
+    "de": "Kryptahebel",
+    "en": "Crypt Lever"
+  },
+  {
+    "source": "An ornamental crypt lever for crypt entrances and dungeon chambers.",
+    "de": "Kryptahebel als Dekoration für Krypteneingänge und Grabkammern.",
+    "en": "An ornamental crypt lever for crypt entrances and dungeon chambers."
+  },
+  {
+    "source": "Wall Switch",
+    "de": "Wandschalter",
+    "en": "Wall Switch"
+  },
+  {
+    "source": "An ornamental wall switch for crypt entrances and dungeon chambers.",
+    "de": "Wandschalter als Dekoration für Krypteneingänge und Grabkammern.",
+    "en": "An ornamental wall switch for crypt entrances and dungeon chambers."
+  },
+  {
+    "source": "Crypt Portcullis",
+    "de": "Fallgitter",
+    "en": "Crypt Portcullis"
+  },
+  {
+    "source": "An ornamental crypt portcullis for crypt entrances and dungeon chambers.",
+    "de": "Fallgitter als Dekoration für Krypteneingänge und Grabkammern.",
+    "en": "An ornamental crypt portcullis for crypt entrances and dungeon chambers."
+  },
+  {
+    "source": "Locked Crypt Gate",
+    "de": "Verschlossenes Tor",
+    "en": "Locked Crypt Gate"
+  },
+  {
+    "source": "An ornamental locked crypt gate for crypt entrances and dungeon chambers.",
+    "de": "Verschlossenes Tor als Dekoration für Krypteneingänge und Grabkammern.",
+    "en": "An ornamental locked crypt gate for crypt entrances and dungeon chambers."
+  },
+  {
+    "source": "Floor Spike Trap",
+    "de": "Bodendornfalle",
+    "en": "Floor Spike Trap"
+  },
+  {
+    "source": "An ornamental floor spike trap for crypt entrances and dungeon chambers.",
+    "de": "Bodendornfalle als Dekoration für Krypteneingänge und Grabkammern.",
+    "en": "An ornamental floor spike trap for crypt entrances and dungeon chambers."
+  },
+  {
+    "source": "Wall Arrow Trap",
+    "de": "Wandpfeilfalle",
+    "en": "Wall Arrow Trap"
+  },
+  {
+    "source": "An ornamental wall arrow trap for crypt entrances and dungeon chambers.",
+    "de": "Wandpfeilfalle als Dekoration für Krypteneingänge und Grabkammern.",
+    "en": "An ornamental wall arrow trap for crypt entrances and dungeon chambers."
+  },
+  {
+    "source": "Small Soul Crystal",
+    "de": "Kleiner Seelenkristall",
+    "en": "Small Soul Crystal"
+  },
+  {
+    "source": "A cluster of soul crystals glowing with violet light.",
+    "de": "Eine Gruppe von Seelenkristallen, die violettes Licht ausstrahlen.",
+    "en": "A cluster of soul crystals glowing with violet light."
+  },
+  {
+    "source": "Large Soul Crystal",
+    "de": "Großer Seelenkristall",
+    "en": "Large Soul Crystal"
+  },
+  {
+    "source": "Active Rune Block",
+    "de": "Aktiver Runenblock",
+    "en": "Active Rune Block"
+  },
+  {
+    "source": "Carved runes glow with violet spirit energy.",
+    "de": "Gemeißelte Runen leuchten vor violetter Geisterenergie.",
+    "en": "Carved runes glow with violet spirit energy."
+  },
+  {
+    "source": "Inactive Rune Block",
+    "de": "Inaktiver Runenblock",
+    "en": "Inactive Rune Block"
+  },
+  {
+    "source": "Ancient runes lie dark on the surface of this stone.",
+    "de": "Alte Runen liegen dunkel auf der Oberfläche dieses Steins.",
+    "en": "Ancient runes lie dark on the surface of this stone."
+  },
+  {
+    "source": "Mystic Mist Block",
+    "de": "Mystischer Nebelblock",
+    "en": "Mystic Mist Block"
+  },
+  {
+    "source": "A translucent violet stone for mystical decorations.",
+    "de": "Ein durchscheinender violetter Stein für mystische Dekorationen.",
+    "en": "A translucent violet stone for mystical decorations."
+  },
+  {
+    "source": "Cemetery",
+    "de": "Friedhof",
+    "en": "Cemetery"
+  },
+  {
+    "source": "Grave Dungeon",
+    "de": "Grabgewölbe",
+    "en": "Grave Dungeon"
+  },
+  {
+    "source": "Tomb of {}",
+    "de": "Grab von {}",
+    "en": "Tomb of {}"
+  },
+  {
+    "source": "Lilac stone with natural cyan mineral veins.",
+    "de": "Lila Gestein mit natürlichen türkisfarbenen Mineraladern.",
+    "en": "Lilac stone with natural cyan mineral veins."
+  }
+]

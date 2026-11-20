@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": 439,
+  "name": "Liquid Galle",
+  "description": "Corrosive Galle. Spreads four blocks from a source at half the speed of water.",
+  "creative_category": "nature",
+  "render_kind": "boxes",
+  "bevel_width": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "materials": {
+    "Bile": {
+      "base_color": [
+        1,
+        1,
+        1,
+        0.9
+      ],
+      "roughness": 0.18,
+      "reflectance": 0.65
+    }
+  },
+  "textures": {
+    "Bile": "textures/bile_fluid.png"
+  },
+  "face_materials": [
+    "Bile",
+    "Bile",
+    "Bile",
+    "Bile",
+    "Bile",
+    "Bile"
+  ],
+  "hardness": 0.05,
+  "resistance": 0,
+  "required_tool": null,
+  "mining_level": 0
+}

@@ -25,7 +25,7 @@ fn filter_at(journal: &EditJournal, position: Cell) -> logistics::FilterConfig {
 
 fn source(peer: Cell, chunks: &ChunkStore, journal: &EditJournal) -> Option<Cell> {
     let material = chunks.block_at(peer)?;
-    if material == 29 {
+    if terra_core::containers::is_chest(material) {
         return chest_loaded(peer, chunks, journal).then_some(peer);
     }
     logistics::source_output(material)?;
@@ -43,17 +43,24 @@ fn source(peer: Cell, chunks: &ChunkStore, journal: &EditJournal) -> Option<Cell
 }
 
 fn chest_loaded(peer: Cell, chunks: &ChunkStore, journal: &EditJournal) -> bool {
-    chunks.block_at(peer) == Some(29)
-        && journal.block(peer) == Some(29)
+    let Some(material) = chunks
+        .block_at(peer)
+        .filter(|m| terra_core::containers::is_chest(*m))
+    else {
+        return false;
+    };
+    journal.block(peer) == Some(material)
         && journal.object_state(peer).is_none_or(|state| {
-            state.peer.is_none_or(|other| {
-                chunks.block_at(other) == Some(29)
-                    && journal.object_state(other).is_some_and(|s| {
-                        s.peer == Some(peer)
-                            && s.facing == state.facing
-                            && s.secondary != state.secondary
-                    })
-            })
+            state.valid_for(peer, material)
+                && state.peer.is_none_or(|other| {
+                    material == 29
+                        && chunks.block_at(other) == Some(29)
+                        && journal.object_state(other).is_some_and(|s| {
+                            s.peer == Some(peer)
+                                && s.facing == state.facing
+                                && s.secondary != state.secondary
+                        })
+                })
         })
 }
 
@@ -776,6 +783,48 @@ mod tests {
         (chunks, journal, source, belt)
     }
     #[test]
+    fn ornate_chest_is_a_loaded_port_source_at_every_yaw() {
+        for facing in 0..4 {
+            let (mut chunks, mut journal, _, _) = fixture();
+            let chest = [8, 3, 7];
+            let port = [8, 3, 8];
+            place(
+                &mut chunks,
+                &mut journal,
+                chest,
+                terra_core::grave_blocks::ORNATE_CHEST,
+                BlockObjectState {
+                    facing,
+                    ..Default::default()
+                },
+            );
+            let state = BlockObjectState {
+                peer: Some(chest),
+                ..Default::default()
+            };
+            place(&mut chunks, &mut journal, port, logistics::HOPPER, state);
+            assert_eq!(source(chest, &chunks, &journal), Some(chest));
+            assert_eq!(
+                inventory_target(port, logistics::HOPPER, state, &chunks, &journal),
+                Some((chest, true))
+            );
+            let (section, local) = terra_voxel::global_to_section(chest);
+            chunks
+                .loaded
+                .get_mut(&section)
+                .unwrap()
+                .data
+                .set_block(local, 0)
+                .unwrap();
+            assert_eq!(
+                source(chest, &chunks, &journal),
+                None,
+                "Stale journal storage must not route items"
+            );
+        }
+    }
+
+    #[test]
     fn tunnel_routes_chests_at_belt_height_and_one_cell_above_or_below_without_a_saved_peer() {
         for dy in [-1, 0, 1] {
             let (mut chunks, mut journal, _, _) = fixture();
@@ -988,7 +1037,9 @@ mod tests {
             let item = if compatible {
                 input
             } else {
-                ItemKind::Block(3)
+                let dirt = ItemKind::Block(2);
+                assert!(terra_core::crusher::recipe_for(dirt).is_none());
+                dirt
             };
             if full {
                 journal

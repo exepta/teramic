@@ -1,0 +1,7 @@
+{
+  "item": {
+    "tool": "tar_bucket"
+  },
+  "name": "Tar Bucket",
+  "description": "A finite amount of viscous tar. Coats prepared paths within four blocks, leveling into a thin film before drying."
+}

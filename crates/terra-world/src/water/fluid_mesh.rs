@@ -8,6 +8,7 @@ mod occlusion;
 mod partial;
 mod pipes;
 pub(crate) mod rails;
+mod tongue;
 
 #[cfg(test)]
 mod construction_tests;
@@ -348,6 +349,7 @@ pub(crate) fn append_fluid_patch<'a>(
             let mut count = 0;
             let mut natural = None;
             let mut construction = None::<f64>;
+            let mut incoming_head = None::<f64>;
             let mut falling = false;
             for dz in -1..=0 {
                 for dx in -1..=0 {
@@ -366,6 +368,34 @@ pub(crate) fn append_fluid_patch<'a>(
                         }
                         let covered = connected_above(neighbor);
                         falling |= covered;
+                        // A moving front and the full cell feeding it share
+                        // the same incoming edge, including at a chunk seam.
+                        // Read only the upstream halo; the next cell beyond a
+                        // front may lie outside this worker's snapshot.
+                        if !covered
+                            && let Some(&moving) = fluids.get(&neighbor)
+                            && moving.flow != [0; 2]
+                            && canonical_level(neighbor, moving).is_none()
+                        {
+                            let axis = usize::from(moving.flow[0] == 0);
+                            let coordinate = if axis == 0 { 0 } else { 2 };
+                            let component = moving.flow[axis];
+                            let edge = neighbor[coordinate] + i64::from(component < 0);
+                            let corner_at = if coordinate == 0 {
+                                p[0] + corner[0]
+                            } else {
+                                p[2] + corner[1]
+                            };
+                            let mut back = neighbor;
+                            back[coordinate] -= i64::from(component);
+                            if corner_at == edge
+                                && let Some(head) = sample(back)
+                                && head > level + 0.0001
+                            {
+                                incoming_head =
+                                    Some(incoming_head.map_or(head, |old| old.max(head)));
+                            }
+                        }
                         let local: [usize; 3] =
                             std::array::from_fn(|i| (neighbor[i] - origin[i] + 1) as usize);
                         if super::space::partial(padded[local[0] + 18 * (local[1] + 18 * local[2])])
@@ -394,7 +424,7 @@ pub(crate) fn append_fluid_patch<'a>(
                     }
                 }
             }
-            let level = construction.or(natural).map_or_else(
+            let level = construction.or(natural).or(incoming_head).map_or_else(
                 || {
                     if count > 0 {
                         total / f64::from(count)
@@ -403,7 +433,7 @@ pub(crate) fn append_fluid_patch<'a>(
                     }
                 },
                 |level| {
-                    if river_surface && construction.is_none() {
+                    if river_surface && construction.is_none() && natural.is_some() {
                         super::channels::shared_corner_height(
                             columns,
                             (p[0] - origin[0] + corner[0]) as usize,
@@ -420,19 +450,73 @@ pub(crate) fn append_fluid_patch<'a>(
             let level = if falling { p[1] as f64 + 1.0 } else { level };
             (level - origin[1] as f64) as f32
         });
-        let points = [
+        let mut points = [
             [x, tops[0], z],
             [x, tops[1], z + 1.0],
             [x + 1.0, tops[2], z + 1.0],
             [x + 1.0, tops[3], z],
         ];
+        let mut top_normal = [0.0, 1.0, 0.0];
+        if !natural_surface && !covered && cell.flow != [0; 2] {
+            let axis = usize::from(cell.flow[0] == 0);
+            let component = cell.flow[axis];
+            let coordinate = if axis == 0 { 0 } else { 2 };
+            let mut back = p;
+            let mut ahead = p;
+            back[coordinate] -= i64::from(component);
+            ahead[coordinate] += i64::from(component);
+            let local: [i64; 3] = std::array::from_fn(|i| ahead[i] - origin[i] + 1);
+            let dry = local.iter().all(|v| (0..18).contains(v)) && {
+                let [lx, ly, lz] = local.map(|v| v as usize);
+                super::tongue::front_boundary(padded[lx + 18 * (ly + 18 * lz)])
+                    && sample(ahead).is_none()
+            };
+            if dry
+                && let Some(head) = sample(back)
+                && let Some(front) = terra_core::fluid_surface::Front::new(
+                    cell.height() as f32,
+                    (head - p[1] as f64) as f32,
+                    axis,
+                    component > 0,
+                )
+            {
+                let block = |q: [i64; 3]| {
+                    let l = std::array::from_fn::<_, 3, _>(|i| q[i] - origin[i] + 1);
+                    if !l.iter().all(|v| (0..18).contains(v)) {
+                        return None;
+                    }
+                    Some(padded[(l[0] + 18 * (l[1] + 18 * l[2])) as usize])
+                };
+                if let Some(tongue) =
+                    super::tongue::Tongue::on_bed(front, p, block, |q| sample(q).is_some())
+                {
+                    tongue::append(water, &tongue, [x, y, z], cell.flow.map(f32::from));
+                    continue;
+                }
+                let shape = [
+                    [x, y + cell.height() as f32, z],
+                    [x, y + cell.height() as f32, z + 1.],
+                    [x + 1., y + cell.height() as f32, z + 1.],
+                    [x + 1., y + cell.height() as f32, z],
+                ];
+                points = shape.map(|point| front.deform(point, [x, y, z], cell.height() as f32));
+                top_normal = front.normal();
+            }
+        }
+        if !natural_surface && covered && cell.amount < 8 {
+            let width = (cell.height() as f32).sqrt();
+            for point in &mut points {
+                point[0] = x + 0.5 + (point[0] - x - 0.5) * width;
+                point[2] = z + 0.5 + (point[2] - z - 0.5) * width;
+            }
+        }
         let flow = cell.flow.map(f32::from);
         let upper_owns_top = natural_surface && (height - (origin[1] + 16) as f64).abs() < 1e-8;
         if !covered && !upper_owns_top {
             quad(
                 water,
                 points,
-                [0.0, 1.0, 0.0],
+                top_normal,
                 flow,
                 cell.height() as f32,
                 [0.0; 4],
@@ -444,10 +528,10 @@ pub(crate) fn append_fluid_patch<'a>(
             quad(
                 water,
                 [
-                    [x, y, z],
-                    [x + 1.0, y, z],
-                    [x + 1.0, y, z + 1.0],
-                    [x, y, z + 1.0],
+                    [points[0][0], y, points[0][2]],
+                    [points[3][0], y, points[3][2]],
+                    [points[2][0], y, points[2][2]],
+                    [points[1][0], y, points[1][2]],
                 ],
                 [0.0, -1.0, 0.0],
                 flow,
@@ -513,6 +597,7 @@ pub(crate) fn append_fluid_patch<'a>(
                 }
                 let top = a[1].max(b[1]);
                 for fragment in occlusion::fragments(points, normal, origin, &masks) {
+                    let fragment = occlusion::clip(&fragment, 1, y, true);
                     let mut fragment_effects = effects;
                     if effects[3] == 5.0 {
                         let fragment_top = fragment
@@ -533,6 +618,12 @@ pub(crate) fn append_fluid_patch<'a>(
                         fragment_effects,
                     );
                 }
+            } else if a[1] < y || b[1] < y {
+                // Shore corners follow the shared reservoir surface and can
+                // descend below this cell. Clip its walls to its own volume:
+                // an inverted wall overlaps the next falling cell and shimmers.
+                let points = occlusion::clip(&points, 1, y, true);
+                polygon(water, &points, normal, flow, cell.height() as f32, effects);
             } else {
                 quad(water, points, normal, flow, cell.height() as f32, effects);
             }
@@ -595,6 +686,22 @@ fn polygon(
     depth: f32,
     effect: [f32; 4],
 ) {
+    if points.len() < 3 {
+        return;
+    }
+    let outward = |i: usize| {
+        let u: [f32; 3] = std::array::from_fn(|axis| points[i][axis] - points[0][axis]);
+        let v: [f32; 3] = std::array::from_fn(|axis| points[i + 1][axis] - points[0][axis]);
+        let cross = [
+            u[1] * v[2] - u[2] * v[1],
+            u[2] * v[0] - u[0] * v[2],
+            u[0] * v[1] - u[1] * v[0],
+        ];
+        cross.iter().zip(normal).map(|(a, b)| a * b).sum::<f32>() > 1e-8
+    };
+    if !(1..points.len() - 1).any(outward) {
+        return;
+    }
     let first = patch.positions.len() as u32;
     patch.positions.extend_from_slice(points);
     patch
@@ -623,7 +730,7 @@ fn polygon(
             .surface_effects
             .extend(std::iter::repeat_n(effect, points.len()));
     }
-    for i in 1..points.len() - 1 {
+    for i in (1..points.len() - 1).filter(|&i| outward(i)) {
         patch
             .indices
             .extend([first, first + i as u32, first + i as u32 + 1]);
@@ -649,6 +756,48 @@ mod tests {
         })
         .unwrap();
         vec![terrain.surface_column(0.5, 0.5); 18 * 18]
+    }
+
+    #[test]
+    fn first_water_front_covers_a_fraction_of_the_next_cell_instead_of_a_flat_square() {
+        let fluids = FluidSnapshot::from([
+            (
+                [7, 7, 8],
+                FluidCell {
+                    amount: 8,
+                    source: true,
+                    flow: [0; 2],
+                },
+            ),
+            (
+                [8, 7, 8],
+                FluidCell {
+                    amount: 1,
+                    source: false,
+                    flow: [1, 0],
+                },
+            ),
+        ]);
+        let mut patch = None;
+        append_fluid_patch(
+            &mut patch,
+            SectionPos::default(),
+            &columns(),
+            &vec![0; 18 * 18 * 18],
+            &fluids,
+            false,
+        );
+        let patch = patch.unwrap();
+        let front: Vec<_> = patch
+            .positions
+            .iter()
+            .filter(|p| p[0] > 8.0001 && p[2] >= 8. && p[2] <= 9.)
+            .collect();
+        assert!(!front.is_empty());
+        assert!(
+            front.iter().all(|p| p[0] <= 8.251),
+            "new eighth must advance only a quarter cell against a full head"
+        );
     }
 
     #[test]
@@ -891,6 +1040,57 @@ mod tests {
             vertices
         };
         assert_eq!(edge(&left, 16.0), edge(&right, 0.0));
+    }
+
+    #[test]
+    fn a_low_dry_bank_never_inverts_fluid_walls_below_their_cell_or_duplicates_the_lip() {
+        let mut columns = columns();
+        for z in 0..18 {
+            for x in 0..18 {
+                columns[x + 18 * z].height = 8.0;
+                columns[x + 18 * z].water_level = (x < 17).then_some(10.5);
+            }
+        }
+        let fluids = FluidSnapshot::from([(
+            [15, 10, 8],
+            FluidCell {
+                amount: 4,
+                source: false,
+                flow: [1, 0],
+            },
+        )]);
+        let mut patch = None;
+        append_fluid_patch(
+            &mut patch,
+            SectionPos::default(),
+            &columns,
+            &vec![0; 18 * 18 * 18],
+            &fluids,
+            true,
+        );
+        let patch = patch.unwrap();
+        assert!(
+            patch.positions.iter().any(|p| p[1] < 10.0),
+            "the top must retain the shared natural shore slope"
+        );
+        for triangle in patch.indices.chunks_exact(3) {
+            let [a, b, c] = std::array::from_fn(|i| patch.positions[triangle[i] as usize]);
+            let u: [f32; 3] = std::array::from_fn(|i| b[i] - a[i]);
+            let v: [f32; 3] = std::array::from_fn(|i| c[i] - a[i]);
+            let cross = [
+                u[1] * v[2] - u[2] * v[1],
+                u[2] * v[0] - u[0] * v[2],
+                u[0] * v[1] - u[1] * v[0],
+            ];
+            let normal = patch.normals[triangle[0] as usize];
+            assert!(
+                cross.iter().zip(normal).map(|(a, b)| a * b).sum::<f32>() > 1e-8,
+                "a reversed/degenerate wall can shimmer against the lower volume"
+            );
+            if normal[1] == 0.0 {
+                assert!([a, b, c].iter().all(|p| p[1] >= 10.0));
+            }
+        }
     }
 
     #[test]

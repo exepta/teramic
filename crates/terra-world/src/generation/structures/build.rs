@@ -3,8 +3,12 @@ use terra_core::CropKind;
 
 const PATH: u16 = 102;
 const WOOL: u16 = 103;
+mod graves;
 pub(super) mod royal;
 mod village;
+pub(super) fn default_house_template() -> Result<Vec<StructureObject>, String> {
+    village::house_template()
+}
 
 pub(super) struct Builder<'a> {
     pub(super) terrain: &'a TerraGenerator,
@@ -160,17 +164,25 @@ impl Builder<'_> {
                 supports.push((px, pz, column));
             }
         }
+        let adapted = self.terrain.config().structures_revision >= 10;
+        let floor = if adapted {
+            low + (high - low) / 2
+        } else {
+            high
+        };
         (high - low
-            <= if self.summary.style == VillageStyle::Highland {
+            <= if adapted {
+                6
+            } else if self.summary.style == VillageStyle::Highland {
                 12
             } else {
                 8
             }
-            && (-90..=310).contains(&high)
+            && (-90..=310).contains(&floor)
             && supports
                 .into_iter()
-                .all(|(px, pz, column)| foundation_supported(self.terrain, px, pz, high, column)))
-        .then_some(high)
+                .all(|(px, pz, column)| foundation_supported(self.terrain, px, pz, floor, column)))
+        .then_some(floor)
     }
     fn palette(&self) -> (u16, u16, u16, u16, u16, u16, u16) {
         match self.summary.style {
@@ -717,7 +729,7 @@ impl Builder<'_> {
         self.summary.containers.retain(|p| {
             self.objects
                 .get(p)
-                .is_some_and(|o| o.material == 29 && o.loot.is_some())
+                .is_some_and(|o| matches!(o.material, 29 | 377) && o.loot.is_some())
         });
         for (_, object) in self.objects {
             if object
@@ -742,6 +754,9 @@ impl Builder<'_> {
 }
 
 pub(super) fn plan(terrain: &TerraGenerator, region: [i64; 2], seed: u32) -> Option<Site> {
+    if let Some(site) = graves::plan(terrain, region, seed) {
+        return Some(site);
+    }
     let selected = if terrain.config().structures_revision >= 8 {
         super::distribution::configured_candidate(terrain.config(), region).is_some()
     } else {
@@ -803,6 +818,7 @@ pub(super) fn plan_legacy(terrain: &TerraGenerator, region: [i64; 2], seed: u32)
             bounds: [[0; 3]; 2],
             buildings: Vec::new(),
             containers: Vec::new(),
+            grave: None,
         },
         patches: BTreeMap::new(),
         objects: BTreeMap::new(),
@@ -856,7 +872,10 @@ pub(super) fn plan_legacy(terrain: &TerraGenerator, region: [i64; 2], seed: u32)
         }
         StructureKind::Ruin => b.ruin(x - 7, z - 6)?,
         StructureKind::Mine => b.mine(x - 4, z - 5)?,
-        StructureKind::Kingdom | StructureKind::Outpost => return None,
+        StructureKind::Kingdom
+        | StructureKind::Outpost
+        | StructureKind::Cemetery
+        | StructureKind::GraveDungeon => return None,
     }
     b.finish()
 }
@@ -916,6 +935,7 @@ mod tests {
                     bounds: [[0; 3]; 2],
                     buildings: Vec::new(),
                     containers: Vec::new(),
+                    grave: None,
                 },
                 patches: BTreeMap::new(),
                 objects: BTreeMap::new(),
@@ -1045,6 +1065,7 @@ mod tests {
                 bounds: [[0; 3]; 2],
                 buildings: Vec::new(),
                 containers: Vec::new(),
+                grave: None,
             },
             patches: BTreeMap::new(),
             objects: BTreeMap::new(),
@@ -1090,6 +1111,7 @@ mod tests {
                     bounds: [[0; 3]; 2],
                     buildings: Vec::new(),
                     containers: Vec::new(),
+                    grave: None,
                 },
                 patches: BTreeMap::new(),
                 objects: BTreeMap::new(),

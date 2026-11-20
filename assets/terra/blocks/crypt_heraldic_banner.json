@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 359,
+  "name": "Heraldic Crypt Banner",
+  "description": "Heraldic Crypt Banner in faded purple cloth with golden trim.",
+  "creative_category": "decoration",
+  "hardness": 0.4,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_heraldic_banner.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

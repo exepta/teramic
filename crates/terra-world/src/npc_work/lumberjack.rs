@@ -15,7 +15,10 @@ fn axe(worker: &WorkerState) -> Option<ItemKind> {
         .iter()
         .filter(|stack| stack.valid())
         .map(|stack| stack.item)
-        .filter(|item| item.tool_kind().is_some_and(|tool| tool.durability() > 0))
+        .filter(|item| {
+            item.tool_kind()
+                .is_some_and(|tool| WorkKind::Lumberjack.accepts_tool(tool))
+        })
         .max_by_key(|item| item.tool_kind().map_or(0, ToolKind::mining_level))
 }
 
@@ -119,6 +122,11 @@ pub(super) fn step(
     runtime: &mut WorkRuntime,
 ) {
     if worker.tree.is_none() {
+        runtime
+            .tree_failures
+            .entry(order.id)
+            .or_default()
+            .retain(|(_, until)| *until > npc.age);
         let root = match worker.target {
             Some(WorkTarget::Tree(root)) => Some(root),
             _ => None,
@@ -131,43 +139,62 @@ pub(super) fn step(
                 .find(|cell| {
                     crate::tree_felling::worker_root(chunks, journal, *cell)
                         && jobs.reservation_owner(&WorkTarget::Tree(*cell)).is_none()
+                        && !runtime
+                            .tree_failures
+                            .get(&order.id)
+                            .is_some_and(|failed| failed.iter().any(|(root, _)| root == cell))
                 });
             *scan = (*scan + SCAN_BUDGET) % volume.max(1);
             result
         });
-        let Some(root) = root else {
-            wait(worker, npc, WaitReason::NoTargets);
-            return;
-        };
-        worker.target = Some(WorkTarget::Tree(root));
-        // A planted tree belongs to its planter; permission to break a claim alone
-        // does not authorize automatically harvesting someone else's orchard.
-        if journal.gameplay().trees.trees.values().any(|tree| {
-            tree.root == root && tree.planted_by.is_some_and(|owner| owner != order.owner)
-        }) {
-            wait(worker, npc, WaitReason::Protected);
-            return;
+        if root.is_none() {
+            match planting::select(chunks, journal, terrain, order, npc, worker, jobs, runtime) {
+                Ok(Some(task)) => {
+                    worker.target = Some(WorkTarget::Tree(task.root));
+                    worker.tree = Some(task);
+                    worker.work_seconds = 0.0;
+                }
+                Ok(None) => {
+                    wait(worker, npc, WaitReason::NoTargets);
+                    return;
+                }
+                Err(reason) => {
+                    wait(worker, npc, reason);
+                    return;
+                }
+            }
         }
-        crate::tree_felling::request_missing(chunks, journal, root);
-        let Some(plan) = crate::tree_felling::Plan::prepare(chunks, journal, root) else {
-            wait(worker, npc, WaitReason::Unloaded);
-            return;
-        };
-        if !plan.allowed_for(order.owner, chunks, journal) {
-            wait(worker, npc, WaitReason::Protected);
-            return;
+        if let Some(root) = root {
+            worker.target = Some(WorkTarget::Tree(root));
+            // A planted tree belongs to its planter; permission to break a claim alone
+            // does not authorize automatically harvesting someone else's orchard.
+            if journal.gameplay().trees.trees.values().any(|tree| {
+                tree.root == root && tree.planted_by.is_some_and(|owner| owner != order.owner)
+            }) {
+                wait(worker, npc, WaitReason::Protected);
+                return;
+            }
+            crate::tree_felling::request_missing(chunks, journal, root);
+            let Some(plan) = crate::tree_felling::Plan::prepare(chunks, journal, root) else {
+                wait(worker, npc, WaitReason::Unloaded);
+                return;
+            };
+            if !plan.allowed_for(order.owner, chunks, journal) {
+                wait(worker, npc, WaitReason::Protected);
+                return;
+            }
+            let Some(mut task) = plan.worker_task() else {
+                wait(worker, npc, WaitReason::NoTargets);
+                return;
+            };
+            let Some(foot) = work_face(&task, chunks, journal, terrain, order, npc) else {
+                wait(worker, npc, WaitReason::NoPath);
+                return;
+            };
+            task.foot = foot;
+            worker.tree = Some(task);
+            worker.work_seconds = 0.0;
         }
-        let Some(mut task) = plan.worker_task() else {
-            wait(worker, npc, WaitReason::NoTargets);
-            return;
-        };
-        let Some(foot) = work_face(&task, chunks, journal, terrain, order, npc) else {
-            wait(worker, npc, WaitReason::NoPath);
-            return;
-        };
-        task.foot = foot;
-        worker.tree = Some(task);
-        worker.work_seconds = 0.0;
     }
     let Some(mut task) = worker.tree.take() else {
         return;
@@ -175,8 +202,37 @@ pub(super) fn step(
     let result = advance(
         chunks, journal, terrain, properties, order, npc, worker, &mut task, dt, runtime,
     );
-    let abandon_unstarted =
-        !task.started && matches!(result, Err(WaitReason::NoPath | WaitReason::Protected));
+    let attempt =
+        runtime
+            .tree_attempts
+            .entry(order.id)
+            .or_insert((task.root, npc.position, npc.age));
+    if attempt.0 != task.root
+        || crate::creatures::distance(attempt.1, npc.position) > 0.05_f64.powi(2)
+    {
+        *attempt = (task.root, npc.position, npc.age);
+    }
+    let blocked_unstarted = !task.started
+        && worker.status == WorkStatus::Waiting(WaitReason::NoPath)
+        && npc.age - attempt.2 > 6.0;
+    let abandon_unstarted = !task.started
+        && matches!(result, Err(WaitReason::NoPath | WaitReason::Protected))
+        || !task.started
+            && task.stage == TreeWorkStage::Planting
+            && matches!(result, Err(WaitReason::NoPlantingSite))
+        || blocked_unstarted;
+    if abandon_unstarted {
+        let failed = runtime.tree_failures.entry(order.id).or_default();
+        if failed.len() >= 8 {
+            failed.remove(0);
+        }
+        failed.push((task.root, npc.age + 8.0));
+        runtime.tree_attempts.remove(&order.id);
+        runtime.travel.remove(&npc.id);
+        runtime.navigation.invalidate(npc.id);
+        worker.target = None;
+        worker.work_seconds = 0.0;
+    }
     if !matches!(result, Ok(true)) && !abandon_unstarted {
         worker.tree = Some(task);
     }
@@ -236,16 +292,7 @@ fn advance(
         }
         worker.target = Some(WorkTarget::Drop(drop.id));
         if movement::approach(
-            chunks,
-            journal,
-            terrain,
-            order,
-            npc,
-            worker,
-            cell,
-            dt,
-            &mut runtime.navigation,
-            false,
+            chunks, journal, terrain, order, npc, worker, cell, dt, runtime, false,
         ) {
             actions::collect(journal, worker, WorkTarget::Drop(drop.id))?;
         }
@@ -257,25 +304,26 @@ fn advance(
     }
 
     if task.stage == TreeWorkStage::Planting {
-        return plant(
+        return planting::step(
             chunks, journal, terrain, order, npc, worker, task, dt, runtime,
         );
     }
     if !task.wood.is_empty() {
         let Some(tool) = axe(worker) else {
+            let supplies = station::supply_order(chunks, journal, order, runtime, None);
             if movement::approach(
                 chunks,
                 journal,
                 terrain,
-                order,
+                &supplies,
                 npc,
                 worker,
-                order.storage,
+                supplies.storage,
                 dt,
-                &mut runtime.navigation,
+                runtime,
                 true,
             ) {
-                actions::supply(journal, order, worker, true, None, 0)?;
+                actions::supply(journal, &supplies, worker, true, None, 0)?;
             }
             return Ok(false);
         };
@@ -283,16 +331,7 @@ fn advance(
             return Err(WaitReason::StorageFull);
         }
         if !movement::approach(
-            chunks,
-            journal,
-            terrain,
-            order,
-            npc,
-            worker,
-            task.foot,
-            dt,
-            &mut runtime.navigation,
-            false,
+            chunks, journal, terrain, order, npc, worker, task.foot, dt, runtime, false,
         ) {
             return Ok(false);
         }
@@ -368,113 +407,7 @@ fn advance(
     }
     task.stage = TreeWorkStage::Planting;
     worker.work_seconds = 0.0;
-    plant(
+    planting::step(
         chunks, journal, terrain, order, npc, worker, task, dt, runtime,
     )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn plant(
-    chunks: &mut ChunkStore,
-    journal: &mut EditJournal,
-    terrain: &TerraGenerator,
-    order: &WorkOrder,
-    npc: &mut Creature,
-    worker: &mut WorkerState,
-    task: &mut TreeWork,
-    dt: f32,
-    runtime: &mut WorkRuntime,
-) -> Result<bool, WaitReason> {
-    let item = ItemKind::Prop(task.species.sapling());
-    if !task.sapling_loaded || worker.inventory.count(item) == 0 {
-        task.sapling_loaded = false;
-        if movement::approach(
-            chunks,
-            journal,
-            terrain,
-            order,
-            npc,
-            worker,
-            order.storage,
-            dt,
-            &mut runtime.navigation,
-            true,
-        ) {
-            actions::supply(journal, order, worker, false, Some(item), 0)?;
-            task.sapling_loaded = true;
-        }
-        return Ok(false);
-    }
-    // The former root is preferred; a bounded adjacent search permits a stump
-    // replaced by a player without planting on buildings or silently discarding seed.
-    let mut unloaded = false;
-    let former_root = task.root;
-    let support = std::iter::once([former_root[0], former_root[1] - 1, former_root[2]])
-        .chain((-2_i64..=2).flat_map(|x| {
-            (-2_i64..=2).map(move |z| [former_root[0] + x, former_root[1] - 1, former_root[2] + z])
-        }))
-        .filter(|cell| order.area.contains([cell[0], cell[1] + 1, cell[2]]))
-        .find(|cell| {
-            unloaded |= chunks.block_at(*cell).is_none();
-            let prop = crate::saplings::placement_prop(
-                *cell,
-                task.species,
-                journal.prop_epoch(terra_voxel::global_to_section(*cell).0),
-            );
-            allowed(chunks, journal, order, KingdomPermission::NpcWork, *cell)
-                && crate::saplings::placement_check_in_world(
-                    chunks,
-                    journal,
-                    terrain,
-                    prop,
-                    Some(order.owner),
-                )
-                .is_ok()
-        });
-    let Some(support) = support else {
-        return Err(if unloaded {
-            WaitReason::Unloaded
-        } else {
-            WaitReason::NoPlantingSite
-        });
-    };
-    let root = [support[0], support[1] + 1, support[2]];
-    if !movement::approach(
-        chunks,
-        journal,
-        terrain,
-        order,
-        npc,
-        worker,
-        root,
-        dt,
-        &mut runtime.navigation,
-        false,
-    ) {
-        return Ok(false);
-    }
-    worker.status = WorkStatus::Working;
-    worker.work_seconds += dt;
-    if worker.work_seconds < 0.75 {
-        return Ok(false);
-    }
-    let mut next = worker.inventory.clone();
-    if next.revision == u64::MAX || !next.take_one(item) {
-        return Err(WaitReason::MissingMaterial);
-    }
-    let prop = crate::saplings::placement_prop(
-        support,
-        task.species,
-        journal.prop_epoch(terra_voxel::global_to_section(support).0),
-    );
-    if !crate::saplings::plant(chunks, journal, prop, order.owner)
-        .map_err(|_| WaitReason::NoPlantingSite)?
-    {
-        return Err(WaitReason::NoPlantingSite);
-    }
-    worker.inventory = next;
-    worker.target = None;
-    worker.work_seconds = 0.0;
-    worker.status = WorkStatus::Idle;
-    Ok(true)
 }

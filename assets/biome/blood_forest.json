@@ -1,0 +1,14 @@
+{
+  "biome": "blood_forest",
+  "selection_weight": 1.0,
+  "terrain": {
+    "min_height": 15.0,
+    "max_height": 105.0,
+    "horizontal_scale": 1100.0,
+    "detail_strength": 0.22,
+    "relief_strength": 0.42,
+    "soil_depth": 5.0,
+    "tree_density": 1.5,
+    "terrace_strength": 0.25
+  }
+}

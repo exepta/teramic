@@ -88,11 +88,11 @@ impl Geometry {
     }
     fn water_mesh(&self, terrain: &terra_world::TerraGenerator) -> Mesh {
         use crate::water::{
-            biome::{ATTRIBUTE_BIOME_TINT, WaterTint},
+            biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_BLOOD_WEIGHT, WaterTint},
             material::ATTRIBUTE_WAVE_WEIGHT,
         };
         let mut tints = std::collections::HashMap::new();
-        let colors: Vec<_> = self
+        let (colors, blood): (Vec<_>, Vec<_>) = self
             .positions
             .iter()
             .map(|p| {
@@ -101,12 +101,13 @@ impl Geometry {
                     0,
                     (p[2].floor() as i64).div_euclid(16) * 16,
                 ];
-                tints
+                let tint = tints
                     .entry(origin)
-                    .or_insert_with(|| WaterTint::new(terrain, origin))
-                    .at([p[0] - origin[0] as f32, 0., p[2] - origin[2] as f32])
+                    .or_insert_with(|| WaterTint::new(terrain, origin));
+                let local = [p[0] - origin[0] as f32, 0., p[2] - origin[2] as f32];
+                (tint.payload(local), tint.blood_at(local))
             })
-            .collect();
+            .unzip();
         self.mesh()
             .with_inserted_attribute(
                 Mesh::ATTRIBUTE_UV_0,
@@ -127,6 +128,7 @@ impl Geometry {
                     .collect::<Vec<_>>(),
             )
             .with_inserted_attribute(ATTRIBUTE_BIOME_TINT, colors)
+            .with_inserted_attribute(ATTRIBUTE_BLOOD_WEIGHT, blood)
             .with_inserted_attribute(ATTRIBUTE_WAVE_WEIGHT, vec![0.; self.positions.len()])
     }
     fn mesh(&self) -> Mesh {
@@ -147,7 +149,7 @@ pub(crate) fn install(app: &mut App) {
     app.init_resource::<intake::IntakeRenderStatus>();
     app.init_resource::<glass::GlassPipeRenderStatus>();
     app.init_resource::<jet::InfuserJetRenderStatus>();
-    app.add_systems(Startup, setup.after(crate::water::material::setup_water))
+    app.add_systems(Startup, setup.after(crate::particle_fluids::setup_surface))
         .add_systems(Update, update);
 }
 
@@ -155,7 +157,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    water: Res<crate::water::material::WaterAssets>,
+    water: Res<crate::particle_fluids::HydraulicMaterials>,
     terrain: Res<terra_world::streaming::WorldTerrain>,
 ) {
     let placeholder = Geometry {
@@ -186,7 +188,7 @@ fn setup(
     let water_entity = commands
         .spawn((
             Mesh3d(water_mesh.clone()),
-            MeshMaterial3d::<crate::water::material::WaterMaterial>(water.0.clone()),
+            MeshMaterial3d::<crate::particle_fluids::FluidMaterial>(water.0[0].clone()),
             Transform::default(),
             Visibility::Hidden,
             NotShadowCaster,
@@ -509,24 +511,23 @@ mod tests {
         assert!(geometry.positions.iter().flatten().all(|v| v.is_finite()));
     }
     #[test]
-    fn hydraulic_water_shares_lake_material_biome_and_optics_without_container_waves() {
-        use crate::water::{
-            biome::ATTRIBUTE_BIOME_TINT,
-            material::{ATTRIBUTE_WAVE_WEIGHT, WaterAssets, WaterMaterial},
-        };
+    fn hydraulic_water_uses_shared_confined_fluid_optics_without_container_waves() {
+        use crate::water::{biome::ATTRIBUTE_BIOME_TINT, material::ATTRIBUTE_WAVE_WEIGHT};
         let mut app = App::new();
-        let handle = Handle::<WaterMaterial>::default();
+        let handle = Handle::<crate::particle_fluids::FluidMaterial>::default();
         let terrain = terra_world::TerraGenerator::new(Default::default()).unwrap();
         app.init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<StandardMaterial>>()
-            .insert_resource(WaterAssets(handle.clone()))
+            .insert_resource(crate::particle_fluids::HydraulicMaterials(
+                std::array::from_fn(|_| handle.clone()),
+            ))
             .insert_resource(terra_world::streaming::WorldTerrain(terrain))
             .add_systems(Startup, setup);
         app.update();
         let entity = app.world().resource::<Effects>().water_entity;
         assert_eq!(
             app.world()
-                .get::<MeshMaterial3d<WaterMaterial>>(entity)
+                .get::<MeshMaterial3d<crate::particle_fluids::FluidMaterial>>(entity)
                 .unwrap()
                 .0,
             handle
@@ -555,6 +556,18 @@ mod tests {
         assert!(
             matches!(mesh.attribute(ATTRIBUTE_WAVE_WEIGHT), Some(bevy::mesh::VertexAttributeValues::Float32(values)) if values.iter().all(|&v| v == 0.))
         );
+        assert!(
+            matches!(mesh.attribute(ATTRIBUTE_BIOME_TINT), Some(bevy::mesh::VertexAttributeValues::Float32x4(values)) if values.len() == geometry.positions.len() && values.iter().all(|v| (0.0..=1.0).contains(&v[3])))
+        );
+        let startup_mesh = app
+            .world()
+            .resource::<Assets<Mesh>>()
+            .get(&app.world().resource::<Effects>().water_mesh)
+            .unwrap();
+        assert!(matches!(
+            startup_mesh.attribute(ATTRIBUTE_BIOME_TINT),
+            Some(bevy::mesh::VertexAttributeValues::Float32x4(_))
+        ));
         assert!(
             matches!(mesh.attribute(Mesh::ATTRIBUTE_COLOR), Some(bevy::mesh::VertexAttributeValues::Float32x4(values)) if values.iter().all(|v| *v == [0.,0.,0.,7.]))
         );

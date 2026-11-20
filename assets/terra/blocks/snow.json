@@ -29,5 +29,8 @@
   "hardness": 0.55,
   "resistance": 0.5,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Soft snow": "textures/reference_base/snow.png"
+  }
 }

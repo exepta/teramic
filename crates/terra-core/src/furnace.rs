@@ -36,25 +36,47 @@ impl SmeltingRecipe {
             && (0.5..=600.0).contains(&self.seconds)
     }
 }
-const RECIPES: [(&str, &str); 9] = [
-    ("beef", include_str!("../../../assets/smelting/beef.json")),
-    ("pork", include_str!("../../../assets/smelting/pork.json")),
+const RECIPES: [(&str, &str); 10] = [
+    (
+        "beef",
+        include_str!("../../../assets/crafting/processes/smelting/beef.json"),
+    ),
+    (
+        "pork",
+        include_str!("../../../assets/crafting/processes/smelting/pork.json"),
+    ),
     (
         "mutton",
-        include_str!("../../../assets/smelting/mutton.json"),
+        include_str!("../../../assets/crafting/processes/smelting/mutton.json"),
     ),
-    ("fish", include_str!("../../../assets/smelting/fish.json")),
+    (
+        "fish",
+        include_str!("../../../assets/crafting/processes/smelting/fish.json"),
+    ),
     (
         "clownfish",
-        include_str!("../../../assets/smelting/clownfish.json"),
+        include_str!("../../../assets/crafting/processes/smelting/clownfish.json"),
     ),
-    ("iron", include_str!("../../../assets/smelting/iron.json")),
-    ("gold", include_str!("../../../assets/smelting/gold.json")),
+    (
+        "iron",
+        include_str!("../../../assets/crafting/processes/smelting/iron.json"),
+    ),
+    (
+        "gold",
+        include_str!("../../../assets/crafting/processes/smelting/gold.json"),
+    ),
     (
         "smooth_stone",
-        include_str!("../../../assets/smelting/smooth_stone.json"),
+        include_str!("../../../assets/crafting/processes/smelting/smooth_stone.json"),
     ),
-    ("glass", include_str!("../../../assets/smelting/glass.json")),
+    (
+        "glass",
+        include_str!("../../../assets/crafting/processes/smelting/glass.json"),
+    ),
+    (
+        "bitumen",
+        include_str!("../../../assets/crafting/processes/smelting/bitumen.json"),
+    ),
 ];
 fn load<T: serde::de::DeserializeOwned>(folder: &str, name: &str, fallback: &str) -> Option<T> {
     let path = crate::asset_directory()
@@ -85,7 +107,7 @@ pub fn recipes() -> &'static [SmeltingRecipe] {
             else {
                 continue;
             };
-            let value = load::<SmeltingRecipe>("smelting", name, source)
+            let value = load::<SmeltingRecipe>("crafting/processes/smelting", name, source)
                 .filter(|r| r.valid() && r.id == builtin.id && r.key == builtin.key)
                 .unwrap_or(builtin);
             if !recipes

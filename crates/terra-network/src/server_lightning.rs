@@ -152,6 +152,7 @@ pub(super) fn tick(mut world: LightningWorld, mut previous: Local<Option<u64>>) 
         .collect();
     for (id, at) in nearby {
         let mut drop = None;
+        let mut forest_loot = [None, None];
         if exposed_surface(&world.chunks, at[0].floor() as i64, at[2].floor() as i64)
             .is_some_and(|roof| roof[1] as f64 <= at[1] + 0.5)
             && let Some(animal) = world.journal.gameplay_mut().creatures.animals.get_mut(&id)
@@ -159,11 +160,22 @@ pub(super) fn tick(mut world: LightningWorld, mut previous: Local<Option<u64>>) 
             animal.health = (animal.health - 6.0).max(0.0);
             animal.behavior = if animal.health == 0.0 {
                 drop = animal.product();
+                forest_loot = terra_core::creatures::drops::forest_loot(
+                    animal.kind,
+                    animal.variant,
+                    animal.id,
+                );
                 terra_core::creatures::CreatureBehavior::Dead
             } else {
                 terra_core::creatures::CreatureBehavior::Flee
             };
             animal.timer = 5.0;
+        }
+        for stack in forest_loot.into_iter().flatten() {
+            world
+                .journal
+                .gameplay_mut()
+                .drop_stack(at, stack, [0.0, 1.8, 0.0], 0.35);
         }
         if let Some(product) = drop {
             world

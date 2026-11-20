@@ -1430,8 +1430,9 @@ fn survival_prop_mining_creates_one_resource_without_removing_neighbors() {
 }
 
 #[test]
-fn legacy_density_packet_cannot_bypass_collectible_prop_occlusion() {
-    let (mut host, mut a, _, _) = fixture();
+fn legacy_density_packet_cannot_bypass_rigid_collectible_prop_occlusion() {
+    use terra_world::props::{PropId, PropKind, PropPose, WorldProp};
+    let (mut host, mut a, target, _) = fixture();
     host.world_mut()
         .resource_mut::<GameConfig>()
         .server
@@ -1450,16 +1451,110 @@ fn legacy_density_packet_cannot_bypass_collectible_prop_occlusion() {
         .unwrap();
     let eye =
         Vec3::from_array(state.position) + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
+    let support = [target[0], target[1] - 1, target[2] + 1];
+    let owner = terra_voxel::global_to_section(support).0;
+    let prop = WorldProp {
+        id: PropId((1_u64 << 63) | 77),
+        kind: PropKind::SmallStones,
+        position: [
+            support[0] as f64 + 0.5,
+            target[1] as f64,
+            support[2] as f64 + 0.5,
+        ],
+        rotation: 0.,
+        scale: 2.,
+        variant: 0,
+        section: owner,
+        removed: false,
+    };
+    let mut authored_cells = Vec::new();
+    host.world_mut()
+        .resource_scope(|world, mut journal: Mut<EditJournal>| {
+            let mut chunks = world.resource_mut::<ChunkStore>();
+            // This is an authored rigid-prop case, independent of biome density
+            // and whether this seed happens to generate a rock beside spawn.
+            for section in chunks.loaded.values_mut() {
+                for existing in &mut section.props {
+                    let dx = existing.position[0] - f64::from(eye.x);
+                    let dz = existing.position[2] - f64::from(eye.z);
+                    if dx * dx + dz * dz < 64. && !existing.removed {
+                        journal.remove_prop(existing.section, existing.id).unwrap();
+                        existing.removed = true;
+                    }
+                }
+            }
+            for dx in -1..=1 {
+                for dy in -1..=2 {
+                    for dz in 0..=2 {
+                        let position = [target[0] + dx, target[1] + dy, target[2] + dz];
+                        let material = if position == support || dz == 0 { 3 } else { 0 };
+                        let before = chunks.block_at(position).unwrap();
+                        if before != material {
+                            assert!(
+                                commit_block_edit(
+                                    &mut chunks,
+                                    &mut journal,
+                                    &BlockEditRequest {
+                                        position,
+                                        expected_material: before,
+                                        material,
+                                    },
+                                    &Default::default(),
+                                )
+                                .unwrap()
+                            );
+                        }
+                        authored_cells.push((position, material));
+                    }
+                }
+            }
+            assert!(journal.place_prop(prop).unwrap());
+            chunks.loaded.get_mut(&owner).unwrap().props.push(prop);
+        });
+    wait(&mut host, &mut [&mut a], |_, clients| {
+        let chunks = clients[0].world().resource::<ChunkStore>();
+        authored_cells
+            .iter()
+            .all(|(position, material)| chunks.block_at(*position) == Some(*material))
+            && chunks.loaded.get(&owner).is_some_and(|section| {
+                section
+                    .props
+                    .iter()
+                    .any(|candidate| candidate.id == prop.id)
+            })
+    });
     let chunks = host.world().resource::<ChunkStore>();
-    let (block, prop, look) = chunks.loaded.values().flat_map(|section| &section.props).filter(|prop| !prop.removed).find_map(|prop| {
-        let target = Vec3::from_array(prop.position.map(|v| v as f32)) + Vec3::Y * 0.2;
-        let rotation = Transform::from_translation(eye).looking_at(target, Vec3::Y).rotation;
-        let (yaw, pitch, _) = rotation.to_euler(EulerRot::YXZ);
-        if pitch.abs() > 1.4 { return None; }
-        let (block, selected) = terra_world::targeting::pick_world(chunks, eye.to_array().map(f64::from), (rotation * Vec3::NEG_Z).to_array().map(f64::from));
-        let block = block?;
-        matches!(selected, Some(terra_world::targeting::WorldTarget::Prop(hit)) if hit.prop.id == prop.id).then_some((block, *prop, [yaw, pitch]))
-    }).expect("natural prop occluding a solid block");
+    let journal = host.world().resource::<EditJournal>();
+    let properties = host
+        .world()
+        .resource::<terra_core::block_properties::BlockPropertiesCatalog>();
+    let geometry = terra_world::props::visual::template(
+        prop.kind,
+        prop.template_variant(),
+        terra_world::props::visual::PropDetail::Near,
+        &terra_world::props::visual::PropPalette::default(),
+    )
+    .unwrap();
+    let (block, look) = geometry.iter().flat_map(|mesh| {
+        mesh.indices.chunks_exact(3).map(move |triangle| {
+            let point: [f64; 3] = std::array::from_fn(|axis| {
+                prop.position[axis] + triangle.iter().map(|i| {
+                    f64::from(mesh.positions[*i as usize][axis]) * f64::from(prop.visual_scale()) / 3.
+                }).sum::<f64>()
+            });
+            let rotation = Transform::from_translation(eye)
+                .looking_at(Vec3::from_array(point.map(|v| v as f32)), Vec3::Y).rotation;
+            let (yaw, pitch, _) = rotation.to_euler(EulerRot::YXZ);
+            ([yaw, pitch], Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.) * Vec3::NEG_Z)
+        })
+    }).find_map(|(look, direction)| {
+        let (block, selected) = terra_world::targeting::pick_world_for_block_mining(
+            chunks, journal, properties,
+            eye.to_array().map(f64::from), direction.to_array().map(f64::from), PropPose::Rest,
+        );
+        matches!(selected, Some(terra_world::targeting::WorldTarget::Prop(hit)) if hit.prop.id == prop.id)
+            .then_some((block?, look))
+    }).expect("the authored rigid stones must obscure their real solid backing");
     let material = chunks.block_at(block.position).unwrap();
     send(&mut a, ClientControl::VegetationDensity(0.0));
     assert_eq!(
@@ -1469,11 +1564,11 @@ fn legacy_density_packet_cannot_bypass_collectible_prop_occlusion() {
             EditAction::Block {
                 position: block.position,
                 expected: material,
-                material: 0
+                material: 0,
             },
-            look
+            look,
         ),
-        EditOutcome::Occluded
+        EditOutcome::Occluded,
     );
     assert_eq!(
         host.world()

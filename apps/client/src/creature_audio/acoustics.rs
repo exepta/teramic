@@ -1,6 +1,25 @@
 //! Small loaded-cell probes, independent of cameras and audio-device callbacks.
 use bevy::prelude::*;
 
+/// Hear a neighborhood rather than a single point on a region boundary.
+/// The center keeps half the influence; four nearby samples share the rest.
+pub(super) fn biome_neighborhood(
+    center: [f64; 2],
+    middle: [f64; 10],
+    mut sample: impl FnMut(f64, f64) -> [f64; 10],
+) -> [f64; 10] {
+    let mut weights = middle.map(|weight| weight * 0.5);
+    for [dx, dz] in [[-16.0, 0.0], [16.0, 0.0], [0.0, -16.0], [0.0, 16.0]] {
+        for (sum, weight) in weights
+            .iter_mut()
+            .zip(sample(center[0] + dx, center[1] + dz))
+        {
+            *sum += weight * 0.125;
+        }
+    }
+    weights
+}
+
 /// Rain is heard where it hits nearby surfaces, not as a loop attached to a
 /// flying listener. Nine rays at 2 Hz never request or generate terrain.
 pub(super) fn rain_surface_proximity(
@@ -55,6 +74,22 @@ pub(super) fn wet_step_mix(rain: f32, wetness: f32, surface: super::clips::Surfa
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn neighborhood_preserves_regions_and_introduces_neighbors_before_crossing() {
+        let region = |x: f64, _: f64| {
+            let mut weights = [0.0; 10];
+            weights[if x < 0.0 { 2 } else { 8 }] = 1.0;
+            weights
+        };
+        let inside = biome_neighborhood([-40.0, 0.0], region(-40.0, 0.0), region);
+        assert_eq!(inside[2], 1.0);
+        assert_eq!(inside[8], 0.0);
+        let near = biome_neighborhood([-5.0, 0.0], region(-5.0, 0.0), region);
+        assert_eq!(near[2], 0.875);
+        assert_eq!(near[8], 0.125);
+        assert_eq!(near.iter().sum::<f64>(), 1.0);
+    }
 
     #[test]
     fn rain_requires_real_nearby_impact_surfaces_and_fades_with_altitude() {

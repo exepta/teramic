@@ -1,0 +1,2 @@
+Isolated Construction Mode run: /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/construction-mode/run.KuNmlz
+Construction Mode passed: real TAB, pan, cottage selection/preview/queue, Creative stock, NPC inventory, ESC and restored camera/avatar; seven DE/EN captures with automatic saved areas and H hide/show

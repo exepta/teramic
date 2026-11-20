@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 393,
+  "name": "Floor Spike Trap",
+  "description": "An ornamental floor spike trap for crypt entrances and dungeon chambers.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_spike_trap.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/crypt_spike_trap.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.04,
+        0,
+        0.04
+      ],
+      "maximum": [
+        0.96,
+        0.12,
+        0.96
+      ]
+    }
+  ]
+}

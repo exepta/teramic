@@ -1,5 +1,72 @@
 # TERAMIC Recorded Audio
 
+## Sandworm voice and movement (20 November 2026)
+
+Eight original runtime-prepared clips add a low, breath-driven breach roar,
+granular digging, sand entry impact, chitin bite, viscous spit, hurt grunt,
+collapsing death call and quiet exposed breathing. The voice layers are original
+deterministic, filtered noise and irregular glottal synthesis by Project TERAMIC.
+The sand, stone, wood and water Foley layers reuse the existing CC0 recordings
+credited below; no animal voice or third-party monster recording is copied.
+
+`creature_audio/worm/synthesis.rs` prepares these once on the existing audio
+loading worker. The shared bank now contains 132 clips (the previous 124 indices
+are unchanged). World audio uses the shared body listener, stereo pan, distance
+falloff and voice limit. Breach calls require a newly visible mouth; late-join
+baselines and repeated snapshots do not replay them.
+
+`bash tools/benchmarks/run-worm-audio.sh` exports the eight mono 24000 Hz WAVs
+and observes actual replicated phase fixtures through the shared audio device.
+The clips can also be exported to `TERRA_CAPTURE_DIR` when both
+`--smoke-test-steps` and `TERRA_WORM_AUDIO_INSPECT=1` are set.
+
+## Nature-led biome ambience (18 November 2026)
+
+Outdoor biomes use the existing bird, cricket, foliage and coast recordings as
+recognizable natural surroundings. Spirit Blossom and Blood Forest retain fewer
+birds and occasional distant crows; their background no longer uses the dungeon
+recording, synthetic drones, voice-like breaths or bell phrases. The existing
+`environment/leaves.wav` moving-leaf recording by Augmentality / Brandon Morris
+(CC0, credited below) now supplies unhurried foliage movements at its original
+pitch. Quiet gaps, source distance and modest filtering distinguish regions.
+Mushroom Park keeps its nighttime insects; Cherry Forest can add a rare, very
+quiet glass/seed glint using the existing Kenney CC0 glass contacts credited below.
+That contextual accent is not a new recording of a magical plant.
+
+The previous low-wind mix, eleven shared beds, equal-power biome transitions and
+long loop overlaps remain. Outdoor reverb is restrained; the existing dungeon
+sample stays in caves. All preparation runs once on the current audio loading
+worker; no new external downloads or licenses are introduced. The extra foliage
+input does not add a bank index: the shared bank still contains 124 clips.
+
+### Environmental source preparation (16 November 2026)
+
+New inputs are CC0 1.0 and are adapted by Project TERAMIC as mono 24000 Hz
+PCM16 with filtering, loudness headroom and short edge fades:
+
+- IgnasD, [Crows singing](https://opengameart.org/content/crows-singing),
+  `Crows.ogg` → `environment/crows.wav`.
+- jasinski, excerpts prepared by qubodup,
+  [Beach Ocean Waves](https://opengameart.org/content/beach-ocean-waves),
+  four `wave_0{1,2,3,4}_cc0-18363__jasinski__alkaibeach.flac` recordings
+  → `environment/ocean-surf.wav`.
+- isaiah658, [Ambient Bird Sounds](https://opengameart.org/content/ambient-bird-sounds),
+  `birds-isaiah658.ogg` → `environment/woodland-birds.wav`.
+- Luke.RUSTLTD, [wind1](https://opengameart.org/content/wind1),
+  `wind1.wav` → `environment/wind-ambience.wav`. This source is synthesized
+  wind made with PureData, not a field recording.
+
+Reproduction: `python3 tools/assets/prepare-biome-ambience.py /path/to/source-dir`.
+`environment/biome-sources.json` records original file hashes and download URLs.
+The runtime prepares quieter natural foliage beds and the existing restrained
+desert/highland wind on the same loading worker. Nature recordings keep their
+original pitch; wind retains its previous low-level filtered variations. Sparse
+bird/crow/cave details use the shared positional-category mixer and cave reverb.
+The sandworm warning adapts TERAMIC's original procedural thunder into a short
+filtered ground rumble. Those adaptations are sound design, not new recordings.
+The existing cave sample retains its CC0 credit below. No Minecraft or mod
+sound files are included.
+
 ## Dry Stalker Breathing
 
 `animals/stalker-airway.wav` is the quiet 7.48..8.33-second airway/tail excerpt
@@ -260,8 +327,8 @@ boundaries and applies body-position attenuation and underwater filtering.
 
 ## Biome Soundscape And Material Steps: CC0 1.0 (Phase 57)
 
-The previous wind/leaves recordings remain archived in this folder, but are no
-longer loaded or played by the soundscape. The following recordings are not
+The previous wind recording remains archived. The moving-leaf recording was
+reused for the natural biome mix on 18 November 2026. The following recordings are not
 extracted from Minecraft, Hytale or any ambience mod.
 
 - Thimras, Park Ambiences:

@@ -13,6 +13,7 @@ pub fn supported(material: u16) -> bool {
     matches!(material, 28..=29 | 59..=73 | 99..=100 | 139..=160 | 163..=168 | 170..=172)
         || construction::is_stair(material)
         || construction::is_slab(material)
+        || terra_core::roads::is_shape(material)
         || terra_core::castle::is_castle(material)
         || terra_core::train_parts::is_train(material)
 }

@@ -10,6 +10,15 @@ use terra_voxel::SectionPos;
 
 #[test]
 fn residents_really_explore_generated_houses_and_paths_without_walking_in_place() {
+    assert_residents_explore_generated_settlement(4);
+}
+
+#[test]
+fn residents_cross_terrain_adapted_foundations_and_paths_without_getting_stuck() {
+    assert_residents_explore_generated_settlement(10);
+}
+
+fn assert_residents_explore_generated_settlement(structures_revision: u8) {
     let terrain = TerraGenerator::new(WorldConfig {
         landscape_revision: 4,
         sea_level: 22.0,
@@ -18,7 +27,9 @@ fn residents_really_explore_generated_houses_and_paths_without_walking_in_place(
         trees: false,
         caves: false,
         ecology_revision: 0,
-        structures_revision: 4,
+        structures_revision,
+        // This fixed settlement predates Blood Forest's redistribution of land biomes.
+        blood_forest_revision: 0,
         ..Default::default()
     })
     .unwrap();

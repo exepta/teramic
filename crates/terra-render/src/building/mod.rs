@@ -106,6 +106,19 @@ impl BuildingWorld<'_> {
                 | ItemKind::Crop(_)
                 | ItemKind::Apple
                 | ItemKind::AppleCore
+                | ItemKind::BloodBerry
+                | ItemKind::CrimsonMushroom
+                | ItemKind::ThornTwig
+                | ItemKind::BloodCrystal
+                | ItemKind::DarkSap
+                | ItemKind::BloodLeaf
+                | ItemKind::BloodSpore
+                | ItemKind::BloodSlimeGel
+                | ItemKind::Bone
+                | ItemKind::Bitumen
+                | ItemKind::GloomEssence
+                | ItemKind::LightSplitter
+                | ItemKind::RoadAggregate
                 | ItemKind::Dust(_) => Some(templates.item_materials.opaque),
                 ItemKind::Prop(kind) => Some(match kind {
                     ResourcePropKind::Flower => templates.prop_materials.flowers[0],

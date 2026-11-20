@@ -1,0 +1,3 @@
+Rebuilt ten voxel prop GLBs; definitions and textures unchanged.
+Rebuilt voxel prop GLBs; definitions, textures and recipes unchanged.
+All 18 GLBs are byte-identical after model-only regeneration.

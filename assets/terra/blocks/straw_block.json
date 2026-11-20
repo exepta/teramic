@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": 448,
+  "name": "Straw Block",
+  "description": "A tightly tied bale of golden straw with woven rope courses.",
+  "creative_category": "building",
+  "render_kind": "cube",
+  "bevel_width": 0.022,
+  "hardness": 0.7,
+  "resistance": 0.8,
+  "required_tool": null,
+  "mining_level": 0,
+  "materials": {
+    "Surface": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/street/straw_normal.png"
+    }
+  },
+  "textures": {
+    "Surface": "textures/street/straw.png"
+  },
+  "face_materials": [
+    "Surface",
+    "Surface",
+    "Surface",
+    "Surface",
+    "Surface",
+    "Surface"
+  ],
+  "surface": "wood"
+}

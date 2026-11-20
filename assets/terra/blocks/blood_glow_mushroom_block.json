@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": 411,
+  "name": "Blood Glow Mushroom Block",
+  "description": "Blood Glow Mushroom Block from the crimson woodland.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "blood_glow_mushroom_block": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "blood_glow_mushroom_block": "textures/blood_glow_mushroom_block.png"
+  },
+  "face_materials": [
+    "blood_glow_mushroom_block",
+    "blood_glow_mushroom_block",
+    "blood_glow_mushroom_block",
+    "blood_glow_mushroom_block",
+    "blood_glow_mushroom_block",
+    "blood_glow_mushroom_block"
+  ],
+  "light": {
+    "color": [
+      1,
+      0.1,
+      0.06
+    ],
+    "intensity": 140,
+    "range": 7,
+    "falloff": "soft_core",
+    "flicker": 0.02,
+    "cave_intensity": 0.7,
+    "shadows": false
+  }
+}

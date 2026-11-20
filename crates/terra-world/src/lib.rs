@@ -1,4 +1,8 @@
 //! Stateless terrain generation and shared section streaming/editing.
+#[cfg(feature = "bevy")]
+pub mod bile;
+#[cfg(feature = "bevy")]
+pub mod building_jobs;
 #[cfg(all(test, feature = "bevy"))]
 mod creature_tests;
 #[cfg(feature = "bevy")]
@@ -15,12 +19,15 @@ pub mod furnaces;
 pub mod generation;
 #[cfg(feature = "bevy")]
 mod growth;
+pub mod hazards;
 #[cfg(feature = "bevy")]
 pub mod hearths;
 #[cfg(feature = "bevy")]
 pub mod interaction_shapes;
 #[cfg(feature = "bevy")]
 pub mod kingdom_access;
+#[cfg(feature = "bevy")]
+pub mod kingdom_starter;
 #[cfg(feature = "bevy")]
 pub mod lanterns;
 #[cfg(feature = "bevy")]
@@ -32,6 +39,8 @@ pub mod placement;
 pub mod plumbing;
 pub mod props;
 pub mod rails;
+#[cfg(feature = "bevy")]
+pub mod roads;
 pub mod segments;
 #[cfg(feature = "bevy")]
 pub mod slabs;
@@ -52,6 +61,8 @@ pub mod train_motion;
 pub mod trains;
 #[cfg(feature = "bevy")]
 pub mod tree_felling;
+#[cfg(feature = "bevy")]
+pub mod viscous;
 pub mod water;
 pub mod weather;
 #[cfg(feature = "bevy")]

@@ -183,6 +183,8 @@ mod tests {
             mushroom_park: 0.0,
             cliffted_desert: 0.0,
             cherry_forest: 0.0,
+            spirit_blossom: 0.0,
+            blood_forest: 0.0,
         };
         assert!(marine_contact(&column, 8.0, 7.9));
         assert!(!marine_contact(&column, 8.0, 8.0));

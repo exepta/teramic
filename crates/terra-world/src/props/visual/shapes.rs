@@ -71,6 +71,10 @@ pub(super) fn raw_template(
         super::botany::bush(&mut batches, variant, level, palette)?;
         return Ok(batches.into_values().collect());
     }
+    if kind == PropKind::Fern {
+        super::fern::append(&mut batches, variant, level, palette)?;
+        return Ok(batches.into_values().collect());
+    }
     let mut voxel = |material, center: [f32; 3], size: [f32; 3], rotation| {
         add_box(
             &mut batches,
@@ -112,6 +116,7 @@ pub(super) fn raw_template(
         }
         PropKind::Grass
         | PropKind::Flower
+        | PropKind::Fern
         | PropKind::Bush
         | PropKind::Seagrass
         | PropKind::SeaCucumber
@@ -132,28 +137,6 @@ pub(super) fn raw_template(
         | PropKind::CherrySapling
         | PropKind::AppleSapling
         | PropKind::AppleFruit => {}
-        PropKind::Fern => {
-            voxel(
-                palette.stem,
-                [0.0, 0.16, 0.0],
-                [0.035, 0.32, 0.035],
-                Quat::IDENTITY,
-            )?;
-            for i in 0..if fine { 5 } else { 4 } {
-                let yaw = i as f32 * std::f32::consts::TAU / 5.0 + variant as f32 * 0.3;
-                let rotation = Quat::from_rotation_y(yaw);
-                for step in 1..=if fine { 3 } else { 1 } {
-                    let reach = if fine { step as f32 * 0.085 } else { 0.18 };
-                    let p = rotation * Vec3::new(reach, 0.27 + reach * 0.35, 0.0);
-                    voxel(
-                        palette.foliage[(i + variant) % 3],
-                        p.to_array(),
-                        [if fine { 0.1 } else { 0.28 }, 0.035, 0.19 - reach * 0.35],
-                        rotation,
-                    )?;
-                }
-            }
-        }
         PropKind::SmallPlant if variant >= 128 => {
             voxel(
                 palette.stone,

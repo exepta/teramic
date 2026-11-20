@@ -689,6 +689,8 @@ mod tests {
                 mushroom_park: park,
                 cliffted_desert: 0.0,
                 cherry_forest: 0.0,
+                spirit_blossom: 0.0,
+                blood_forest: 0.0,
             };
             let mut counts = [[0_usize; 2]; 2];
             for z in -64..64 {
@@ -843,6 +845,8 @@ mod tests {
             mushroom_park: 0.0,
             cliffted_desert: 0.0,
             cherry_forest: 0.0,
+            spirit_blossom: 0.0,
+            blood_forest: 0.0,
         };
         let mut dense = 0;
         let mut clear = 0;
@@ -925,6 +929,8 @@ mod tests {
             mushroom_park: 0.0,
             cliffted_desert: 0.0,
             cherry_forest: 0.0,
+            spirit_blossom: 0.0,
+            blood_forest: 0.0,
         };
         let mut bushes = 0;
         let mut grasses = 0;
@@ -974,6 +980,8 @@ mod tests {
             mushroom_park: 1.0,
             cliffted_desert: 0.0,
             cherry_forest: 0.0,
+            spirit_blossom: 0.0,
+            blood_forest: 0.0,
         };
         let mut colors = HashSet::new();
         let mut count = 0;

@@ -22,7 +22,7 @@ struct Environment<'a> {
 }
 
 fn strike(attacker: &mut Peer, victim: &mut Peer, look: [f32; 2], world: Environment<'_>) -> bool {
-    if !world.config.world.game_rules.pvp
+    if !world.config.pvp_enabled()
         || attacker.id == victim.id
         || !attacker.accepted
         || !attacker.synced

@@ -349,3 +349,39 @@ fn small_props_fit_quarter_block_footprints_and_requested_flower_mushroom_height
         }
     }
 }
+
+#[test]
+fn dead_bushes_have_grounded_solid_tapered_wood_and_bounded_lod_geometry() {
+    let palette = PropPalette {
+        crop: 17,
+        twig: 18,
+        foliage: [20, 21, 22],
+        ..Default::default()
+    };
+    for variant in 128..136 {
+        let mut counts = Vec::new();
+        for level in [PropDetail::Near, PropDetail::Middle, PropDetail::Far] {
+            let meshes = template(PropKind::Bush, variant, level, &palette).unwrap();
+            assert_eq!(meshes.len(), 1, "dry wood shares one material batch");
+            let wood = &meshes[0];
+            assert_eq!(wood.material, 17);
+            assert!(wood.colors.iter().all(|c| c[0] > c[1] && c[1] > c[2]));
+            assert_eq!(
+                crate::props::wind_parameters(PropKind::Bush, variant, 0.6, 1.0)[1],
+                0.0
+            );
+            assert!(wood.positions.len() <= 1500);
+            assert!(wood.positions.iter().flatten().all(|v| v.is_finite()));
+            assert!(wood.positions.iter().all(|p| p[1] >= 0.0 && p[1] < 0.9));
+            assert!(wood.positions.iter().any(|p| p[1] == 0.0));
+            for triangle in wood.indices.chunks_exact(3) {
+                let [a, b, c] =
+                    std::array::from_fn(|i| Vec3::from_array(wood.positions[triangle[i] as usize]));
+                let normal = Vec3::from_array(wood.normals[triangle[0] as usize]);
+                assert!((b - a).cross(c - a).dot(normal) > 0.0);
+            }
+            counts.push(wood.positions.len());
+        }
+        assert!(counts[0] > counts[1] && counts[1] > counts[2]);
+    }
+}

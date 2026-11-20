@@ -1,0 +1,9 @@
+width = 1920
+height = 1080
+window_mode = "windowed"
+render_distance = 3
+vsync = false
+fps_limit = 60
+shadow_quality = "high"
+weather = "clear"
+weather_intensity = 0.0

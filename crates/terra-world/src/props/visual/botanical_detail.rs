@@ -2,6 +2,7 @@
 use super::{
     PropDetail, PropMesh, PropPalette,
     geometry::{add_box, add_stalk},
+    leaf::{add_profile, grass_profile},
 };
 use bevy_math::{Quat, Vec2, Vec3};
 use std::collections::BTreeMap;
@@ -66,7 +67,7 @@ pub(super) fn grass(
         palette.foliage
     };
     let variant = variant % 8;
-    for i in 8..24 {
+    for i in 8..22 {
         let angle = i as f32 * 2.399963 + variant as f32 * 0.13;
         let radius = 0.055 + (i as f32 / 23.0).sqrt() * 0.205;
         let mut root = Vec3::new(angle.cos() * radius, 0.0, angle.sin() * radius);
@@ -85,16 +86,24 @@ pub(super) fn grass(
         }
         let height =
             (0.24 + ((i * 13 + variant * 7) % 29) as f32 * 0.012) * [0.85, 1.0, 0.94][variant % 3];
-        let width = 0.032 + ((i + variant) % 4) as f32 * 0.005;
+        let width = 0.14 + ((i + variant) % 4) as f32 * 0.012;
         let material = colors[(i + variant) % 3];
         let start = batches.get(&material).map_or(0, |b| b.positions.len());
-        add_stalk(
+        let x_leaf = root.x.abs() >= root.z.abs();
+        let sign = if if x_leaf { root.x } else { root.z } > 0.0 {
+            -1.0
+        } else {
+            1.0
+        };
+        let axis = if x_leaf { Vec3::X } else { Vec3::Z } * sign;
+        add_profile(
             batches,
             material,
             root,
-            Vec2::splat(width),
-            &[Vec3::ZERO, Vec3::Y * height],
-            0.0,
+            &grass_profile(width, height),
+            axis,
+            Vec3::Y,
+            0.018,
         )?;
         if let Some(mesh) = batches.get_mut(&material) {
             mesh.colors.resize(mesh.positions.len(), [1.0; 4]);
@@ -105,34 +114,6 @@ pub(super) fn grass(
                 let t = (p[1] / height).clamp(0.0, 1.0);
                 *color = [0.77 + 0.45 * t, 0.87 + 0.30 * t, 0.70 + 0.11 * t, 1.0];
             }
-        }
-        let x_leaf = root.x.abs() >= root.z.abs();
-        let sign = if if x_leaf { root.x } else { root.z } > 0.0 {
-            -1.0
-        } else {
-            1.0
-        };
-        let axis = if x_leaf { Vec3::X } else { Vec3::Z } * sign;
-        let leaf = root + Vec3::Y * (height * (0.26 + (i % 3) as f32 * 0.12));
-        voxel(
-            batches,
-            colors[(i + 1 + variant) % 3],
-            leaf + axis * 0.026,
-            if x_leaf {
-                Vec3::new(0.088, 0.048, 0.038)
-            } else {
-                Vec3::new(0.038, 0.048, 0.088)
-            },
-            0.92,
-        )?;
-        if i % 3 == 0 {
-            voxel(
-                batches,
-                colors[(i + 2 + variant) % 3],
-                root + Vec3::Y * (height - 0.017),
-                Vec3::new(width * 1.5, 0.045, width * 1.5),
-                1.12,
-            )?;
         }
     }
     if !dry && variant % 3 == 2 {
@@ -339,20 +320,75 @@ pub(super) fn flower(
                 let cupped = species == 0 || species == 4;
                 let p =
                     tip + Vec3::new(a.cos() * 0.074, (petal % 2) as f32 * 0.018, a.sin() * 0.074);
-                voxel(
-                    batches,
-                    color,
-                    p,
-                    Vec3::new(0.068, if cupped { 0.07 } else { 0.035 }, 0.065),
-                    0.92 + (petal % 3) as f32 * 0.06,
-                )?;
+                let radial = if a.cos().abs() >= a.sin().abs() {
+                    Vec3::X * a.cos().signum()
+                } else {
+                    Vec3::Z * a.sin().signum()
+                };
                 if petal % 2 == 0 {
+                    let lateral = if cupped {
+                        Vec3::Y
+                    } else {
+                        radial.cross(Vec3::Y)
+                    };
+                    let profile = if cupped {
+                        [
+                            [0.0, -0.035],
+                            [0.068, -0.035],
+                            [0.068, 0.005],
+                            [0.105, 0.005],
+                            [0.105, 0.035],
+                            [0.055, 0.035],
+                            [0.055, 0.018],
+                            [0.0, 0.018],
+                        ]
+                    } else {
+                        [
+                            [0.0, -0.032],
+                            [0.068, -0.032],
+                            [0.068, -0.018],
+                            [0.105, -0.018],
+                            [0.105, 0.018],
+                            [0.068, 0.018],
+                            [0.068, 0.032],
+                            [0.0, 0.032],
+                        ]
+                    }
+                    .map(Vec2::from_array);
+                    let start = batches.get(&color).map_or(0, |mesh| mesh.positions.len());
+                    add_profile(
+                        batches,
+                        color,
+                        p - radial * 0.034,
+                        &profile,
+                        radial,
+                        lateral,
+                        if cupped { 0.045 } else { 0.035 },
+                    )?;
+                    if let Some(mesh) = batches.get_mut(&color) {
+                        mesh.colors.resize(mesh.positions.len(), [1.0; 4]);
+                        for (tint, position) in mesh.colors[start..]
+                            .iter_mut()
+                            .zip(&mesh.positions[start..])
+                        {
+                            let reach = (Vec3::from_array(*position) - p).dot(radial);
+                            let shade = 0.97 + (reach / 0.105).clamp(0.0, 1.0) * 0.15;
+                            *tint = [shade, shade, shade, 1.0];
+                        }
+                    }
+                } else {
                     voxel(
                         batches,
                         color,
-                        p + Vec3::new(a.cos() * 0.033, 0.025, a.sin() * 0.033),
-                        Vec3::new(0.045, 0.035, 0.045),
-                        1.12,
+                        p,
+                        if cupped {
+                            Vec3::new(0.065, 0.07, 0.065)
+                        } else if radial.x != 0.0 {
+                            Vec3::new(0.085, 0.035, 0.045)
+                        } else {
+                            Vec3::new(0.045, 0.035, 0.085)
+                        },
+                        0.92 + (petal % 3) as f32 * 0.06,
                     )?;
                 }
             }

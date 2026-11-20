@@ -232,11 +232,21 @@ pub(crate) fn load_blocks(
                 })
                 .collect();
             for block in &library.blocks {
-                for path in block.textures.values() {
+                for path in block.textures.values().chain(
+                    block
+                        .materials
+                        .values()
+                        .filter_map(|material| material.normal_texture.as_ref()),
+                ) {
+                    let linear = block
+                        .materials
+                        .values()
+                        .any(|material| material.normal_texture.as_ref() == Some(path));
                     assets.textures.entry(path.clone()).or_insert_with(|| {
                         server
                             .load_builder()
-                            .with_settings(|settings: &mut ImageLoaderSettings| {
+                            .with_settings(move |settings: &mut ImageLoaderSettings| {
+                                settings.is_srgb = !linear;
                                 // Publish only the completed mip chain to the renderer.
                                 settings.asset_usage = RenderAssetUsages::MAIN_WORLD;
                                 settings.sampler =
@@ -337,6 +347,7 @@ fn torch_item_material() -> StandardMaterial {
 struct MaterialKey {
     emission: [u32; 3],
     texture: Option<String>,
+    normal_texture: Option<String>,
     pattern: Option<super::definitions::TexturePattern>,
     color: [u32; 4],
     roughness: u32,
@@ -355,6 +366,7 @@ impl BlockAssets {
         let key = MaterialKey {
             emission: definition.emission.map(f32::to_bits),
             texture: texture.map(String::from),
+            normal_texture: definition.normal_texture.clone(),
             pattern: definition.texture_pattern,
             color: definition.base_color.map(f32::to_bits),
             roughness: definition.roughness.to_bits(),
@@ -373,6 +385,11 @@ impl BlockAssets {
                 definition.emission[2],
                 1.0,
             ),
+            normal_map_texture: definition
+                .normal_texture
+                .as_ref()
+                .and_then(|path| self.textures.get(path))
+                .cloned(),
             base_color: Color::linear_rgba(r, g, b, a),
             base_color_texture: texture
                 .and_then(|path| self.textures.get(path).cloned())
@@ -381,7 +398,9 @@ impl BlockAssets {
                         .texture_pattern
                         .and_then(|pattern| self.patterns.get(&pattern).cloned())
                 }),
-            alpha_mode: if a < 1.0 {
+            alpha_mode: if texture.is_some_and(authored_foliage_texture) {
+                AlphaMode::Mask(0.5)
+            } else if a < 1.0 {
                 AlphaMode::Blend
             } else {
                 AlphaMode::Opaque
@@ -389,9 +408,10 @@ impl BlockAssets {
             perceptual_roughness: definition.roughness,
             reflectance: definition.reflectance,
             metallic: definition.metallic,
-            double_sided: definition.double_sided,
-            cull_mode: (!definition.double_sided)
-                .then_some(bevy::render::render_resource::Face::Back),
+            double_sided: definition.double_sided || texture.is_some_and(authored_foliage_texture),
+            cull_mode: (!(definition.double_sided
+                || texture.is_some_and(authored_foliage_texture)))
+            .then_some(bevy::render::render_resource::Face::Back),
             ..default()
         };
         let slot = self.materials.len();
@@ -561,6 +581,12 @@ fn register_authored_textures(
     Ok(true)
 }
 
+/// These PNGs carry botanical silhouettes, including partially covered edges.
+/// Inventory, color, depth and shadow rendering must all retain that coverage.
+fn authored_foliage_texture(path: &str) -> bool {
+    path.starts_with("textures/foliage/") && path.ends_with(".png")
+}
+
 fn prepare_mipmaps(source: &mut SourceAssets, assets: &mut BlockAssets) -> Result<bool, String> {
     for (path, handle) in assets.textures.clone() {
         if assets.mipmaps_ready.contains(&path) {
@@ -590,12 +616,15 @@ fn prepare_mipmaps(source: &mut SourceAssets, assets: &mut BlockAssets) -> Resul
             && let Some(image) = source.images.get(&handle)
         {
             let image = image.clone();
-            let canopy = path == "textures/canopy-stylized.png";
+            let canopy = path == "textures/canopy-stylized.png" || authored_foliage_texture(&path);
             let authored = path.starts_with("model:");
+            let normal_map = path.ends_with("_normal.png");
             assets.mipmap_jobs.insert(
                 path,
                 AsyncComputeTaskPool::get().spawn(async move {
-                    if canopy {
+                    if normal_map {
+                        super::mipmaps::generate_normal(image)
+                    } else if canopy {
                         crate::foliage::masked_canopy(image)
                     } else if authored {
                         super::mipmaps::generate_authored(image)
@@ -671,6 +700,14 @@ fn collect_templates(
         ) {
             let mut authored_materials = HashSet::new();
             for (name, material) in &definition.materials {
+                if material.normal_texture.is_some()
+                    && let Some(&slot) = assets
+                        .cube_material_slots
+                        .get(&(definition.id, name.clone()))
+                {
+                    authored_materials.insert(slot);
+                    templates.normal_mapped_materials.insert(slot);
+                }
                 if let Some(reference) = material.coarse_face {
                     let source = templates.cube_lods.get(&reference.block).ok_or_else(|| {
                         format!(
@@ -731,6 +768,27 @@ fn collect_templates(
                     .ok_or("Missing crystal material")?;
                 templates.ore_materials.insert(definition.id, slot);
             }
+            if let Some(cluster) = &definition.foliage_cluster {
+                let slot = |name: &String| {
+                    assets
+                        .cube_material_slots
+                        .get(&(definition.id, name.clone()))
+                        .copied()
+                        .ok_or_else(|| {
+                            format!(
+                                "Block {}: missing leaf cluster material {name}",
+                                definition.id
+                            )
+                        })
+                };
+                templates.foliage_clusters.insert(
+                    definition.id,
+                    super::FoliageClusterMaterials {
+                        leaves: slot(&cluster.material)?,
+                        needles: cluster.needles.as_ref().map(slot).transpose()?,
+                    },
+                );
+            }
             let mut block = BlockTemplate {
                 surface: definition.surface.map(super::surface::SurfaceTemplate::new),
                 render_kind: definition.render_kind,
@@ -745,7 +803,9 @@ fn collect_templates(
                 face_materials,
                 side_cap,
                 details: Vec::new(),
-                model: if definition.render_kind == BlockRenderKind::Boxes {
+                model: if terra_core::street::is_arc(definition.id) {
+                    super::sidewalk::arc(definition.id, 0, face_materials)
+                } else if definition.render_kind == BlockRenderKind::Boxes {
                     super::cube::box_model(
                         &definition.collision_boxes,
                         definition.bevel_width,
@@ -756,7 +816,8 @@ fn collect_templates(
                 },
             };
             for primitive in block.faces.iter_mut().flatten().chain(&mut block.model) {
-                if authored_materials.contains(&primitive.material) {
+                if primitive.tangents.is_empty() && authored_materials.contains(&primitive.material)
+                {
                     primitive.tangents = primitive
                         .normals
                         .iter()

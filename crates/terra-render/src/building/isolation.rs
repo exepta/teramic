@@ -65,7 +65,7 @@ pub(super) struct Scene<'w> {
     terrain: Option<Res<'w, WorldTerrain>>,
     config: Option<Res<'w, terra_core::GameConfig>>,
     foliage: Option<Res<'w, crate::foliage::FoliageAssets>>,
-    water: Option<Res<'w, crate::water::material::WaterAssets>>,
+    water: Option<Res<'w, crate::particle_fluids::HydraulicMaterials>>,
 }
 
 fn requested(world: &BuildingWorld, scene: &Scene) -> Option<Key> {
@@ -535,17 +535,14 @@ fn spawn_batch(
         Visibility::default(),
         ChildOf(root),
     ));
-    if let Some(water) = scene.water.as_ref().filter(|_| {
+    if let Some(water) = scene.water.as_ref().and_then(|water| {
         world
             .blocks
             .templates
             .as_ref()
-            .is_some_and(|t| t.water_material(slot))
+            .and_then(|t| water.for_slot(t, slot))
     }) {
-        entity.insert((
-            MeshMaterial3d(water.0.clone()),
-            bevy::light::NotShadowCaster,
-        ));
+        entity.insert((MeshMaterial3d(water), bevy::light::NotShadowCaster));
     } else if let Some(foliage) = scene.foliage.as_ref().and_then(|a| a.materials.get(&slot)) {
         entity.insert(MeshMaterial3d(foliage.clone()));
     } else if let Some(material) = world.blocks.materials.get(slot) {

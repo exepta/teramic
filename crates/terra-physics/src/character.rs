@@ -3,6 +3,7 @@ use crate::TerrainCollisionState;
 use avian3d::prelude::*;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use terra_world::{edits::EditJournal, streaming::ChunkStore};
+mod ice;
 #[path = "character/rail_recovery.rs"]
 mod rail_recovery;
 
@@ -400,16 +401,27 @@ impl CharacterSimulation<'_, '_> {
                 .map(|hit| hit.normal1)
         };
         state.grounded = ground_normal.is_some();
+        let viscous = terra_world::viscous::body_contact(
+            &self.chunks,
+            &self.journal,
+            (state.position - Vec3::Y * PLAYER_HALF_HEIGHT)
+                .as_dvec3()
+                .to_array(),
+            [
+                f64::from(PLAYER_RADIUS * 2.0),
+                f64::from(PLAYER_HALF_HEIGHT * 2.0),
+                f64::from(PLAYER_RADIUS * 2.0),
+            ],
+        );
         let direction = Vec3::new(input.direction.x, 0.0, input.direction.z).clamp_length_max(1.0);
         let desired = direction
             * movement_multiplier
+            * viscous.movement_multiplier
             * if input.sprint {
                 SPRINT_SPEED
             } else {
                 WALK_SPEED
             };
-        state.velocity.x = desired.x;
-        state.velocity.z = desired.z;
         let water = {
             let _scope = terra_core::profiling::ScopeTimer::new("character.water");
             self.terrain.as_ref().and_then(|terrain| {
@@ -442,6 +454,24 @@ impl CharacterSimulation<'_, '_> {
             )
         };
         let swimming = water.is_some() || (motion.immersion > 0.0 && motion.velocity[1] < -0.1);
+        // Prediction and authority both run this motor against confirmed voxels.
+        // Ice changes horizontal traction only; no extra physics material/state.
+        let mut horizontal = ice::horizontal_velocity(
+            &self.chunks,
+            &self.journal,
+            state.position,
+            state.velocity,
+            desired,
+            state.grounded && !swimming && movement_multiplier > 0.0,
+            self.time.delta_secs(),
+        );
+        // A sticky surface also brakes momentum carried in from an ice bank.
+        if viscous.immersion > 0.0 {
+            let braking = 1.0 - (-12.0 * self.time.delta_secs()).exp();
+            horizontal = horizontal.lerp(desired, braking);
+        }
+        state.velocity.x = horizontal.x;
+        state.velocity.z = horizontal.z;
         let current = crate::current::advection(motion);
         if swimming {
             let surface = water.map_or(state.position.y + 0.25, |column| column.level as f32);
@@ -464,6 +494,10 @@ impl CharacterSimulation<'_, '_> {
                 1.0
             } else {
                 movement_multiplier
+            } * if surface_jump {
+                1.0
+            } else {
+                viscous.movement_multiplier
             } + current.y;
             if surface_jump {
                 state.velocity.y = swim;
@@ -682,14 +716,29 @@ pub fn swimming_column(
     journal: &EditJournal,
     position: Vec3,
 ) -> Option<terra_world::water::WaterColumn> {
-    if !config.water || !position.is_finite() {
+    if !position.is_finite() {
         return None;
     }
     let probe = position - Vec3::Y * (PLAYER_HALF_HEIGHT - 0.35);
-    let water = chunks
-        .water_column_at_point(terrain, journal, probe.as_dvec3().to_array())
+    let water = terra_world::viscous::swimming_column(chunks, journal, probe.as_dvec3().to_array())
         .or_else(|| {
-            chunks.water_column_at_point(terrain, journal, position.as_dvec3().to_array())
+            terra_world::viscous::swimming_column(chunks, journal, position.as_dvec3().to_array())
+        })
+        .or_else(|| {
+            config
+                .water
+                .then(|| {
+                    chunks
+                        .water_column_at_point(terrain, journal, probe.as_dvec3().to_array())
+                        .or_else(|| {
+                            chunks.water_column_at_point(
+                                terrain,
+                                journal,
+                                position.as_dvec3().to_array(),
+                            )
+                        })
+                })
+                .flatten()
         })?;
     (position.y - PLAYER_HALF_HEIGHT < water.level as f32 - 0.35
         && position.y + PLAYER_HALF_HEIGHT > water.bed as f32 + 0.1)

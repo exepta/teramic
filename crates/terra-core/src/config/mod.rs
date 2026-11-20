@@ -2,7 +2,7 @@ mod audio;
 mod biomes;
 mod terrain;
 pub use biomes::{
-    BiomeDefinition, BiomeDefinitions, BiomeKind, BiomeTerrain, MarineFloorWeights,
+    BiomeClimate, BiomeDefinition, BiomeDefinitions, BiomeKind, BiomeTerrain, MarineFloorWeights,
     MarineHabitatConfig, OceanBiomeConfig,
 };
 pub use terrain::{LandscapeDefinitions, LandscapeProfile, TerrainKind};

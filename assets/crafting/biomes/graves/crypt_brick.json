@@ -1,0 +1,28 @@
+{
+  "id": "teramic::crypt_brick",
+  "name": "Crypt Brick",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 343
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 337
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 2
+      }
+    ]
+  }
+}

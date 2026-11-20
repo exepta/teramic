@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "structures_revision": 10,
+  "fixture_edits": 0,
+  "sites": {
+    "outpost": {
+      "overview": {
+        "width": 1920,
+        "height": 1080,
+        "sha256": "dcdf4019728cb4d2f3185e8466793f4242704f8145585ec42dd9b44da600153b"
+      },
+      "close": {
+        "width": 1920,
+        "height": 1080,
+        "sha256": "a22bef29783a5104d2d7523190bd83316690693630aacc53d10f28df72c84875"
+      }
+    },
+    "kingdom-temperate": {
+      "overview": {
+        "width": 1920,
+        "height": 1080,
+        "sha256": "9cdb5c8a7fa32e612a9e6fb626e81c524435e730834b9e79f7ac7a113104205a"
+      },
+      "close": {
+        "width": 1920,
+        "height": 1080,
+        "sha256": "c6d77e41187c05502762fd2fc732d383bb1fa2f1d9327e36a80633dec9e37ee0"
+      }
+    }
+  },
+  "note": "Production terrain; overview camera disables distance fog only for inspection."
+}

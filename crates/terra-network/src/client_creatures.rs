@@ -237,8 +237,23 @@ fn receive(
                     received: now,
                     interval: 0.1,
                 });
+            // The tail is already fully underground before authority re-anchors
+            // the worm at the second hole. Interpolating that hidden move would
+            // drag its next upright breach sideways through fourteen metres.
+            let reanchor = current.kind == terra_core::creatures::CreatureKind::SandWorm
+                && matches!(
+                    track.current.behavior,
+                    terra_core::creatures::CreatureBehavior::Leap
+                        | terra_core::creatures::CreatureBehavior::Hunt
+                )
+                && current.behavior != track.current.behavior;
             let mut previous = track.current.clone();
-            previous.position = track.position().to_array().map(f64::from);
+            if reanchor {
+                track.playback = Default::default();
+                previous.position = current.position;
+            } else {
+                previous.position = track.position().to_array().map(f64::from);
+            }
             track.interval = now
                 .saturating_duration_since(track.received)
                 .as_secs_f32()
@@ -312,4 +327,83 @@ fn send(
     player_attacks.0.clear();
     pets.0.clear();
     nests.0.clear();
+}
+
+#[cfg(test)]
+mod spirit_wire_tests {
+    use super::*;
+    use terra_core::creatures::{
+        Creature, CreatureBehavior, CreatureKind, CreatureNeeds, creature_id,
+    };
+
+    #[test]
+    fn spirit_and_forest_variants_roundtrip_and_old_kind_discriminants_stay_unchanged() {
+        for (ordinal, kind) in CreatureKind::ALL.into_iter().enumerate() {
+            assert_eq!(postcard::to_allocvec(&kind).unwrap(), vec![ordinal as u8]);
+        }
+        assert_eq!(CreatureKind::Villager as u8, 20);
+        assert_eq!(CreatureKind::Butterfly as u8, 21);
+        assert_eq!(CreatureKind::SpiritGloom as u8, 22);
+        assert_eq!(CreatureKind::SpiritFox as u8, 23);
+        assert_eq!(CreatureKind::ThornBrute as u8, 29);
+        assert_eq!(CreatureKind::SandWorm as u8, 30);
+        let mut creatures = Vec::new();
+        for kind in [
+            CreatureKind::Butterfly,
+            CreatureKind::SpiritGloom,
+            CreatureKind::SpiritFox,
+            CreatureKind::Skeleton,
+            CreatureKind::Raven,
+            CreatureKind::BloodSlime,
+            CreatureKind::BloodStalker,
+            CreatureKind::BloodWisp,
+            CreatureKind::ThornBrute,
+            CreatureKind::SandWorm,
+        ] {
+            for variant in 0..kind.variant_count() {
+                let home = [creatures.len() as i64, 0];
+                let animal = Creature {
+                    id: creature_id(home, 0).unwrap(),
+                    kind,
+                    home,
+                    position: [0.5, 4.0, 0.5],
+                    velocity: [0.0; 3],
+                    yaw: 0.0,
+                    health: kind.health(),
+                    behavior: if kind == CreatureKind::SandWorm {
+                        CreatureBehavior::Tremor
+                    } else {
+                        CreatureBehavior::Fly
+                    },
+                    timer: 1.0,
+                    age: 0.0,
+                    variant,
+                    needs: CreatureNeeds::full(kind),
+                };
+                assert!(animal.valid());
+                let json = serde_json::to_string(&animal).unwrap();
+                assert_eq!(serde_json::from_str::<Creature>(&json).unwrap(), animal);
+                let mut invalid = animal.clone();
+                invalid.variant = kind.variant_count();
+                assert!(!invalid.valid());
+                creatures.push(animal);
+            }
+        }
+        let snapshot = CreatureStates {
+            tick: 1,
+            creatures,
+            ecology: Default::default(),
+            intentions: Vec::new(),
+            bonds: Vec::new(),
+            families: Vec::new(),
+            stalker_grip: None,
+        };
+        let restored: CreatureStates =
+            postcard::from_bytes(&postcard::to_allocvec(&snapshot).unwrap()).unwrap();
+        assert_eq!(restored.creatures, snapshot.creatures);
+        assert_eq!(snapshot_ids(&restored).unwrap().len(), 19);
+        let worm = restored.creatures.last().unwrap();
+        assert_eq!(worm.kind, CreatureKind::SandWorm);
+        assert_eq!(worm.behavior, CreatureBehavior::Tremor);
+    }
 }

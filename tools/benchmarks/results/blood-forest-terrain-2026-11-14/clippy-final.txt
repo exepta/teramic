@@ -1,0 +1,44 @@
+    Checking terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel)
+   Compiling terra-ui v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-ui)
+    Checking terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+    Checking terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+error: unnecessary closure used with `bool::then`
+  --> crates/terra-world/src/creatures/forest.rs:23:5
+   |
+23 | /     (biome == "blood_forest").then(|| match (seed >> 48) % 10 {
+24 | |         0..=2 => Kind::Raven,
+25 | |         3..=5 => Kind::BloodSlime,
+26 | |         6 => Kind::BloodStalker,
+...  |
+29 | |         _ => Kind::Skeleton,
+30 | |     })
+   | |______^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.97.0/index.html#unnecessary_lazy_evaluations
+   = note: `-D clippy::unnecessary-lazy-evaluations` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::unnecessary_lazy_evaluations)]`
+help: use `then_some` instead
+   |
+23 ~     (biome == "blood_forest").then_some(match (seed >> 48) % 10 {
+24 +         0..=2 => Kind::Raven,
+25 +         3..=5 => Kind::BloodSlime,
+26 +         6 => Kind::BloodStalker,
+27 +         7 => Kind::BloodWisp,
+28 +         8 => Kind::ThornBrute,
+29 +         _ => Kind::Skeleton,
+30 +     })
+   |
+
+error: derefed type is same as origin
+   --> crates/terra-world/src/creatures/forest.rs:208:59
+    |
+208 |         navigation::ground_waypoint(a, h, target, search, nav.as_deref_mut()).and_then(advance)
+    |                                                           ^^^^^^^^^^^^^^^^^^ help: try: `nav`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.97.0/index.html#needless_option_as_deref
+    = note: `-D clippy::needless-option-as-deref` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_option_as_deref)]`
+
+error: could not compile `terra-world` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `terra-world` (lib test) due to 2 previous errors

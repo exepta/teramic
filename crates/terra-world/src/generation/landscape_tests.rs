@@ -7,6 +7,7 @@ use terra_voxel::{MaterialId, SectionPos};
 fn revision_one_heights_match_the_pre_f40_executable_snapshot() {
     let terrain = TerraGenerator::new(WorldConfig {
         landscape_revision: 1,
+        blood_forest_revision: 0,
         rivers: false,
         ..Default::default()
     })

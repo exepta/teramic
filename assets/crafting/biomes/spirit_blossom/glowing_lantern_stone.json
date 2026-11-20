@@ -1,0 +1,28 @@
+{
+  "id": "teramic::glowing_lantern_stone",
+  "name": "Glowing Lantern Stone",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 315
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 308
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "block": 316
+        },
+        "count": 1
+      }
+    ]
+  }
+}

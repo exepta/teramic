@@ -9,6 +9,12 @@ use terra_world::{
     streaming::{ChunkStore, LoadedSection, WorldTerrain},
 };
 
+#[path = "server_building_jobs_tests.rs"]
+mod building_jobs_tests;
+#[path = "server_building_sight_tests.rs"]
+mod building_sight_tests;
+#[path = "server_chest_authority_tests.rs"]
+mod chest_authority_tests;
 #[path = "server_conveyor_interaction_tests.rs"]
 mod conveyor_interaction_tests;
 #[path = "server_npc_work_tests.rs"]
@@ -19,10 +25,14 @@ mod pot_tests;
 mod rail_tests;
 #[path = "server_sapling_placement_tests.rs"]
 mod sapling_placement_tests;
+#[path = "server_tar_tests.rs"]
+mod tar_tests;
 #[path = "server_train_authority_tests.rs"]
 mod train_authority_tests;
 #[path = "server_train_protection_tests.rs"]
 mod train_protection_tests;
+#[path = "server_villager_defense_authority_tests.rs"]
+mod villager_defense_authority_tests;
 #[path = "server_wrench_tests.rs"]
 mod wrench_tests;
 
@@ -519,6 +529,10 @@ fn farm_command(
             FarmingAction::FillBucket
                 | FarmingAction::EmptyBucket
                 | FarmingAction::Till
+                | FarmingAction::MakePath
+                | FarmingAction::PourTar
+                | FarmingAction::FillBileBucket
+                | FarmingAction::EmptyBileBucket
                 | FarmingAction::Refill
         ) {
             journal.revision(section)

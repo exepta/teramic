@@ -3,7 +3,7 @@
 use super::*;
 
 impl Royal<'_, '_> {
-    fn natural_floor(&self, x: i64, z: i64) -> i64 {
+    pub(super) fn natural_floor(&self, x: i64, z: i64) -> i64 {
         let point = self.point([x, 0, z]);
         self.builder.ground(point[0], point[2]) - self.origin[1]
     }
@@ -11,6 +11,9 @@ impl Royal<'_, '_> {
         self.blend_floor(x, z, self.natural_floor(x, z))
     }
     fn blend_floor(&self, x: i64, z: i64, natural: i64) -> i64 {
+        if self.terrain_adapted() {
+            return natural;
+        }
         let radius = if self.outpost { 31.0 } else { 72.0 };
         let distance = (x as f64).hypot(z as f64);
         if distance <= radius {

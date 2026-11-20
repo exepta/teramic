@@ -1,0 +1,57 @@
+{
+  "buttons": [
+    {
+      "captions": [
+        {
+          "glyph_width_px": 71.0,
+          "text": "Audio"
+        }
+      ],
+      "id": "audio",
+      "width_px": 229.0
+    },
+    {
+      "captions": [
+        {
+          "glyph_width_px": 122.0,
+          "text": "Steuerung"
+        }
+      ],
+      "id": "controls",
+      "width_px": 229.0
+    },
+    {
+      "captions": [
+        {
+          "glyph_width_px": 59.0,
+          "text": "Spiel"
+        }
+      ],
+      "id": "gameplay-options",
+      "width_px": 229.0
+    },
+    {
+      "captions": [
+        {
+          "glyph_width_px": 76.0,
+          "text": "Grafik"
+        }
+      ],
+      "id": "graphics",
+      "width_px": 229.0
+    },
+    {
+      "captions": [
+        {
+          "glyph_width_px": 146.0,
+          "text": "Mehrspieler"
+        }
+      ],
+      "id": "multiplayer-options",
+      "width_px": 229.0
+    }
+  ],
+  "language": "de",
+  "single_line_setting_titles": 6,
+  "status": "passed"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "teramic::tar_bucket",
+  "name": "Fill Tar Bucket",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "tool": "tar_bucket"
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shaped",
+    "width": 1,
+    "height": 2,
+    "cells": [
+      {
+        "item": "bitumen",
+        "count": 4
+      },
+      {
+        "item": {
+          "tool": "bucket"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

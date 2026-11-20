@@ -1,0 +1,28 @@
+{
+  "id": "teramic::sidewalk_block",
+  "name": "Carve Sidewalk Pavers",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 441
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 3
+        },
+        "count": 3
+      },
+      {
+        "item": {
+          "block": 42
+        },
+        "count": 1
+      }
+    ]
+  }
+}

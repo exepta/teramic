@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "id": 431,
+  "name": "Asphalt",
+  "description": "Dense matte asphalt made from road aggregate, sand and coal tar.",
+  "creative_category": "building",
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "hardness": 1.4,
+  "resistance": 5,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "materials": {
+    "Road aggregate": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 1,
+      "reflectance": 0.06
+    }
+  },
+  "textures": {
+    "Road aggregate": "textures/asphalt.png"
+  },
+  "face_materials": [
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate"
+  ]
+}

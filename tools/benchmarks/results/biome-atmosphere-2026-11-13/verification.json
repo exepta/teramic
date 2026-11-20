@@ -1,0 +1,83 @@
+{
+  "status": "passed",
+  "seed": 42042,
+  "biomes": {
+    "spirit-blossom": {
+      "atmosphere": {
+        "first_banks": 77,
+        "first_drift": [
+          2.5636887550354004,
+          1.2818443775177002
+        ],
+        "later_banks": 77,
+        "later_drift": [
+          3.3352129459381104,
+          1.6676064729690552
+        ],
+        "mist_expected": true,
+        "scene": "picker-spirit-blossom",
+        "status": "passed",
+        "terrain": "Actual generated terrain; no placed lamps or fixture blocks"
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "bytes": 3783381,
+          "sha256": "0da3a03b51d0b1d98cb88b4d59f0007bc8ce0d616910765380bb5577e2588192"
+        },
+        "animated": {
+          "width": 1920,
+          "height": 1080,
+          "bytes": 3791741,
+          "sha256": "f2202b8699302b0bdd1ed09aefb8feaa729a0cc7b66bb3cf7ea1743a565b458f"
+        },
+        "close": {
+          "width": 1920,
+          "height": 1080,
+          "bytes": 2257224,
+          "sha256": "9ceec732f73e9c0c79692886805a4c347ccc14da52104a749d1e8c10777280c8"
+        }
+      }
+    },
+    "cherry-forest": {
+      "atmosphere": {
+        "first_banks": 0,
+        "first_drift": [
+          0.0,
+          0.0
+        ],
+        "later_banks": 0,
+        "later_drift": [
+          0.0,
+          0.0
+        ],
+        "mist_expected": false,
+        "scene": "picker-cherry-forest",
+        "status": "passed",
+        "terrain": "Actual generated terrain; no placed lamps or fixture blocks"
+      },
+      "screens": {
+        "overview": {
+          "width": 1920,
+          "height": 1080,
+          "bytes": 4051151,
+          "sha256": "90c88fcea2afda09fb80781b67a8a61a8f69f77cb8c2874b0d04e2d3310d132c"
+        },
+        "animated": {
+          "width": 1920,
+          "height": 1080,
+          "bytes": 4045692,
+          "sha256": "22b06289b3029f7590533e7023c26f8bd2d286aae8fc86555393fa3d1ac92d41"
+        },
+        "close": {
+          "width": 1920,
+          "height": 1080,
+          "bytes": 2345909,
+          "sha256": "b7f1da21434517934d3fdf2949ba9e2af9d097634f206bd45c7b9689dc3e94c7"
+        }
+      }
+    }
+  },
+  "visual_review": "Actual terrain colors and light-source clarity must be reviewed in the captures; no color is asserted from synthetic fixtures."
+}

@@ -207,6 +207,7 @@ mod tests {
                 bounds: [[0; 3]; 2],
                 buildings: Vec::new(),
                 containers: Vec::new(),
+                grave: None,
             },
             patches: BTreeMap::new(),
             objects: BTreeMap::new(),
@@ -445,6 +446,12 @@ mod tests {
             let generator = TerraGenerator::new(WorldConfig {
                 seed: WorldSeed(seed),
                 structures_revision: 4,
+                // Keep the original river/ecology contracts of these bounded
+                // historical candidates, before optional Spirit/Blood terrain.
+                ecology_revision: 4,
+                river_terrain_revision: 4,
+                spirit_blossom_revision: 0,
+                blood_forest_revision: 0,
                 landscape_revision,
                 rivers: landscape_revision >= 3,
                 ..Default::default()

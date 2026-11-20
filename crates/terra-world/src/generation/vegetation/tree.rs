@@ -15,6 +15,7 @@ pub(crate) struct Tree {
     pub bounds: Bounds,
     pub wood: Vec<WoodSegment>,
     pub crowns: Vec<Crown>,
+    pub lantern: Option<[i64; 3]>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,7 +45,12 @@ impl Tree {
             TreeSpecies::Birch => terra_core::TreeSpecies::Birch,
             TreeSpecies::Cherry(_) => terra_core::TreeSpecies::Cherry,
             TreeSpecies::Apple => terra_core::TreeSpecies::Apple,
-            TreeSpecies::Palm | TreeSpecies::Mushroom(_) => return None,
+            TreeSpecies::Palm
+            | TreeSpecies::Mushroom(_)
+            | TreeSpecies::SpiritBlossom(_)
+            | TreeSpecies::Bloodwood => {
+                return None;
+            }
         })
     }
     #[cfg(feature = "bevy")]
@@ -110,6 +116,22 @@ impl Tree {
         species: TreeSpecies,
         ecology_revision: u8,
     ) -> Self {
+        if ecology_revision >= 7 && species == TreeSpecies::Birch {
+            return Self::crowned_birch(origin, seed, roots);
+        }
+        if ecology_revision >= 6
+            && matches!(
+                species,
+                TreeSpecies::Green
+                    | TreeSpecies::Autumn
+                    | TreeSpecies::Birch
+                    | TreeSpecies::Cherry(_)
+                    | TreeSpecies::SpiritBlossom(_)
+                    | TreeSpecies::Bloodwood
+            )
+        {
+            return Self::grove(origin, seed, roots, species);
+        }
         if species == TreeSpecies::Apple && ecology_revision >= 4 {
             Self::apple(origin, seed, true)
         } else {
@@ -131,7 +153,13 @@ impl Tree {
             _ => {}
         }
         let form = match (seed >> 24) % 3 {
-            _ if matches!(species, TreeSpecies::Cherry(_)) => TreeForm::Spreading,
+            _ if matches!(
+                species,
+                TreeSpecies::Cherry(_) | TreeSpecies::SpiritBlossom(_) | TreeSpecies::Bloodwood
+            ) =>
+            {
+                TreeForm::Spreading
+            }
             0 => TreeForm::Spreading,
             1 => TreeForm::Upright,
             _ => TreeForm::Tiered,
@@ -252,7 +280,7 @@ impl Tree {
         for crown in &crowns {
             bounds = bounds.union(crown.bounds);
         }
-        Self {
+        let mut tree = Self {
             origin,
             species,
             wood_material: species.wood(),
@@ -260,7 +288,10 @@ impl Tree {
             bounds,
             wood,
             crowns,
-        }
+            lantern: None,
+        };
+        tree.lantern = tree.choose_blossom_lantern();
+        tree
     }
 
     fn local(&self, global: [i64; 3]) -> [f32; 3] {
@@ -272,6 +303,13 @@ impl Tree {
             .then_some(self.wood_material)
     }
     pub fn leaves_at(&self, global: [i64; 3]) -> Option<MaterialId> {
+        if self.lantern == Some(global) {
+            return Some(if self.species == TreeSpecies::Bloodwood {
+                MaterialId::HangingBloodVines
+            } else {
+                MaterialId::HangingBlossomLantern
+            });
+        }
         let point = self.local(global);
         (self.bounds.contains(point) && self.crowns.iter().any(|c| c.contains(point)))
             .then_some(self.species.leaves())
@@ -292,6 +330,20 @@ impl Tree {
                     blocks[index] = self.species.leaves() as u16;
                 }
             });
+        }
+        if let Some(cell) = self.lantern {
+            let local: [i64; 3] = std::array::from_fn(|axis| cell[axis] - start[axis]);
+            if local.into_iter().all(|v| (0..size as i64).contains(&v)) {
+                let index =
+                    local[0] as usize + size * (local[1] as usize + size * local[2] as usize);
+                if blocks[index] == 0 {
+                    blocks[index] = if self.species == TreeSpecies::Bloodwood {
+                        MaterialId::HangingBloodVines as u16
+                    } else {
+                        MaterialId::HangingBlossomLantern as u16
+                    };
+                }
+            }
         }
     }
 }

@@ -4,12 +4,14 @@ use super::{
     wind_displacement, wind_parameters,
 };
 use std::sync::OnceLock;
+mod outline;
 #[cfg(test)]
 mod performance_tests;
 
 struct PickMesh {
     positions: Vec<[f32; 3]>,
     indices: Vec<u32>,
+    outline: Vec<[u32; 2]>,
 }
 static MESHES: [[OnceLock<Result<PickMesh, String>>; 256]; PropKind::ALL.len()] =
     [const { [const { OnceLock::new() }; 256] }; PropKind::ALL.len()];
@@ -20,6 +22,7 @@ fn mesh(prop: &WorldProp) -> Option<&'static PickMesh> {
             let mut mesh = PickMesh {
                 positions: Vec::new(),
                 indices: Vec::new(),
+                outline: Vec::new(),
             };
             for part in visual::template(
                 prop.kind,
@@ -32,6 +35,7 @@ fn mesh(prop: &WorldProp) -> Option<&'static PickMesh> {
                 mesh.indices
                     .extend(part.indices.into_iter().map(|i| i + base));
             }
+            mesh.outline = outline::from_triangles(&mesh.positions, &mesh.indices);
             Ok(mesh)
         })
         .as_ref()
@@ -74,10 +78,11 @@ fn point_scaled(prop: &WorldProp, p: [f32; 3], pose: PropPose, factor: f32) -> [
 pub(super) fn edges(prop: &WorldProp, pose: PropPose, mut visit: impl FnMut([[f64; 3]; 2])) {
     let Some(mesh) = mesh(prop) else { return };
     let world = |p| point(prop, p, pose);
-    for face in mesh.positions.chunks_exact(4) {
-        for i in 0..4 {
-            visit([world(face[i]), world(face[(i + 1) % 4])]);
-        }
+    for &[a, b] in &mesh.outline {
+        visit([
+            world(mesh.positions[a as usize]),
+            world(mesh.positions[b as usize]),
+        ]);
     }
 }
 

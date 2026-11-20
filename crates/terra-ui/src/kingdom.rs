@@ -1,8 +1,10 @@
 //! Bergfried management uses the replicated registry and authoritative commands.
+mod sections;
 use bevy::{
     input_focus::{FocusCause, InputFocus},
     prelude::*,
 };
+use sections::KingdomSectionsView;
 use serde::Serialize;
 use terra_core::{
     GameAction, GameMode, PlayerUuid,
@@ -49,6 +51,8 @@ pub(crate) struct KingdomMenuState {
     icon_search: String,
     tab: String,
     role_member: Option<PlayerUuid>,
+    selected_member: Option<PlayerUuid>,
+    selected_realm: Option<String>,
     displayed: Option<KingdomId>,
     pending: Option<(u64, f64)>,
     confirm_dissolve: bool,
@@ -105,6 +109,8 @@ pub enum KingdomMenuAction {
     Dissolve,
     CancelDissolve,
     Tab(String),
+    SelectMember(PlayerUuid),
+    SelectRealm(String),
     EditRole(PlayerUuid),
     SetRole {
         member: PlayerUuid,
@@ -124,6 +130,7 @@ pub struct KingdomMemberView {
     pub can_kick: bool,
     pub can_edit_role: bool,
     pub editing: bool,
+    pub selected: bool,
     pub permissions: String,
     pub build: bool,
     pub break_blocks: bool,
@@ -161,6 +168,7 @@ pub struct KingdomDiplomacyView {
     pub can_neutral: bool,
     pub can_ally: bool,
     pub can_hostile: bool,
+    pub selected: bool,
 }
 fn target_key(target: DiplomaticTarget) -> String {
     match target {
@@ -176,6 +184,7 @@ pub struct KingdomView {
     pub bound: bool,
     pub title: String,
     pub kingdom_id: String,
+    pub settlement_id: u64,
     pub location: String,
     pub founder: String,
     pub members: Vec<KingdomMemberView>,
@@ -192,6 +201,9 @@ pub struct KingdomView {
     pub members_tab: bool,
     pub diplomacy_tab: bool,
     pub work_tab: bool,
+    pub building_tab: bool,
+    pub army_tab: bool,
+    pub sections: KingdomSectionsView,
     pub own_role: String,
     pub access_hint: String,
     pub capabilities: Vec<KingdomCapabilityView>,
@@ -245,6 +257,7 @@ pub(crate) fn install(app: &mut App) {
             PreUpdate,
             opening_frame
                 .in_set(KingdomInputSet)
+                .after(crate::npc_work::NpcWorkInputSet)
                 .after(bevy::input::InputSystems),
         )
         .add_systems(
@@ -271,6 +284,7 @@ struct InputContext<'w> {
     session: Option<Res<'w, ClientSession>>,
     menu: Option<Res<'w, crate::menu::MenuState>>,
     inventory: Option<Res<'w, crate::inventory::InventoryState>>,
+    npc_work: Option<Res<'w, crate::npc_work::WorkUiState>>,
     chat: Option<Res<'w, crate::chat::ChatState>>,
     pets: Option<Res<'w, crate::pets::PetMenuState>>,
     fullmap: Option<Res<'w, crate::minimap::fullmap::FullMapState>>,
@@ -296,7 +310,8 @@ impl InputContext<'_> {
     }
 
     fn unoccupied(&self) -> bool {
-        !self.inventory.as_ref().is_some_and(|v| v.blocks_input())
+        !self.npc_work.as_ref().is_some_and(|v| v.blocks_input())
+            && !self.inventory.as_ref().is_some_and(|v| v.blocks_input())
             && !self.chat.as_ref().is_some_and(|v| v.blocks_input())
             && !self.pets.as_ref().is_some_and(|v| v.blocks_input())
             && !self.fullmap.as_ref().is_some_and(|v| v.blocks_input())
@@ -340,9 +355,19 @@ fn opening_frame(
         }
         return;
     }
-    if !context.playing()
-        || !context.unoccupied()
-        || crate::inventory::rail_mode_priority(&input, context.active.as_deref())
+    if !context.playing() || !context.unoccupied() {
+        return;
+    }
+    if input.just_pressed(GameAction::Kingdom) {
+        if let Some(position) = context.session.as_deref().and_then(territorial_keep) {
+            state.position = Some(position);
+            blocked.0 = true;
+            capture.write(CaptureRequest(false));
+            actions.write(KingdomMenuAction::Open(position));
+        }
+        return;
+    }
+    if crate::inventory::rail_mode_priority(&input, context.active.as_deref())
         || !context.camera.as_ref().is_some_and(|c| c.captured)
         || input.pressed(GameAction::FlyDown)
         || (input.binding(GameAction::FlyDown) == GameAction::FlyDown.default_binding()
@@ -393,8 +418,11 @@ fn ready(world: &World) -> bool {
 
 fn other_panel(world: &World) -> bool {
     world
-        .get_resource::<crate::inventory::InventoryState>()
+        .get_resource::<crate::npc_work::WorkUiState>()
         .is_some_and(|v| v.blocks_input())
+        || world
+            .get_resource::<crate::inventory::InventoryState>()
+            .is_some_and(|v| v.blocks_input())
         || world
             .get_resource::<crate::chat::ChatState>()
             .is_some_and(|v| v.blocks_input())
@@ -410,10 +438,23 @@ fn near_keep(world: &World, position: [i64; 3]) -> bool {
     let Some(session) = world.get_resource::<ClientSession>() else {
         return false;
     };
-    in_reach(session, position)
-        && world
-            .get_resource::<terra_world::streaming::ChunkStore>()
-            .is_none_or(|chunks| chunks.block_at(position) == Some(terra_core::castle::BERGFRIED))
+    territorial_keep(session) == Some(position)
+        || (in_reach(session, position)
+            && world
+                .get_resource::<terra_world::streaming::ChunkStore>()
+                .is_none_or(|chunks| {
+                    chunks.block_at(position) == Some(terra_core::castle::BERGFRIED)
+                }))
+}
+
+fn territorial_keep(session: &ClientSession) -> Option<[i64; 3]> {
+    let position = session
+        .confirmed_state()
+        .map_or(session.spawn.to_array(), |pose| pose.position);
+    session
+        .kingdoms
+        .territorial_keep(session.uuid?, position.map(|v| f64::from(v).floor() as i64))
+        .map(|keep| keep.location)
 }
 
 fn in_reach(session: &ClientSession, position: [i64; 3]) -> bool {
@@ -596,8 +637,33 @@ pub(crate) fn update(world: &mut World) {
             })
         });
         if let KingdomMenuAction::Tab(ref tab) = action {
-            if matches!(tab.as_str(), "overview" | "members" | "diplomacy" | "work") {
+            if matches!(
+                tab.as_str(),
+                "overview" | "members" | "diplomacy" | "work" | "building" | "army"
+            ) {
                 world.resource_mut::<KingdomMenuState>().tab = tab.clone();
+            }
+            continue;
+        }
+        if let KingdomMenuAction::SelectMember(member) = action {
+            if record
+                .as_ref()
+                .is_some_and(|record| record.members.contains(&member))
+            {
+                let mut state = world.resource_mut::<KingdomMenuState>();
+                state.selected_member = Some(member);
+                state.role_member = None;
+            }
+            continue;
+        }
+        if let KingdomMenuAction::SelectRealm(ref target) = action {
+            if world
+                .resource::<KingdomView>()
+                .diplomacy
+                .iter()
+                .any(|realm| realm.key == *target)
+            {
+                world.resource_mut::<KingdomMenuState>().selected_realm = Some(target.clone());
             }
             continue;
         }
@@ -615,6 +681,7 @@ pub(crate) fn update(world: &mut World) {
                 })
             {
                 let mut state = world.resource_mut::<KingdomMenuState>();
+                state.selected_member = Some(member);
                 state.role_member = if state.role_member == Some(member) {
                     None
                 } else {
@@ -1059,6 +1126,16 @@ fn sync_view(world: &mut World, position: [i64; 3]) {
             state.role_member = None;
         }
         let changed = state.displayed != Some(k.id);
+        if changed
+            || state
+                .selected_member
+                .is_none_or(|member| !k.members.contains(&member))
+        {
+            state.selected_member = k.members.first().copied();
+        }
+        if changed {
+            state.selected_realm = None;
+        }
         if changed || !state.draft_edited || !editable {
             state.draft = k.name.clone();
         }
@@ -1200,6 +1277,7 @@ fn sync_view(world: &mut World, position: [i64; 3]) {
                     can_kick: editable && !pending,
                     can_edit_role: editable && !pending,
                     editing: editable && state.role_member == Some(*id),
+                    selected: state.selected_member == Some(*id),
                     permissions: permission_summary(role),
                     build: role.permissions().build,
                     break_blocks: role.permissions().break_blocks,
@@ -1228,21 +1306,21 @@ fn sync_view(world: &mut World, position: [i64; 3]) {
         .map(|role| {
             let p = role.permissions();
             [
-                ("Build", "hammer", p.build),
-                ("Break", "pickaxe", p.break_blocks),
+                ("Build", "settings-wrench", p.build),
+                ("Break", "settings-wrench", p.break_blocks),
                 ("Inventories", "package", p.inventories),
-                ("NPC Work", "users", p.npc_work),
+                ("NPC Work", "users-round", p.npc_work),
             ]
             .into_iter()
             .map(|(label, icon, allowed)| KingdomCapabilityView {
                 label: label.into(),
-                icon: format!("tilt-icon:{icon}@24"),
+                icon: format!("tilt-icon:{icon}@32"),
                 allowed,
             })
             .collect()
         })
         .unwrap_or_default();
-    let diplomacy = record.as_ref().map_or_else(Vec::new, |source| {
+    let mut diplomacy: Vec<_> = record.as_ref().map_or_else(Vec::new, |source| {
         let players = session
             .kingdoms
             .kingdoms
@@ -1299,10 +1377,21 @@ fn sync_view(world: &mut World, position: [i64; 3]) {
                         && offered != DiplomaticRelation::Allied
                         && target != DiplomaticTarget::Bot(BotKingdom::Petora),
                     can_hostile: manages && !pending && offered != DiplomaticRelation::Hostile,
+                    selected: false,
                 }
             })
             .collect()
     });
+    let selected_realm = state
+        .selected_realm
+        .as_ref()
+        .filter(|selected| diplomacy.iter().any(|realm| &realm.key == *selected))
+        .cloned()
+        .or_else(|| diplomacy.first().map(|realm| realm.key.clone()));
+    for realm in &mut diplomacy {
+        realm.selected = selected_realm.as_ref() == Some(&realm.key);
+    }
+    let sections = sections::project(world, session, record.as_ref());
     let next = KingdomView {
         visible: true,
         bound: record.is_some(),
@@ -1313,6 +1402,7 @@ fn sync_view(world: &mut World, position: [i64; 3]) {
         kingdom_id: record
             .as_ref()
             .map_or_else(String::new, |k| format!("#{} · Active", k.id)),
+        settlement_id: record.as_ref().map_or(0, |k| k.id.0),
         location: format!(
             "Bergfried · {} / {} / {}",
             position[0], position[1], position[2]
@@ -1345,7 +1435,7 @@ fn sync_view(world: &mut World, position: [i64; 3]) {
         can_join: record.is_some() && membership.is_none() && uuid.is_some() && !pending,
         can_leave: member && !founder && !pending,
         founder_controls: founder && session.allow_build,
-        manager_controls:manages,overview_tab:!matches!(state.tab.as_str(),"members"|"diplomacy"|"work"),members_tab:state.tab=="members",diplomacy_tab:state.tab=="diplomacy",work_tab:state.tab=="work",
+        manager_controls:manages,overview_tab:!matches!(state.tab.as_str(),"members"|"diplomacy"|"work"|"building"|"army"),members_tab:state.tab=="members",diplomacy_tab:state.tab=="diplomacy",work_tab:state.tab=="work",building_tab:state.tab=="building",army_tab:state.tab=="army",sections,
         own_role:role.map_or("Outsider",KingdomRole::label).into(),
         access_hint:if manages {"Founder and Officers manage claims, roles and relations. Officers cannot change peers or grant Officer."}else{"Management: Founder / Officer. New joins: Visitor. Legacy members: Member."}.into(),capabilities,diplomacy,
         confirm_dissolve: state.confirm_dissolve,

@@ -287,6 +287,9 @@ impl SectionGenerator {
         if known.iter().any(Option::is_none) {
             self.terrain
                 .stamp_ores(start, size, &column.columns, &mut padded);
+            for patch in &column.natural_features {
+                patch.stamp(start, size, &mut padded);
+            }
             for tree in &column.trees {
                 tree.stamp_wood(start, size, &mut padded);
             }
@@ -421,7 +424,13 @@ impl SectionGenerator {
         let size = column.size;
         let start = origin.map(|v| v - padding as i64);
         let columns = &column.columns;
-        let structure_at = |p| column.structures.iter().find_map(|site| site.block_at(p));
+        let structure_at = |p| {
+            column
+                .structures
+                .iter()
+                .find_map(|site| site.block_at(p))
+                .or_else(|| self.terrain.natural_material_at(p))
+        };
         if edits.is_empty() && start[1] as f64 + 0.5 > column.maximum {
             return Ok(GeneratedSection {
                 data: BlockSection::from_blocks(position, revision, vec![0; SECTION_VOLUME])?,
@@ -447,6 +456,9 @@ impl SectionGenerator {
             }
         }
         self.terrain.stamp_ores(start, size, columns, &mut padded);
+        for patch in &column.natural_features {
+            patch.stamp(start, size, &mut padded);
+        }
         let trees = &column.trees;
         let surface_sections = column.surface_sections;
         // Terrain wins; every tree's wood wins over every crown; edits win last.
@@ -830,6 +842,13 @@ impl SectionGenerator {
                         .get(&above)
                         .copied()
                         .or_else(|| structure_at(above))
+                        .or_else(|| {
+                            if self.terrain.config().ecology_revision >= 6 {
+                                self.terrain.natural_material_at(above)
+                            } else {
+                                None
+                            }
+                        })
                         .unwrap_or_else(|| {
                             trees
                                 .iter()
@@ -1001,11 +1020,14 @@ impl SectionGenerator {
         if let Some(material) = self.terrain.structure_block(global) {
             return Ok(material);
         }
+        if let Some(material) = self.terrain.natural_material_at(global) {
+            return Ok(material);
+        }
         let column = self
             .terrain
             .surface_column(global[0] as f64 + 0.5, global[2] as f64 + 0.5);
         let terrain = self.terrain_block(global, column);
-        let terrain = if (terrain == 3
+        let terrain = if (matches!(terrain, 3 | 308)
             || self.terrain.config().cave_structure_revision >= 4
                 && matches!(terrain, 13 | 57 | 58))
             && self.terrain.config().ores.enabled

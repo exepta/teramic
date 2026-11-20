@@ -16,7 +16,7 @@ fn bag(bellows: Option<BellowsKind>) -> Inventory {
 }
 #[test]
 fn smelting_assets_are_valid_unique_and_fuels_are_wood_not_snow_or_clay() {
-    assert_eq!(recipes().len(), 9);
+    assert_eq!(recipes().len(), 10);
     for recipe in recipes() {
         assert!(recipe.valid());
     }

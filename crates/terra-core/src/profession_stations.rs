@@ -21,11 +21,17 @@ pub const fn is_station(material: u16) -> bool {
 }
 
 pub const fn is_depot(material: u16) -> bool {
-    matches!(material, 29 | crate::train_parts::CARGO) || is_station(material)
+    matches!(
+        material,
+        29 | crate::grave_blocks::ORNATE_CHEST | crate::train_parts::CARGO
+    ) || is_station(material)
 }
 
 pub fn supports_work(material: u16, kind: WorkKind) -> bool {
-    if matches!(material, 29 | crate::train_parts::CARGO) {
+    if matches!(
+        material,
+        29 | crate::grave_blocks::ORNATE_CHEST | crate::train_parts::CARGO
+    ) {
         return true;
     }
     is_station(material)

@@ -1,0 +1,13 @@
+{
+  "id": 10619,
+  "key": "teramic::crush_road_aggregate",
+  "name": "Crush road aggregate",
+  "input": {
+    "block": 3
+  },
+  "output": {
+    "item": "road_aggregate",
+    "count": 4
+  },
+  "seconds": 4
+}

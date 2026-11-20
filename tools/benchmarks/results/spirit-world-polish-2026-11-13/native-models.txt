@@ -1,0 +1,1 @@
+Isolated model gallery run: /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/model-galleries/run.NSWXmW

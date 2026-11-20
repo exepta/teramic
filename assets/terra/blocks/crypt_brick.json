@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": 343,
+  "name": "Crypt Brick",
+  "description": "Crypt Brick for the weathered walls of old graves and crypts.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "crypt_brick": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "crypt_brick": "textures/crypt_brick.png"
+  },
+  "face_materials": [
+    "crypt_brick",
+    "crypt_brick",
+    "crypt_brick",
+    "crypt_brick",
+    "crypt_brick",
+    "crypt_brick"
+  ]
+}

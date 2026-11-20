@@ -1,0 +1,11 @@
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Finished `test` profile [optimized + debuginfo] target(s) in 2m 12s
+     Running unittests src/lib.rs (target/world-validation/debug/deps/terra_world-241b0ee1f61de9ef)
+
+running 3 tests
+test generation::natural_features::tests::habitats_reject_water_portals_slopes_structures_and_tree_feet ... ok
+test generation::natural_features::tests::groups_leave_clearings_and_large_props_keep_twelve_metre_spacing_across_negative_tiles ... ok
+test generation::natural_features::tests::rock_voxels_are_embedded_irregular_and_match_streamed_boundaries_edits_and_reload ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1447 filtered out; finished in 0.15s
+

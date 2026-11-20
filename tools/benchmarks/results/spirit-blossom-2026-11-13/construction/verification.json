@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "screens": {
+    "construction-catalog-de-wide": {
+      "width": 1601,
+      "height": 900,
+      "bytes": 1920790
+    },
+    "construction-npc-de-wide": {
+      "width": 1601,
+      "height": 900,
+      "bytes": 806949
+    },
+    "construction-blueprint-de-wide": {
+      "width": 1601,
+      "height": 900,
+      "bytes": 1985157
+    },
+    "construction-queued-en-compact": {
+      "width": 960,
+      "height": 641,
+      "bytes": 877501
+    },
+    "construction-areas-de-wide": {
+      "width": 1601,
+      "height": 900,
+      "bytes": 2055966
+    },
+    "construction-areas-hidden-de-wide": {
+      "width": 1601,
+      "height": 900,
+      "bytes": 2055761
+    },
+    "construction-areas-animated-de-wide": {
+      "width": 1601,
+      "height": 900,
+      "bytes": 2056347
+    }
+  },
+  "transport": "real local UDP authority and acknowledged Build claim",
+  "input": "real remappable TAB/ESC KeyboardInput, WASD pan, HTML template handler and projected MouseButtonInput",
+  "template": "spruce-cottage-v1",
+  "preview": "actual orange template mesh",
+  "resources": "four acknowledged Creative infinity rows without a chest",
+  "queue": "real ground raycast, selected-template job and authoritative free_resources",
+  "persistence": "actual integrated-server save acknowledgement plus disk reload validates job/template/free_resources and matching owner settlement without storage",
+  "npc": "actual civilian click, private inventory response and ESC retaining construction",
+  "restoration": "unchanged authoritative/predicted avatar and restored gameplay camera",
+  "areas": "real server-confirmed storage/residential areas, bounded drifting density volumes and red Build-claim perimeter",
+  "visibility": "actual H KeyboardInput hides/restores all overlay meshes while reusing cached entities",
+  "animation": "finite uploaded spatial advection changes between two actual visible GPU captures",
+  "responsive_geometry": "DE wide and EN compact viewport/caption checks"
+}

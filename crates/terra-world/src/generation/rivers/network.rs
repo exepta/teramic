@@ -255,7 +255,12 @@ impl TerraGenerator {
             let b = points[(i + 1).min(POINTS - 1)];
             let slope = (b[0] - a[0]) / (b[2] - a[2]);
             let normal = 1.0 / slope.hypot(1.0);
-            for offset in [-10.0, -5.0, 5.0, 10.0] {
+            let reach = if self.config().river_terrain_revision >= 5 {
+                12.0
+            } else {
+                10.0
+            };
+            for offset in [-reach, -reach * 0.5, reach * 0.5, reach] {
                 let [x, z] = frame.world(
                     points[i][0] + offset * normal,
                     points[i][2] - offset * slope * normal,
@@ -302,6 +307,9 @@ impl TerraGenerator {
         z: f64,
     ) -> Option<super::RiverSample> {
         let mut sample = self.sample_drainage(path, x, z, None)?;
+        if self.config().river_terrain_revision >= 5 {
+            return Some(sample);
+        }
         let along = path.frame.project(x, z)[1];
         let end_distance = along - along.clamp(0.0, (POINTS - 1) as f64 * path.step);
         let normal = (f64::from(sample.flow[0]) * path.frame.downstream[0]

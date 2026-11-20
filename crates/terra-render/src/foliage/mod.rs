@@ -1,4 +1,5 @@
 mod mask;
+mod motes;
 pub(crate) mod packing;
 mod particles;
 
@@ -6,10 +7,7 @@ use crate::blocks::BlockAssets;
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
-    render::{
-        render_resource::{AsBindGroup, Face},
-        storage::ShaderBuffer,
-    },
+    render::{render_resource::AsBindGroup, storage::ShaderBuffer},
     shader::ShaderRef,
 };
 use std::collections::HashMap;
@@ -47,6 +45,8 @@ pub struct FoliageStatus {
     pub particle_batches: usize,
     pub spawned_leaves: u64,
     pub rooted_fibre_materials: usize,
+    pub magical_motes: usize,
+    pub magical_batches: usize,
 }
 
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
@@ -125,6 +125,7 @@ pub(crate) fn install(app: &mut App) {
         .init_resource::<FoliageAssets>()
         .init_resource::<FoliageStatus>();
     particles::install(app);
+    motes::install(app);
 }
 
 pub(crate) fn prepare_materials(
@@ -170,7 +171,13 @@ pub(crate) fn prepare_materials(
         let Some(block) = templates.blocks.get(&id) else {
             continue;
         };
-        for &slot in &block.face_materials {
+        for slot in block.face_materials.into_iter().chain(
+            templates
+                .foliage_clusters
+                .get(&id)
+                .into_iter()
+                .flat_map(|cluster| cluster.slots()),
+        ) {
             if assets.materials.contains_key(&slot) {
                 continue;
             }
@@ -179,9 +186,9 @@ pub(crate) fn prepare_materials(
             };
             let mut base = base.clone();
             base.alpha_mode = AlphaMode::Mask(0.5);
-            // These crowns are closed voxel shells, unlike the flat falling leaves.
-            base.double_sided = false;
-            base.cull_mode = Some(Face::Back);
+            // Cutout clusters must remain visible through gaps from either side.
+            base.double_sided = true;
+            base.cull_mode = None;
             base.perceptual_roughness = 0.91;
             let handle = materials.add(ExtendedMaterial {
                 base,
@@ -190,7 +197,11 @@ pub(crate) fn prepare_materials(
                         0.043,
                         0.010,
                         0.85,
-                        if matches!(id, 132 | 133) { -1.0 } else { 0.0 },
+                        if matches!(id, 132 | 133 | 310..=312 | 406) {
+                            -1.0
+                        } else {
+                            0.0
+                        },
                     ),
                     weather: crate::weather::storage::WEATHER_BUFFER_HANDLE.clone(),
                 },
@@ -458,12 +469,12 @@ mod tests {
                 app.add_plugins(FoliageReferenceBenchmark);
             }
             let mut templates = TemplateSet::default();
-            for id in 1..=10 {
+            for (index, id) in (1..=10).chain([406]).enumerate() {
                 let base = app
                     .world_mut()
                     .resource_mut::<Assets<StandardMaterial>>()
                     .add(StandardMaterial {
-                        base_color: Color::linear_rgb(id as f32 / 10.0, 0.6, 0.2),
+                        base_color: Color::linear_rgb((index + 1) as f32 / 11.0, 0.6, 0.2),
                         ..default()
                     });
                 let slot = app.world().resource::<BlockAssets>().materials.len();
@@ -485,28 +496,56 @@ mod tests {
                     },
                 );
             }
+            for (id, slot, needles) in [(7, 11, Some(12)), (406, 13, None)] {
+                templates.foliage_clusters.insert(
+                    id,
+                    crate::blocks::FoliageClusterMaterials {
+                        leaves: slot,
+                        needles,
+                    },
+                );
+                for _ in std::iter::once(slot).chain(needles) {
+                    let base = app
+                        .world_mut()
+                        .resource_mut::<Assets<StandardMaterial>>()
+                        .add(StandardMaterial::default());
+                    app.world_mut()
+                        .resource_mut::<BlockAssets>()
+                        .materials
+                        .push(base);
+                }
+            }
             app.world_mut().resource_mut::<BlockAssets>().templates =
                 Some(std::sync::Arc::new(templates));
             app.update();
             app.update();
             let assets = app.world().resource::<FoliageAssets>();
-            assert_eq!(assets.materials.len(), 3);
-            assert_eq!(assets.reference.len(), if reference { 3 } else { 0 });
+            assert_eq!(assets.materials.len(), 7);
+            assert_eq!(assets.reference.len(), if reference { 7 } else { 0 });
             let materials = app.world().resource::<Assets<LeafMaterial>>();
-            assert_eq!(materials.len(), 3);
-            for slot in 0..10 {
+            assert_eq!(materials.len(), 7);
+            for slot in 0..14 {
                 assert_eq!(
                     assets.materials.contains_key(&slot),
-                    (6..=8).contains(&slot)
+                    matches!(slot, 6..=8 | 10..=13)
                 );
                 if let Some(handle) = assets.materials.get(&slot) {
                     let material = materials.get(handle).unwrap();
                     assert_eq!(material.base.alpha_mode, AlphaMode::Mask(0.5));
-                    assert_eq!(material.base.cull_mode, Some(Face::Back));
-                    assert!(!material.base.double_sided);
+                    assert_eq!(material.base.cull_mode, None);
+                    assert!(material.base.double_sided);
                     assert_eq!(
                         material.base.base_color.to_linear().red,
-                        (slot + 1) as f32 / 10.0
+                        if slot < 11 {
+                            (slot + 1) as f32 / 11.0
+                        } else {
+                            1.0
+                        }
+                    );
+                    assert_eq!(
+                        material.extension.wind.w,
+                        if matches!(slot, 10 | 13) { -1.0 } else { 0.0 },
+                        "Blood foliage keeps its authored red through the seasons; ordinary leaves still change"
                     );
                     assert!(material.extension.wind.x + material.extension.wind.y < WIND_BOUNDS);
                     if let Some(handle) = assets.reference.get(&slot) {

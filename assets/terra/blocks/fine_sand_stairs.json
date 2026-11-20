@@ -32,15 +32,29 @@
       ]
     },
     {
-      "minimum": [0, 0.6666666666666666, 0.6666666666666666],
-      "maximum": [1, 1, 1]
+      "minimum": [
+        0,
+        0.6666666666666666,
+        0.6666666666666666
+      ],
+      "maximum": [
+        1,
+        1,
+        1
+      ]
     }
   ],
   "materials": {
     "Fine sand": {
-      "texture_pattern": "sand",
-      "roughness": 1,
-      "reflectance": 0.12
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/sand_normal.png"
     }
   },
   "face_materials": [
@@ -55,5 +69,8 @@
   "resistance": 0.5,
   "required_tool": null,
   "mining_level": 0,
-  "struct_block": false
+  "struct_block": false,
+  "textures": {
+    "Fine sand": "textures/block_palette/sand.png"
+  }
 }

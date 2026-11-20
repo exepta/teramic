@@ -93,6 +93,79 @@ fn run(
 fn snapshot(journal: &EditJournal) -> BTreeMap<Cell, FluidCell> {
     journal.fluid_cells().collect()
 }
+
+#[test]
+fn placed_water_advances_across_the_last_pool_cell_before_contacting_its_wall() {
+    use crate::water::{FluidOccluders, append_fluid_patch, flowing_surface_height};
+    use terra_core::block_shapes::ShapeBox;
+
+    let (terrain, mut chunks, mut journal, cells) = rectangular_fixture([7, 7, 8], [2, 1]);
+    put(&mut chunks, &mut journal, cells[0], 27);
+    let wall = [9, 7, 8];
+    let columns = vec![terrain.surface_column(0.5, 0.5); 18 * 18];
+    let padded: Vec<_> = (0..18_i64.pow(3))
+        .map(|i| {
+            chunks
+                .block_at([i % 18 - 1, i / 18 % 18 - 1, i / 324 - 1])
+                .unwrap_or(3)
+        })
+        .collect();
+    let banks = FluidOccluders::from([(
+        wall,
+        vec![ShapeBox {
+            minimum: wall.map(|v| v as f64),
+            maximum: wall.map(|v| (v + 1) as f64),
+            hinged: false,
+        }],
+    )]);
+    let mut early = false;
+    let mut contacted = false;
+    for _ in 0..8 {
+        run(&terrain, &chunks, &mut journal, 1);
+        let amount = journal.fluid(cells[1]).unwrap_or_default().amount;
+        if !(1..8).contains(&amount) {
+            continue;
+        }
+        let mut mesh = None;
+        append_fluid_patch(
+            &mut mesh,
+            global_to_section(cells[1]).0,
+            &columns,
+            &padded,
+            &journal.fluid_cells().collect(),
+            (false, &banks),
+        );
+        let mesh = mesh.unwrap();
+        let front_x = mesh.positions.iter().map(|p| p[0]).fold(0., f32::max);
+        assert!(flowing_surface_height(&chunks, &terrain, &journal, [8.06, 7., 8.5]).is_some());
+        let near_wall = flowing_surface_height(&chunks, &terrain, &journal, [8.99, 7., 8.5]);
+        if amount < 4 {
+            assert!(front_x > 8. && front_x < 8.99);
+            assert_eq!(near_wall, None);
+            early = true;
+        } else if amount > 4 {
+            assert_eq!(front_x, 9.);
+            assert!(near_wall.is_some_and(|h| h > 7.));
+            assert!(
+                !mesh
+                    .indices
+                    .chunks_exact(3)
+                    .any(|face| { face.iter().all(|&i| mesh.positions[i as usize][0] == 9.) }),
+                "a hidden end face would overlap the bank"
+            );
+            contacted = true;
+        }
+    }
+    assert!(early && contacted);
+    for partial in [
+        82,
+        terra_core::plumbing::BASIN,
+        terra_core::brewing::MATERIAL,
+    ] {
+        assert!(!crate::water::tongue::front_boundary(partial));
+    }
+}
+
 fn assert_quiet(terrain: &TerraGenerator, chunks: &ChunkStore, journal: &mut EditJournal) {
     let before = snapshot(journal);
     let epochs: Vec<_> = journal.water_mesh_epochs().collect();
@@ -117,7 +190,7 @@ fn assert_quiet(terrain: &TerraGenerator, chunks: &ChunkStore, journal: &mut Edi
 }
 
 #[test]
-fn diagonal_sources_form_only_the_other_two_sources_across_positive_and_negative_chunk_edges() {
+fn diagonal_sources_fill_gradually_without_creating_sources_across_chunk_edges() {
     for origin in [[3, 18, 3], [-1, 16, -1], [15, -16, 15]] {
         for diagonal in [[0, 3], [1, 2]] {
             let (terrain, mut chunks, mut journal, positions) = fixture(origin);
@@ -127,13 +200,13 @@ fn diagonal_sources_form_only_the_other_two_sources_across_positive_and_negative
                 .map(|p| (p, journal.mesh_epoch(p)))
                 .collect();
             let step = run(&terrain, &chunks, &mut journal, 32);
-            for p in positions {
+            for (index, p) in positions.into_iter().enumerate() {
                 assert_eq!(
                     journal.fluid(p),
                     Some(FluidCell {
                         amount: 8,
                         flow: [0; 2],
-                        source: true
+                        source: diagonal.contains(&index)
                     })
                 );
             }
@@ -142,7 +215,7 @@ fn diagonal_sources_form_only_the_other_two_sources_across_positive_and_negative
                     .fluid_cells()
                     .filter(|(_, cell)| cell.source)
                     .count(),
-                4
+                2
             );
             assert_eq!(step.sourced, 16);
             assert_eq!(step.replenished + step.drained, 0);
@@ -176,19 +249,20 @@ fn single_or_adjacent_sources_fill_a_calm_pool_without_becoming_new_sources() {
         }
         assert_eq!(step.sourced, 32 - initial.len() as u64 * 8);
         assert_quiet(&terrain, &chunks, &mut journal);
-        // A newly placed diagonal seed intentionally enables the 2-neighbour rule.
+        // Another paid source cannot promote the other cells into reservoirs.
         sources(&mut chunks, &mut journal, positions, &[3]);
         run(&terrain, &chunks, &mut journal, 8);
-        assert!(
-            positions
-                .into_iter()
-                .all(|p| journal.fluid(p).unwrap().source)
-        );
+        for (index, p) in positions.into_iter().enumerate() {
+            assert_eq!(
+                journal.fluid(p).unwrap().source,
+                initial.contains(&index) || index == 3
+            );
+        }
     }
 }
 
 #[test]
-fn source_free_supported_pools_keep_every_finite_unit_and_clear_old_flow_without_remeshing() {
+fn source_free_supported_pools_recede_with_an_exact_ledger_and_then_stay_quiet() {
     for total in [1_u16, 7, 8, 11, 23, 31, 32] {
         let (terrain, chunks, mut journal, positions) = fixture([-1, 18, 15]);
         let mut left = total;
@@ -220,18 +294,12 @@ fn source_free_supported_pools_keep_every_finite_unit_and_clear_old_flow_without
                 .into_iter()
                 .map(|p| u16::from(journal.fluid(p).unwrap_or_default().amount))
                 .sum::<u16>(),
-            total
+            0
         );
-        assert_eq!(step.sourced + step.replenished + step.drained, 0);
-        for (index, p) in positions.into_iter().enumerate() {
-            assert_eq!(
-                journal.fluid(p).unwrap_or_default(),
-                FluidCell {
-                    amount: (total / 4 + u16::from(index < (total % 4) as usize)) as u8,
-                    flow: [0; 2],
-                    source: false
-                }
-            );
+        assert_eq!(step.sourced + step.replenished, 0);
+        assert_eq!(step.drained, u64::from(total));
+        for p in positions {
+            assert_eq!(journal.fluid(p).unwrap_or_default(), FluidCell::default());
         }
         assert_quiet(&terrain, &chunks, &mut journal);
     }
@@ -287,7 +355,7 @@ fn unsupported_open_falling_or_waterlogged_arrangements_never_grow_new_sources()
 }
 
 #[test]
-fn a_top_slab_supports_a_pool_but_an_unloaded_border_defers_source_formation_until_reload() {
+fn a_top_slab_supports_a_pool_but_an_unloaded_border_defers_flow_until_reload() {
     let (terrain, mut chunks, mut journal, positions) = fixture([-1, 18, -1]);
     sources(&mut chunks, &mut journal, positions, &[0, 3]);
     for p in positions {
@@ -317,16 +385,16 @@ fn a_top_slab_supports_a_pool_but_an_unloaded_border_defers_source_formation_unt
     chunks.loaded.insert(missing, unloaded);
     journal.resume_fluids(missing);
     run(&terrain, &chunks, &mut journal, 32);
-    assert!(
-        positions
-            .into_iter()
-            .all(|p| journal.fluid(p).unwrap().source)
-    );
+    for (index, p) in positions.into_iter().enumerate() {
+        let cell = journal.fluid(p).unwrap();
+        assert_eq!(cell.amount, 8);
+        assert_eq!(cell.source, index == 0 || index == 3);
+    }
     assert_quiet(&terrain, &chunks, &mut journal);
 }
 
 #[test]
-fn source_formation_preflights_all_cross_section_counters_before_any_source_changes() {
+fn pool_flux_preflights_all_cross_section_counters_before_any_changes() {
     let (terrain, mut chunks, mut journal, positions) = fixture([-1, 18, -1]);
     sources(&mut chunks, &mut journal, positions, &[0, 3]);
     let owner = global_to_section(positions[1]).0;
@@ -363,7 +431,7 @@ fn source_formation_preflights_all_cross_section_counters_before_any_source_chan
 }
 
 #[test]
-fn other_supported_closed_sizes_conserve_finite_water_and_stay_quiet_after_reload() {
+fn supported_closed_sizes_recede_with_an_exact_ledger_and_stay_dry_after_reload() {
     for (size, total) in [([1, 1], 5_u16), ([3, 3], 21), ([4, 3], 37)] {
         let (terrain, chunks, mut journal, positions) = rectangular_fixture([-1, 18, 15], size);
         let mut left = total;
@@ -388,13 +456,14 @@ fn other_supported_closed_sizes_conserve_finite_water_and_stay_quiet_after_reloa
             journal.wake_fluid(p);
         }
         let step = run(&terrain, &chunks, &mut journal, 32);
-        assert_eq!(step.sourced + step.replenished + step.drained, 0);
+        assert_eq!(step.sourced + step.replenished, 0);
+        assert_eq!(step.drained, u64::from(total));
         assert_eq!(
             positions
                 .iter()
                 .map(|&p| u16::from(journal.fluid(p).unwrap_or_default().amount))
                 .sum::<u16>(),
-            total
+            0
         );
         assert!(positions.iter().all(|&p| {
             let cell = journal.fluid(p).unwrap_or_default();
@@ -418,7 +487,7 @@ fn other_supported_closed_sizes_conserve_finite_water_and_stay_quiet_after_reloa
                 .iter()
                 .map(|&p| u16::from(restored.fluid(p).unwrap_or_default().amount))
                 .sum::<u16>(),
-            total
+            0
         );
     }
 }
@@ -595,4 +664,97 @@ fn exhausted_pool_proof_budget_never_pauses_locally_unsupported_waterfall_cells(
     );
     assert!(!resting.handled(p));
     assert_eq!(resting.examined, STEP_POOL_BUDGET);
+}
+
+#[test]
+fn stacked_source_free_reservoir_recedes_completely_and_stays_quiet_after_reload() {
+    let (terrain, chunks, mut journal, positions) = rectangular_fixture([3, 18, 3], [3, 3]);
+    for &p in &positions {
+        journal
+            .set_fluid(
+                p,
+                FluidCell {
+                    amount: 8,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+    }
+    for (i, &p) in positions.iter().enumerate().take(3) {
+        journal
+            .set_fluid(
+                [p[0], p[1] + 1, p[2]],
+                FluidCell {
+                    amount: [8, 8, 2][i],
+                    flow: [1, 0],
+                    source: false,
+                },
+            )
+            .unwrap();
+    }
+    let step = run(&terrain, &chunks, &mut journal, 64);
+    assert_eq!(step.sourced + step.replenished, 0);
+    assert_eq!(step.drained, 90);
+    assert_eq!(
+        journal
+            .fluid_cells()
+            .map(|(_, c)| u16::from(c.amount))
+            .sum::<u16>(),
+        0
+    );
+    for &p in &positions {
+        assert_eq!(journal.fluid(p).unwrap().amount, 0);
+        assert_eq!(
+            journal.fluid([p[0], p[1] + 1, p[2]]).unwrap_or_default(),
+            FluidCell::default()
+        );
+    }
+    assert_quiet(&terrain, &chunks, &mut journal);
+    let mut restored = EditJournal::default();
+    for p in journal.changed_sections() {
+        restored.import_delta(journal.section_delta(p)).unwrap();
+    }
+    assert_quiet(&terrain, &chunks, &mut restored);
+}
+
+#[test]
+fn a_sustained_fractional_source_fills_its_open_slab_lip_to_a_quiet_common_head() {
+    let (terrain, mut chunks, mut journal, positions) = rectangular_fixture([3, 18, 3], [2, 1]);
+    let (lip, pool) = (positions[0], positions[1]);
+    put(&mut chunks, &mut journal, lip, 82);
+    journal
+        .set_object_state(lip, Some(BlockObjectState::default()))
+        .unwrap();
+    journal
+        .set_fluid(
+            lip,
+            FluidCell {
+                amount: 6,
+                source: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    journal
+        .set_fluid(
+            pool,
+            FluidCell {
+                amount: 5,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let step = run(&terrain, &chunks, &mut journal, 32);
+    assert_eq!(step.sourced, 1);
+    assert_eq!(step.replenished + step.drained, 0);
+    assert_eq!(journal.fluid(lip).unwrap().amount, 6);
+    assert_eq!(journal.fluid(pool).unwrap().amount, 6);
+    assert_eq!(
+        journal
+            .fluid_cells()
+            .map(|(_, cell)| u16::from(cell.amount))
+            .sum::<u16>(),
+        12
+    );
+    assert_quiet(&terrain, &chunks, &mut journal);
 }

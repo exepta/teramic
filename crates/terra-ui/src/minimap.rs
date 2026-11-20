@@ -154,6 +154,7 @@ pub struct MiniMapView {
     pub coordinates: String,
     pub biome: String,
     pub clock: String,
+    pub fps: String,
     pub seasons: bool,
     pub season: String,
     // Native calendar uniforms stay continuous without invalidating unrelated
@@ -506,6 +507,7 @@ struct MapData<'w> {
     water: Option<Res<'w, Messages<WaterPublished>>>,
     section_edits: Option<Res<'w, Messages<SectionEditApplied>>>,
     clock: Option<Res<'w, terra_core::WorldClock>>,
+    frame_rate: Option<Res<'w, crate::debug::fps::SessionFps>>,
     creatures: Option<Res<'w, ReplicatedCreatures>>,
     players: Option<Res<'w, ReplicatedPlayers>>,
     social: Option<Res<'w, terra_network::client::SocialState>>,
@@ -583,6 +585,7 @@ fn update(
         water,
         section_edits,
         clock,
+        frame_rate,
         creatures,
         players,
         social,
@@ -988,6 +991,10 @@ fn update(
             } else {
                 String::new()
             },
+            fps: frame_rate
+                .as_ref()
+                .and_then(|frames| frames.current)
+                .map_or_else(|| "— FPS".into(), |frames| format!("{frames:.0} FPS")),
             seasons: season.is_some_and(|s| s.enabled),
             season: season.map_or_else(String::new, |s| s.season.name().into()),
             season_cycle: season.map_or(0.0, |s| (s.season.index() as f32 + s.progress) * 0.25),
@@ -1548,14 +1555,16 @@ fn beneath_roof(
 fn biome_name(kind: terra_world::generation::biomes::BiomeKind) -> &'static str {
     use terra_world::generation::biomes::BiomeKind;
     match kind {
-        BiomeKind::Ocean => "Ocean",
-        BiomeKind::Plains => "Plains",
-        BiomeKind::Forest => "Forest",
-        BiomeKind::Desert => "Desert",
-        BiomeKind::Highland => "Highlands",
-        BiomeKind::MushroomPark => "Mushroom Park",
-        BiomeKind::ClifftedDesert => "Cliffted Desert",
-        BiomeKind::CherryForest => "Cherry Forest",
+        BiomeKind::Ocean => "Ocean · Warm",
+        BiomeKind::Plains => "Plains · Warm",
+        BiomeKind::Forest => "Forest · Warm",
+        BiomeKind::Desert => "Desert · Hot",
+        BiomeKind::Highland => "Highlands · Cold",
+        BiomeKind::MushroomPark => "Mushroom Park · Warm",
+        BiomeKind::ClifftedDesert => "Cliffted Desert · Hot",
+        BiomeKind::CherryForest => "Cherry Forest · Warm",
+        BiomeKind::SpiritBlossom => "Spirit Blossom · Warm",
+        BiomeKind::BloodForest => "Blood Forest · Warm",
     }
 }
 fn layer_root(root: &std::path::Path, layer: MapLayer) -> PathBuf {
@@ -1748,7 +1757,7 @@ mod tests {
     fn cache_palette() -> MapPalette {
         MapPalette {
             colors: vec![[0.2, 0.3, 0.1]; 8],
-            biome_colors: [[0.2, 0.5, 0.1]; 8],
+            biome_colors: [[0.2, 0.5, 0.1]; 10],
             ..default()
         }
     }
@@ -1760,7 +1769,7 @@ mod tests {
             material: 1,
             height: -42,
             known: true,
-            biome_weights: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            biome_weights: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             ..default()
         };
         DetailTile {

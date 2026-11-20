@@ -16,6 +16,172 @@ fn config(seed: u64) -> WorldConfig {
 }
 
 #[test]
+fn revision_eight_lowlands_have_different_relief_within_the_same_profile() {
+    let sampler = AdvancedSampler::new(&WorldConfig {
+        landscape_revision: 8,
+        ..config(42042)
+    });
+    let mut relief: [Vec<(f64, f64)>; 3] = std::array::from_fn(|_| Vec::new());
+    for z in -16..=16 {
+        for x in -16..=16 {
+            let [x, z] = [f64::from(x) * 512.0 + 0.5, f64::from(z) * 512.0 + 0.5];
+            let center = sampler.node(x, z);
+            let profile = match center.profile() {
+                TerrainKind::Plains => 0,
+                TerrainKind::RollingPlains => 1,
+                TerrainKind::Forest => 2,
+                _ => continue,
+            };
+            if center.fields.continentalness < 0.28 {
+                continue;
+            }
+            let heights = [
+                sampler.node(x - 192.0, z).height,
+                sampler.node(x + 192.0, z).height,
+                sampler.node(x, z - 192.0).height,
+                sampler.node(x, z + 192.0).height,
+                center.height,
+            ];
+            let span = heights.into_iter().fold(f64::NEG_INFINITY, f64::max)
+                - heights.into_iter().fold(f64::INFINITY, f64::min);
+            // A uniform hillside has near-zero curvature even when steep.
+            let curvature = (heights[0] + heights[1] - 2.0 * center.height).abs()
+                + (heights[2] + heights[3] - 2.0 * center.height).abs();
+            relief[profile].push((span, curvature));
+        }
+    }
+    let mut varied_profiles = 0;
+    for samples in &mut relief {
+        if samples.len() < 12 {
+            continue;
+        }
+        samples.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let low = samples[samples.len() / 10].0;
+        let high = samples[samples.len() * 9 / 10].0;
+        let broken = samples
+            .iter()
+            .filter(|(_, curvature)| *curvature > 1.0)
+            .count();
+        varied_profiles += usize::from(high > low * 1.8 && broken * 2 > samples.len());
+        eprintln!(
+            "lowland samples={} p10_relief={low} p90_relief={high} curved={broken}",
+            samples.len()
+        );
+    }
+    assert!(
+        varied_profiles >= 2,
+        "same-biome districts must include soft and broken relief"
+    );
+}
+
+#[test]
+fn revision_six_relief_changes_the_landscape_without_moving_climate_or_saved_profiles() {
+    for seed in [42042, 7, 99173] {
+        let saved = config(seed);
+        let old = AdvancedSampler::new(&saved);
+        let modern = AdvancedSampler::new(&WorldConfig {
+            landscape_revision: 6,
+            ..saved.clone()
+        });
+        assert_eq!(old.definitions, modern.definitions);
+        let mut changed = 0;
+        let mut inland = 0;
+        let mut maximum_delta = 0.0_f64;
+        for z in -12..=12 {
+            for x in -12..=12 {
+                let [x, z] = [f64::from(x) * 384.0 + 0.5, f64::from(z) * 384.0 + 0.5];
+                let before = old.node(x, z);
+                let after = modern.node(x, z);
+                assert_eq!(before.fields, after.fields);
+                assert_eq!(before.weights, after.weights);
+                assert_eq!(before.overhangs, after.overhangs);
+                assert!(after.height.is_finite() && (-119.0..=350.0).contains(&after.height));
+                if before.fields.continentalness >= 0.24 {
+                    inland += 1;
+                    let delta = (before.height - after.height).abs();
+                    maximum_delta = maximum_delta.max(delta);
+                    changed += usize::from(delta > 1.0);
+                } else if before.fields.continentalness <= -0.14 {
+                    assert_eq!(
+                        before.height.to_bits(),
+                        after.height.to_bits(),
+                        "ocean shoreline anchor moved"
+                    );
+                }
+            }
+        }
+        eprintln!(
+            "fantasy relief seed={seed}: inland={inland} changed={changed} maximum_delta={maximum_delta:.3}m"
+        );
+        assert!(inland >= 20 && changed * 2 > inland);
+        assert!(
+            maximum_delta > 15.0,
+            "fantasy relief is too weak for seed{seed}: {maximum_delta}"
+        );
+        // Every saved revision below six continues through the identical node
+        // function and immutable profile snapshot, including explicitly absent snapshots.
+        for revision in 0..=5 {
+            let legacy = AdvancedSampler::new(&WorldConfig {
+                landscape_revision: revision,
+                ..saved.clone()
+            });
+            for [x, z] in [[-128.0, 128.0], [-0.5, -0.5], [4096.5, -3072.5]] {
+                assert_eq!(
+                    legacy.node(x, z).values().map(f64::to_bits),
+                    old.node(x, z).values().map(f64::to_bits)
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn revision_six_cache_boundaries_are_continuous_and_explicit_flat_worlds_stay_flat() {
+    let config = WorldConfig {
+        landscape_revision: 6,
+        ..config(42042)
+    };
+    let sampler = AdvancedSampler::new(&config);
+    let reversed = AdvancedSampler::new(&config);
+    for cell in -16..=16 {
+        let edge = f64::from(cell * 128);
+        for [x, z] in [[edge, -97.5], [-97.5, edge], [edge, edge]] {
+            let left = sampler.height(x - 0.00001, z - 0.00001);
+            let right = sampler.height(x + 0.00001, z + 0.00001);
+            assert!(
+                (left - right).abs() < 0.002,
+                "terrain seam at{x},{z}: {left} {right}"
+            );
+            assert_eq!(
+                right.to_bits(),
+                reversed.height(x + 0.00001, z + 0.00001).to_bits()
+            );
+            assert_eq!(
+                left.to_bits(),
+                reversed.height(x - 0.00001, z - 0.00001).to_bits()
+            );
+        }
+    }
+    let flat = TerraGenerator::new(WorldConfig {
+        hill_amplitude: 0.0,
+        mountain_amplitude: 0.0,
+        ..config
+    })
+    .unwrap();
+    for [x, z] in [[-2048.5, 8192.5], [-0.5, 0.5], [4096.5, -3072.5]] {
+        assert_eq!(
+            flat.terrain_base_height(x, z).to_bits(),
+            flat.config().base_height.to_bits()
+        );
+        assert_eq!(
+            flat.base_height_with_biome(x, z, flat.climate_biome_at(x, z))
+                .to_bits(),
+            flat.config().base_height.to_bits()
+        );
+    }
+}
+
+#[test]
 fn original_saved_profiles_and_absent_snapshot_keep_original_geometry_bits() {
     for seed in [7, 42042, 99173] {
         let mut saved = config(seed);

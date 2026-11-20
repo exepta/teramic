@@ -1,0 +1,16 @@
+{
+  "first_banks": 77,
+  "first_drift": [
+    2.5636887550354004,
+    1.2818443775177002
+  ],
+  "later_banks": 77,
+  "later_drift": [
+    3.3352129459381104,
+    1.6676064729690552
+  ],
+  "mist_expected": true,
+  "scene": "picker-spirit-blossom",
+  "status": "passed",
+  "terrain": "Actual generated terrain; no placed lamps or fixture blocks"
+}

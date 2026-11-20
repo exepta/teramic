@@ -1,0 +1,610 @@
+[
+  {
+    "id": 324,
+    "enum": "BlueClay",
+    "slug": "blue_clay",
+    "name": "Blue Clay",
+    "german": "Blauer Lehm",
+    "family": "clay_blue"
+  },
+  {
+    "id": 325,
+    "enum": "RedClay",
+    "slug": "red_clay",
+    "name": "Red Clay",
+    "german": "Roter Lehm",
+    "family": "clay_red"
+  },
+  {
+    "id": 326,
+    "enum": "GreenClay",
+    "slug": "green_clay",
+    "name": "Green Clay",
+    "german": "Gruener Lehm",
+    "family": "clay_green"
+  },
+  {
+    "id": 327,
+    "enum": "YellowClay",
+    "slug": "yellow_clay",
+    "name": "Yellow Clay",
+    "german": "Gelber Lehm",
+    "family": "clay_yellow"
+  },
+  {
+    "id": 328,
+    "enum": "WhiteClay",
+    "slug": "white_clay",
+    "name": "White Clay",
+    "german": "Weisser Lehm",
+    "family": "clay_white"
+  },
+  {
+    "id": 329,
+    "enum": "BlackClay",
+    "slug": "black_clay",
+    "name": "Black Clay",
+    "german": "Schwarzer Lehm",
+    "family": "clay_black"
+  },
+  {
+    "id": 330,
+    "enum": "GrayClay",
+    "slug": "gray_clay",
+    "name": "Gray Clay",
+    "german": "Grauer Lehm",
+    "family": "clay_gray"
+  },
+  {
+    "id": 331,
+    "enum": "DarkGrayClay",
+    "slug": "dark_gray_clay",
+    "name": "Dark Gray Clay",
+    "german": "Dunkelgrauer Lehm",
+    "family": "clay_dark_gray"
+  },
+  {
+    "id": 332,
+    "enum": "PurpleClay",
+    "slug": "purple_clay",
+    "name": "Purple Clay",
+    "german": "Lila Lehm",
+    "family": "clay_purple"
+  },
+  {
+    "id": 333,
+    "enum": "PinkClay",
+    "slug": "pink_clay",
+    "name": "Pink Clay",
+    "german": "Rosa Lehm",
+    "family": "clay_pink"
+  },
+  {
+    "id": 334,
+    "enum": "LimeClay",
+    "slug": "lime_clay",
+    "name": "Lime Clay",
+    "german": "Limettengruener Lehm",
+    "family": "clay_lime"
+  },
+  {
+    "id": 335,
+    "enum": "TurquoiseClay",
+    "slug": "turquoise_clay",
+    "name": "Turquoise Clay",
+    "german": "Tuerkiser Lehm",
+    "family": "clay_turquoise"
+  },
+  {
+    "id": 336,
+    "enum": "OrangeClay",
+    "slug": "orange_clay",
+    "name": "Orange Clay",
+    "german": "Oranger Lehm",
+    "family": "clay_orange"
+  },
+  {
+    "id": 337,
+    "enum": "GraveStone",
+    "slug": "grave_stone",
+    "name": "Grave Stone",
+    "german": "Grabsteinstein",
+    "family": "stone"
+  },
+  {
+    "id": 338,
+    "enum": "DarkGraveStone",
+    "slug": "dark_grave_stone",
+    "name": "Dark Grave Stone",
+    "german": "Dunkelstein",
+    "family": "dark_stone"
+  },
+  {
+    "id": 339,
+    "enum": "CrackedGraveStone",
+    "slug": "cracked_grave_stone",
+    "name": "Cracked Dark Stone",
+    "german": "Rissiger Dunkelstein",
+    "family": "cracked_stone"
+  },
+  {
+    "id": 340,
+    "enum": "OrnateGraveStone",
+    "slug": "ornate_grave_stone",
+    "name": "Ornate Stone",
+    "german": "Zierstein",
+    "family": "ornate_stone"
+  },
+  {
+    "id": 341,
+    "enum": "MossGraveStone",
+    "slug": "moss_grave_stone",
+    "name": "Moss Veined Stone",
+    "german": "Moosstein",
+    "family": "moss_stone"
+  },
+  {
+    "id": 342,
+    "enum": "OvergrownGraveStone",
+    "slug": "overgrown_grave_stone",
+    "name": "Overgrown Stone",
+    "german": "Bemooster Stein",
+    "family": "overgrown_stone"
+  },
+  {
+    "id": 343,
+    "enum": "CryptBrick",
+    "slug": "crypt_brick",
+    "name": "Crypt Brick",
+    "german": "Kryptastein",
+    "family": "crypt_brick"
+  },
+  {
+    "id": 344,
+    "enum": "GraveStoneSlab",
+    "slug": "grave_stone_slab",
+    "name": "Stone Floor Slab",
+    "german": "Steinplatte",
+    "family": "slab"
+  },
+  {
+    "id": 345,
+    "enum": "OrnateGraveSlab",
+    "slug": "ornate_grave_slab",
+    "name": "Ornate Floor Slab",
+    "german": "Zierplatte",
+    "family": "ornate_slab"
+  },
+  {
+    "id": 346,
+    "enum": "MosaicGraveSlab",
+    "slug": "mosaic_grave_slab",
+    "name": "Mosaic Floor Slab",
+    "german": "Mosaikplatte",
+    "family": "mosaic_slab"
+  },
+  {
+    "id": 347,
+    "enum": "CrackedGraveSlab",
+    "slug": "cracked_grave_slab",
+    "name": "Cracked Floor Slab",
+    "german": "Rissige Platte",
+    "family": "cracked_slab"
+  },
+  {
+    "id": 348,
+    "enum": "InscribedGraveSlab",
+    "slug": "inscribed_grave_slab",
+    "name": "Inscribed Grave Slab",
+    "german": "Grabplatte mit Inschrift",
+    "family": "inscribed_slab"
+  },
+  {
+    "id": 349,
+    "enum": "CryptColumn",
+    "slug": "crypt_column",
+    "name": "Crypt Column",
+    "german": "Kryptasaeule",
+    "family": "column"
+  },
+  {
+    "id": 350,
+    "enum": "OrnateCryptColumn",
+    "slug": "ornate_crypt_column",
+    "name": "Ornate Crypt Column",
+    "german": "Ziersaeule",
+    "family": "ornate_column"
+  },
+  {
+    "id": 351,
+    "enum": "CryptCapital",
+    "slug": "crypt_capital",
+    "name": "Column Capital",
+    "german": "Saeulenkapitell",
+    "family": "capital"
+  },
+  {
+    "id": 352,
+    "enum": "CryptColumnBase",
+    "slug": "crypt_column_base",
+    "name": "Column Base",
+    "german": "Saeulenbasis",
+    "family": "base"
+  },
+  {
+    "id": 353,
+    "enum": "CryptArch",
+    "slug": "crypt_arch",
+    "name": "Crypt Arch",
+    "german": "Kryptabogen",
+    "family": "arch"
+  },
+  {
+    "id": 354,
+    "enum": "MossyCryptArch",
+    "slug": "mossy_crypt_arch",
+    "name": "Mossy Crypt Arch",
+    "german": "Verzierter Bogen",
+    "family": "moss_arch"
+  },
+  {
+    "id": 355,
+    "enum": "GraveReliefWall",
+    "slug": "grave_relief_wall",
+    "name": "Grave Relief Wall",
+    "german": "Reliefwand",
+    "family": "relief"
+  },
+  {
+    "id": 356,
+    "enum": "SkullRelief",
+    "slug": "skull_relief",
+    "name": "Skull Relief",
+    "german": "Totenkopfrelief",
+    "family": "skull_relief"
+  },
+  {
+    "id": 357,
+    "enum": "CrossRelief",
+    "slug": "cross_relief",
+    "name": "Cross Relief",
+    "german": "Kreuzrelief",
+    "family": "cross_relief"
+  },
+  {
+    "id": 358,
+    "enum": "CryptWallNiche",
+    "slug": "crypt_wall_niche",
+    "name": "Candle Wall Niche",
+    "german": "Wandnische",
+    "family": "niche"
+  },
+  {
+    "id": 359,
+    "enum": "CryptHeraldicBanner",
+    "slug": "crypt_heraldic_banner",
+    "name": "Heraldic Crypt Banner",
+    "german": "Wappenbanner",
+    "family": "banner"
+  },
+  {
+    "id": 360,
+    "enum": "CryptTornBanner",
+    "slug": "crypt_torn_banner",
+    "name": "Torn Crypt Banner",
+    "german": "Verschlissenes Stoffbanner",
+    "family": "torn_banner"
+  },
+  {
+    "id": 361,
+    "enum": "CryptCurtain",
+    "slug": "crypt_curtain",
+    "name": "Velvet Crypt Curtain",
+    "german": "Edler Vorhang",
+    "family": "curtain"
+  },
+  {
+    "id": 362,
+    "enum": "GravestoneSmall",
+    "slug": "gravestone_small",
+    "name": "Small Gravestone",
+    "german": "Kleiner Grabstein",
+    "family": "gravestone_small"
+  },
+  {
+    "id": 363,
+    "enum": "GravestoneMedium",
+    "slug": "gravestone_medium",
+    "name": "Medium Gravestone",
+    "german": "Mittlerer Grabstein",
+    "family": "gravestone_medium"
+  },
+  {
+    "id": 364,
+    "enum": "GravestoneLarge",
+    "slug": "gravestone_large",
+    "name": "Large Gravestone",
+    "german": "Grosser Grabstein",
+    "family": "gravestone_large"
+  },
+  {
+    "id": 365,
+    "enum": "GraveCross",
+    "slug": "grave_cross",
+    "name": "Grave Cross",
+    "german": "Kreuzgrab",
+    "family": "cross"
+  },
+  {
+    "id": 366,
+    "enum": "BorderedGrave",
+    "slug": "bordered_grave",
+    "name": "Bordered Grave",
+    "german": "Grab mit Umrandung",
+    "family": "bordered_grave"
+  },
+  {
+    "id": 367,
+    "enum": "SarcophagusClosed",
+    "slug": "sarcophagus_closed",
+    "name": "Closed Sarcophagus",
+    "german": "Geschlossener Sarkophag",
+    "family": "sarcophagus"
+  },
+  {
+    "id": 368,
+    "enum": "SarcophagusOpen",
+    "slug": "sarcophagus_open",
+    "name": "Open Sarcophagus",
+    "german": "Offener Sarkophag",
+    "family": "open_sarcophagus"
+  },
+  {
+    "id": 369,
+    "enum": "GraveLanternPost",
+    "slug": "grave_lantern_post",
+    "name": "Grave Lantern Post",
+    "german": "Friedhofslaterne",
+    "family": "lantern"
+  },
+  {
+    "id": 370,
+    "enum": "CryptWallTorch",
+    "slug": "crypt_wall_torch",
+    "name": "Crypt Wall Torch",
+    "german": "Kryptawandfackel",
+    "family": "torch"
+  },
+  {
+    "id": 371,
+    "enum": "CryptCandles",
+    "slug": "crypt_candles",
+    "name": "Candle Group",
+    "german": "Kerzengruppe",
+    "family": "candles"
+  },
+  {
+    "id": 372,
+    "enum": "CryptChandelier",
+    "slug": "crypt_chandelier",
+    "name": "Crypt Chandelier",
+    "german": "Kronleuchter",
+    "family": "chandelier"
+  },
+  {
+    "id": 373,
+    "enum": "SoulBrazier",
+    "slug": "soul_brazier",
+    "name": "Soul Brazier",
+    "german": "Seelenlicht",
+    "family": "brazier"
+  },
+  {
+    "id": 374,
+    "enum": "SkeletonRemains",
+    "slug": "skeleton_remains",
+    "name": "Skeleton Remains",
+    "german": "Skelettreste",
+    "family": "skeleton"
+  },
+  {
+    "id": 375,
+    "enum": "BonePile",
+    "slug": "bone_pile",
+    "name": "Bone Pile",
+    "german": "Knochenhaufen",
+    "family": "bones"
+  },
+  {
+    "id": 376,
+    "enum": "GraveUrn",
+    "slug": "grave_urn",
+    "name": "Grave Urn",
+    "german": "Graburne",
+    "family": "urn"
+  },
+  {
+    "id": 377,
+    "enum": "OrnateCryptChest",
+    "slug": "ornate_crypt_chest",
+    "name": "Ornate Crypt Chest",
+    "german": "Verzierte Truhe",
+    "family": "chest"
+  },
+  {
+    "id": 378,
+    "enum": "CryptBooks",
+    "slug": "crypt_books",
+    "name": "Old Book Stack",
+    "german": "Buecherstapel",
+    "family": "books"
+  },
+  {
+    "id": 379,
+    "enum": "GraveSkull",
+    "slug": "grave_skull",
+    "name": "Grave Skull",
+    "german": "Schaedel",
+    "family": "skull"
+  },
+  {
+    "id": 380,
+    "enum": "CryptChain",
+    "slug": "crypt_chain",
+    "name": "Hanging Crypt Chain",
+    "german": "Haengende Kette",
+    "family": "chain"
+  },
+  {
+    "id": 381,
+    "enum": "DeadGrass",
+    "slug": "dead_grass",
+    "name": "Dead Grass",
+    "german": "Totes Gras",
+    "family": "grass"
+  },
+  {
+    "id": 382,
+    "enum": "ThornBush",
+    "slug": "thorn_bush",
+    "name": "Thorn Bush",
+    "german": "Dornenbusch",
+    "family": "thorn"
+  },
+  {
+    "id": 383,
+    "enum": "HangingIvy",
+    "slug": "hanging_ivy",
+    "name": "Hanging Ivy",
+    "german": "Haengender Efeu",
+    "family": "ivy"
+  },
+  {
+    "id": 384,
+    "enum": "GraveMoss",
+    "slug": "grave_moss",
+    "name": "Moss Cover",
+    "german": "Moosbewuchs",
+    "family": "moss"
+  },
+  {
+    "id": 385,
+    "enum": "DarkMushrooms",
+    "slug": "dark_mushrooms",
+    "name": "Dark Mushrooms",
+    "german": "Dunkle Pilze",
+    "family": "mushrooms"
+  },
+  {
+    "id": 386,
+    "enum": "GlowingPurpleMushrooms",
+    "slug": "glowing_purple_mushrooms",
+    "name": "Glowing Purple Mushrooms",
+    "german": "Purpurne Leuchtpilze",
+    "family": "glow_mushrooms"
+  },
+  {
+    "id": 387,
+    "enum": "BlossomingVines",
+    "slug": "blossoming_vines",
+    "name": "Blossoming Vines",
+    "german": "Bluehende Ranken",
+    "family": "vines"
+  },
+  {
+    "id": 388,
+    "enum": "CryptPressurePlate",
+    "slug": "crypt_pressure_plate",
+    "name": "Stone Pressure Plate",
+    "german": "Steindruckplatte",
+    "family": "plate"
+  },
+  {
+    "id": 389,
+    "enum": "CryptLever",
+    "slug": "crypt_lever",
+    "name": "Crypt Lever",
+    "german": "Kryptahebel",
+    "family": "lever"
+  },
+  {
+    "id": 390,
+    "enum": "CryptWallSwitch",
+    "slug": "crypt_wall_switch",
+    "name": "Wall Switch",
+    "german": "Wandschalter",
+    "family": "switch"
+  },
+  {
+    "id": 391,
+    "enum": "CryptPortcullis",
+    "slug": "crypt_portcullis",
+    "name": "Crypt Portcullis",
+    "german": "Fallgitter",
+    "family": "portcullis"
+  },
+  {
+    "id": 392,
+    "enum": "LockedCryptGate",
+    "slug": "locked_crypt_gate",
+    "name": "Locked Crypt Gate",
+    "german": "Verschlossenes Tor",
+    "family": "gate"
+  },
+  {
+    "id": 393,
+    "enum": "CryptSpikeTrap",
+    "slug": "crypt_spike_trap",
+    "name": "Floor Spike Trap",
+    "german": "Bodendornfalle",
+    "family": "spikes"
+  },
+  {
+    "id": 394,
+    "enum": "CryptArrowTrap",
+    "slug": "crypt_arrow_trap",
+    "name": "Wall Arrow Trap",
+    "german": "Wandpfeilfalle",
+    "family": "arrows"
+  },
+  {
+    "id": 395,
+    "enum": "SoulCrystalSmall",
+    "slug": "soul_crystal_small",
+    "name": "Small Soul Crystal",
+    "german": "Kleiner Seelenkristall",
+    "family": "crystal_small"
+  },
+  {
+    "id": 396,
+    "enum": "SoulCrystalLarge",
+    "slug": "soul_crystal_large",
+    "name": "Large Soul Crystal",
+    "german": "Grosser Seelenkristall",
+    "family": "crystal_large"
+  },
+  {
+    "id": 397,
+    "enum": "ActiveRuneBlock",
+    "slug": "active_rune_block",
+    "name": "Active Rune Block",
+    "german": "Aktiver Runenblock",
+    "family": "rune"
+  },
+  {
+    "id": 398,
+    "enum": "InactiveRuneBlock",
+    "slug": "inactive_rune_block",
+    "name": "Inactive Rune Block",
+    "german": "Inaktiver Runenblock",
+    "family": "inactive_rune"
+  },
+  {
+    "id": 399,
+    "enum": "MysticMistBlock",
+    "slug": "mystic_mist_block",
+    "name": "Mystic Mist Block",
+    "german": "Mystischer Nebelblock",
+    "family": "mist"
+  }
+]

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": 351,
+  "name": "Column Capital",
+  "description": "Column Capital for monumental entrances, arcades and vaulted halls.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_capital.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/crypt_capital.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.12,
+        0.61,
+        0.12
+      ],
+      "maximum": [
+        0.88,
+        1,
+        0.88
+      ]
+    },
+    {
+      "minimum": [
+        0.23,
+        0.36,
+        0.23
+      ],
+      "maximum": [
+        0.77,
+        0.62,
+        0.77
+      ]
+    },
+    {
+      "minimum": [
+        0.28,
+        0,
+        0.28
+      ],
+      "maximum": [
+        0.72,
+        0.37,
+        0.72
+      ]
+    }
+  ]
+}

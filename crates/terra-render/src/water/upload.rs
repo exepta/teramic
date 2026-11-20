@@ -14,21 +14,9 @@ use terra_world::{
     streaming::{ChunkStore, SectionPublished, SectionRemoved, WaterPublished},
 };
 
-use super::biome::{ATTRIBUTE_BIOME_TINT, WaterTint};
+use super::biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_BLOOD_WEIGHT, WaterTint};
 
-#[derive(Resource, Default)]
-pub struct WaterStatus {
-    pub ready: bool,
-    /// Every loaded water section has an initial uploaded representation. Later
-    /// fluid updates can remain pending without blocking entry into the world.
-    pub initial_ready: bool,
-    pub visible_tiles: usize,
-    pub triangles: usize,
-    pub spray_particles: usize,
-    pub mist_volumes: usize,
-    #[cfg(test)]
-    pub(super) scanned_sections: usize,
-}
+pub(super) use super::WaterStatus;
 
 struct WaterTile {
     epoch: u64,
@@ -70,6 +58,7 @@ pub(super) struct WaterWorld<'w> {
     config: Res<'w, GameConfig>,
     focus: Option<Res<'w, terra_world::streaming::ChunkFocus>>,
     terrain: Option<Res<'w, terra_world::streaming::WorldTerrain>>,
+    time: Option<Res<'w, Time>>,
     publications: Option<Res<'w, Messages<SectionPublished>>>,
     water: Option<Res<'w, Messages<WaterPublished>>>,
     removals: Option<Res<'w, Messages<SectionRemoved>>>,
@@ -81,7 +70,10 @@ pub(super) fn upload_water(
     assets: Res<WaterAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut tiles: ResMut<WaterTiles>,
-    mut status: ResMut<WaterStatus>,
+    (mut status, mut motion): (
+        ResMut<WaterStatus>,
+        Option<ResMut<crate::liquid_motion::History>>,
+    ),
     (mut budget, mut queue): (
         Option<ResMut<crate::MeshUploadStatus>>,
         Local<WaterUploadQueue>,
@@ -151,6 +143,12 @@ pub(super) fn upload_water(
             .collect()
     };
     for p in removed {
+        if let Some(history) = motion.as_deref_mut() {
+            history.remove(crate::liquid_motion::Key(
+                p,
+                crate::liquid_motion::Kind::Water,
+            ));
+        }
         if let Some(tile) = tiles.0.remove(&p)
             && let Some((entity, mesh, _)) = tile.render
         {
@@ -330,11 +328,18 @@ pub(super) fn upload_water(
                         effect[2] = tint.ocean_at(*point);
                     }
                 }
-                patch
-                    .positions
-                    .iter()
-                    .map(|&p| tint.at(p))
-                    .collect::<Vec<_>>()
+                (
+                    patch
+                        .positions
+                        .iter()
+                        .map(|&p| tint.payload(p))
+                        .collect::<Vec<_>>(),
+                    patch
+                        .positions
+                        .iter()
+                        .map(|&p| tint.blood_at(p))
+                        .collect::<Vec<_>>(),
+                )
             });
             let mut mesh = Mesh::new(
                 PrimitiveTopology::TriangleList,
@@ -354,13 +359,28 @@ pub(super) fn upload_water(
                 },
             )
             .with_inserted_indices(Indices::U32(patch.indices));
-            if let Some(tints) = biome_tints {
+            if let Some((tints, blood)) = biome_tints {
                 mesh.insert_attribute(ATTRIBUTE_BIOME_TINT, tints);
+                mesh.insert_attribute(ATTRIBUTE_BLOOD_WEIGHT, blood);
             }
-            let bounds = mesh.get_aabb().map(|mut bounds| {
-                bounds.half_extents.y += 0.24;
-                bounds
-            });
+            if world.journal.fluid_epoch(position) > 0
+                && let Some(history) = motion.as_deref_mut()
+            {
+                let now = world.time.as_ref().map_or(0.0, |time| time.elapsed_secs());
+                history.prepare(
+                    crate::liquid_motion::Key(position, crate::liquid_motion::Kind::Water),
+                    &mut mesh,
+                    now,
+                    represented,
+                    0,
+                );
+            }
+            let bounds = crate::liquid_motion::bounds(&mesh)
+                .or_else(|| mesh.get_aabb())
+                .map(|mut bounds| {
+                    bounds.half_extents.y += 0.24;
+                    bounds
+                });
             let handle = meshes.add(mesh);
             let entity = commands
                 .spawn((
@@ -394,6 +414,33 @@ pub(super) fn upload_water(
             }
             Some((entity, handle, triangles))
         } else {
+            if let Some(history) = motion.as_deref_mut() {
+                let now = world.time.as_ref().map_or(0.0, |time| time.elapsed_secs());
+                if let Some((mesh, duration, _)) = history.drain(
+                    crate::liquid_motion::Key(position, crate::liquid_motion::Kind::Water),
+                    now,
+                ) {
+                    let handle = meshes.add(mesh);
+                    if let Ok(origin) = position.origin() {
+                        commands.spawn((
+                            Mesh3d(handle.clone()),
+                            MeshMaterial3d::<WaterMaterial>(assets.0.clone()),
+                            Transform::from_translation(Vec3::from_array(origin.map(|v| v as f32))),
+                            crate::liquid_motion::retiring(
+                                crate::liquid_motion::Key(
+                                    position,
+                                    crate::liquid_motion::Kind::Water,
+                                ),
+                                now + duration,
+                                handle,
+                            ),
+                            crate::miniature::layers(),
+                            bevy::light::NotShadowCaster,
+                            Name::new("Draining water surface"),
+                        ));
+                    }
+                }
+            }
             None
         };
         if let Some(old) = tiles.0.insert(position, WaterTile { epoch, render }) {

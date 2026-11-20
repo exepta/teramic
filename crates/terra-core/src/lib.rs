@@ -1,5 +1,7 @@
 //! Shared identities, validated configuration and optional ECS integration.
+pub mod block_loot;
 pub mod brewing;
+pub mod building_jobs;
 pub mod campfire;
 pub mod castle;
 #[cfg(test)]
@@ -14,10 +16,12 @@ mod debug;
 pub mod effects;
 pub mod equipment;
 pub mod farming;
+pub mod fog_blocks;
 mod food;
 #[cfg(feature = "bevy")]
 pub mod footsteps;
 pub mod furnace;
+pub mod grave_blocks;
 pub mod infusion;
 pub mod inventory_sort;
 pub mod kinetic;
@@ -29,6 +33,8 @@ pub mod npc_jobs;
 pub mod plumbing;
 pub mod profession_stations;
 pub mod rails;
+pub mod roads;
+pub mod street;
 pub mod train_blueprint;
 pub mod train_motion;
 pub mod train_parts;
@@ -48,7 +54,7 @@ pub use food::{FoodDefinition, FoodRegeneration, food};
 mod gameplay;
 mod identity;
 mod map_palette;
-pub use map_palette::MapPalette;
+pub use map_palette::{MapPalette, relative_grass_tint};
 pub mod minerals;
 #[cfg(feature = "bevy")]
 pub mod miniature;
@@ -77,12 +83,13 @@ pub use weather::{LightningEvent, LightningObserver, SnowProfile, WeatherPattern
 #[cfg(feature = "controls")]
 pub use config::controls::{ControlsConfig, GameAction, GameplayInput, InputBinding};
 pub use config::{
-    AudioConfig, BiomeDefinition, BiomeDefinitions, BiomeKind, BiomeTerrain, BlockDetailConfig,
-    BlockDetailQuality, ChunkAnimation, ClientConfig, Config, ConfigError, GameConfig,
-    GameLanguage, GameplayConfig, LandscapeDefinitions, LandscapeProfile, LanguagePreference,
-    MapMode, MarineFloorWeights, MarineHabitatConfig, MinimapConfig, MobHealthBars,
-    MultiplayerConfig, OceanBiomeConfig, PlayerPermissions, ServerConfig, StructureSettings,
-    TerrainKind, WaterQuality, WeatherKind, WeatherQuality, WorldConfig, config_directory,
+    AudioConfig, BiomeClimate, BiomeDefinition, BiomeDefinitions, BiomeKind, BiomeTerrain,
+    BlockDetailConfig, BlockDetailQuality, ChunkAnimation, ClientConfig, Config, ConfigError,
+    GameConfig, GameLanguage, GameplayConfig, LandscapeDefinitions, LandscapeProfile,
+    LanguagePreference, MapMode, MarineFloorWeights, MarineHabitatConfig, MinimapConfig,
+    MobHealthBars, MultiplayerConfig, OceanBiomeConfig, PlayerPermissions, ServerConfig,
+    StructureSettings, TerrainKind, WaterQuality, WeatherKind, WeatherQuality, WorldConfig,
+    config_directory,
 };
 pub use config::{
     CaveQuality, GraphicsConfig, ShadowQuality, TreeFallAnimation, WindowModeSetting,
@@ -124,3 +131,11 @@ pub mod train_boiler;
 mod initial_ticks;
 
 pub mod train_power;
+
+#[cfg(feature = "bevy")]
+pub mod work_areas;
+
+pub mod bile;
+pub mod biome_flora;
+pub mod blood_blocks;
+pub mod fluid_surface;

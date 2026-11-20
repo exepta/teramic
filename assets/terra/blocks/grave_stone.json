@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": 337,
+  "name": "Grave Stone",
+  "description": "Grave Stone for the weathered walls of old graves and crypts.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "grave_stone": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "grave_stone": "textures/grave_stone.png"
+  },
+  "face_materials": [
+    "grave_stone",
+    "grave_stone",
+    "grave_stone",
+    "grave_stone",
+    "grave_stone",
+    "grave_stone"
+  ]
+}

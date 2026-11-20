@@ -237,6 +237,122 @@ fn spawn_commands_replicate_and_console_authority_does_not_grant_player_permissi
 }
 
 #[test]
+fn real_spawn_sand_worm_command_creates_a_visible_hittable_animal_on_two_clients() {
+    use crate::client::{CreatureActions, ReplicatedCreatures};
+    use terra_core::creatures::{CreatureBehavior, CreatureKind, sandworm, spawning};
+    use terra_world::edits::EditJournal;
+    let (mut host, mut a, mut b) = pair();
+    host.world_mut()
+        .resource_mut::<GameConfig>()
+        .server
+        .natural_mob_limit = Some(0);
+    command(
+        &mut a,
+        ChatCommand::Send("/spawn teramic::sand_worm".into()),
+    );
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients.iter().all(|c| {
+            c.world()
+                .resource::<ReplicatedCreatures>()
+                .creatures
+                .values()
+                .any(|track| {
+                    track.current.kind == CreatureKind::SandWorm
+                        && spawning::is_command_id(track.current.id)
+                        && track.current.behavior == CreatureBehavior::Attack
+                        && sandworm::emergence(&track.current) == 1.0
+                })
+        })
+    });
+    let body = a
+        .world()
+        .resource::<ClientSession>()
+        .confirmed_state()
+        .unwrap()
+        .position;
+    let eye = [
+        f64::from(body[0]),
+        f64::from(body[1] + terra_physics::character::PLAYER_EYE_OFFSET),
+        f64::from(body[2]),
+    ];
+    // Look at a real exposed anatomical volume. The old root+1.6 m target is
+    // empty beneath the upright neck; its animated front comes into reach as
+    // the normal bite presentation bends down. No phase/position is forced.
+    let anatomical_ray = |animal: &terra_core::creatures::Creature| {
+        terra_core::creatures::hitboxes::for_creature(animal)
+            .iter()
+            .filter_map(|part| {
+                let delta =
+                    Vec3::from_array(std::array::from_fn(|i| (part.center[i] - eye[i]) as f32));
+                let ray = delta.try_normalize()?;
+                terra_world::creatures::ray_distance(
+                    animal,
+                    eye,
+                    ray.to_array().map(f64::from),
+                    4.5,
+                )
+                .map(|distance| (distance, ray))
+            })
+            .min_by(|a, b| a.0.total_cmp(&b.0))
+            .map(|(_, ray)| ray)
+    };
+    std::thread::sleep(Duration::from_millis(500));
+    wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
+        clients[0]
+            .world()
+            .resource::<ReplicatedCreatures>()
+            .creatures
+            .values()
+            .any(|track| {
+                track.current.kind == CreatureKind::SandWorm
+                    && track.current.behavior == CreatureBehavior::Attack
+                    && anatomical_ray(&track.current).is_some()
+            })
+    });
+    let animal = a
+        .world()
+        .resource::<ReplicatedCreatures>()
+        .creatures
+        .values()
+        .find(|track| track.current.kind == CreatureKind::SandWorm)
+        .unwrap()
+        .current
+        .clone();
+    let ray = anatomical_ray(&animal).expect("actual animated anatomy must be hittable");
+    a.world_mut().resource_mut::<ClientSession>().look = [(-ray.x).atan2(-ray.z), ray.y.asin()];
+    a.world_mut()
+        .resource_mut::<CreatureActions>()
+        .0
+        .push_back((animal.id, false));
+    wait(&mut host, &mut [&mut a, &mut b], |host, clients| {
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .creatures
+            .animals[&animal.id]
+            .health
+            < animal.health
+            && clients.iter().all(|c| {
+                c.world()
+                    .resource::<ReplicatedCreatures>()
+                    .creatures
+                    .get(&animal.id)
+                    .is_some_and(|track| {
+                        track.current.health < animal.health
+                            && track.current.behavior == CreatureBehavior::Attack
+                    })
+            })
+    });
+    assert!(
+        a.world()
+            .resource::<ClientChat>()
+            .entries
+            .iter()
+            .any(|entry| entry.text.contains("Spawned teramic::sand_worm"))
+    );
+}
+
+#[test]
 fn snow_levels_thunder_and_ground_strikes_share_the_real_two_client_authority() {
     use server::ServerConsole;
     use terra_core::{WeatherPattern, WorldWeather};

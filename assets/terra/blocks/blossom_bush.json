@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 317,
+  "name": "Blossom Bush",
+  "description": "A low shrub covered in five-petaled pink flowers.",
+  "creative_category": "nature",
+  "hardness": 0.3,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/blossom_bush.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

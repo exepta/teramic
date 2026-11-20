@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 388,
+  "name": "Stone Pressure Plate",
+  "description": "An ornamental stone pressure plate for crypt entrances and dungeon chambers.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_pressure_plate.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/crypt_pressure_plate.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.08,
+        0,
+        0.08
+      ],
+      "maximum": [
+        0.92,
+        0.1,
+        0.92
+      ]
+    }
+  ]
+}

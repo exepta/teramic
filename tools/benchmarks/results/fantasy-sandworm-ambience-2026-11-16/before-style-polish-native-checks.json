@@ -1,0 +1,186 @@
+{
+  "client_sha256": "aafc23718e3cb39673bb5875a3ad1b85758c0866e18db08a648b461e84a715a3",
+  "runs": [
+    {
+      "name": "foliage",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-foliage-creatures.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 32.42,
+      "source_directory": "target/foliage-creatures/run.OkWbYi",
+      "captures": [
+        {
+          "file": "captures/foliage/eyes/eyes-0-open.png",
+          "sha256": "93b1a15e6a34494a13d84a57b2aeee1db5cc5ab59a8719579b43ba21e18c2bd3",
+          "bytes": 1973967
+        },
+        {
+          "file": "captures/foliage/eyes/eyes-1-half-blink.png",
+          "sha256": "55d3625abaa5052cb0807080f2f11fb7cecf6333d108ec75ebbf97e8ee99233f",
+          "bytes": 1976602
+        },
+        {
+          "file": "captures/foliage/eyes/eyes-2-closed.png",
+          "sha256": "0d7a4a9b719392f824a14554276f3932310a37090d3bb2faf15214fcd3b00005",
+          "bytes": 1979912
+        },
+        {
+          "file": "captures/foliage/eyes/eyes-3-after-blink.png",
+          "sha256": "19141dd00e08fb9d3475ed63e0cacf135b871597d141ab2f905aa56ef69aa9ed",
+          "bytes": 1976590
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-0.png",
+          "sha256": "a2c8938ab224795801faa616691d53f8e44b3dd3a9ee42801dbbd0dc8c6c8d55",
+          "bytes": 2103015
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-1.png",
+          "sha256": "20e309c28be04b536e7559f6bdf43a6de2c170bc612791747bb1104653a8f26a",
+          "bytes": 1997227
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-2.png",
+          "sha256": "10afad40b9d1d7d7db835d4995cbfd980daa24998413636d31cf0be19ab58e15",
+          "bytes": 2134367
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-3.png",
+          "sha256": "17d5948b180c92352d91816536f5ff34de55b41a042fd0f544919643d57e420e",
+          "bytes": 2166257
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-4.png",
+          "sha256": "88ee3ca7350f535897170e7b4151fad19b5054e7259727d35b141b918f297a3d",
+          "bytes": 2143496
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-5.png",
+          "sha256": "1ae74901244d6a525f2fdf1ce37d232957d1a377a476768f45a2593037ec7771",
+          "bytes": 2207269
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-6.png",
+          "sha256": "808a90f80ce772c3e6afc27b39304d4efa104b05fba1dd5a8e32618e71a02bbc",
+          "bytes": 2198368
+        }
+      ]
+    },
+    {
+      "name": "sandworm",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-voxel-creatures.sh",
+        "sandworm"
+      ],
+      "exit_code": 0,
+      "seconds": 17.81,
+      "source_directory": "target/voxel-creatures/run.E0T4nf",
+      "captures": [
+        {
+          "file": "captures/sandworm/sandworm/sandworm-0.png",
+          "sha256": "b90eddb5849b4b2756fc49417fda031ecf545fce2788b811ece3aafbf6c3fb62",
+          "bytes": 2248219
+        },
+        {
+          "file": "captures/sandworm/sandworm/sandworm-1.png",
+          "sha256": "0cc366da8484d428d29371ed6b4ab7ba849682451e4a6fc752301a38c9a5b03a",
+          "bytes": 2247495
+        },
+        {
+          "file": "captures/sandworm/sandworm/sandworm-2.png",
+          "sha256": "3e7e75b705016588b1366aff091c683c8fe25927fabe2b1dc16284336a8ae742",
+          "bytes": 2249529
+        },
+        {
+          "file": "captures/sandworm/sandworm/sandworm-3.png",
+          "sha256": "e724033efc337bc4a27aa9a1f9a721249fbf5e526438a054117ce8496b3e6b12",
+          "bytes": 2235071
+        },
+        {
+          "file": "captures/sandworm/sandworm/sandworm-4.png",
+          "sha256": "559b6c82c3805a6eaefd7d496ec7156aaf81a948d8e80e3a5169a2a5f43b7f1f",
+          "bytes": 2251425
+        }
+      ]
+    },
+    {
+      "name": "nature",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-fantasy-nature.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 23.19,
+      "source_directory": "target/fantasy-nature/run.BcxKke",
+      "captures": [
+        {
+          "file": "captures/nature/captures/reference-cactus-close.png",
+          "sha256": "4fbfaa0a8a82c972fe1c11875d103f336e5887848a05947d5a4ff3d38f064d7d",
+          "bytes": 2447547
+        },
+        {
+          "file": "captures/nature/captures/reference-cactus-overview.png",
+          "sha256": "f6b73550b582b4d6d7784314d929bbd47729685deb9aa939ab4d894a162c2e80",
+          "bytes": 2265629
+        },
+        {
+          "file": "captures/nature/captures/rock-formations-close.png",
+          "sha256": "c73d15cb951cc24bcda52aa3486f098dec182d3f4b9ece18b8a919e7b08cbc23",
+          "bytes": 2752315
+        },
+        {
+          "file": "captures/nature/captures/rock-formations-overview.png",
+          "sha256": "bac40434cdf6b424de6e1ba18e6a16e12bd144e460bf298c05572fe5f865a949",
+          "bytes": 2705874
+        }
+      ]
+    },
+    {
+      "name": "biomes",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-reference-biomes.sh",
+        "reference-birch",
+        "picker-forest",
+        "picker-cherry-forest"
+      ],
+      "exit_code": 0,
+      "seconds": 35.95,
+      "source_directory": "target/reference-biomes/run.1pUOXg",
+      "captures": [
+        {
+          "file": "captures/biomes/captures/picker-cherry-forest-overview.png",
+          "sha256": "2cc809f9c8b8f2625bf3117534fd456917fa5505cdf2025a7265984722b4ddde",
+          "bytes": 2654331
+        },
+        {
+          "file": "captures/biomes/captures/picker-forest-overview.png",
+          "sha256": "98be45f2c83fc1abcaae904f5ed66d9c58b159301997ff5efa4bd68771f0dcab",
+          "bytes": 2753023
+        },
+        {
+          "file": "captures/biomes/captures/reference-birch-close.png",
+          "sha256": "4bf3936a40fa1d843a96403dca2b687c029ad90702aec819c8b38a2229b7be02",
+          "bytes": 2864082
+        },
+        {
+          "file": "captures/biomes/captures/reference-birch-overview.png",
+          "sha256": "38a70bfb0e1edbf18ef24770132868456458f0990b884e5463439a825bd47b7d",
+          "bytes": 2889689
+        }
+      ]
+    },
+    {
+      "name": "audio",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-fantasy-audio.sh"
+      ],
+      "exit_code": 1,
+      "seconds": 0.48
+    }
+  ]
+}

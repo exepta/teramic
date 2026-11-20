@@ -1,6 +1,7 @@
 //! Settlement residents share creature persistence without claiming natural spawn slots.
 /// Legacy civilian IDs; military IDs 10..12 remain unchanged in saved worlds.
 pub const CIVILIAN_ROLE_COUNT: u8 = 10;
+pub const LUMBERJACK: u8 = 9;
 pub const ENGINEER: u8 = 13;
 pub const MINER: u8 = 14;
 pub const UNEMPLOYED: u8 = 15;
@@ -11,9 +12,10 @@ pub const NOMAD_A: u8 = 19;
 pub const NOMAD_B: u8 = 20;
 pub const NOMAD_C: u8 = 21;
 pub const NOMAD_D: u8 = 22;
-pub const ROLE_COUNT: u8 = 23;
+pub const CRAFTSMAN: u8 = 23;
+pub const ROLE_COUNT: u8 = 24;
 /// Explicit membership avoids accidentally classifying appended civilians as soldiers.
-pub const CIVILIAN_ROLES: [u8; 20] = [
+pub const CIVILIAN_ROLES: [u8; 21] = [
     0,
     1,
     2,
@@ -34,6 +36,7 @@ pub const CIVILIAN_ROLES: [u8; 20] = [
     NOMAD_B,
     NOMAD_C,
     NOMAD_D,
+    CRAFTSMAN,
 ];
 
 pub const fn is_civilian(role: u8) -> bool {
@@ -87,6 +90,7 @@ pub fn greeting(id: u64, role: u8, asleep: bool) -> String {
         "Ich schlafe gerade. Komm morgen wieder."
     } else {
         match role {
+            CRAFTSMAN => "Mit Baumaterial und einem Bauauftrag errichte ich neue Haeuser.",
             ENGINEER => "Ich kuemmere mich um Gleise und Lokomotiven.",
             MINER => "Unter dem Fels warten Erz und Kohle.",
             UNEMPLOYED => "Ich suche Arbeit hier in der Siedlung.",

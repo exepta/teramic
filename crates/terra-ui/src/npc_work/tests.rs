@@ -2,7 +2,7 @@ use super::*;
 use terra_core::{PlayerUuid, npc_jobs::WorkOrder};
 use terra_network::protocol::npc_work::{WorkResult, WorkSnapshot};
 
-fn app() -> App {
+pub(super) fn app() -> App {
     let mut app = App::new();
     let owner = PlayerUuid::from_u128(1);
     let mut session = ClientSession::default();
@@ -10,6 +10,7 @@ fn app() -> App {
     session.uuid = Some(owner);
     session.work = WorkSnapshot {
         revision: 1,
+        detail: None,
         workers: vec![WorkerView {
             npc: 7,
             name: "Ada".into(),
@@ -41,6 +42,7 @@ fn app() -> App {
         .init_resource::<Time<Real>>()
         .add_message::<NpcWorkUiAction>()
         .add_message::<NpcWorkRequest>()
+        .add_message::<terra_network::client::BuildingRequest>()
         .add_systems(Update, update);
     app.update();
     app
@@ -56,6 +58,43 @@ fn requests(app: &mut App) -> Vec<NpcWorkRequest> {
 fn act(app: &mut App, action: NpcWorkUiAction) {
     app.world_mut().write_message(action);
     app.update();
+}
+
+#[test]
+fn saved_area_toggle_is_local_and_never_submits_or_visualizes_edited_drafts() {
+    use terra_core::work_areas::{WorkAreaDisplay, WorkAreaTarget};
+    let mut app = app();
+    app.init_resource::<WorkAreaDisplay>();
+    requests(&mut app);
+    let before = app.world().resource::<ClientSession>().work.clone();
+    act(
+        &mut app,
+        NpcWorkUiAction::Field {
+            field: "min-x".into(),
+            value: "100".into(),
+        },
+    );
+    act(&mut app, NpcWorkUiAction::ToggleAreas);
+    assert_eq!(
+        app.world().resource::<WorkAreaDisplay>().target,
+        Some(WorkAreaTarget::Worker(7))
+    );
+    assert!(app.world().resource::<NpcWorkView>().areas_shown);
+    assert!(requests(&mut app).is_empty());
+    assert_eq!(app.world().resource::<ClientSession>().work, before);
+    let mut actual = None;
+    terra_network::client::work_areas::visit_saved_areas(
+        app.world().resource::<ClientSession>(),
+        Some(WorkAreaTarget::Worker(7)),
+        |mark| {
+            if mark.kind == terra_core::work_areas::WorkAreaKind::Work {
+                actual = Some(mark.bounds.min);
+            }
+        },
+    );
+    assert_eq!(actual, Some([-20, 18, -16]));
+    act(&mut app, NpcWorkUiAction::ToggleAreas);
+    assert!(app.world().resource::<WorkAreaDisplay>().target.is_none());
 }
 
 #[test]
@@ -233,7 +272,13 @@ fn switching_workers_loads_their_own_draft_and_ignores_unknown_ids() {
 fn worker_ui_templates_and_styles_parse_with_the_real_tilt_loaders() {
     assert!(
         include_str!("../../../../src-ui/components/kingdom-menu/kingdom-menu.component.html")
-            .contains("<npc-work-panel>")
+            .contains("<kingdom-workers>")
+    );
+    assert!(
+        include_str!(
+            "../../../../src-ui/components/kingdom-workers/kingdom-workers.component.html"
+        )
+        .contains("<npc-work-panel>")
     );
     tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
         "../../../../src-ui/components/npc-work-panel/npc-work-panel.component.css"
@@ -289,7 +334,9 @@ fn native_work_callbacks_resolve_children_and_reject_malformed_switch_values() {
     callback(&mut app, "npc_work_command", "npc-work-refresh", None);
     let sent = requests(&mut app);
     assert_eq!(sent.len(), 1);
-    assert_eq!(sent[0].0.action, WorkAction::Inspect);
+    // Refresh retains this worker's private inventory subscription in the keep.
+    assert_eq!(sent[0].0.action, WorkAction::InspectNpc { npc: 7 });
+    assert!(!app.world().resource::<NpcWorkView>().pending);
     callback(
         &mut app,
         "npc_work_change",
@@ -304,4 +351,116 @@ fn native_work_callbacks_resolve_children_and_reject_malformed_switch_values() {
             enabled: false,
         }
     );
+}
+
+#[test]
+fn a_craftsman_assignment_uses_no_work_area_and_waits_for_the_building_authority() {
+    let mut app = app();
+    requests(&mut app);
+    let owner = PlayerUuid::from_u128(1);
+    let kingdom = app
+        .world_mut()
+        .resource_mut::<ClientSession>()
+        .kingdoms
+        .found(owner, [0, 20, 0], "Craft town")
+        .unwrap();
+    act(
+        &mut app,
+        NpcWorkUiAction::Field {
+            field: "kind".into(),
+            value: "craftsman".into(),
+        },
+    );
+    act(
+        &mut app,
+        NpcWorkUiAction::Field {
+            field: "min-x".into(),
+            value: String::new(),
+        },
+    );
+    act(
+        &mut app,
+        NpcWorkUiAction::Field {
+            field: "storage-x".into(),
+            value: String::new(),
+        },
+    );
+    assert!(app.world().resource::<NpcWorkView>().craftsman);
+    assert!(
+        app.world().resource::<NpcWorkView>().can_assign,
+        "craftsmen do not invent placeholder work-area/depot coordinates"
+    );
+    act(&mut app, NpcWorkUiAction::Assign);
+    let sent: Vec<_> = app
+        .world_mut()
+        .resource_mut::<Messages<terra_network::client::BuildingRequest>>()
+        .drain()
+        .filter(|request| {
+            matches!(
+                request.0.action,
+                terra_network::protocol::building_jobs::BuildingAction::AssignCraftsman { .. }
+            )
+        })
+        .collect();
+    assert_eq!(sent.len(), 1);
+    assert_eq!(
+        sent[0].0.action,
+        terra_network::protocol::building_jobs::BuildingAction::AssignCraftsman {
+            kingdom,
+            npc: 7,
+            enabled: true
+        }
+    );
+    assert!(app.world().resource::<NpcWorkView>().pending);
+    assert!(
+        !app.world()
+            .resource::<ClientSession>()
+            .buildings
+            .is_craftsman(7)
+    );
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .last_building_result = Some(terra_network::protocol::building_jobs::BuildingResult {
+        request: sent[0].0.request,
+        error: Some(terra_core::building_jobs::BuildError::Protected),
+    });
+    app.update();
+    assert!(!app.world().resource::<NpcWorkView>().pending);
+    assert!(
+        app.world()
+            .resource::<NpcWorkView>()
+            .error
+            .contains("Berechtigung")
+    );
+}
+
+#[test]
+fn keep_worker_selection_requests_and_projects_the_actual_private_inventory() {
+    let mut app = app();
+    requests(&mut app);
+    act(&mut app, NpcWorkUiAction::Select(7));
+    assert!(
+        requests(&mut app)
+            .iter()
+            .any(|request| request.0.action == WorkAction::InspectNpc { npc: 7 })
+    );
+    let mut inventory = terra_core::Inventory::default();
+    assert_eq!(
+        inventory.insert(terra_core::ItemKind::Tool(terra_core::ToolKind::RubyAxe), 1),
+        0
+    );
+    assert_eq!(
+        inventory.insert(
+            terra_core::ItemKind::Prop(terra_core::ResourcePropKind::SpruceSapling),
+            128
+        ),
+        0
+    );
+    app.world_mut().resource_mut::<ClientSession>().work.detail =
+        Some(terra_network::protocol::npc_work::WorkerDetail { npc: 7, inventory });
+    app.update();
+    let view = app.world().resource::<NpcWorkView>();
+    assert!(view.visible && !view.direct && view.inventory_ready);
+    assert_eq!(view.private_inventory.len(), 9);
+    assert_eq!(view.private_inventory[1].count, "128");
 }

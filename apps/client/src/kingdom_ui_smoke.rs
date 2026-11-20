@@ -11,6 +11,7 @@ use terra_core::kingdom::{
 use terra_network::client::ClientSession;
 use terra_network::protocol::kingdom::{KingdomAction, KingdomOutcome};
 use terra_ui::{ElementId, KingdomMenuAction, KingdomView};
+mod redesign;
 
 pub(crate) fn requested() -> bool {
     std::env::var("TERRA_KINGDOM_UI_GALLERY").as_deref() == Ok("1")
@@ -221,30 +222,6 @@ fn bounds(world: &mut World, picker: bool) -> Result<(), String> {
             "Kingdom panel escapes the viewport: {panel_rect:?}"
         ));
     }
-    if !picker
-        && world.resource::<KingdomView>().bound
-        && world.resource::<KingdomView>().overview_tab
-    {
-        let scroll = element(world, "kingdom-scroll").ok_or("Missing overview viewport")?;
-        let viewport = rect(world, scroll).ok_or("Missing overview geometry")?;
-        for id in [
-            "kingdom-claim-protected",
-            "kingdom-claim-territory",
-            "kingdom-release",
-        ] {
-            let button =
-                element(world, id).ok_or_else(|| format!("Missing overview action {id}"))?;
-            if !within(
-                rect(world, button).ok_or("Overview action has no layout")?,
-                viewport,
-            ) {
-                return Err(format!(
-                    "Overview action is below the fold: {id}, {:?} outside {viewport:?}",
-                    rect(world, button)
-                ));
-            }
-        }
-    }
     let texts = world
         .query::<(Entity, &Text)>()
         .iter(world)
@@ -305,6 +282,150 @@ fn scroll_to_top(world: &mut World) {
         position.0.y = 0.0;
     }
 }
+#[derive(Resource, Default)]
+struct OverviewClaimProof {
+    step: Option<u8>,
+    index: usize,
+    attempts: u8,
+}
+
+/// Exercise all real General actions at each captured resolution, then restore
+/// the overview. Merely existing below the fold is not accepted as reachable.
+fn overview_actions_ready(world: &mut World, gallery: &mut Gallery) -> Result<bool, String> {
+    world.init_resource::<OverviewClaimProof>();
+    world.resource_scope(|world, mut proof: Mut<OverviewClaimProof>| {
+        const ACTIONS: [&str; 3] = [
+            "kingdom-claim-protected",
+            "kingdom-claim-territory",
+            "kingdom-release",
+        ];
+        if proof.step != Some(gallery.step) {
+            proof.step = Some(gallery.step);
+            proof.index = 0;
+            proof.attempts = 0;
+        }
+        let scroll = element(world, "kingdom-scroll").ok_or("Missing overview viewport")?;
+        if proof.index == ACTIONS.len() {
+            scroll_to_top(world);
+            proof.index += 1;
+            gallery.since = Instant::now();
+            return Ok(false);
+        }
+        if proof.index > ACTIONS.len() {
+            let offset = world
+                .get::<bevy::ui::ScrollPosition>(scroll)
+                .ok_or("Overview has no scroll position")?
+                .0
+                .y;
+            if offset.abs() > 0.5 {
+                return Err(format!(
+                    "Overview did not return to its top after the scroll proof: {offset}"
+                ));
+            }
+            return Ok(true);
+        }
+        let id = ACTIONS[proof.index];
+        let button = element(world, id).ok_or_else(|| format!("Missing overview action {id}"))?;
+        if !belongs(world, button, scroll) {
+            return Err(format!(
+                "Overview action is outside its scroll container: {id}"
+            ));
+        }
+        let target = rect(world, button).ok_or("Overview action has no geometry")?;
+        let viewport = rect(world, scroll).ok_or("Overview has no viewport geometry")?;
+        if within(target, viewport) {
+            proof.index += 1;
+            proof.attempts = 0;
+            gallery.since = Instant::now();
+            return Ok(false);
+        }
+        if target.min.x < viewport.min.x - 2.0
+            || target.max.x > viewport.max.x + 2.0
+            || target.height() > viewport.height() + 2.0
+        {
+            return Err(format!(
+                "Overview action cannot fit its viewport: {id}, {target:?}/{viewport:?}"
+            ));
+        }
+        let geometry = world
+            .get::<ComputedNode>(scroll)
+            .ok_or("Missing scroll geometry")?;
+        let overflow = geometry.content_size().y - geometry.size().y;
+        if !overflow.is_finite() || overflow <= 2.0 {
+            return Err(format!(
+                "Overview action {id} is clipped without a real vertical scroll range"
+            ));
+        }
+        let scale = world
+            .get::<UiGlobalTransform>(scroll)
+            .map_or(1.0, |pose| pose.matrix2.x_axis.length().max(0.1));
+        let mut position = world
+            .get_mut::<bevy::ui::ScrollPosition>(scroll)
+            .ok_or("Overview viewport cannot scroll")?;
+        let desired = (position.0.y + (target.center().y - viewport.center().y) / scale)
+            .clamp(0.0, overflow / scale);
+        if (desired - position.0.y).abs() < 0.25 || proof.attempts >= 8 {
+            return Err(format!(
+                "Overview scrolling failed to reveal {id}: {target:?}/{viewport:?}"
+            ));
+        }
+        position.0.y = desired;
+        proof.attempts += 1;
+        gallery.since = Instant::now();
+        Ok(false)
+    })
+}
+
+fn detail_contains(world: &mut World, id: &str, expected_name: &str) -> bool {
+    let Some(detail) = element(world, id) else {
+        return false;
+    };
+    world
+        .query::<(Entity, &Text)>()
+        .iter(world)
+        .any(|(entity, text)| text.0 == expected_name && belongs(world, entity, detail))
+}
+
+fn selected_member_ready(
+    world: &mut World,
+    gallery: &mut Gallery,
+    member: terra_core::PlayerUuid,
+) -> Result<bool, String> {
+    let row = world
+        .resource::<KingdomView>()
+        .members
+        .iter()
+        .find(|row| row.id == member.to_string())
+        .cloned()
+        .ok_or("Missing actual member row")?;
+    if !row.selected {
+        world.write_message(KingdomMenuAction::SelectMember(member));
+        gallery.since = Instant::now();
+        return Ok(false);
+    }
+    Ok(detail_contains(world, "kingdom-member-detail", &row.name))
+}
+
+fn selected_realm_ready(
+    world: &mut World,
+    gallery: &mut Gallery,
+    target: &str,
+) -> Result<bool, String> {
+    let row = world
+        .resource::<KingdomView>()
+        .diplomacy
+        .iter()
+        .find(|row| row.key == target)
+        .cloned()
+        .ok_or("Missing actual diplomacy row")?;
+    if !row.selected {
+        world.write_message(KingdomMenuAction::SelectRealm(target.into()));
+        gallery.since = Instant::now();
+        return Ok(false);
+    }
+    Ok(detail_contains(world, "kingdom-realm-detail", &row.name))
+}
+
 fn colorpicker_theme(world: &mut World) -> Result<(), String> {
     let owner = element(world, "kingdom-color").ok_or("Missing real colorpicker")?;
     let popup = world
@@ -357,8 +478,17 @@ fn shot(world: &mut World, gallery: &mut Gallery, name: &str) -> Result<(), Stri
 }
 
 pub(crate) fn run(world: &mut World) -> Result<bool, String> {
+    if crate::construction_mode_smoke::requested() {
+        return crate::construction_mode_smoke::run(world);
+    }
+    if crate::building_local_smoke::requested() {
+        return crate::building_local_smoke::run(world);
+    }
     if crate::npc_work_smoke::requested() {
         return crate::npc_work_smoke::run(world);
+    }
+    if redesign::requested() {
+        return redesign::run(world);
     }
     if !world.contains_resource::<Gallery>() {
         world.insert_resource(Gallery {
@@ -384,6 +514,7 @@ pub(crate) fn run(world: &mut World) -> Result<bool, String> {
                 for mut window in world.query::<&mut Window>().iter_mut(world) { window.resolution.set_physical_resolution(2560,1440); }
             }
             1 => {
+                if !overview_actions_ready(world,&mut g)? {return Ok(false);}
                 bounds(world,false)?;
                 shot(world,&mut g,"kingdom-ui-qhd")?;
             }
@@ -428,6 +559,7 @@ pub(crate) fn run(world: &mut World) -> Result<bool, String> {
                 for mut window in world.query::<&mut Window>().iter_mut(world) { window.resolution.set_physical_resolution(1024,768); }
             }
             12 => {
+                if !overview_actions_ready(world,&mut g)? {return Ok(false);}
                 bounds(world,false)?;
                 shot(world,&mut g,"kingdom-ui-compact")?;
             }
@@ -442,6 +574,7 @@ pub(crate) fn run(world: &mut World) -> Result<bool, String> {
                 for mut window in world.query::<&mut Window>().iter_mut(world) { window.resolution.set_physical_resolution(3840,2160); }
             }
             17 => {
+                if !overview_actions_ready(world,&mut g)? {return Ok(false);}
                 bounds(world,false)?;
                 shot(world,&mut g,"kingdom-ui-4k")?;
             }
@@ -462,6 +595,7 @@ pub(crate) fn run(world: &mut World) -> Result<bool, String> {
                 let member=g.member.ok_or("Missing joined player")?;
                 if !role_ack(world,member,KingdomRole::Visitor){return Ok(false);}
                 if !world.resource::<KingdomView>().members.iter().any(|m|m.id==member.to_string()&&m.role=="Visitor"&&m.permissions=="No protected-land permissions"){return Err("Fresh member UI did not show Visitor capabilities".into());}
+                if !selected_member_ready(world,&mut g,member)? {return Ok(false);}
                 bounds(world,false)?;shot(world,&mut g,"kingdom-rights-visitor")?;
             }
             24 => {world.write_message(KingdomMenuAction::EditRole(g.member.ok_or("Missing member")?));}
@@ -472,11 +606,14 @@ pub(crate) fn run(world: &mut World) -> Result<bool, String> {
             26 => {world.write_message(KingdomMenuAction::SetRole{member:g.member.ok_or("Missing member")?,role:KingdomRole::Worker});}
             27 => {
                 if !role_ack(world,g.member.ok_or("Missing member")?,KingdomRole::Worker){return Ok(false);}
+                let member=g.member.ok_or("Missing member")?;
+                if !selected_member_ready(world,&mut g,member)? {return Ok(false);}
                 bounds(world,false)?;shot(world,&mut g,"kingdom-rights-worker")?;
             }
             28 => {scroll_to_top(world);world.write_message(KingdomMenuAction::Tab("diplomacy".into()));}
             29 => {
                 if world.resource::<KingdomView>().diplomacy.len()<4{return Err("Missing NPC diplomacy targets".into());}
+                if !selected_realm_ready(world,&mut g,"bot:helteria")? {return Ok(false);}
                 bounds(world,false)?;shot(world,&mut g,"kingdom-diplomacy-neutral")?;
             }
             30 => {world.write_message(KingdomMenuAction::SetRelation{target:DiplomaticTarget::Bot(BotKingdom::Helteria),relation:DiplomaticRelation::Allied});}
@@ -485,6 +622,7 @@ pub(crate) fn run(world: &mut World) -> Result<bool, String> {
                 if view.pending { return Ok(false); }
                 if !view.error.is_empty() { return Err(view.error.clone()); }
                 if !view.diplomacy.iter().any(|r|r.key=="bot:helteria"&&r.relation_key=="allied"&&!r.pending_alliance){return Err("Helteria alliance was not confirmed by server".into());}
+                if !selected_realm_ready(world,&mut g,"bot:helteria")? {return Ok(false);}
                 bounds(world,false)?;shot(world,&mut g,"kingdom-diplomacy-allied")?;
             }
             32 => {world.write_message(KingdomMenuAction::SetRelation{target:DiplomaticTarget::Bot(BotKingdom::Lutera),relation:DiplomaticRelation::Allied});}
@@ -493,6 +631,7 @@ pub(crate) fn run(world: &mut World) -> Result<bool, String> {
                 if view.pending { return Ok(false); }
                 if !view.error.is_empty() { return Err(view.error.clone()); }
                 if !view.diplomacy.iter().any(|r|r.key=="bot:lutera"&&r.relation_key=="neutral"&&r.pending_alliance&&r.hint.contains("level 2")){return Err("Level 1 alliance offer must remain pending".into());}
+                if !selected_realm_ready(world,&mut g,"bot:lutera")? {return Ok(false);}
                 bounds(world,false)?;shot(world,&mut g,"kingdom-diplomacy-pending")?;
             }
             34 => {world.write_message(KingdomMenuAction::Tab("members".into()));world.write_message(KingdomMenuAction::SetRole{member:g.member.ok_or("Missing member")?,role:KingdomRole::Visitor});}
@@ -501,6 +640,8 @@ pub(crate) fn run(world: &mut World) -> Result<bool, String> {
                 let peer=world.non_send::<GalleryPeer>();let session=peer.app.world().resource::<ClientSession>();
                 let Some(result)=session.last_kingdom_result.as_ref().filter(|r|r.request==peer.request)else{return Ok(false);};
                 if result.outcome!=KingdomOutcome::Rejected(terra_core::kingdom::KingdomError::PermissionDenied){return Err(format!("Visitor escalation was not denied: {:?}",result.outcome));}
+                let member=g.member.ok_or("Missing member")?;
+                if !selected_member_ready(world,&mut g,member)? {return Ok(false);}
                 bounds(world,false)?;shot(world,&mut g,"kingdom-rights-revoked")?;
             }
             37 => {
@@ -531,6 +672,8 @@ pub(crate) fn run(world: &mut World) -> Result<bool, String> {
             }
             41 => {
                 let view=world.resource::<KingdomView>();if !view.members_tab||view.capabilities.iter().any(|p|p.allowed){return Err("Authenticated Visitor must have no protected-land capabilities".into());}
+                let member=g.member.ok_or("Missing authenticated Visitor")?;
+                if !selected_member_ready(world,&mut g,member)? {return Ok(false);}
                 bounds(world,false)?;shot(world,&mut g,"kingdom-member-readonly")?;
             }
             42 => {world.write_message(KingdomMenuAction::Tab("diplomacy".into()));}

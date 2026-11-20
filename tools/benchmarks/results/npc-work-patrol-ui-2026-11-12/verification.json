@@ -1,0 +1,84 @@
+{
+  "status": "passed",
+  "screens": {
+    "npc-direct-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 737534
+    },
+    "npc-selection-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 1570672
+    },
+    "npc-selection-en-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 693668
+    },
+    "npc-direct-en-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 708240
+    },
+    "npc-direct-de-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 217698
+    },
+    "npc-direct-en-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 221924
+    },
+    "npc-direct-en-compact-paused": {
+      "width": 960,
+      "height": 640,
+      "bytes": 221042
+    }
+  },
+  "input": "real target raycasts and frame-controlled gameplay/HTML handlers",
+  "transport": "real local UDP server",
+  "private_inventory": true,
+  "kingdom_hotkey": true,
+  "responsive_geometry": true,
+  "date": "2026-11-12",
+  "protocol": 137,
+  "save_migration": false,
+  "tests": {
+    "passed": 4750,
+    "failed": 0,
+    "ignored_existing": 10,
+    "filtered_existing_missing_glb": 1
+  },
+  "checks": {
+    "check": {
+      "status": "passed",
+      "completion": "Finished `dev` profile [optimized + debuginfo] target(s) in 18.55s"
+    },
+    "clippy": {
+      "status": "passed",
+      "completion": "Finished `dev` profile [optimized + debuginfo] target(s) in 23.14s"
+    },
+    "doctests": {
+      "status": "passed",
+      "completion": "Finished `test` profile [optimized + debuginfo] target(s) in 0.80s"
+    },
+    "build": {
+      "status": "passed",
+      "completion": "Finished `dev` profile [optimized + debuginfo] target(s) in 2m 54s"
+    }
+  },
+  "native_language": {
+    "status": "passed",
+    "width": 960,
+    "height": 640,
+    "captures": 4,
+    "preference_saved": true
+  },
+  "headless": {
+    "status": "passed",
+    "sections": 27,
+    "display": false
+  }
+}

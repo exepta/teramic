@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 346,
+  "name": "Mosaic Floor Slab",
+  "description": "Mosaic Floor Slab for cemetery paths and crypt floors.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/mosaic_grave_slab.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/mosaic_grave_slab.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.25,
+        1
+      ]
+    }
+  ]
+}

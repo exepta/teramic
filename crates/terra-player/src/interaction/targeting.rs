@@ -21,7 +21,28 @@ pub struct TargetTrain(pub Option<terra_world::trains::TrainHit>);
 #[path = "train_target_tests.rs"]
 mod train_tests;
 
+/// Gameplay rays use the physical eye. Camera interpolation, stair smoothing,
+/// walking sway and damage motion are presentation and must not change the
+/// cell or face subsequently validated by the server.
+pub(super) fn interaction_origin(
+    camera: Vec3,
+    body: Option<Vec3>,
+    online: bool,
+    mode: Option<crate::ControllerMode>,
+    third_person: bool,
+) -> Vec3 {
+    if online || mode == Some(crate::ControllerMode::Walk) || third_person {
+        body.map_or(camera, |body| {
+            body + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET
+        })
+    } else {
+        // Local fly cameras really are detached and have no authoritative body.
+        camera
+    }
+}
+
 pub(crate) fn target_creature(
+    construction: Option<Res<crate::ConstructionCamera>>,
     camera: Query<(&Transform, &crate::CameraLook), With<TerraCamera>>,
     bodies: Query<&Transform, With<crate::PlayerBody>>,
     creatures: Option<Res<terra_network::client::ReplicatedCreatures>>,
@@ -29,6 +50,9 @@ pub(crate) fn target_creature(
     train: Option<Res<TargetTrain>>,
     mut target: ResMut<TargetCreature>,
 ) {
+    if construction.as_ref().is_some_and(|camera| camera.active) {
+        return;
+    }
     target.0 = None;
     let Some(creatures) = creatures else {
         return;
@@ -66,6 +90,7 @@ pub(crate) fn target_creature(
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn target_block(
+    construction: Option<Res<crate::ConstructionCamera>>,
     camera: Query<(&Transform, &crate::CameraLook), With<TerraCamera>>,
     chunks: Res<ChunkStore>,
     journal: Res<terra_world::edits::EditJournal>,
@@ -83,8 +108,15 @@ pub(crate) fn target_block(
         Option<Res<terra_core::WorldClock>>,
     ),
     mut train: Option<ResMut<TargetTrain>>,
-    session: Option<Res<terra_network::client::ClientSession>>,
+    controller: (
+        Option<Res<terra_network::client::ClientSession>>,
+        Option<Res<crate::ControllerMode>>,
+    ),
 ) {
+    let (session, mode) = controller;
+    if construction.as_ref().is_some_and(|camera| camera.active) {
+        return;
+    }
     if let Some(train) = &mut train {
         train.0 = None;
     }
@@ -93,16 +125,17 @@ pub(crate) fn target_block(
         world_target.0 = None;
         return;
     };
-    let origin = if perspective
-        .as_deref()
-        .is_some_and(|mode| mode.is_third_person())
-    {
-        bodies.iter().next().map_or(camera.translation, |body| {
-            body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET
-        })
-    } else {
-        camera.translation
-    };
+    let origin = interaction_origin(
+        camera.translation,
+        bodies.iter().next().map(|body| body.translation),
+        session
+            .as_ref()
+            .is_some_and(|session| session.ready && session.player.is_some()),
+        mode.as_deref().copied(),
+        perspective
+            .as_deref()
+            .is_some_and(|mode| mode.is_third_person()),
+    );
     let rail_placement = !input.pressed(terra_core::GameAction::Break)
         && active
             .as_ref()
@@ -210,6 +243,141 @@ mod tests {
         props::{PropId, PropKind, WorldProp},
         streaming::LoadedSection,
     };
+
+    #[test]
+    fn building_and_mining_keep_the_authoritative_eye_at_bobbed_block_edges() {
+        let owner = SectionPos::default();
+        let mut data = BlockSection::empty(owner).unwrap();
+        for x in [3, 4] {
+            data.set_block([x, 3, 5], 3).unwrap();
+        }
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            owner,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        let eye = Vec3::new(3.99, 3.5, 9.5);
+        let mut session = terra_network::client::ClientSession::default();
+        session.ready = true;
+        session.player = Some(terra_core::PlayerId(1));
+        let mut app = App::new();
+        app.insert_resource(chunks)
+            .init_resource::<terra_world::edits::EditJournal>()
+            .init_resource::<terra_core::block_properties::BlockPropertiesCatalog>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<TargetBlock>()
+            .init_resource::<TargetWorld>()
+            .insert_resource(session)
+            .insert_resource(super::super::ActiveItem(Some(terra_core::ItemKind::Block(
+                3,
+            ))))
+            .add_systems(Update, target_block);
+        app.world_mut().spawn((
+            crate::PlayerBody,
+            Transform::from_translation(
+                eye - Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET,
+            ),
+        ));
+        app.world_mut().spawn((
+            TerraCamera,
+            // Normal gait and interpolation can cross this voxel edge visually.
+            Transform::from_translation(eye + Vec3::new(0.04, 0.04, 0.)),
+            crate::CameraLook::default(),
+        ));
+        for breaking in [false, true] {
+            if breaking {
+                app.world_mut()
+                    .resource_mut::<ButtonInput<MouseButton>>()
+                    .press(MouseButton::Left);
+            }
+            app.update();
+            let hit = app.world().resource::<TargetBlock>().0.unwrap();
+            assert_eq!(hit.position, [3, 3, 5]);
+            assert_eq!(hit.normal, [0, 0, 1]);
+            let chunks = app.world().resource::<ChunkStore>();
+            let journal = app.world().resource::<terra_world::edits::EditJournal>();
+            let properties = app
+                .world()
+                .resource::<terra_core::block_properties::BlockPropertiesCatalog>();
+            let authority = terra_world::targeting::pick_world_for_mining(
+                chunks,
+                journal,
+                properties,
+                eye.to_array().map(f64::from),
+                [0., 0., -1.],
+                terra_world::props::PropPose::Rest,
+            )
+            .0
+            .unwrap();
+            assert_eq!(hit, authority);
+            assert_eq!(
+                terra_world::targeting::item_placement_with_state(chunks, journal, hit, 3),
+                Some(([3, 3, 6], 0)),
+            );
+        }
+        // The shared eye still selects the actual intervening wall.
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block([3, 3, 7], 3)
+            .unwrap();
+        app.update();
+        assert_eq!(
+            app.world().resource::<TargetBlock>().0.unwrap().position,
+            [3, 3, 7]
+        );
+        // A default/disconnected session resource does not attach a fly camera.
+        {
+            let mut session = app
+                .world_mut()
+                .resource_mut::<terra_network::client::ClientSession>();
+            session.ready = false;
+            session.player = None;
+        }
+        app.insert_resource(crate::ControllerMode::Fly);
+        app.update();
+        assert_eq!(
+            app.world().resource::<TargetBlock>().0.unwrap().position,
+            [4, 3, 5]
+        );
+    }
+
+    #[test]
+    fn detached_local_flight_keeps_its_camera_eye() {
+        let camera = Vec3::new(10., 30., 40.);
+        let body = Vec3::new(1., 2., 3.);
+        assert_eq!(
+            interaction_origin(
+                camera,
+                Some(body),
+                false,
+                Some(crate::ControllerMode::Fly),
+                false
+            ),
+            camera,
+        );
+        for (online, mode, third_person) in [
+            (true, Some(crate::ControllerMode::Fly), false),
+            (false, Some(crate::ControllerMode::Walk), false),
+            (false, None, true),
+        ] {
+            assert_eq!(
+                interaction_origin(camera, Some(body), online, mode, third_person),
+                body + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET,
+            );
+        }
+    }
 
     fn scene() -> ChunkStore {
         let mut chunks = ChunkStore::default();

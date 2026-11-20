@@ -1,0 +1,28 @@
+@if (buildModeView.notice) { <p id="build-mode-notice" class="build-mode-notice">{{ localizedUi.buildModeView.notice }}</p> }
+@if (buildModeView.visible) {
+<div class="build-mode-hud">
+  <div id="build-mode-toolbar" class="build-mode-toolbar">
+    <icon name="settings-wrench" size="32" /><div><h2>{{ i18n.text_baumodus_dac0f173d857 }}</h2><p>{{ localizedUi.buildModeView.title }}</p></div>
+    <button id="build-mode-catalog" onclick="build_mode_action"><icon name="home" size="16" />{{ i18n.text_bauvorlagen_3db82f42ab4e }}</button>
+    <button id="build-mode-rotate" [disabled]="!buildModeView.placing || !buildModeView.preview_ready" onclick="build_mode_action"><icon name="rotate-cw" size="16" />{{ localizedUi.buildModeView.facing }} · R</button>
+    <button id="build-mode-exit" onclick="build_mode_action"><icon name="close" size="16" />TAB / ESC</button>
+  </div>
+  @if (buildModeView.catalog) {
+    <div id="build-mode-panel" class="build-mode-panel"><button id="build-mode-refresh" [disabled]="buildModeView.pending || !buildModeView.can_reload" onclick="build_mode_action"><icon name="refresh" size="16" />{{ i18n.text_vorlagen_aktualisieren_2321f18951ae }}</button><h2>{{ i18n.text_bauvorlagen_3db82f42ab4e }}</h2>
+      <div class="build-mode-categories">@for (category of localizedUi.buildModeView.categories; track category.id) { <button id="build-mode-category" class="build-mode-category" [class.selected]="category.selected" onclick="$set(buildModeIntent.category, category.id); build_mode_action">{{ category.name }}</button> }</div>
+      <div class="build-mode-template-list">@for (template of localizedUi.buildModeView.templates; track template.id) {
+        <button id="build-mode-template" class="build-mode-template" [class.selected]="template.selected" onclick="$set(buildModeIntent.template, template.id); build_mode_action"><icon class="build-mode-preview" name="home" size="64" [src]="template.preview" /><div><h3>{{ template.name }}</h3><p>{{ template.category_path }}</p><p>{{ template.dimensions }}</p></div><icon name="chevron-right" size="16" /></button>
+      }</div>
+    </div>
+  }
+  @if (buildModeView.template_name) {
+    <div id="build-mode-costs" class="build-mode-costs"><h3>{{ localizedUi.buildModeView.template_name }}</h3>
+      <p class="build-mode-hint">{{ i18n.text_im_stadtlager_ben_tigt_creative_baut_d87197b3ea63 }}</p>
+      <div class="build-mode-materials">@for (material of localizedUi.buildModeView.materials; track material.identifier) {
+        <div class="build-mode-material"><img [alt]="material.preview_key" /><p>{{ material.label }}</p><p [class]="material.sufficient ? 'build-mode-enough' : 'build-mode-missing'">{{ material.supply }}</p></div>
+      }</div>
+    </div>
+  }
+  <div id="build-mode-help" class="build-mode-help"><p>{{ localizedUi.buildModeView.areas_hint }}</p>@if (buildModeView.placing && !buildModeView.preview_ready) {<p>{{ i18n.text_vorschau_wird_geladen_43bf52617593 }}</p>}<p>{{ i18n.text_wasd_kamera_mausrad_zoom_r_drehen_li_fbc8930da19c }}</p><p>{{ localizedUi.buildModeView.location }}</p>@if (buildModeView.placing) {<button id="build-mode-place" [disabled]="!buildModeView.can_place" onclick="build_mode_action">{{ i18n.text_vorlage_platzieren_eingabe_2e58e594a986 }}</button>}@if (buildModeView.pending) {<p>{{ i18n.text_bauauftrag_wird_angelegt_a926d58db244 }}</p>}@if (buildModeView.error) {<p class="build-mode-missing">{{ localizedUi.buildModeView.error }}</p>}@if (buildModeView.feedback) {<p class="build-mode-enough">{{ localizedUi.buildModeView.feedback }}</p>}</div>
+</div>
+}

@@ -3,6 +3,7 @@ mod color_tests;
 pub(crate) mod cube;
 pub mod definitions;
 mod loading;
+pub(crate) mod sidewalk;
 #[cfg(test)]
 pub(crate) use loading::test_static_scene;
 pub(crate) mod mipmaps;

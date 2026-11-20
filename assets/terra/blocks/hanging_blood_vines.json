@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 415,
+  "name": "Hanging Blood Vines",
+  "description": "Hanging Blood Vines from the crimson woodland.",
+  "creative_category": "nature",
+  "hardness": 0.35,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/hanging_blood_vines.glb",
+  "textures": {},
+  "struct_block": true,
+  "collision_boxes": []
+}

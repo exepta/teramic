@@ -105,6 +105,12 @@ fn revision_seven_hillside_fields_keep_natural_heights_and_perimeters_get_grass_
     let generator = TerraGenerator::new(WorldConfig {
         seed: WorldSeed(42042),
         structures_revision: 7,
+        // Fixed hillside sites exercise the original landscape-one contract.
+        landscape_revision: 1,
+        ecology_revision: 4,
+        river_terrain_revision: 4,
+        spirit_blossom_revision: 0,
+        blood_forest_revision: 0,
         ..Default::default()
     })
     .unwrap();
@@ -478,6 +484,12 @@ fn real_hillside_gate_roads_join_natural_ground_without_grass_overhangs_or_termi
     let terrain = TerraGenerator::new(WorldConfig {
         seed: WorldSeed(42042),
         structures_revision: 6,
+        // Preserve the recorded cave/gate coordinates when fresh-world defaults evolve.
+        landscape_revision: 1,
+        ecology_revision: 4,
+        river_terrain_revision: 4,
+        spirit_blossom_revision: 0,
+        blood_forest_revision: 0,
         ..Default::default()
     })
     .unwrap();

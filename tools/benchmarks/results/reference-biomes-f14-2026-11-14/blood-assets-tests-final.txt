@@ -1,0 +1,8 @@
+test_complete_stable_catalog_and_individual_textures (test_assets.BloodAssets.test_complete_stable_catalog_and_individual_textures) ... ok
+test_grass_and_log_faces_have_distinct_authored_top_and_sides (test_assets.BloodAssets.test_grass_and_log_faces_have_distinct_authored_top_and_sides) ... ok
+test_real_glbs_have_unit_bounds_correct_normals_and_no_degenerate_faces (test_assets.BloodAssets.test_real_glbs_have_unit_bounds_correct_normals_and_no_degenerate_faces) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.047s
+
+OK

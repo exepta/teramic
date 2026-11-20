@@ -2,10 +2,11 @@ use super::*;
 use terra_core::WorldConfig;
 
 #[test]
-fn main_terrain_defaults_ignore_later_profiles_at_negative_boundaries_and_on_reload() {
+fn saved_legacy_terrain_ignores_later_profiles_at_negative_boundaries_and_on_reload() {
     for seed in [7, 42042, 99173] {
         let config = WorldConfig {
             seed: terra_core::WorldSeed(seed),
+            landscape_revision: 1,
             ..Default::default()
         };
         assert_eq!(config.landscape_revision, 1);
@@ -76,6 +77,7 @@ fn main_terrain_defaults_ignore_later_profiles_at_negative_boundaries_and_on_rel
 fn version_five_reference_regions_match_the_seeded_landscape() {
     let terrain = TerraGenerator::new(WorldConfig {
         landscape_revision: 0,
+        blood_forest_revision: 0,
         ..Default::default()
     })
     .unwrap();

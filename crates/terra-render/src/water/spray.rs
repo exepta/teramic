@@ -1,10 +1,8 @@
 //! One bounded billboard batch for nearby waterfall impacts, with no additional pass.
 use bevy::{
     asset::RenderAssetUsages,
-    light::{NotShadowCaster, NotShadowReceiver},
     mesh::{Indices, PrimitiveTopology},
     prelude::*,
-    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 use std::collections::BTreeMap;
 use terra_core::{GameConfig, WaterQuality};
@@ -38,52 +36,6 @@ struct SprayBatch;
 
 #[derive(Resource, Default)]
 pub(super) struct SprayMesh(Option<Handle<Mesh>>);
-
-pub(super) fn setup(
-    mut commands: Commands,
-    mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    let mut pixels = Vec::with_capacity(16 * 16 * 4);
-    for y in 0..16 {
-        for x in 0..16 {
-            let p = Vec2::new(x as f32 - 7.5, y as f32 - 7.5) / 7.5;
-            let alpha = (1.0 - p.length_squared()).max(0.0).powi(2);
-            pixels.extend([233, 244, 240, (alpha * 255.0) as u8]);
-        }
-    }
-    let texture = images.add(Image::new(
-        Extent3d {
-            width: 16,
-            height: 16,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        pixels,
-        TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::default(),
-    ));
-    let material = materials.add(StandardMaterial {
-        base_color_texture: Some(texture),
-        alpha_mode: AlphaMode::Blend,
-        unlit: true,
-        cull_mode: None,
-        fog_enabled: true,
-        ..default()
-    });
-    commands.spawn((
-        Name::new("Waterfall spray"),
-        SprayBatch,
-        MeshMaterial3d(material),
-        Transform::default(),
-        Visibility::Hidden,
-        NotShadowCaster,
-        NotShadowReceiver,
-        // The mesh follows nearby emitters and supplies its own distance culling.
-        bevy::camera::visibility::NoFrustumCulling,
-    ));
-    commands.init_resource::<SprayMesh>();
-}
 
 #[derive(bevy::ecs::system::SystemParam)]
 pub(super) struct SprayScene<'w, 's> {

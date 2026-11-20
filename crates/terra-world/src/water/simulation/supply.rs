@@ -168,7 +168,23 @@ pub(super) fn ambient_construction(
                             amount: level(left, natural),
                             ..Default::default()
                         });
-                        if !sampler.connected(journal, right, right_water, left, left_water) {
+                        let permeable_model =
+                            sampler.chunks.block_at(right).is_some_and(|material| {
+                                terra_core::construction::is_fence(material)
+                                    || terra_core::plumbing::is_part(material)
+                            });
+                        let connected_face = if permeable_model {
+                            let space = sampler.space(journal, right).clone();
+                            space.connected(
+                                right_water,
+                                sampler.space(journal, left),
+                                left_water,
+                                std::array::from_fn(|i| left[i] - right[i]),
+                            )
+                        } else {
+                            sampler.connected(journal, right, right_water, left, left_water)
+                        };
+                        if !connected_face {
                             connected = false;
                             break;
                         }
@@ -196,4 +212,218 @@ pub(super) fn ambient_construction(
         }
     }
     (wanted.amount > 0).then_some(wanted)
+}
+
+/// Fill the actual free region around a model gradually. A geometric height
+/// below a lower slab is empty solid, so its first visible film starts at the
+/// first nonempty height; every stored unit is still debited or source-accounted.
+pub(super) fn advance_construction(
+    sampler: &mut Sampler<'_>,
+    journal: &mut EditJournal,
+    p: [i64; 3],
+    cell: &mut FluidCell,
+    step: &mut FluidStep,
+) -> Result<bool, FluidError> {
+    if cell.source {
+        return Ok(false);
+    }
+    let partial = sampler
+        .chunks
+        .block_at(p)
+        .is_some_and(super::super::space::partial);
+    let supplied = ambient_construction(sampler, journal, p);
+    // An open lower-slab lip can overtop into actual air without turning every
+    // waterlogged construction into an outlet. Keep its first visible layer,
+    // and let the receiving air continue through ordinary gravity immediately.
+    if !partial
+        && supplied.is_none()
+        && matches!(sampler.chunks.block_at(p), Some(0 | 27))
+        && cell.amount < FLUID_CAPACITY
+        && let Some((q, water, paid)) = finite_lip(sampler, journal, p, *cell)
+    {
+        let next = FluidCell {
+            amount: cell.amount + 1,
+            source: false,
+            flow: [(p[0] - q[0]) as i8, (p[2] - q[2]) as i8],
+        };
+        pools::preflight(journal, &[(p, next), (q, paid)])?;
+        step.changed |= journal.set_simulated_fluid(p, next)?;
+        step.changed |= journal.set_simulated_fluid(q, paid)?;
+        if water.source {
+            step.sourced += 1;
+        }
+        step.transferred += 1;
+        step.wetted.push(p);
+        *cell = next;
+        return Ok(false);
+    }
+    let above = adjacent(p, [0, 1, 0]);
+    let gravity = above
+        .and_then(|q| sampler.cell(journal, q).map(|water| (q, water)))
+        .filter(|(q, water)| {
+            partial && water.amount > 0 && sampler.can_drain(journal, *q, *water, p)
+        });
+    // A finite terrace can reach a model's first exposed layer without
+    // inventing a source. Ordinary one-unit entry below that layer would be
+    // entirely inside the model's solid and discarded by the sampler.
+    let lateral = if partial && supplied.is_none() && gravity.is_none() {
+        [[-1, 0, 0], [0, 0, -1], [1, 0, 0], [0, 0, 1]]
+            .into_iter()
+            .filter_map(|d| {
+                let q = adjacent(p, d)?;
+                let water = sampler.cell(journal, q)?;
+                if water.source || water.amount.saturating_sub(cell.amount) < 2 {
+                    return None;
+                }
+                let target = sampler.space(journal, p).clamp(water);
+                (target.amount > 0 && sampler.connected(journal, q, water, p, target))
+                    .then_some((q, water))
+            })
+            .max_by_key(|(_, water)| water.amount)
+    } else {
+        None
+    };
+    let head = supplied
+        .or_else(|| {
+            gravity.map(|_| {
+                sampler.space(journal, p).clamp(FluidCell {
+                    amount: FLUID_CAPACITY,
+                    ..Default::default()
+                })
+            })
+        })
+        .or_else(|| lateral.map(|(_, water)| sampler.space(journal, p).clamp(water)));
+    let Some(head) = head.filter(|head| head.amount > 0) else {
+        return Ok(false);
+    };
+    let previous = journal.fluid(p).map_or(cell.amount, |water| water.amount);
+    let next = (previous.saturating_add(1)..=head.amount).find_map(|amount| {
+        let candidate = sampler.space(journal, p).clamp(FluidCell {
+            amount,
+            source: false,
+            flow: [0; 2],
+        });
+        (candidate.amount == amount).then_some(candidate)
+    });
+    if let Some(next) = next {
+        let moved = next.amount - previous;
+        let donor = if supplied.is_none() {
+            gravity.filter(|(_, water)| !water.source).or(lateral)
+        } else {
+            None
+        };
+        if donor.is_some_and(|(_, water)| water.amount < moved) {
+            return Ok(true);
+        }
+        if let Some((q, mut water)) = donor {
+            water.amount -= moved;
+            if sampler.space(journal, q).clamp(water).amount != water.amount {
+                return Ok(true);
+            }
+        }
+        let mut updates = vec![(p, next)];
+        if let Some((q, mut water)) = donor {
+            water.amount -= moved;
+            updates.push((q, water));
+        }
+        pools::preflight(journal, &updates)?;
+        for (q, water) in updates {
+            step.changed |= journal.set_simulated_fluid(q, water)?;
+        }
+        if donor.is_none() {
+            step.sourced += u64::from(moved);
+        }
+        step.transferred += u64::from(moved);
+        step.wetted.push(p);
+        *cell = next;
+    } else if cell.flow != [0; 2] {
+        cell.flow = [0; 2];
+        pools::preflight(journal, &[(p, *cell)])?;
+        step.changed |= journal.set_simulated_fluid(p, *cell)?;
+    }
+    // A real downward inlet may continue through a permeable model. Lateral
+    // bank-only waterlogging still stays sealed by its existing face rules.
+    let through_flow = gravity.is_some()
+        && adjacent(p, [0, -1, 0]).is_some_and(|below| {
+            let Some(water) = sampler.cell(journal, below) else {
+                return false;
+            };
+            let capacity = sampler
+                .space(journal, below)
+                .clamp(FluidCell {
+                    amount: FLUID_CAPACITY,
+                    ..Default::default()
+                })
+                .amount;
+            sampler.can_drain(journal, p, *cell, below) && (water.source || water.amount < capacity)
+        });
+    Ok(!through_flow)
+}
+
+/// A closed source-free pool must not swallow work arriving through its model
+/// wall. Real reservoir pressure and funded finite lips retain their intake.
+pub(super) fn model_intake(
+    sampler: &mut Sampler<'_>,
+    journal: &EditJournal,
+    p: [i64; 3],
+    cell: FluidCell,
+) -> bool {
+    ambient_construction(sampler, journal, p).is_some_and(|head| head.amount > cell.amount)
+        || finite_lip(sampler, journal, p, cell).is_some()
+}
+
+fn finite_lip(
+    sampler: &mut Sampler<'_>,
+    journal: &EditJournal,
+    p: [i64; 3],
+    cell: FluidCell,
+) -> Option<([i64; 3], FluidCell, FluidCell)> {
+    if !matches!(sampler.chunks.block_at(p), Some(0 | 27)) || cell.amount >= FLUID_CAPACITY {
+        return None;
+    }
+    for d in [[-1, 0, 0], [0, 0, -1], [1, 0, 0], [0, 0, 1]] {
+        let Some(q) = adjacent(p, d) else { continue };
+        let lower_slab = sampler
+            .chunks
+            .block_at(q)
+            .is_some_and(terra_core::construction::is_slab)
+            && journal.object_state(q).unwrap_or_default().facing < 4;
+        if !lower_slab {
+            continue;
+        }
+        let Some(water) = sampler.cell(journal, q) else {
+            continue;
+        };
+        let difference = water.amount.saturating_sub(cell.amount);
+        if water.amount <= 5 || difference == 0 {
+            continue;
+        }
+        // A real reservoir replenishes this lip, so its last eighth can level
+        // with the receiving pool. A finite film must keep the two-unit gap
+        // that prevents the same unit swapping straight back next update.
+        if !water.source
+            && difference < 2
+            && ambient_construction(sampler, journal, q)
+                .is_none_or(|head| head.amount < water.amount)
+        {
+            continue;
+        }
+        let mut paid = water;
+        if !water.source {
+            paid.amount -= 1;
+        }
+        if sampler.space(journal, q).clamp(paid).amount != paid.amount {
+            continue;
+        }
+        let face = sampler.space(journal, q).clone();
+        if face.connected(
+            water,
+            sampler.space(journal, p),
+            water,
+            std::array::from_fn(|i| p[i] - q[i]),
+        ) {
+            return Some((q, water, paid));
+        }
+    }
+    None
 }

@@ -1,6 +1,6 @@
 //! Meter-authored aquatic models: shared meshes, a few articulated groups, no voxel entities.
 use super::{Part, shape};
-use crate::players::model::Builder;
+use crate::creatures::model::voxel::Builder;
 use bevy::prelude::*;
 use terra_core::creatures::CreatureKind as Kind;
 

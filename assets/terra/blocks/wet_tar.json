@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": 437,
+  "name": "Liquid Tar",
+  "description": "Viscous, glossy tar on a prepared path. Flows slowly onto adjacent paths, then dries into a firm road.",
+  "creative_category": "building",
+  "render_kind": "boxes",
+  "bevel_width": 0,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "maximum": [
+        1,
+        0.9375,
+        1
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.9375,
+        0
+      ],
+      "maximum": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "materials": {
+    "Packed earth": {
+      "texture_pattern": "path_side",
+      "roughness": 1,
+      "reflectance": 0.1
+    },
+    "Tar surface": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.16,
+      "reflectance": 0.68
+    }
+  },
+  "textures": {
+    "Tar surface": "textures/wet_tar.png"
+  },
+  "face_materials": [
+    "Packed earth",
+    "Packed earth",
+    "Packed earth",
+    "Tar surface",
+    "Packed earth",
+    "Packed earth"
+  ],
+  "hardness": 0.7,
+  "resistance": 0.6,
+  "required_tool": "shovel",
+  "mining_level": 0
+}

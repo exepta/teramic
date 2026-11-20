@@ -1,0 +1,22 @@
+{
+  "id": "teramic::sidewalk_arc_left",
+  "name": "Sidewalk Left Curve",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 445
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 441
+        },
+        "count": 4
+      }
+    ]
+  }
+}

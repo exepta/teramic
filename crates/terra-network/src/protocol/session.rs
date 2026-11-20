@@ -7,13 +7,43 @@ use terra_core::{
 use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
-// Version 135 adds productive woodcutters, worn axes and profession depots.
-pub const PROTOCOL_VERSION: u32 = 135;
+// Aimed block actions include the world-space surface point selected by the client.
+pub const PROTOCOL_VERSION: u32 = 152;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 pub const MAX_TREE_INTEREST: usize = 256;
 pub const MAX_TREE_PATCH_CELLS: usize = 32_768;
 pub const MAX_TREE_PATCH_BYTES: usize = 128 * 1024;
+
+#[cfg(test)]
+mod road_identity_tests {
+    use terra_core::{Inventory, ItemKind};
+    #[test]
+    fn road_items_append_without_changing_legacy_binary_item_tags() {
+        for (item, ordinal) in [
+            (ItemKind::Bone, 33),
+            (ItemKind::Bitumen, 34),
+            (ItemKind::RoadAggregate, 35),
+            (ItemKind::GloomEssence, 36),
+            (ItemKind::LightSplitter, 37),
+        ] {
+            let bytes = postcard::to_stdvec(&item).unwrap();
+            assert_eq!(bytes, [ordinal]);
+            assert_eq!(postcard::from_bytes::<ItemKind>(&bytes).unwrap(), item);
+        }
+        let mut bag = Inventory::default();
+        for item in [ItemKind::Bitumen, ItemKind::RoadAggregate]
+            .into_iter()
+            .chain(terra_core::roads::MATERIALS.map(ItemKind::Block))
+        {
+            assert_eq!(bag.insert(item, 7), 0);
+        }
+        let bytes = postcard::to_stdvec(&bag).unwrap();
+        assert_eq!(postcard::from_bytes::<Inventory>(&bytes).unwrap(), bag);
+        let json = serde_json::to_string(&bag).unwrap();
+        assert_eq!(serde_json::from_str::<Inventory>(&json).unwrap(), bag);
+    }
+}
 
 pub struct ControlChannel;
 pub struct InputChannel;
@@ -38,6 +68,11 @@ pub enum ClientControl {
         profile: PlayerProfile,
     },
     Edit(EditCommand),
+    /// Chest-only placement uses the ordinary authoritative edit transaction.
+    PlaceChest {
+        command: EditCommand,
+        merge: terra_core::containers::ChestMerge,
+    },
     Mining(MiningIntent),
     ViewDistance(u8),
     VegetationDensity(f32),
@@ -76,6 +111,16 @@ pub enum ClientControl {
     Kingdom(super::kingdom::KingdomCommand),
     Train(super::trains::TrainCommand),
     NpcWork(super::npc_work::WorkCommand),
+    Building(super::building_jobs::BuildingCommand),
+    BlockEditAt {
+        command: EditCommand,
+        point: [f64; 3],
+        chest_merge: Option<terra_core::containers::ChestMerge>,
+    },
+    MineBlockAt {
+        intent: MiningIntent,
+        point: [f64; 3],
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -387,6 +432,8 @@ pub enum ServerControl {
     TrainEngineFuel(super::trains::TrainCargoSnapshot),
     NpcWork(Box<super::npc_work::WorkSnapshot>),
     NpcWorkResult(super::npc_work::WorkResult),
+    Building(Box<super::building_jobs::BuildingSnapshot>),
+    BuildingResult(super::building_jobs::BuildingResult),
 }
 
 /// Ordered interest updates: reset begins a new neighbourhood, subsequent
@@ -943,7 +990,7 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 135);
+        assert_eq!(PROTOCOL_VERSION, 152);
     }
     #[test]
     fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {
@@ -1208,11 +1255,16 @@ mod world_creation_wire_tests {
     use super::*;
     #[test]
     fn welcome_roundtrip_preserves_none_and_selected_spawn_biomes_and_all_boolean_rules() {
-        for preferred_spawn_biome in [None, Some(terra_core::BiomeKind::CherryForest)] {
+        for preferred_spawn_biome in [
+            None,
+            Some(terra_core::BiomeKind::CherryForest),
+            Some(terra_core::BiomeKind::SpiritBlossom),
+        ] {
             for (kingdoms, outposts) in [(false, false), (false, true), (true, false), (true, true)]
             {
                 let world = WorldConfig {
                     preferred_spawn_biome,
+                    biome_definitions: Some(terra_core::BiomeDefinitions::default()),
                     structures: terra_core::StructureSettings {
                         villages: false,
                         ruins: false,

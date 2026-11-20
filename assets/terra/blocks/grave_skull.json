@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 379,
+  "name": "Grave Skull",
+  "description": "Grave Skull for furnishing ancient graves and crypt chambers.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/grave_skull.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

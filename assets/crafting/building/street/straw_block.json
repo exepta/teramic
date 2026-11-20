@@ -1,0 +1,22 @@
+{
+  "id": "teramic::straw_block",
+  "name": "Tie Straw Bale",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 448
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "crop": "wheat"
+        },
+        "count": 9
+      }
+    ]
+  }
+}

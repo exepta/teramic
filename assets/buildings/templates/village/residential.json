@@ -1,0 +1,9931 @@
+{
+  "schema_version": 1,
+  "id": "village-house-temperate-v1",
+  "anchor": [
+    0,
+    0,
+    0
+  ],
+  "bounds": {
+    "min": [
+      -4,
+      -2,
+      -6
+    ],
+    "max": [
+      4,
+      8,
+      4
+    ]
+  },
+  "steps": [
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -2,
+            -6
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -2,
+            -6
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            0,
+            -2,
+            -6
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            1,
+            -2,
+            -6
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            2,
+            -2,
+            -6
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -2,
+            -5
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -2,
+            -5
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            0,
+            -2,
+            -5
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            1,
+            -2,
+            -5
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            2,
+            -2,
+            -5
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -2,
+            -4
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -2,
+            -4
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            0,
+            -2,
+            -4
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            1,
+            -2,
+            -4
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            2,
+            -2,
+            -4
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -2,
+            -3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -2,
+            -3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -2,
+            -3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            0,
+            -2,
+            -3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            1,
+            -2,
+            -3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            2,
+            -2,
+            -3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            3,
+            -2,
+            -3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -2,
+            -2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -2,
+            -2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -2,
+            -2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            0,
+            -2,
+            -2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            1,
+            -2,
+            -2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            2,
+            -2,
+            -2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            3,
+            -2,
+            -2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -2,
+            -1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -2,
+            -1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -2,
+            -1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            0,
+            -2,
+            -1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            1,
+            -2,
+            -1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            2,
+            -2,
+            -1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            3,
+            -2,
+            -1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -2,
+            0
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -2,
+            0
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -2,
+            0
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            0,
+            -2,
+            0
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            1,
+            -2,
+            0
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            2,
+            -2,
+            0
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            3,
+            -2,
+            0
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -2,
+            1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -2,
+            1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -2,
+            1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            0,
+            -2,
+            1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            1,
+            -2,
+            1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            2,
+            -2,
+            1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            3,
+            -2,
+            1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -2,
+            2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -2,
+            2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -2,
+            2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            0,
+            -2,
+            2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            1,
+            -2,
+            2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            2,
+            -2,
+            2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            3,
+            -2,
+            2
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -2,
+            3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -2,
+            3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -2,
+            3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            0,
+            -2,
+            3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            1,
+            -2,
+            3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            2,
+            -2,
+            3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Foundation",
+      "cells": [
+        {
+          "position": [
+            3,
+            -2,
+            3
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -1,
+            -6
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -1,
+            -6
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            0,
+            -1,
+            -6
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            1,
+            -1,
+            -6
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            2,
+            -1,
+            -6
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -1,
+            -5
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -1,
+            -5
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            0,
+            -1,
+            -5
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            1,
+            -1,
+            -5
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            2,
+            -1,
+            -5
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -1,
+            -4
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -1,
+            -4
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            0,
+            -1,
+            -4
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            1,
+            -1,
+            -4
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            2,
+            -1,
+            -4
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -1,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -1,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -1,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            0,
+            -1,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            1,
+            -1,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            2,
+            -1,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            3,
+            -1,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -1,
+            -2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -1,
+            -2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -1,
+            -2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            0,
+            -1,
+            -2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            1,
+            -1,
+            -2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            2,
+            -1,
+            -2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            3,
+            -1,
+            -2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -1,
+            -1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -1,
+            -1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -1,
+            -1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            0,
+            -1,
+            -1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            1,
+            -1,
+            -1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            2,
+            -1,
+            -1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            3,
+            -1,
+            -1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -1,
+            0
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -1,
+            0
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -1,
+            0
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            0,
+            -1,
+            0
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            1,
+            -1,
+            0
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            2,
+            -1,
+            0
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            3,
+            -1,
+            0
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -1,
+            1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -1,
+            1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -1,
+            1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            0,
+            -1,
+            1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            1,
+            -1,
+            1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            2,
+            -1,
+            1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            3,
+            -1,
+            1
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -1,
+            2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -1,
+            2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -1,
+            2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            0,
+            -1,
+            2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            1,
+            -1,
+            2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            2,
+            -1,
+            2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            3,
+            -1,
+            2
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -3,
+            -1,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -2,
+            -1,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            -1,
+            -1,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            0,
+            -1,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            1,
+            -1,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            2,
+            -1,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Floor",
+      "cells": [
+        {
+          "position": [
+            3,
+            -1,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            0,
+            -6
+          ],
+          "material": 90,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 90
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            0,
+            -6
+          ],
+          "material": 90,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 90
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            0,
+            -5
+          ],
+          "material": 90,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 90
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            0,
+            -5
+          ],
+          "material": 90,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 90
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            0,
+            -4
+          ],
+          "material": 90,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 90
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            0,
+            -4
+          ],
+          "material": 90,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 90
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            0,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            0,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            0,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            1,
+            0,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            0,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            0,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            0,
+            -2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            0,
+            -2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            0,
+            -1
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            0,
+            -1
+          ],
+          "material": 107,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 107
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            0,
+            0,
+            -1
+          ],
+          "material": 107,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 107
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            1,
+            0,
+            -1
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            0,
+            -1
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            0,
+            0
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            0,
+            0
+          ],
+          "material": 43,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 43
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            0,
+            0
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            0,
+            1
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            0,
+            1
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            0,
+            2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            0,
+            2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            0,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            0,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            0,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            0,
+            0,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            1,
+            0,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            0,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            0,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            1,
+            -6
+          ],
+          "material": 90,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 90
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            1,
+            -6
+          ],
+          "material": 90,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 90
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            1,
+            -3
+          ],
+          "material": 6,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 6
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            1,
+            -3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            1,
+            -3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            1,
+            1,
+            -3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            1,
+            -3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            1,
+            -3
+          ],
+          "material": 6,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 6
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            1,
+            -2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            1,
+            -2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            1,
+            0
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            1,
+            0
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            1,
+            2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            1,
+            2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            1,
+            3
+          ],
+          "material": 6,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 6
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            1,
+            3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            1,
+            3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            0,
+            1,
+            3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            1,
+            1,
+            3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            1,
+            3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            1,
+            3
+          ],
+          "material": 6,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 6
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            2,
+            -6
+          ],
+          "material": 90,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 90
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            2,
+            -6
+          ],
+          "material": 90,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 90
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            2,
+            -3
+          ],
+          "material": 6,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 6
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            2,
+            -3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            2,
+            -3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            0,
+            2,
+            -3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            1,
+            2,
+            -3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            2,
+            -3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            2,
+            -3
+          ],
+          "material": 6,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 6
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            2,
+            -2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            2,
+            -2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            2,
+            -1
+          ],
+          "material": 68,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 68
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            2,
+            -1
+          ],
+          "material": 68,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 68
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            2,
+            0
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            2,
+            0
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            2,
+            1
+          ],
+          "material": 68,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 68
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            2,
+            1
+          ],
+          "material": 68,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 68
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            2,
+            2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            2,
+            2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            2,
+            3
+          ],
+          "material": 6,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 6
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            2,
+            3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            2,
+            3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            0,
+            2,
+            3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            1,
+            2,
+            3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            2,
+            3
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            2,
+            3
+          ],
+          "material": 6,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 6
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            3,
+            -6
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            3,
+            -6
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            0,
+            3,
+            -6
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            1,
+            3,
+            -6
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            3,
+            -6
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            3,
+            -5
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            3,
+            -5
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            0,
+            3,
+            -5
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            1,
+            3,
+            -5
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            3,
+            -5
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -4,
+            3,
+            -4
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            4,
+            3,
+            -4
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -4,
+            3,
+            -3
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            3,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            3,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            3,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            0,
+            3,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            1,
+            3,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            3,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            3,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            4,
+            3,
+            -3
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -4,
+            3,
+            -2
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            3,
+            -2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            3,
+            -2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            4,
+            3,
+            -2
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -4,
+            3,
+            -1
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            3,
+            -1
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            3,
+            -1
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            4,
+            3,
+            -1
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -4,
+            3,
+            0
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            3,
+            0
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            3,
+            0
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            4,
+            3,
+            0
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -4,
+            3,
+            1
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            3,
+            1
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            3,
+            1
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            4,
+            3,
+            1
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -4,
+            3,
+            2
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            3,
+            2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            3,
+            2
+          ],
+          "material": 103,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 103
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            4,
+            3,
+            2
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -4,
+            3,
+            3
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -3,
+            3,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -2,
+            3,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -1,
+            3,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            0,
+            3,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            1,
+            3,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            2,
+            3,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            3,
+            3,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            4,
+            3,
+            3
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            -4,
+            3,
+            4
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Walls",
+      "cells": [
+        {
+          "position": [
+            4,
+            3,
+            4
+          ],
+          "material": 82,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -4,
+            4,
+            -4
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            4,
+            -4
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            4,
+            -4
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            4,
+            -4
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            4,
+            -4
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            4,
+            -4
+          ],
+          "material": 74,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            4,
+            4,
+            -4
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -4,
+            4,
+            -3
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -3,
+            4,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            4,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            4,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            4,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            4,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            4,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            3,
+            4,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            4,
+            4,
+            -3
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -4,
+            4,
+            -2
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            4,
+            4,
+            -2
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -4,
+            4,
+            -1
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            4,
+            4,
+            -1
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -4,
+            4,
+            0
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            4,
+            4,
+            0
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -4,
+            4,
+            1
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            4,
+            4,
+            1
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -4,
+            4,
+            2
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            4,
+            4,
+            2
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -4,
+            4,
+            3
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -3,
+            4,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            4,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            4,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            4,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            4,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            4,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            3,
+            4,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            4,
+            4,
+            3
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -4,
+            4,
+            4
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            4,
+            4,
+            4
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -3,
+            5,
+            -4
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            3,
+            5,
+            -4
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -3,
+            5,
+            -3
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            5,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            5,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            5,
+            -3
+          ],
+          "material": 68,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 68
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            5,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            5,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            3,
+            5,
+            -3
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -3,
+            5,
+            -2
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            3,
+            5,
+            -2
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -3,
+            5,
+            -1
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            3,
+            5,
+            -1
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -3,
+            5,
+            0
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            3,
+            5,
+            0
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -3,
+            5,
+            1
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            3,
+            5,
+            1
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -3,
+            5,
+            2
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            3,
+            5,
+            2
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -3,
+            5,
+            3
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            5,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            5,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            5,
+            3
+          ],
+          "material": 68,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 68
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            5,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            5,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            3,
+            5,
+            3
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -3,
+            5,
+            4
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            3,
+            5,
+            4
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            6,
+            -4
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            6,
+            -4
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            6,
+            -3
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            6,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            6,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            6,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            6,
+            -3
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            6,
+            -2
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            6,
+            -2
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            6,
+            -1
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            6,
+            -1
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            6,
+            0
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            6,
+            0
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            6,
+            1
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            6,
+            1
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            6,
+            2
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            6,
+            2
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            6,
+            3
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            6,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            6,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            6,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            6,
+            3
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -2,
+            6,
+            4
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            2,
+            6,
+            4
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            7,
+            -4
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            7,
+            -4
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            7,
+            -3
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            7,
+            -3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            7,
+            -3
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            7,
+            -2
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            7,
+            -2
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            7,
+            -1
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            7,
+            -1
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            7,
+            0
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            7,
+            0
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            7,
+            1
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            7,
+            1
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            7,
+            2
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            7,
+            2
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            7,
+            3
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            7,
+            3
+          ],
+          "material": 16,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 16
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            7,
+            3
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            -1,
+            7,
+            4
+          ],
+          "material": 74,
+          "facing": 1,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            1,
+            7,
+            4
+          ],
+          "material": 74,
+          "facing": 3,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 74
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            8,
+            -4
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            8,
+            -3
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            8,
+            -2
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            8,
+            -1
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            8,
+            0
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            8,
+            1
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            8,
+            2
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            8,
+            3
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Roof",
+      "cells": [
+        {
+          "position": [
+            0,
+            8,
+            4
+          ],
+          "material": 82,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 82
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            0,
+            0,
+            -3
+          ],
+          "material": 65,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": [
+            0,
+            1,
+            -3
+          ],
+          "secondary": false
+        },
+        {
+          "position": [
+            0,
+            1,
+            -3
+          ],
+          "material": 65,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": [
+            0,
+            0,
+            -3
+          ],
+          "secondary": true
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 65
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            -2,
+            0,
+            -2
+          ],
+          "material": 193,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 193
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            2,
+            0,
+            -2
+          ],
+          "material": 193,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 193
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "material": 71,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": [
+            0,
+            0,
+            1
+          ],
+          "secondary": false
+        },
+        {
+          "position": [
+            0,
+            0,
+            1
+          ],
+          "material": 71,
+          "facing": 0,
+          "rotate_facing": true,
+          "peer": [
+            0,
+            0,
+            0
+          ],
+          "secondary": true
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 71
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            1,
+            0,
+            0
+          ],
+          "material": 105,
+          "facing": 0,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 105
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            1,
+            0,
+            1
+          ],
+          "material": 29,
+          "facing": 2,
+          "rotate_facing": true,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 29
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            -3,
+            1,
+            -1
+          ],
+          "material": 105,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 105
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            1,
+            1,
+            -1
+          ],
+          "material": 131,
+          "facing": 2,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 131
+          },
+          "count": 1
+        },
+        {
+          "item": {
+            "flower": "red"
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            3,
+            1,
+            -1
+          ],
+          "material": 105,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 105
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            -1,
+            1,
+            0
+          ],
+          "material": 131,
+          "facing": 7,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 131
+          },
+          "count": 1
+        },
+        {
+          "item": {
+            "flower": "purple"
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            -3,
+            1,
+            1
+          ],
+          "material": 105,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 105
+          },
+          "count": 1
+        }
+      ]
+    },
+    {
+      "phase": "Furnishing",
+      "cells": [
+        {
+          "position": [
+            3,
+            1,
+            1
+          ],
+          "material": 105,
+          "facing": 4,
+          "rotate_facing": false,
+          "peer": null,
+          "secondary": false
+        }
+      ],
+      "costs": [
+        {
+          "item": {
+            "block": 105
+          },
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "item": {
+        "block": 6
+      },
+      "count": 8
+    },
+    {
+      "item": {
+        "block": 16
+      },
+      "count": 106
+    },
+    {
+      "item": {
+        "block": 29
+      },
+      "count": 1
+    },
+    {
+      "item": {
+        "block": 43
+      },
+      "count": 66
+    },
+    {
+      "item": {
+        "block": 65
+      },
+      "count": 1
+    },
+    {
+      "item": {
+        "block": 68
+      },
+      "count": 6
+    },
+    {
+      "item": {
+        "block": 71
+      },
+      "count": 1
+    },
+    {
+      "item": {
+        "block": 74
+      },
+      "count": 87
+    },
+    {
+      "item": {
+        "block": 82
+      },
+      "count": 46
+    },
+    {
+      "item": {
+        "block": 90
+      },
+      "count": 10
+    },
+    {
+      "item": {
+        "block": 103
+      },
+      "count": 47
+    },
+    {
+      "item": {
+        "block": 105
+      },
+      "count": 5
+    },
+    {
+      "item": {
+        "block": 107
+      },
+      "count": 2
+    },
+    {
+      "item": {
+        "block": 131
+      },
+      "count": 2
+    },
+    {
+      "item": {
+        "block": 193
+      },
+      "count": 2
+    },
+    {
+      "item": {
+        "flower": "red"
+      },
+      "count": 1
+    },
+    {
+      "item": {
+        "flower": "purple"
+      },
+      "count": 1
+    }
+  ],
+  "display_name": "Temperate village house",
+  "category": "Residential"
+}

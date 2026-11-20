@@ -36,21 +36,7 @@ pub(super) fn update(
     let Some((camera, look)) = target.camera.iter().next() else {
         return;
     };
-    let origin = if target
-        .perspective
-        .as_deref()
-        .is_some_and(|mode| mode.is_third_person())
-    {
-        target
-            .bodies
-            .iter()
-            .next()
-            .map_or(camera.translation, |body| {
-                body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET
-            })
-    } else {
-        camera.translation
-    };
+    let origin = target.origin(camera);
     let rotation = look.rotation();
     let (yaw, pitch, _) = rotation.to_euler(EulerRot::YXZ);
     let ray = (

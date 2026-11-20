@@ -185,7 +185,7 @@ pub(super) fn tick(
     }
 }
 
-fn hurt_creature(game: &mut terra_core::GameplayState, id: u64, damage: f32) -> bool {
+pub(super) fn hurt_creature(game: &mut terra_core::GameplayState, id: u64, damage: f32) -> bool {
     let Some(animal) = game.creatures.animals.get(&id).filter(|a| a.health > 0.0) else {
         return false;
     };
@@ -211,6 +211,13 @@ fn hurt_creature(game: &mut terra_core::GameplayState, id: u64, damage: f32) -> 
                 count: 1,
             });
         }
+    }
+    if dies {
+        drops.extend(
+            terra_core::creatures::drops::forest_loot(animal.kind, animal.variant, animal.id)
+                .into_iter()
+                .flatten(),
+        );
     }
     if game.drops.len() + drops.len() > terra_core::MAX_WORLD_DROPS
         || game.next_drop.checked_add(drops.len() as u64).is_none()
@@ -452,6 +459,36 @@ mod tests {
             drops
         );
     }
+    #[test]
+    fn new_forest_death_loot_is_authoritative_and_not_repeated() {
+        for kind in [
+            CreatureKind::Skeleton,
+            CreatureKind::Raven,
+            CreatureKind::BloodSlime,
+            CreatureKind::BloodStalker,
+            CreatureKind::BloodWisp,
+            CreatureKind::ThornBrute,
+        ] {
+            let mut game = terra_core::GameplayState::default();
+            let mut creature = animal(1, kind, [0.0; 3]);
+            if kind == CreatureKind::Skeleton {
+                creature.variant = 2;
+            }
+            let expected: Vec<_> =
+                terra_core::creatures::drops::forest_loot(kind, creature.variant, creature.id)
+                    .into_iter()
+                    .flatten()
+                    .collect();
+            game.creatures.animals.insert(1, creature);
+            assert!(hurt_creature(&mut game, 1, 100.0));
+            assert_eq!(game.creatures.animals[&1].behavior, CreatureBehavior::Dead);
+            let drops: Vec<_> = game.drops.iter().map(|drop| drop.stack).collect();
+            assert_eq!(drops, expected, "{kind:?}");
+            assert!(!hurt_creature(&mut game, 1, 100.0));
+            assert_eq!(game.drops.len(), expected.len());
+        }
+    }
+
     #[test]
     fn actual_fast_forward_and_reverse_sweeps_hit_between_poses_but_stationary_trains_do_not() {
         use terra_voxel::{BlockSection, SectionPos};

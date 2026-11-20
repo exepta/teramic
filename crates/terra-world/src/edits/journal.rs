@@ -133,7 +133,9 @@ pub struct EditJournal {
     player_state_revision: u64,
     player_locations: HashMap<terra_core::PlayerUuid, terra_core::PlayerLocation>,
     gameplay: terra_core::GameplayState,
-    pub(super) containers: HashMap<[i64; 3], terra_core::Inventory>,
+    /// Ordered runtime lookup supports bounded town-inventory prefix queries.
+    /// Persistence continues to encode physical inventories as explicit entries.
+    pub(super) containers: std::collections::BTreeMap<[i64; 3], terra_core::Inventory>,
     pub(super) furnaces: HashMap<[i64; 3], terra_core::furnace::FurnaceState>,
     pub(super) crushers: HashMap<[i64; 3], terra_core::crusher::CrusherState>,
     pub(super) mixers: HashMap<[i64; 3], terra_core::mixer::MixerState>,
@@ -174,6 +176,8 @@ pub struct EditJournal {
     pub(super) water_mesh_epochs: HashMap<SectionPos, u64>,
     pub(super) fluid_active: std::collections::VecDeque<[i64; 3]>,
     pub(super) fluid_queued: HashSet<[i64; 3]>,
+    #[cfg(feature = "bevy")]
+    pub(crate) fluid_sources: crate::water::SourceCache,
     #[cfg(feature = "bevy")]
     pub(crate) grass_candidates: std::collections::VecDeque<[i64; 3]>,
     #[cfg(feature = "bevy")]
@@ -508,6 +512,10 @@ impl EditJournal {
             .into_iter()
             .filter(|local| old.and_then(|e| e.fluids.get(local)) != fluids.get(local))
             .collect();
+        #[cfg(feature = "bevy")]
+        if !fluid_changes.is_empty() {
+            self.fluid_sources.invalidate();
+        }
         // No consumer observes the intermediate imported object poses. Rebuild
         // their sparse indexes once after the final metadata is installed.
         // On a bounded-revision failure, resync against the actual partial state
@@ -591,6 +599,13 @@ impl EditJournal {
     }
     pub fn mesh_epoch(&self, p: SectionPos) -> u64 {
         self.mesh_epochs.get(&p).copied().unwrap_or(0)
+    }
+    /// Loaded hazard broadphases can query edited material membership without
+    /// allocating a section delta or copying props, object state and fluids.
+    pub fn section_has_edited_material(&self, section: SectionPos, material: u16) -> bool {
+        self.sections
+            .get(&section)
+            .is_some_and(|s| s.blocks.values().any(|id| *id == material))
     }
     pub fn edited_blocks(&self) -> usize {
         self.sections.values().map(|s| s.blocks.len()).sum()
@@ -982,6 +997,8 @@ impl EditJournal {
         let edits = self.sections.entry(owner).or_default();
         edits.fluids.insert(local, cell);
         edits.fluid_epoch = epoch;
+        #[cfg(feature = "bevy")]
+        self.fluid_sources.invalidate();
         self.wake_fluid_neighbors(global);
         Ok(())
     }
@@ -1000,6 +1017,12 @@ impl EditJournal {
             return Err(BlockError::ProtectedStructure);
         }
         let (owner, local) = global_to_section(global);
+        let thawed = (wake_simulation && material == 0 && self.block(global) == Some(49))
+            .then(|| {
+                self.object_state(global)
+                    .and_then(super::BlockObjectState::frozen_water)
+            })
+            .flatten();
         let mut affected = Vec::with_capacity(8);
         // Corner AO, like shoreline vertices, reads diagonal halo cells as well.
         // Only sections whose one-cell halo contains the edit need a rebuild.
@@ -1111,12 +1134,15 @@ impl EditJournal {
         {
             edits.tints.remove(&local);
         }
-        if !(matches!(material, 28..=29 | 40 | 59..=73 | 99..=100 | 131 | 141..=172)
+        if !(matches!(material, 28..=29 | 40 | 49 | 59..=73 | 99..=100 | 131 | 141..=172)
             || crate::objects::is_opening(material)
             || terra_core::construction::is_shape(material)
             || terra_core::castle::is_castle(material)
             || terra_core::rails::is_rail(material)
             || terra_core::train_parts::is_train(material)
+            || (terra_core::grave_blocks::is_prop(material)
+                || terra_core::blood_blocks::is_prop(material)
+                || terra_core::biome_flora::is_prop(material))
             || terra_core::profession_stations::is_station(material)
             || terra_core::lantern::is_part(material))
             || previous.is_some_and(|old| old != material)
@@ -1218,7 +1244,9 @@ impl EditJournal {
             *self.mesh_epochs.entry(p).or_default() += 1;
         }
         self.invalidate_water_geometry(global)?;
-        if material == terra_voxel::MaterialId::FluidWater as u16 {
+        if let Some(water) = thawed {
+            self.write_fluid_with_wake(global, water, wake_simulation)?;
+        } else if material == terra_voxel::MaterialId::FluidWater as u16 {
             self.write_fluid_with_wake(
                 global,
                 FluidCell {

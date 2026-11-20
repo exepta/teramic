@@ -790,7 +790,10 @@ fn press_compact_hearth(
 
 #[test]
 fn profession_station_use_opens_authoritative_depots_and_blocks_place_or_eating() {
-    for material in terra_core::profession_stations::ALL {
+    for material in terra_core::profession_stations::ALL
+        .into_iter()
+        .chain([terra_core::grave_blocks::ORNATE_CHEST])
+    {
         let mut app = press_compact_hearth(
             InputBinding::Mouse(MouseButton::Right),
             material,
@@ -811,7 +814,11 @@ fn profession_station_use_opens_authoritative_depots_and_blocks_place_or_eating(
         app.update();
         assert_eq!(
             app.world().resource::<InventoryView>().title,
-            terra_core::profession_stations::label(material).unwrap()
+            if material == terra_core::grave_blocks::ORNATE_CHEST {
+                "Ornate Crypt Chest"
+            } else {
+                terra_core::profession_stations::label(material).unwrap()
+            }
         );
     }
 }
@@ -3564,8 +3571,8 @@ fn catalog_search_accepts_localized_names_descriptions_and_canonical_namespaces(
             .resource::<InventoryView>()
             .browser_items
             .iter()
-            .all(|entry| entry.item != Some(axe)),
-        "Changing language must invalidate localized search terms"
+            .any(|entry| entry.item == Some(axe)),
+        "Every supported language remains searchable after changing UI language"
     );
     action(
         &mut app,
@@ -3580,6 +3587,50 @@ fn catalog_search_accepts_localized_names_descriptions_and_canonical_namespaces(
     );
     assert_eq!(app.world().resource::<ClientSession>().inventory, before);
     assert!(requests(&mut app).is_empty());
+}
+
+#[test]
+fn catalog_search_keeps_all_languages_substrings_and_words_independent_of_ui_locale() {
+    let mut app = app(GameMode::Creative);
+    let stone = ItemKind::Block(3);
+    crate::localization::install_test_language(app.world_mut(), "en-US");
+    action(&mut app, InventoryAction::Toggle);
+    for locale in ["en-US", "de-DE"] {
+        app.world_mut()
+            .resource_mut::<tilt_ui::UiLocalization>()
+            .set_locale(locale)
+            .unwrap();
+        for query in ["Stein", "STONE", "tei", "ton", "  stEIn  ", "teramic stone"] {
+            action(&mut app, InventoryAction::Search(query.into()));
+            assert!(
+                app.world()
+                    .resource::<InventoryView>()
+                    .browser_items
+                    .iter()
+                    .any(|v| v.item == Some(stone)),
+                "{locale}: {query}"
+            );
+        }
+        action(&mut app, InventoryAction::Search("galle".into()));
+        let bucket = app
+            .world()
+            .resource::<InventoryView>()
+            .browser_items
+            .iter()
+            .find(|v| v.item == Some(ItemKind::Tool(terra_core::ToolKind::BileBucket)))
+            .expect("Galle bucket is searchable in either UI language");
+        assert!(bucket.name.contains("Galle") && !bucket.name.contains("Bile"));
+    }
+    action(
+        &mut app,
+        InventoryAction::Search("stone impossiblezz".into()),
+    );
+    assert!(
+        app.world()
+            .resource::<InventoryView>()
+            .browser_items
+            .is_empty()
+    );
 }
 
 #[test]
@@ -6854,4 +6905,36 @@ fn explicit_catalog_tracks_ignore_pixel_rounding_and_resize_keeps_the_visible_it
     app.update();
     assert_eq!(app.world().resource::<InventoryState>().page_capacity, 35);
     assert_eq!(app.world().resource::<InventoryState>().page, 4);
+}
+
+#[test]
+fn tar_coatings_are_world_states_while_path_and_tar_bucket_remain_obtainable() {
+    let palette = BlockPalette {
+        choices: [
+            102,
+            terra_core::roads::WET_TAR,
+            terra_core::roads::DRIED_TAR,
+        ]
+        .into_iter()
+        .map(|id| terra_player::interaction::BlockChoice {
+            id,
+            name: format!("block{id}"),
+            identifier: ItemKind::Block(id).identifier(),
+            description: String::new(),
+        })
+        .collect(),
+        ..Default::default()
+    };
+    let items = available_items(
+        GameMode::Creative,
+        &terra_core::Inventory::default(),
+        &palette,
+    );
+    assert!(items.contains(&ItemKind::Block(102)));
+    assert!(items.contains(&ItemKind::Tool(terra_core::ToolKind::TarBucket)));
+    for material in terra_core::roads::TAR_MATERIALS {
+        assert!(!items.contains(&ItemKind::Block(material)));
+        assert!(!catalog_item(ItemKind::Block(material)));
+        assert!(!terra_core::construction::obtainable(material));
+    }
 }

@@ -203,7 +203,14 @@ fn a_running_pump_can_lift_the_finite_water_already_in_its_inlet_without_a_live_
 #[test]
 fn a_faucet_drains_its_own_finite_buffer_without_pushing_water_back_through_its_inlet() {
     for buffered_in_tap in [false, true] {
-        let (mut chunks, mut journal, terrain) = fixture();
+        let (mut chunks, mut journal, _) = fixture();
+        // This empty loaded test volume must contain only its seven stored
+        // units. A changed generated water table is an unrelated live intake.
+        let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
+            water: false,
+            ..Default::default()
+        })
+        .unwrap();
         let upstream = [-1, 3, 0];
         let pipe = [0, 3, 0];
         let tap = [1, 3, 0];

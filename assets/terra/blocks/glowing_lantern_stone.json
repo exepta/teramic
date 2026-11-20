@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": 315,
+  "name": "Glowing Lantern Stone",
+  "description": "A violet stone lantern with a warm luminous blossom.",
+  "creative_category": "decoration",
+  "hardness": 1.4,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "glowing_lantern_stone": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "emission": [
+        0.9,
+        0.52,
+        0.16
+      ]
+    }
+  },
+  "textures": {
+    "glowing_lantern_stone": "textures/glowing_lantern_stone.png"
+  },
+  "face_materials": [
+    "glowing_lantern_stone",
+    "glowing_lantern_stone",
+    "glowing_lantern_stone",
+    "glowing_lantern_stone",
+    "glowing_lantern_stone",
+    "glowing_lantern_stone"
+  ],
+  "light": {
+    "color": [
+      1,
+      0.76,
+      0.43
+    ],
+    "intensity": 900,
+    "range": 13,
+    "falloff": "soft_core",
+    "flicker": 0.035,
+    "cave_intensity": 0.6,
+    "shadows": false
+  },
+  "surface": "rock"
+}

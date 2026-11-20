@@ -1,0 +1,22 @@
+{
+  "id": "teramic::untie_straw",
+  "name": "Untie Straw Bale",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "crop": "wheat"
+    },
+    "count": 9
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 448
+        },
+        "count": 1
+      }
+    ]
+  }
+}

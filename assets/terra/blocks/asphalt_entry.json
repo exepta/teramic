@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "id": 434,
+  "name": "Asphalt Lower Transition",
+  "description": "A road transition from the thin cover to half-block height.",
+  "creative_category": "building",
+  "render_kind": "custom_mesh",
+  "bevel_width": 0,
+  "hardness": 1.4,
+  "resistance": 5,
+  "required_tool": "pickaxe",
+  "mining_level": 0,
+  "materials": {
+    "Road aggregate": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 1,
+      "reflectance": 0.06
+    }
+  },
+  "textures": {
+    "Road aggregate": "textures/asphalt.png"
+  },
+  "face_materials": [
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate",
+    "Road aggregate"
+  ],
+  "model_layout": "scene",
+  "model": "models/asphalt_entry.gltf",
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0.0
+      ],
+      "maximum": [
+        1,
+        0.15625,
+        0.08333333333333333
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.08333333333333333
+      ],
+      "maximum": [
+        1,
+        0.1875,
+        0.16666666666666666
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.16666666666666666
+      ],
+      "maximum": [
+        1,
+        0.21875,
+        0.25
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.25
+      ],
+      "maximum": [
+        1,
+        0.25,
+        0.3333333333333333
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.3333333333333333
+      ],
+      "maximum": [
+        1,
+        0.28125,
+        0.4166666666666667
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.4166666666666667
+      ],
+      "maximum": [
+        1,
+        0.3125,
+        0.5
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.5
+      ],
+      "maximum": [
+        1,
+        0.34375,
+        0.5833333333333334
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.5833333333333334
+      ],
+      "maximum": [
+        1,
+        0.375,
+        0.6666666666666666
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.6666666666666666
+      ],
+      "maximum": [
+        1,
+        0.40625,
+        0.75
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.75
+      ],
+      "maximum": [
+        1,
+        0.4375,
+        0.8333333333333334
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.8333333333333334
+      ],
+      "maximum": [
+        1,
+        0.46875,
+        0.9166666666666666
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0,
+        0.9166666666666666
+      ],
+      "maximum": [
+        1,
+        0.5,
+        1.0
+      ]
+    }
+  ]
+}

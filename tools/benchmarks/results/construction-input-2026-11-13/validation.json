@@ -1,0 +1,45 @@
+{
+  "tests": {
+    "world": 44,
+    "ui": 657,
+    "player": 122
+  },
+  "total": 823,
+  "workspace_all_targets_check": "passed",
+  "workspace_all_targets_clippy": "passed",
+  "format": "passed",
+  "native": [
+    {
+      "confirmation": "button",
+      "origin": [
+        4,
+        16,
+        22
+      ],
+      "os_event_source": "Linux uinput and KWin",
+      "passed": true
+    },
+    {
+      "confirmation": "os-mouse",
+      "origin": [
+        4,
+        16,
+        22
+      ],
+      "os_event_source": "Linux uinput and KWin",
+      "passed": true
+    },
+    {
+      "confirmation": "enter",
+      "origin": [
+        4,
+        16,
+        20
+      ],
+      "os_event_source": null,
+      "passed": true
+    }
+  ],
+  "original_save_unchanged": true,
+  "exact_screenshot_origin_confirmed": false
+}

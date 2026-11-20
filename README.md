@@ -1,11 +1,159 @@
 # Project Terra
 
+Flüssiger Teer wird mit einem **Teereimer** auf vorbereitete **Wegblöcke (Path)**
+gegossen. Rechtsklick mit einer Holz- oder Steinschaufel macht aus Gras, Erde,
+Sand oder Kies einen Weg. An der Werkbank ergeben ein leerer Eimer und vier
+Kohlenteer-Bindemittel einen Teereimer. Seine acht Einheiten verteilen sich
+langsam auf angrenzende freie Wegblöcke und trocknen dort zu festem Teerbelag;
+die Menge und die Schichtdicke bleiben erhalten. Auf anderem Boden lässt sich
+Teer nicht ausgießen. [Straßenbau mit Teer](docs/tar-roads.md).
+Client und Server verwenden gemeinsam Protokoll 149.
+
+Geisterwald-Gras schließt mit seiner Kappe oben an die Deckfläche an.
+Die [Biomkulissen und Asphaltplatzierung](docs/fantasy-nature-sandworm-ambience.md)
+sind korrigiert: natürliche Waldaufnahmen mit sparsamen Fantasy-Akzenten,
+einheitliche Rampenrichtung, längs ausgerichtete Randsteine und nachträgliches
+Drehen der Straßenformen mit dem Schraubenschlüssel.
+
+[Regionale Berge, Wasserfallkorrekturen, Kreaturen-KI und F68-Straßen](docs/fantasy-nature-sandworm-ambience.md)
+ergänzen die aktuelle Überarbeitung. Landschaft 7 erhält große ruhige Ebenen und
+konzentriert Gebirge auf seltenere Regionen; gespeicherte Landschaftsversionen
+bleiben erhalten. Wasserfälle, verwurzelte Wasserpflanzen und natürliche
+Sandwurm-Spawns sind korrigiert. F68 ergänzt Zuschlag, Kohlenteer-Bindemittel,
+Asphalt, dünne Decken, Rampen, Übergänge und Randsteine mit Herstellung und Rückbau.
+Die ursprünglichen Asphalt-Bauformen bleiben für vorhandene Bauten verfügbar.
+
+[Fantasy-Natur, stachelige Kakteen, Sandwurm und Biomatmosphären](docs/fantasy-nature-sandworm-ambience.md)
+beschreiben die neue Überarbeitung. Ecology 9 ergänzt große Felsbögen und
+asymmetrische Pflanzengruppen; vorhandene Weltrevisionen bleiben erhalten.
+Laub verwendet einzelne gefaltete Blätter mit separaten Blüten und Früchten.
+
+Räumliche Blattgruppen, durchscheinender Blood Slime, überarbeitete Skelette und
+gleich breite deutsche Menükategorien sind ergänzt. Der neue
+[Nebelblock](docs/fog-block-and-spirit-stone.md) erzeugt kreisförmigen Bodennebel;
+[Flussrevision 5 und Ecology 8](docs/river-width-and-fog-sources.md) beschreiben
+die breiteren Flüsse und natürlichen Nebelquellen.
+[Aktueller Prüfbericht](tools/benchmarks/results/leaf-fog-ui-rivers-2026-11-15/README.md).
+
+Laub verwendet nun freigestellte Blattgruppen mit echten Zwischenräumen und
+unregelmäßigen Rändern. [Blatttexturen, Geometrie und Schatten](docs/foliage-reference-surfaces.md)
+beschreibt die Überarbeitung; [Raben](docs/raven-flight.md) fliegen über Gelände
+und Baumkronen. [Aktuelle Prüfung](tools/benchmarks/results/foliage-silhouettes-2026-11-15/README.md).
+
+[Laubflächen und Blattrelief](docs/foliage-reference-surfaces.md),
+[Birkensilhouette und Tiefenschwimmen](docs/birch-aquatic-depth.md) sowie
+[Augen, Pferde und Spinnen](docs/voxel-creature-models.md) beschreiben die
+aktuelle Überarbeitung. Birken erhalten in neuen Welten einen breiten Fuß,
+eine schmale Mitte und eine breite obere Krone.
+[Prüfergebnisse und Spielaufnahmen](tools/benchmarks/results/foliage-creatures-depth-2026-11-14/README.md).
+
+[Regionale Flora und Kakteen (Ecology 6)](docs/biome-flora-ecology-6.md)
+erweitern die acht Referenzbiome um eigene Pflanzen, überarbeitete Baumkronen
+und zusammenhängende, abbaubare Kakteen mit zwei bis acht Blöcken Höhe.
+Gras, Erde, Schnee sowie Spirit-/Blood-Oberflächen erhalten neue Materialdetails.
+[Voxelartige Kreaturen](docs/voxel-creature-models.md) behalten ihre Animationen
+und bekommen gestufte, verbundene Außenflächen.
+[F14: Klima, Wachstum und Eis](docs/climate-growth-ice.md) verbindet Wachstum
+und Tierbedürfnisse mit dem lokalen Klima; natürliches Wasser kann gefrieren
+und wieder auftauen, Spieler rutschen auf Eis.
+Neue Welten verwenden inzwischen Revision 7; vorhandene Weltrevisionen bleiben erhalten.
+[Nachweise und echte Spielaufnahmen](tools/benchmarks/results/reference-biomes-f14-2026-11-14/README.md).
+Die Referenzillustrationen bleiben das Gestaltungsziel; die Spielaufnahmen
+belegen keine pixelgleiche Umsetzung.
+
+[Blood Forest](docs/blood-forest.md) ergänzt ein weich gemischtes Blutwald-Biom
+mit 22 Block-/Dekorationstypen, rotem Wasser, Blatttropfen und neuen Kreaturen.
+Die Dokumentation beschreibt Biomauswahl, Befehle und verfügbare Ressourcen.
+Die Biom-Props sind voxelartig gestuft; die Blutwald-Palette ist heller.
+[Ecology 5](docs/natural-features.md) verteilt Pflanzen in lockeren Gruppen und
+ergänzt echte mehrzellige Felsformationen in geeigneten Biomen.
+[Aktueller Prüfbericht](tools/benchmarks/results/blood-forest-voxel-ecology-2026-11-14/README.md).
+[Strukturrevision 10](docs/structure-terrain-revision-10.md) passt Friedhöfe,
+Grabdungeons und Siedlungen an ihr örtliches Gelände an.
+[Blockgrafik und gestreamtes Licht](docs/block-graphics-and-light-streaming.md)
+beschreibt die behobenen Modellfehler und die frühere Erkennung entfernter Lampen.
+[Prüfbericht und native Aufnahmen](tools/benchmarks/results/blood-forest-terrain-2026-11-14/README.md).
+
+[Spirit Blossom und bewegter Gebietsnebel](docs/spirit-blossom.md): ein neues,
+weich gemischtes Biom mit 18 Block-/Dekorationstypen, Blütenbäumen, Laternen,
+sieben Schmetterlingen, zwei Geisterlichtern und einem Geisterfuchs.
+Der Geistwaldnebel folgt dem Gelände; markierte Gebietsgrenzen besitzen bewegte
+Nebelkonturen. Revision 2 ergänzt Hügel, Wasserflächen, Friedhöfe und benannte
+Grabgewölbe: [Geistwald-Erweiterung](docs/spirit-world-polish.md).
+Neue Welten verwenden `spirit_blossom_revision = 2`; bestehende Welten behalten
+ihre gespeicherte Revision 0 oder 1.
+
+[Baumodus, Stadtlager und Building Editor](docs/construction-mode-and-editor.md):
+**TAB** oeffnet in eigenen Bau-Chunks eine frei verschiebbare Top-down-Baukamera.
+**Eingabe/Enter** oder **Vorlage platzieren** bestaetigt die angezeigte Bauposition;
+Linksklick auf den Boden bleibt verfuegbar.
+Echte Lagerbestaende erscheinen links neben der Minimap; Vorlagen zeigen
+verfuegbar / benoetigt und eine orange Platzierungssilhouette. Handwerker bauen
+den bestaetigten Auftrag; Creative benoetigt kein Material.
+Gespeicherte Gebiete erscheinen automatisch als niedrige, bewegte Nebelkonturen;
+die aeussere Bau-Chunk-Grenze ist rot. **H** blendet diese Anzeigen gemeinsam um.
+Bewohner und Tiere blockieren keine Vorlagenplatzierung. Gespeicherte Erde/Gras
+unter dem Haus sind gueltiger Baugrund; natuerliche Gelaendestufen bis vier Bloecke
+werden durch die Handwerker eingeebnet.
+**F82** ist die eigenstaendige App `terra-building-editor` mit leerer Bauwelt,
+9-x-9-Plattform, Spielinventarkatalog und validiertem JSON-Laden/Speichern.
+Die Struct-Bauhilfe ist geschuetzt, wird nicht exportiert und laesst sich in
+den Editor-Optionen von 9x9 bis 33x33 vergroessern.
+Unterordner unter `assets/buildings/` werden als Kategorien beruecksichtigt;
+der Vorlagenkatalog kann ohne Neustart aktualisiert werden.
+Einzel-/Doppeltruhen duerfen nebeneinander stehen; Shift steuert das Verbinden.
+[Phase 241: Pruefbericht](tools/benchmarks/results/construction-editor-2026-11-13/README.md).
+[Phase 243: Bauplatzierung und Gebietsgrenzen](tools/benchmarks/results/construction-areas-2026-11-13/README.md).
+[Phase 244: Platzierung in der echten Testwelt](tools/benchmarks/results/construction-real-save-2026-11-13/README.md).
+[Phase 245: Cursor, Eingabebestaetigung und genaue Ablehnungsdiagnose](tools/benchmarks/results/construction-input-2026-11-13/README.md).
+Aktuell gelten **Protokoll 145** und **Speicherindex ID26** mit Migration aelterer Staende.
+
+[Bergfried und Gebaeudevorlagen](docs/keep-and-building-templates.md): sechs
+Verwaltungsbereiche im bestehenden UI-Stil, echte Vorlagenauswahl fuer manuelle
+und automatische Bauauftraege und gepruefte Materiallisten vor dem Beauftragen.
+Dorfwohnhaus und Fichtenhuette sind als vollstaendige JSON-Vorlagen enthalten.
+Phase 240 fuehrte Protokoll 140 und Speicherindex ID25 ein.
+[Phase 240: Pruefbericht und Aufnahmen](tools/benchmarks/results/keep-templates-2026-11-13/README.md).
+
+[Arbeitswege, Gebietsanzeige und Verteidigung](docs/workers-areas-and-pvp.md):
+Holzfaeller pflanzen auch auf freien Flaechen, gespeicherte Arbeits-/Lagergebiete
+lassen sich farbig einblenden. Alle Rezepte liegen unter `assets/crafting/`;
+Hausauftraege verwenden die echte JSON-Vorlage unter `assets/buildings/`.
+Angegriffene Bewohner wehren sich ausser gegen ihren eigenen Koenig.
+`pvp = true` beziehungsweise `false` in `configs/server.toml` steuert Spielerkampf.
+Phase 239: 4.843 Tests, getrennte Builds, Headless-Start und beide nativen
+Grafiklaeufe bestanden. [Pruefbericht und Aufnahmen](tools/benchmarks/results/workers-areas-defense-2026-11-12/README.md).
+
 Neu: [Gleisleger mit Schotterfundamenten und Wagenbeladung](docs/train-excavation.md)
 sowie [NPC-Arbeitsauftraege (F58)](docs/npc-work.md) mit Gebieten, Lageranbindung,
 Prioritaeten und Statusanzeige im Bergfried. F61 ergaenzt produktive Holzfaeller
 und neun Berufsstationen. [Deutsch/Englisch (F72)](docs/localization.md) laesst
-sich in den Gameplay-Einstellungen je Profil waehlen. Client und Server verwenden
-gemeinsam Protokoll 135; aeltere Spielstaende werden migriert.
+sich in den Gameplay-Einstellungen je Profil waehlen.
+[F49/F80](docs/navigation-and-founding.md) ergaenzen sichere lokale NPC-Wege und
+18 einmalige Startbewohner je neuem Kingdom. Client und Server verwenden
+gemeinsam Protokoll 145; aeltere Spielstaende werden migriert.
+
+[Direkte NPC-Arbeitszuweisung und Kingdom-Bedienung](docs/npc-interaction-and-kingdom.md):
+Rechtsklick-Dialog mit Inventaransicht, Gebiets-/Lagerwahl im HUD, automatische
+Build-Chunk-Patrouillen, Kingdom-Zugriff mit K und groessere Dialoge mit
+Umbruch langer deutscher Beschriftungen. Dorflichtquellen bleiben aus groesserer
+Entfernung sichtbar.
+
+[Holzfaeller und Setzlinge](docs/lumberjack-stations-and-drops.md): echte
+Berufsstation vor Arbeitsbeginn, geschlechtergerechter Modellwechsel und
+20-%-Setzlingsbeute aus Laub; Aktionsbuttons wachsen mit ihrem Text.
+
+[Handwerker und lokaler Hausbau](docs/settlement-building.md): Der Bergfried-Tab
+**Lokales Bauen / Building Local** verwaltet Handwerker ohne eigenes Arbeitsgebiet,
+einen Stadtlagerbereich mit echten Truhen und einzelne oder automatisch geplante
+Dorfwohnhaeuser. NPCs holen Material, bauen sichtbar Block fuer Block und verwenden
+wiederverwertbare Gerueste. Ein bis vier anwesende Handwerker benoetigen
+30/15/10/5 Minuten aktive Echtzeit. Eigene untatige Villager wandern in Build-Chunks;
+ihre privaten Inventare sind auch ueber die Arbeitsliste im Bergfried erreichbar.
+Holzfaeller koennen Axt und Setzlinge am besuchten Berufstisch abholen, wenn sie im
+Ausgabelager fehlen. Phase 238 ist mit 4800 Library-/Binary-Tests, vier
+Integrationstests, getrennten Builds und beiden nativen UI-Laeufen geprueft:
+[Pruefbericht und Aufnahmen](tools/benchmarks/results/settlement-building-2026-11-12/README.md).
 
 Aktueller UI-/Wetterabgleich: gemeinsame Inventar-/Katalogslots, ueberarbeitete
 Rahmen und Karten, begrenzte Wegpunktanzeige und sichere Wasserabfragen bei
@@ -54,7 +202,7 @@ Die Implementierung liegt in fachlich benannten Modulen:
 | --- | --- |
 | terra-core | `config/`: Client, Server, Welt, Laden, Fehler und Validierung; `gameplay.rs`: Spielmodus, Inventar und Ressourcen; `identity.rs`, `constants.rs`, `plugin.rs` |
 | terra-voxel | `blocks/`: Sections, Koordinaten, Indexierung, Raycasts; `meshing/`: Greedy-Quads und Geometrie; `density/`: bisherige Dichte-Sample-API; `materials.rs` |
-| terra-world | `generation/biomes/`: Klima und fuenf gewichtete Profile; `landforms.rs`, `surface.rs`: Terrassen und Bodenschichten; `columns.rs`: wiederverwendbare Spaltendaten; `generation/vegetation/`: Baeume und Bewuchsmasken; `water/`: Zellsolver und separate Wasseroberflaechen; `edits/`: gemeinsames Edit-/Gameplay-Journal; `streaming/`: Interesse, Batch-Jobs, Ressourcen, Edits und Plugin |
+| terra-world | `generation/biomes/`: Klima und zehn gewichtete Biome; `landforms.rs`, `surface.rs`: Terrassen und Bodenschichten; `columns.rs`: wiederverwendbare Spaltendaten; `generation/vegetation/`: Baeume und Bewuchsmasken; `water/`: Zellsolver und separate Wasseroberflaechen; `edits/`: gemeinsames Edit-/Gameplay-Journal; `streaming/`: Interesse, Batch-Jobs, Ressourcen, Edits und Plugin |
 | terra-render | `blocks/`: gemeinsame Cube-Vorlagen, JSON-/Textur-Registry und optionale Custom-GLBs; `meshing/`: verbundene Kanten, LOD, Geometriecache und Worker-Batching; `props/`: Micro-Geometrie, verankerter Wind und Section-Batches; `building/`: Debug-Bauvorschau, Bruchanimation und Ressourcenmarker; `previews.rs`: echte Blockansichten fuer TiltUI; `water/`: erweitertes PBR-Material, Upload und Lebenszyklus; Szene und Auswahlrahmen |
 | terra-player | `camera/`: Lauf-/Flugsteuerung, Avian-Character-Controller und Mausfreigabe; `interaction/`: Targeting und Abbau/Setzen |
 | terra-network | Lightyear/UDP-Netcode, versionierter Handshake, serverseitige Autoritaet, Client-Replikat, Prediction/Reconciliation und bestaetigte Section-Deltas |
@@ -62,6 +210,7 @@ Die Implementierung liegt in fachlich benannten Modulen:
 | terra-storage | `manifest.rs`: versionierter Speichervertrag |
 | terra-ui | TiltUI-Plugin, Einstellungen mit Live-Vorschau und generierter Komponentenkatalog |
 | apps/client | Bootstrap, native Szenen-/Interaktions-Smoke-Tests und kurzer Einstiegspunkt |
+| apps/building-editor | Eigenstaendige leere Bauwelt, kreative Platzierung, lokale TiltUI-Komponenten und versionierter JSON-Import/-Export |
 | apps/server | Gemeinsamer Headless-Bootstrap fuer Integrated/Dedicated Server, verwalteter Serverthread, automatischer Join-Handshake und Signalbehandlung |
 
 `src-ui/` enthaelt die echten TiltUI-Komponententripel, Einstellungsmenue, Overlay und Fadenkreuz.
@@ -98,7 +247,14 @@ cargo build --locked -p terra-client
 cargo build --locked -p terra-server
 cargo run --locked -p terra-client
 cargo run --locked -p terra-server
+cargo run --locked -p terra-building-editor
 ```
+
+RustRover bietet die geteilte Startkonfiguration **Terra Client** aus
+[.run/TerraClient.run.xml](.run/TerraClient.run.xml). Sie startet das aktuelle
+Paket und Binary `terra-client`. Alte Profile mit `--package teramic --bin teramic`
+passen nicht mehr zum Workspace. Nach Änderungen an der Klangkulisse den Client
+vollständig neu starten: Ein Menü- oder Weltwechsel lädt die Audiobank nicht neu.
 
 Der normale Client startet im **TERAMIC Main Menu**, ohne Weltgenerierung oder
 automatisch gestarteten Host. Singleplayer oeffnet die persistente Weltenliste.
@@ -118,7 +274,7 @@ Keine Join-Dateien und keine manuell konfigurierten oder verteilten privaten
 Serverschluessel. Der automatische Handshake handelt intern kurzlebige Netcode-
 Transportcredentials aus; die bewahrte Lightyear-Verschluesselung braucht weiterhin
 einen nur im Serverprozess lebenden Transportschluessel. Das ist kein Account-Key.
-`--connect-token` und `--token-out` sind abgeloest. Protokollstand jetzt **73**:
+`--connect-token` und `--token-out` sind abgeloest. Protokollstand jetzt **145**:
 Client und Server gemeinsam neu bauen/starten. Seeds und Welt-IDs bleiben gleich.
 
 Im LAN den Server mit `--bind 0.0.0.0:5000` starten. **Multiplayer** entdeckt ihn
@@ -1589,6 +1745,12 @@ werden tatsaechlich genutzt. Das Plugin kommt vor `DefaultPlugins`.
 Es gibt keinen Ersatz durch ein anderes UI-Framework.
 
 ## Tests
+
+Aktuelle Abnahme: 4800 Library-/Binary-Tests und vier Integrationstests bestanden.
+Zehn bestehende Tests bleiben ignoriert. Der Original-GLB-Test benoetigt die
+externe Datei `FIVERR/VoxelGrassBlock glb file.glb`, die im Repository fehlt;
+fuer diesen Checkout dokumentiert der [Phase-238-Pruefbericht](tools/benchmarks/results/settlement-building-2026-11-12/README.md)
+den genauen Testaufruf mit diesem einzelnen Filter und die nativen Abnahmen.
 
 ```bash
 cargo fmt --all --check
@@ -4574,7 +4736,7 @@ ausgewaehlt; Partikelzahl und Qualitaetsbudgets bleiben unveraendert.
 Der **Ofen** belegt zwei Bloecke uebereinander. Block 59 und die Rohrvarianten
 60 bis 64 erweitern die vorhandene Registry, ohne bisherige IDs zu verschieben.
 Das Inventar besitzt getrennte, serverseitig gefilterte Plaetze fuer Eingang,
-Brennstoff, Ausgabe und einen Blasebalg. Einzelne JSONs unter `assets/smelting/`
+Brennstoff, Ausgabe und einen Blasebalg. Einzelne JSONs unter `assets/crafting/processes/smelting/`
 und `assets/fuels/` definieren Schmelzrezepte und Brenndauern. Too Many Items
 zeigt Ofenrezepte samt Laufzeit und kann ihre Zutaten in einen geoeffneten Ofen
 laden. Eisen und Gold werden im Ofen geschmolzen; die bisherigen
@@ -5228,7 +5390,7 @@ Gift tropft zeitversetzt vom Herz, weiterhin nur als erster Effekt der Reihe.
 Der horizontale Zweiblock-Crusher verarbeitet Blumen zu Farbstoff und Mineralien
 zu sechs Staubarten. Zwei private Inventarslots, atomare Transfers, vier Sekunden
 Verarbeitung, Fortschritt und Too-Many-Items-Rezepte sind integriert. Einzelne
-Rezepte liegen in `assets/crushing/`; der Generator fuer das gemeinsame
+Rezepte liegen in `assets/crafting/processes/crushing/`; der Generator fuer das gemeinsame
 3D-Modell ist `tools/assets/build_crusher.mjs`. Seit Phase 107 muss eine
 Handkurbel (Block 100) rechts am Zahnrad montiert werden. Inventar befuellen,
 schliessen und an der Kurbel Platzieren/Benutzen gedrueckt halten; Loslassen
@@ -6314,3 +6476,6 @@ Wasserverbindungspruefungen um Schienen vermeiden teure Volumenzerlegung.
 Drei native Messungen in Kopien der Test-Welt erreichen 27.23/28.62/25.16 ms als
 laengsten Frame fuer Blockbau, Gleisbau und Chunk-Streaming; die Originalwelt
 bleibt unveraendert. 4488 Tests bestanden, zehn ignoriert.
+
+Geistwald-Revision 2, Grabstätten, neue Blockmodelle und Nebeloptimierung:
+[Implementierungsumfang und Nutzung](docs/spirit-world-polish.md).

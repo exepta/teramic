@@ -15,7 +15,7 @@ fn generator(seed: u64) -> TerraGenerator {
 }
 
 fn pure(kind: BiomeKind) -> BiomeSample {
-    let mut weights = [0.0; 8];
+    let mut weights = [0.0; 10];
     weights[kind as usize] = 1.0;
     let [
         ocean,
@@ -26,6 +26,8 @@ fn pure(kind: BiomeKind) -> BiomeSample {
         mushroom_park,
         cliffted_desert,
         cherry_forest,
+        spirit_blossom,
+        blood_forest,
     ] = weights;
     BiomeSample {
         temperature: 0.5,
@@ -39,6 +41,8 @@ fn pure(kind: BiomeKind) -> BiomeSample {
             mushroom_park,
             cliffted_desert,
             cherry_forest,
+            spirit_blossom,
+            blood_forest,
         },
     }
 }
@@ -240,5 +244,22 @@ fn foothill_ecology_blends_across_non_overlapping_climate_bands() {
         }
         assert!((sample.weights.values().iter().sum::<f64>() - 1.0).abs() < 1e-10);
         previous = sample;
+    }
+}
+
+#[test]
+fn legacy_eroded_shores_never_acquire_new_biomes_through_height_fallback() {
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 4,
+        blood_forest_revision: 0,
+        spirit_blossom_revision: 0,
+        ..Default::default()
+    })
+    .unwrap();
+    for height in [-10., 0., 15., 25., 31.] {
+        let result = terrain.surface_ecology(pure(BiomeKind::Plains), height);
+        assert_eq!(result.weights.blood_forest, 0.);
+        assert_eq!(result.weights.spirit_blossom, 0.);
+        assert!((result.weights.values().iter().sum::<f64>() - 1.).abs() < 1e-9);
     }
 }

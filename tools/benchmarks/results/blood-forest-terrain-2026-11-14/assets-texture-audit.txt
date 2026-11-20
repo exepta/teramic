@@ -1,0 +1,5 @@
+Only three intended PNGs changed; every other existing block asset SHA256 and mtime is unchanged.
+blood_leaves RGB min (98, 35, 43) max (162, 61, 69)
+bloodwood_log RGB min (79, 42, 35) max (134, 72, 59)
+bloodwood_log_end RGB min (93, 47, 39) max (148, 83, 65)
+Byte-identical regeneration; periodic side/leaf sampling verified over all 16,384 texels.

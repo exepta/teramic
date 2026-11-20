@@ -1,0 +1,35 @@
+{
+  "status": "passed",
+  "screens": {
+    "construction-catalog-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 1990346
+    },
+    "construction-npc-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 950413
+    },
+    "construction-blueprint-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 2053749
+    },
+    "construction-queued-en-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 882182
+    }
+  },
+  "transport": "real local UDP authority and acknowledged Build claim",
+  "input": "real remappable TAB/ESC KeyboardInput, WASD pan, HTML template handler and projected MouseButtonInput",
+  "template": "spruce-cottage-v1",
+  "preview": "actual orange template mesh",
+  "resources": "four acknowledged Creative infinity rows without a chest",
+  "queue": "real ground raycast, selected-template job and authoritative free_resources",
+  "persistence": "actual integrated-server save acknowledgement plus disk reload validates job/template/free_resources and matching owner settlement without storage",
+  "npc": "actual civilian click, private inventory response and ESC retaining construction",
+  "restoration": "unchanged authoritative/predicted avatar and restored gameplay camera",
+  "responsive_geometry": "DE wide and EN compact viewport/caption checks"
+}

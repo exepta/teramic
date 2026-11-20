@@ -13,3 +13,4 @@ tools/**/*.patch -whitespace
 tools/**/perf-symbols.txt -whitespace
 # Test output keeps its terminal blank lines as captured evidence.
 tools/benchmarks/results/**/*.log -whitespace
+tools/benchmarks/results/**/*.txt -whitespace

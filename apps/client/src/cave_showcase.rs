@@ -133,6 +133,8 @@ fn eye(stage: usize) -> Transform {
     } else if stage == 18 {
         Transform::from_xyz(-19.0, -17.0, 35.0).looking_at(Vec3::new(4.0, -16.5, 35.0), Vec3::Y)
     } else if stage == 19 {
+        // Keep both world-space photometry targets inside the same frustum.
+        // This lip is 1/8 enclosed under the continuous entrance kernel.
         Transform::from_xyz(-6.0, -17.0, 35.0).looking_at(Vec3::new(16.0, -16.5, 35.0), Vec3::Y)
     } else if stage == 20 {
         eye(14)
@@ -754,7 +756,7 @@ fn measure_portal(
     let position_matches = if enclosed {
         cave.blend > 0.99
     } else {
-        cave.blend < 0.01
+        (cave.blend - 0.125).abs() < 0.01
     };
     let visible = measurements.is_some_and(|(ground, sky)| ground > 0.01 && sky > 0.03);
     let comparison = if enclosed {
@@ -918,8 +920,11 @@ mod tests {
         );
         assert_eq!(
             terra_world::enclosure::sample(outside, 18.0, |p| Some(block(p))).cave,
-            0.0
+            0.125
         );
+        let daylight =
+            terra_world::enclosure::sample([-3.0, -17.0, 35.0], 18.0, |p| Some(block(p)));
+        assert_eq!(daylight.cave, 0.0);
         assert_eq!(block([-19, -11, 35]), 3);
         assert_eq!(block([3, -21, 35]), 3);
         assert_eq!(block([3, 18, 35]), 0);

@@ -59,7 +59,114 @@ fn put(chunks: &mut ChunkStore, journal: &mut EditJournal, p: [i64; 3], id: u16,
 }
 
 #[test]
-fn partial_water_wets_banks_across_section_seams_without_escaping_and_drains() {
+fn a_source_funded_hidden_intake_buffer_opens_its_visible_film_then_drains_after_cutoff() {
+    let p = [15, 8, 5];
+    let q = [16, 8, 5];
+    let (terrain, mut chunks, mut journal) = fixture(p);
+    put(&mut chunks, &mut journal, p, 27, 0);
+    put(&mut chunks, &mut journal, q, 82, 0);
+    journal
+        .set_fluid(
+            p,
+            FluidCell {
+                amount: 4,
+                source: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    journal
+        .set_fluid(
+            q,
+            FluidCell {
+                amount: 4,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    // Its inlet is alive while pressure is still below the first visible film.
+    // This paid buffer must survive several ticks, rather than reset each tick.
+    for _ in 0..8 {
+        let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
+        assert_eq!(step.drained + step.absorbed, 0);
+        assert_eq!(journal.fluid(q).unwrap().amount, 4);
+        assert_eq!(chunks.fluid_cell_at(&terrain, &journal, q, 82).amount, 0);
+    }
+    journal
+        .set_fluid(
+            p,
+            FluidCell {
+                amount: 8,
+                source: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let total = |journal: &EditJournal| {
+        journal
+            .fluid_cells()
+            .map(|(_, c)| u64::from(c.amount))
+            .sum::<u64>()
+    };
+    let initial = total(&journal);
+    let mut sourced = 0;
+    for _ in 0..8 {
+        let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
+        assert_eq!(
+            step.drained + step.absorbed,
+            0,
+            "An active inlet must finish its already funded film"
+        );
+        sourced += step.sourced + step.replenished;
+        assert_eq!(total(&journal), initial + sourced);
+    }
+    assert_eq!(chunks.fluid_cell_at(&terrain, &journal, q, 82).amount, 8);
+    put(&mut chunks, &mut journal, p, 3, 0);
+    let retained = total(&journal);
+    let mut drained = 0;
+    for _ in 0..32 {
+        let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
+        assert_eq!(step.sourced + step.replenished, 0);
+        drained += step.drained + step.absorbed;
+        assert_eq!(total(&journal) + drained, retained);
+    }
+    assert_eq!(total(&journal), 0);
+}
+
+#[test]
+fn reloaded_water_hidden_entirely_inside_a_slab_is_removed_and_accounted() {
+    let p = [15, 8, 5];
+    let (terrain, mut chunks, mut journal) = fixture(p);
+    put(&mut chunks, &mut journal, p, 82, 0);
+    journal
+        .set_fluid(
+            p,
+            FluidCell {
+                amount: 4,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(chunks.fluid_cell_at(&terrain, &journal, p, 82).amount, 0);
+    let mut restored = EditJournal::default();
+    for owner in journal.changed_sections() {
+        restored.import_delta(journal.section_delta(owner)).unwrap();
+    }
+    let step = simulate_fluid_step(&terrain, &chunks, &mut restored, 4096).unwrap();
+    assert_eq!(step.drained, 4);
+    assert_eq!(step.sourced + step.replenished, 0);
+    assert_eq!(restored.fluid(p), Some(FluidCell::default()));
+    for _ in 0..8 {
+        assert!(
+            !simulate_fluid_step(&terrain, &chunks, &mut restored, 4096)
+                .unwrap()
+                .changed
+        );
+    }
+}
+
+#[test]
+fn partial_water_wets_slab_skin_and_overtops_an_open_lip_without_evaporating() {
     for x in [-1, 15] {
         let p = [x, 8, 5];
         let q = [x + 1, 8, 5];
@@ -74,16 +181,21 @@ fn partial_water_wets_banks_across_section_seams_without_escaping_and_drains() {
         );
         put(&mut chunks, &mut journal, q, 82, 0);
         put(&mut chunks, &mut journal, r, 0, 0);
-        // The lower slab seals a closed pocket below half height. This stream
-        // regression needs a real outlet to prove recession after its source
-        // stops; the separately tested sealed pocket must keep its finite water.
+        // The lower slab's upper void wets from the source side. Its lip can
+        // then pay a finite front into the real outlet beyond the raised edge.
         put(&mut chunks, &mut journal, [r[0], r[1] - 1, r[2]], 0, 0);
         for _ in 0..30 {
             simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
         }
         assert_eq!(journal.fluid(q).unwrap().amount, 8);
         assert!(!journal.fluid(q).unwrap().source);
-        assert!(journal.fluid(r).is_none_or(|c| c.amount == 0));
+        assert!(journal.fluid(r).is_some_and(|c| c.amount > 0));
+        assert!(
+            journal
+                .fluid([r[0], r[1] - 1, r[2]])
+                .is_some_and(|c| c.amount > 0),
+            "overtopping must reach the outlet's actual lower cell"
+        );
         assert!(journal.fluid(r).is_none_or(|c| !c.source));
         let wet = chunks
             .water_column_at_point(&terrain, &journal, [q[0] as f64 + 0.5, 8.6, 5.5])
@@ -117,16 +229,45 @@ fn partial_water_wets_banks_across_section_seams_without_escaping_and_drains() {
             Some(wet)
         );
         put(&mut chunks, &mut journal, p, 3, 0);
+        let retained: u64 = journal
+            .fluid_cells()
+            .map(|(_, water)| u64::from(water.amount))
+            .sum();
+        let mut drained = 0;
         for _ in 0..80 {
-            simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
+            let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
+            assert_eq!(step.sourced + step.replenished, 0);
+            drained += step.drained + step.absorbed;
+            assert_eq!(
+                journal
+                    .fluid_cells()
+                    .map(|(_, w)| u64::from(w.amount))
+                    .sum::<u64>()
+                    + drained,
+                retained
+            );
         }
-        assert!(journal.fluid(q).is_none_or(|c| c.amount == 0 && !c.source));
-        assert!(journal.fluid(r).is_none_or(|c| c.amount == 0 && !c.source));
+        assert_eq!(
+            journal
+                .fluid_cells()
+                .map(|(_, water)| u64::from(water.amount))
+                .sum::<u64>(),
+            0
+        );
+        assert_eq!(
+            journal.fluid(q).unwrap().amount,
+            0,
+            "an old supported outlet cannot sustain a removed source"
+        );
+        assert!(!journal.fluid(q).unwrap().source);
+        assert_eq!(journal.fluid(r).unwrap().amount, 0);
+        assert_eq!(journal.fluid([r[0], r[1] - 1, r[2]]).unwrap().amount, 0);
+        assert!(journal.fluid_cells().all(|(_, water)| !water.source));
     }
 }
 
 #[test]
-fn isolated_half_height_pocket_retains_water_after_adjacent_supply_is_cut() {
+fn an_isolated_half_height_pocket_recedes_without_crossing_its_solid_bank() {
     use std::collections::BTreeMap;
     for x in [-1, 15] {
         let p = [x, 8, 5];
@@ -134,6 +275,18 @@ fn isolated_half_height_pocket_retains_water_after_adjacent_supply_is_cut() {
         let r = [x + 2, 8, 5];
         let (terrain, mut chunks, mut journal) = fixture(p);
         put(&mut chunks, &mut journal, p, 27, 0);
+        // A half-height source ends at the solid bank's crest. A full source
+        // would genuinely overtop this lip and fill the formerly isolated pool.
+        journal
+            .set_fluid(
+                p,
+                FluidCell {
+                    amount: 4,
+                    source: true,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
         put(&mut chunks, &mut journal, q, 82, 0);
         put(&mut chunks, &mut journal, r, 0, 0);
         journal
@@ -145,11 +298,23 @@ fn isolated_half_height_pocket_retains_water_after_adjacent_supply_is_cut() {
                 },
             )
             .unwrap();
+        let mut drained = 0;
         for _ in 0..30 {
-            simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
+            let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
+            drained += step.drained + step.absorbed;
+            assert_eq!(step.sourced + step.replenished, 0);
         }
-        assert_eq!(journal.fluid(q).unwrap().amount, 8);
-        assert_eq!(journal.fluid(r).unwrap().amount, 4);
+        assert!(
+            journal
+                .fluid(q)
+                .is_none_or(|water| water.amount == 0 && !water.source)
+        );
+        assert_eq!(journal.fluid(r).unwrap().amount, 0);
+        assert_eq!(
+            drained, 4,
+            "The separate half-height source cannot feed through the solid bank"
+        );
+        assert_eq!(journal.fluid(p).unwrap().amount, 4);
         put(&mut chunks, &mut journal, p, 3, 0);
         let total = |journal: &EditJournal| {
             journal
@@ -167,20 +332,18 @@ fn isolated_half_height_pocket_retains_water_after_adjacent_supply_is_cut() {
             removed += step.drained + step.absorbed;
             assert_eq!(total(&journal) + removed, initial + added);
         }
-        assert_eq!(journal.fluid(q).unwrap().amount, 0);
-        assert_eq!(
-            journal.fluid(r).unwrap(),
-            FluidCell {
-                amount: 4,
-                ..Default::default()
-            }
+        assert!(
+            journal
+                .fluid(q)
+                .is_none_or(|water| water.amount == 0 && !water.source)
         );
-        assert_eq!(total(&journal), 4);
-        let column = chunks
-            .water_column_at_point(&terrain, &journal, [r[0] as f64 + 0.5, 8.25, 5.5])
-            .unwrap();
-        assert_eq!(column.level, 8.5);
-        assert_eq!(column.bed, 8.0);
+        assert_eq!(journal.fluid(r).unwrap(), FluidCell::default());
+        assert_eq!(total(&journal), initial);
+        assert!(
+            chunks
+                .water_column_at_point(&terrain, &journal, [r[0] as f64 + 0.5, 8.25, 5.5])
+                .is_none()
+        );
         let expected: BTreeMap<_, _> = journal.fluid_cells().collect();
         let mut restored = EditJournal::default();
         for owner in journal.changed_sections() {
@@ -195,7 +358,7 @@ fn isolated_half_height_pocket_retains_water_after_adjacent_supply_is_cut() {
             );
         }
         assert_eq!(restored.fluid_cells().collect::<BTreeMap<_, _>>(), expected);
-        assert_eq!(total(&restored), 4);
+        assert_eq!(total(&restored), initial);
     }
 }
 
@@ -322,7 +485,7 @@ fn replacing_source_with_slab_waterlogs_it_until_a_full_block_removes_the_source
 }
 
 #[test]
-fn water_flows_around_pipes_across_chunk_seams_and_recedes_when_source_is_removed() {
+fn water_flows_around_pipes_across_chunk_seams_and_recedes_after_source_removal() {
     use terra_core::plumbing;
     for x in [-1, 15] {
         for material in plumbing::WOOD_PIPE..=plumbing::PUMP {
@@ -358,11 +521,32 @@ fn water_flows_around_pipes_across_chunk_seams_and_recedes_when_source_is_remove
             assert!(space.contains(external, [0.03, 0.5, 0.03]));
             assert!(!space.contains(external, [0.5; 3]));
             put(&mut chunks, &mut journal, p, 3, 0);
+            let retained: u64 = journal
+                .fluid_cells()
+                .map(|(_, cell)| u64::from(cell.amount))
+                .sum();
+            let mut drained = 0;
             for _ in 0..80 {
-                simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
+                let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 4096).unwrap();
+                assert_eq!(step.sourced + step.replenished, 0);
+                drained += step.drained + step.absorbed;
+                assert_eq!(
+                    journal
+                        .fluid_cells()
+                        .map(|(_, c)| u64::from(c.amount))
+                        .sum::<u64>()
+                        + drained,
+                    retained
+                );
             }
-            assert!(journal.fluid(q).is_none_or(|cell| cell.amount == 0));
-            assert!(journal.fluid(r).is_none_or(|cell| cell.amount == 0));
+            assert_eq!(
+                journal
+                    .fluid_cells()
+                    .map(|(_, cell)| u64::from(cell.amount))
+                    .sum::<u64>(),
+                0
+            );
+            assert!(journal.fluid_cells().all(|(_, cell)| !cell.source));
         }
     }
 }
@@ -612,5 +796,129 @@ fn server_scheduler_uses_the_highest_actual_source_instead_of_clamping_placed_wa
             source: true,
             ..Default::default()
         })
+    );
+}
+
+#[test]
+fn a_lower_slab_receives_one_visible_film_before_its_remaining_height_fills() {
+    let p = [7, 8, 5];
+    let q = [8, 8, 5];
+    let (terrain, mut chunks, mut journal) = fixture(p);
+    put(&mut chunks, &mut journal, p, 27, 0);
+    put(&mut chunks, &mut journal, q, 82, 0);
+    let mut sampler = Sampler {
+        terrain: &terrain,
+        chunks: &chunks,
+        columns: HashMap::new(),
+        spaces: HashMap::new(),
+        river_columns: HashMap::new(),
+        river_origins: HashMap::new(),
+    };
+    let mut cell = FluidCell::default();
+    let mut step = FluidStep::default();
+    assert!(
+        supply::advance_construction(&mut sampler, &mut journal, q, &mut cell, &mut step).unwrap()
+    );
+    assert_eq!(
+        cell.amount, 5,
+        "the first exposed eighth sits above the solid lower half"
+    );
+    assert_eq!(step.sourced, 5);
+    assert!(!cell.source);
+    assert!(
+        supply::advance_construction(&mut sampler, &mut journal, q, &mut cell, &mut step).unwrap()
+    );
+    assert_eq!(cell.amount, 6);
+    assert_eq!(step.sourced, 6);
+}
+
+#[test]
+fn finite_lateral_water_pays_for_the_first_exposed_slab_film_without_creating_mass() {
+    let p = [7, 8, 5];
+    let q = [8, 8, 5];
+    let (terrain, mut chunks, mut journal) = fixture(p);
+    put(&mut chunks, &mut journal, p, 0, 0);
+    put(&mut chunks, &mut journal, q, 82, 0);
+    journal
+        .set_fluid(
+            p,
+            FluidCell {
+                amount: 5,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let mut sampler = Sampler {
+        terrain: &terrain,
+        chunks: &chunks,
+        columns: HashMap::new(),
+        spaces: HashMap::new(),
+        river_columns: HashMap::new(),
+        river_origins: HashMap::new(),
+    };
+    let mut cell = FluidCell::default();
+    let mut step = FluidStep::default();
+    assert!(
+        supply::advance_construction(&mut sampler, &mut journal, q, &mut cell, &mut step).unwrap()
+    );
+    assert_eq!(cell.amount, 5);
+    assert!(!cell.source);
+    assert_eq!(journal.fluid(p).unwrap().amount, 0);
+    assert_eq!(
+        journal
+            .fluid_cells()
+            .map(|(_, water)| u64::from(water.amount))
+            .sum::<u64>(),
+        5
+    );
+    assert_eq!(
+        step.sourced + step.replenished + step.drained + step.absorbed,
+        0
+    );
+    assert_eq!(step.transferred, 5);
+}
+
+#[test]
+fn exposed_lower_slab_lip_pays_one_front_unit_and_keeps_a_valid_film() {
+    let q = [7, 8, 5];
+    let p = [8, 8, 5];
+    let (terrain, mut chunks, mut journal) = fixture(q);
+    put(&mut chunks, &mut journal, q, 82, 0);
+    put(&mut chunks, &mut journal, p, 0, 0);
+    journal
+        .set_fluid(
+            q,
+            FluidCell {
+                amount: 6,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let mut sampler = Sampler {
+        terrain: &terrain,
+        chunks: &chunks,
+        columns: HashMap::new(),
+        spaces: HashMap::new(),
+        river_columns: HashMap::new(),
+        river_origins: HashMap::new(),
+    };
+    let mut cell = FluidCell::default();
+    let mut step = FluidStep::default();
+    assert!(
+        !supply::advance_construction(&mut sampler, &mut journal, p, &mut cell, &mut step).unwrap(),
+        "air receiving the lip remains eligible for gravity"
+    );
+    assert_eq!(cell.amount, 1);
+    assert_eq!(journal.fluid(q).unwrap().amount, 5);
+    assert_eq!(
+        journal
+            .fluid_cells()
+            .map(|(_, water)| u64::from(water.amount))
+            .sum::<u64>(),
+        6
+    );
+    assert_eq!(
+        step.sourced + step.replenished + step.drained + step.absorbed,
+        0
     );
 }

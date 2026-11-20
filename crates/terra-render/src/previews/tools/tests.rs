@@ -76,6 +76,32 @@ fn all_tools_are_detailed_bounded_three_dimensional_shared_solids() {
 }
 
 #[test]
+fn tar_bucket_shows_dark_tar_instead_of_the_water_surface() {
+    let tar = batches(ItemKind::Tool(ToolKind::TarBucket), 0)
+        .unwrap()
+        .remove(0);
+    let water = batches(ItemKind::Tool(ToolKind::WaterBucket), 0)
+        .unwrap()
+        .remove(0);
+    assert_eq!(tar.positions, water.positions);
+    assert_eq!(tar.normals, water.normals);
+    let changed: Vec<_> = tar
+        .colors
+        .iter()
+        .zip(&water.colors)
+        .filter(|(a, b)| a != b)
+        .collect();
+    assert_eq!(changed.len(), 36);
+    for (tar, water) in changed {
+        assert!(tar[0] < 0.05 && tar[1] < 0.05 && tar[2] < 0.05);
+        // Mesh colors are linear and face shaded; compare hue and contrast,
+        // rather than applying an sRGB brightness threshold to every face.
+        assert!(water[2] > water[1] && water[1] > water[0]);
+        assert!(water[2] > tar[2] * 8.0);
+    }
+}
+
+#[test]
 fn all_spoons_share_a_real_concave_bowl_but_keep_their_material_palette() {
     let mut colors = std::collections::HashSet::new();
     for tool in [

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 372,
+  "name": "Crypt Chandelier",
+  "description": "Crypt Chandelier casts warm light over paths and chambers.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_chandelier.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      1,
+      0.75,
+      0.43
+    ],
+    "intensity": 900,
+    "range": 13,
+    "falloff": "soft_core",
+    "flicker": 0.025,
+    "cave_intensity": 0.65,
+    "shadows": false,
+    "offset": [
+      0.5,
+      0.59,
+      0.5
+    ]
+  }
+}

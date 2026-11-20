@@ -1,0 +1,71 @@
+{
+  "status": "passed",
+  "screens": {
+    "keep-general-de-wide": {
+      "width": 1600,
+      "height": 1000,
+      "bytes": 317527
+    },
+    "keep-members-de-wide": {
+      "width": 1600,
+      "height": 1000,
+      "bytes": 368248
+    },
+    "keep-diplomacy-de-wide": {
+      "width": 1600,
+      "height": 1000,
+      "bytes": 349765
+    },
+    "keep-buildings-de-wide": {
+      "width": 1600,
+      "height": 1000,
+      "bytes": 421241
+    },
+    "keep-workers-de-wide": {
+      "width": 1600,
+      "height": 1000,
+      "bytes": 407768
+    },
+    "keep-army-de-wide": {
+      "width": 1600,
+      "height": 1000,
+      "bytes": 381028
+    },
+    "keep-general-en-compact": {
+      "width": 1024,
+      "height": 768,
+      "bytes": 209372
+    },
+    "keep-members-en-compact": {
+      "width": 1024,
+      "height": 768,
+      "bytes": 214771
+    },
+    "keep-diplomacy-en-compact": {
+      "width": 1024,
+      "height": 768,
+      "bytes": 210437
+    },
+    "keep-buildings-en-compact": {
+      "width": 1024,
+      "height": 768,
+      "bytes": 253995
+    },
+    "keep-workers-en-compact": {
+      "width": 1024,
+      "height": 768,
+      "bytes": 219161
+    },
+    "keep-army-en-compact": {
+      "width": 1024,
+      "height": 768,
+      "bytes": 224284
+    }
+  },
+  "transport": "real local UDP server with actual second authenticated member",
+  "input": "actual HTML tab and template card handlers plus local detail selection",
+  "real_soldier_roster": true,
+  "authoritative_template_material_preview": true,
+  "responsive_frame_and_caption_bounds": true,
+  "selection_classes_match_details": true
+}

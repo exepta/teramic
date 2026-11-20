@@ -16,6 +16,7 @@ pub struct PreparedColumn {
     pub(super) trees: Vec<Tree>,
     pub(super) tree_props: Vec<crate::props::WorldProp>,
     pub(super) structures: Vec<Arc<super::structures::Site>>,
+    pub(super) natural_features: Vec<Arc<super::natural_features::NaturalPatch>>,
     pub(super) maximum: f64,
     pub(super) surface_sections: Option<[i64; 2]>,
     #[cfg(feature = "bevy")]
@@ -44,6 +45,7 @@ mod snow_tests {
                 columns: Vec::new(),
                 trees: Vec::new(),
                 tree_props: Vec::new(),
+                natural_features: Vec::new(),
                 structures: vec![Arc::new(Site {
                     summary: SiteSummary {
                         id: 1,
@@ -53,6 +55,7 @@ mod snow_tests {
                         bounds: [center, center],
                         buildings: Vec::new(),
                         containers: Vec::new(),
+                        grave: None,
                     },
                     sections: BTreeMap::from([(
                         section,
@@ -78,6 +81,11 @@ mod snow_tests {
 }
 
 impl PreparedColumn {
+    #[cfg(all(test, feature = "bevy"))]
+    pub(crate) fn with_spruce_for_test(mut self, origin: [i64; 3], seed: u64) -> Self {
+        self.trees = vec![super::vegetation::spruce_for_test(origin, seed)];
+        self
+    }
     pub(crate) fn is_structure_block(&self, cell: [i64; 3]) -> bool {
         self.structures
             .iter()
@@ -99,6 +107,7 @@ impl PreparedColumn {
                 bounds: settlement.bounds,
                 buildings: Vec::new(),
                 containers: Vec::new(),
+                grave: None,
             },
             sections: Default::default(),
             settlement: Some(settlement),
@@ -254,8 +263,8 @@ impl PreparedColumn {
     ) -> Option<super::TreeAppearance> {
         self.trees.iter().find_map(|tree| {
             let generated = match material {
-                6 | 10 | 36 | 134 => tree.wood_at(global),
-                7..=9 | 132 | 133 | 195 => tree.leaves_at(global),
+                6 | 10 | 36 | 134 | 313 | 405 => tree.wood_at(global),
+                7..=9 | 132 | 133 | 195 | 310..=312 | 406 => tree.leaves_at(global),
                 _ => None,
             };
             generated
@@ -422,6 +431,7 @@ impl SectionGenerator {
             })
             .filter(|prop| [prop.section.x, prop.section.z] == coordinate)
             .collect();
+        let natural_features = self.terrain().natural_patches(start, size);
         let mut minimum = columns
             .iter()
             .map(|c| {
@@ -435,8 +445,16 @@ impl SectionGenerator {
             .iter()
             .map(|c| c.height)
             .fold(f64::NEG_INFINITY, f64::max);
+        if self.terrain().config().spirit_blossom_revision > 0 {
+            maximum += 2.0;
+        }
         for tree in &trees {
             maximum = maximum.max((tree.origin[1] + i64::from(tree.bounds.max[1])) as f64);
+        }
+        for patch in &natural_features {
+            if let Some(top) = patch.maximum() {
+                maximum = maximum.max(top as f64 + 1.0);
+            }
         }
         if self.terrain().config().water && minimum < self.terrain().config().sea_level {
             maximum = maximum.max(self.terrain().config().sea_level);
@@ -472,6 +490,7 @@ impl SectionGenerator {
             trees,
             tree_props,
             structures,
+            natural_features,
             maximum,
             surface_sections,
             #[cfg(feature = "bevy")]

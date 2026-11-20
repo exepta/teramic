@@ -1,0 +1,28 @@
+{
+  "id": "teramic::white_clay",
+  "name": "White Clay",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 328
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 19
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "dye": "white"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

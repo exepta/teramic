@@ -968,6 +968,60 @@ fn mixed_slabs_and_eighth_snow_layers_roundtrip_without_changing_old_material_id
 }
 
 #[test]
+fn liquid_tar_age_255_and_cured_volume_survive_binary_negative_region_roundtrip() {
+    use terra_core::roads;
+    use terra_world::edits::BlockObjectState;
+
+    let root = root();
+    let world = WorldId(149);
+    let cells = [
+        ([-513, -17, -1], roads::WET_TAR, 255),
+        ([-512, -16, -513], roads::DRIED_TAR, 7),
+    ];
+    let mut journal = EditJournal::default();
+    for (position, material, facing) in cells {
+        journal.record(position, material).unwrap();
+        journal
+            .set_object_state(
+                position,
+                Some(BlockObjectState {
+                    facing,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+    }
+    save_edits(&root, world, &journal).unwrap();
+    for filename in ["regions/r.-2.-1.region", "regions/r.-1.-2.region"] {
+        let bytes = fs::read(root.join(filename)).unwrap();
+        assert_eq!(&bytes[..8], MAGIC, "{filename} is a binary region");
+    }
+    let loaded = load_edits(&root, world).unwrap();
+    for (position, material, facing) in cells {
+        assert_eq!(loaded.block(position), Some(material));
+        let state = loaded.object_state(position).unwrap();
+        assert_eq!(state.facing, facing);
+        assert_eq!(roads::tar_amount(state.facing), 8);
+        assert!(state.valid_for(position, material));
+        let owner = terra_voxel::global_to_section(position).0;
+        assert_eq!(loaded.section_delta(owner), journal.section_delta(owner));
+    }
+    assert_eq!(
+        roads::tar_stage(loaded.object_state(cells[0].0).unwrap().facing),
+        31
+    );
+    // Re-saving the loaded journal must not reinterpret the high state byte as
+    // an invalid facing or reset the coating's age to a freshly poured bucket.
+    save_edits(&root, world, &loaded).unwrap();
+    let reloaded = load_edits(&root, world).unwrap();
+    for (position, material, facing) in cells {
+        assert_eq!(reloaded.block(position), Some(material));
+        assert_eq!(reloaded.object_state(position).unwrap().facing, facing);
+    }
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn wool_mixed_slab_primary_and_secondary_states_survive_journal_updates_region_and_replica_reload()
 {
     use terra_world::edits::BlockObjectState;
@@ -2834,6 +2888,7 @@ fn legacy_regions_migrate_and_oriented_pairs_roundtrip_across_region_boundaries(
                     peer: Some(peer),
                     secondary,
                     rail_curve: None,
+                    liquid: None,
                 }),
             )
             .unwrap();

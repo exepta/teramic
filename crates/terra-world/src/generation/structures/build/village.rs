@@ -2,8 +2,12 @@
 use super::*;
 
 mod buildings;
+mod house_template;
 mod lighting;
 mod paths;
+pub(super) fn house_template() -> Result<Vec<StructureObject>, String> {
+    house_template::cells()
+}
 mod populated;
 #[cfg(test)]
 mod tests;
@@ -124,6 +128,7 @@ pub(super) fn plan(terrain: &TerraGenerator, region: [i64; 2], seed: u32) -> Opt
             bounds: [[0; 3]; 2],
             buildings: Vec::new(),
             containers: Vec::new(),
+            grave: None,
         },
         patches: BTreeMap::new(),
         objects: BTreeMap::new(),
@@ -135,7 +140,10 @@ pub(super) fn plan(terrain: &TerraGenerator, region: [i64; 2], seed: u32) -> Opt
         StructureKind::Village => build(&mut builder, x, z)?,
         StructureKind::Ruin => builder.ruin(x - 7, z - 6)?,
         StructureKind::Mine => super::super::mine::build(&mut builder, x, z)?,
-        StructureKind::Kingdom | StructureKind::Outpost => return None,
+        StructureKind::Kingdom
+        | StructureKind::Outpost
+        | StructureKind::Cemetery
+        | StructureKind::GraveDungeon => return None,
     }
     builder.finish()
 }

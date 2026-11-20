@@ -1,0 +1,10 @@
+{
+  "item": "blood_berry",
+  "name": "Blood Berry",
+  "description": "A sweet red berry gathered in the Blood Forest.",
+  "food": {
+    "nutrition": 8.0,
+    "saturation": 4.0,
+    "eat_seconds": 1.0
+  }
+}

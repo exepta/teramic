@@ -1,0 +1,170 @@
+{
+  "phase": 241,
+  "status": "passed",
+  "date": "2026-11-13",
+  "tests": {
+    "targets": 16,
+    "passed": 4941,
+    "failed": 0,
+    "ignored": 10,
+    "filtered": 1,
+    "missing_external_fixture": "FIVERR/VoxelGrassBlock glb file.glb"
+  },
+  "protocol": 141,
+  "save_index": "ID26",
+  "standalone_editor_tests": 21,
+  "native_construction": {
+    "status": "passed",
+    "screens": {
+      "construction-catalog-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 1990346
+      },
+      "construction-npc-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 950413
+      },
+      "construction-blueprint-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 2053749
+      },
+      "construction-queued-en-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 882182
+      }
+    },
+    "transport": "real local UDP authority and acknowledged Build claim",
+    "input": "real remappable TAB/ESC KeyboardInput, WASD pan, HTML template handler and projected MouseButtonInput",
+    "template": "spruce-cottage-v1",
+    "preview": "actual orange template mesh",
+    "resources": "four acknowledged Creative infinity rows without a chest",
+    "queue": "real ground raycast, selected-template job and authoritative free_resources",
+    "persistence": "actual integrated-server save acknowledgement plus disk reload validates job/template/free_resources and matching owner settlement without storage",
+    "npc": "actual civilian click, private inventory response and ESC retaining construction",
+    "restoration": "unchanged authoritative/predicted avatar and restored gameplay camera",
+    "responsive_geometry": "DE wide and EN compact viewport/caption checks"
+  },
+  "native_editor": {
+    "status": "passed",
+    "screens": {
+      "editor-empty-platform": {
+        "width": 1440,
+        "height": 900,
+        "bytes": 1414576
+      },
+      "editor-placed-block": {
+        "width": 1440,
+        "height": 900,
+        "bytes": 1479684
+      },
+      "editor-removed-block": {
+        "width": 1440,
+        "height": 900,
+        "bytes": 1518087
+      },
+      "editor-real-inventory-catalog": {
+        "width": 1440,
+        "height": 900,
+        "bytes": 588501
+      },
+      "editor-loaded-house": {
+        "width": 1440,
+        "height": 900,
+        "bytes": 1316301
+      },
+      "editor-save-browser": {
+        "width": 1440,
+        "height": 900,
+        "bytes": 451688
+      },
+      "editor-overwrite-confirmation": {
+        "width": 1440,
+        "height": 900,
+        "bytes": 630857
+      },
+      "editor-options-english": {
+        "width": 1440,
+        "height": 900,
+        "bytes": 544274
+      }
+    },
+    "application": "standalone terra-building-editor",
+    "input": "actual right/left MouseButtonInput and production HTML component handlers",
+    "catalog": "real shared inventory preview assets",
+    "file": "editor-acceptance.json",
+    "schema_version": 1,
+    "steps": 390,
+    "physical_cells": 392,
+    "materials": 17,
+    "save": "actual default JSON import, exact save/reload and explicit overwrite confirmation",
+    "options": "live English language selection"
+  },
+  "headless_sections": 27,
+  "server_gpu_window_ui_dependencies": false,
+  "screens": {
+    "editor-empty-platform.png": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 1414576
+    },
+    "editor-placed-block.png": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 1479684
+    },
+    "editor-removed-block.png": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 1518087
+    },
+    "editor-real-inventory-catalog.png": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 588501
+    },
+    "editor-loaded-house.png": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 1316301
+    },
+    "editor-save-browser.png": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 451688
+    },
+    "editor-overwrite-confirmation.png": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 630857
+    },
+    "editor-options-english.png": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 544274
+    },
+    "construction-catalog-de-wide.png": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 1990346
+    },
+    "construction-npc-de-wide.png": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 950413
+    },
+    "construction-blueprint-de-wide.png": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 2053749
+    },
+    "construction-queued-en-compact.png": {
+      "width": 960,
+      "height": 640,
+      "bytes": 882182
+    }
+  }
+}

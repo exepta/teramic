@@ -1,0 +1,191 @@
+{
+  "phase": 238,
+  "status": "passed",
+  "validated_utc": "2026-11-12T16:23:13.919927+00:00",
+  "tests": {
+    "unit_and_binary": 4800,
+    "integration": 4,
+    "total_passed": 4804,
+    "failed": 0,
+    "existing_ignored": 10,
+    "external_fixture_filtered": 1,
+    "construction_world": 13,
+    "full_houses": 4,
+    "steps_per_house": 832,
+    "doc_examples": 0
+  },
+  "excluded_test": {
+    "name": "original_glb_loads_through_the_named_reader_with_uvs_tangents_and_pbr_images",
+    "reason": "missing external fixture",
+    "path": "FIVERR/VoxelGrassBlock glb file.glb"
+  },
+  "checks": {
+    "fmt": true,
+    "workspace_check": true,
+    "workspace_clippy_all_targets_deny_warnings": true,
+    "independent_client_build": true,
+    "independent_server_build": true,
+    "final_combined_build": true,
+    "headless_without_display": true,
+    "server_graphics_ui_dependencies": []
+  },
+  "parallel_project_clock": {
+    "projects": 5,
+    "elapsed_seconds": 2.0,
+    "previous_work_seconds": 1.6,
+    "corrected_work_seconds": 2.0,
+    "maximum_active_projects_per_tick": 32
+  },
+  "native_building": {
+    "status": "passed",
+    "screens": {
+      "building-local-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 507112
+      },
+      "building-storage-selection-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 1454821
+      },
+      "building-job-en-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 225840
+      },
+      "building-progress-en-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 223440
+      },
+      "building-paused-en-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 227692
+      }
+    },
+    "input": "real gameplay raycasts and HTML component handlers",
+    "transport": "real local UDP server",
+    "claims": "real acknowledged Build claim",
+    "storage": "actual chest and transferred 128 stone plus 128 planks",
+    "craftsman_without_work_area": true,
+    "house": "actual default village template, real non-air voxel placement, acknowledged pause",
+    "responsive_geometry": true
+  },
+  "native_npc": {
+    "status": "passed",
+    "screens": {
+      "npc-direct-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 731294
+      },
+      "npc-selection-de-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 1552427
+      },
+      "npc-selection-en-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 564159
+      },
+      "npc-direct-en-wide": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 693675
+      },
+      "npc-direct-de-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 207875
+      },
+      "npc-direct-en-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 210916
+      },
+      "npc-direct-en-compact-paused": {
+        "width": 960,
+        "height": 640,
+        "bytes": 195937
+      },
+      "npc-lumberjack-missing-station-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 217478
+      },
+      "npc-lumberjack-profession-compact": {
+        "width": 960,
+        "height": 640,
+        "bytes": 705221
+      }
+    },
+    "input": "real target raycasts and frame-controlled gameplay/HTML handlers",
+    "transport": "real local UDP server",
+    "private_inventory": true,
+    "kingdom_hotkey": true,
+    "responsive_geometry": true
+  },
+  "source_file_count": 171,
+  "source_sha256": "source-sha256.json",
+  "dependencies": {
+    "avian3d": "0.8.0",
+    "bevy": "0.20.0",
+    "lightyear": "0.31.0",
+    "serde": "1.0.229",
+    "tilt-ui": "0.1.0",
+    "toml": "1.1.8+spec-1.1.0",
+    "tracing": "0.1.44"
+  },
+  "protocol": 139,
+  "save_index": "ID24",
+  "screenshots": {
+    "building-job-en-compact.png": {
+      "width": 960,
+      "height": 640,
+      "sha256": "c55ead74a0b6d51bcc3985f743743018545a6251526f9d97346ff5e1942d5d13"
+    },
+    "building-local-de-wide.png": {
+      "width": 1600,
+      "height": 900,
+      "sha256": "4687ec0b3b76e51523829bb62e35983be5a48938de80a5c6df3bb8a91942d1fb"
+    },
+    "building-paused-en-compact.png": {
+      "width": 960,
+      "height": 640,
+      "sha256": "121e596b8fe570b7ec6ea0c66aebebc7ce54e335f6a21305c6e7908243345c86"
+    },
+    "building-progress-en-compact.png": {
+      "width": 960,
+      "height": 640,
+      "sha256": "6422d9adc0360d508a959b578f6798cb98c21f1e9148cebe95e215c28a7ab998"
+    },
+    "building-storage-selection-de-wide.png": {
+      "width": 1600,
+      "height": 900,
+      "sha256": "9ee639a02517e46d45e630fe823bec795a4135c3968dcf12600d23358580bd4a"
+    },
+    "npc-direct-de-wide.png": {
+      "width": 1600,
+      "height": 900,
+      "sha256": "0a0e9f15cbe98a1ab89b2510ebd416f058a80b282eaa217b36cf264b5fef01cf"
+    },
+    "npc-lumberjack-missing-station-compact.png": {
+      "width": 960,
+      "height": 640,
+      "sha256": "a5c1187d7ecff761c5576fa6255aca9cf35815e81cb1a61f8ed51f805a8f7b4d"
+    },
+    "npc-lumberjack-profession-compact.png": {
+      "width": 960,
+      "height": 640,
+      "sha256": "1af16fc03edcc195c9d8d8765bcde53fbfd60cd2ec9ffa272b0fa71e5095d82b"
+    }
+  },
+  "limits": [
+    "loaded world only; no construction chunk pinning",
+    "one fixed village-house template",
+    "32 retained jobs globally; 32 craftsmen per settlement; four craftsmen per house"
+  ]
+}

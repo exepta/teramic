@@ -8,9 +8,11 @@ use bevy::{
 use terra_core::GameConfig;
 use terra_player::TerraCamera;
 use terra_world::streaming::ChunkFocus;
+mod biome_atmosphere;
 pub(crate) mod caves;
 pub(crate) mod daylight;
 pub(crate) mod horizon;
+pub(crate) mod view_range;
 
 pub(crate) const SURFACE_FOG: Vec3 = Vec3::new(0.58, 0.73, 0.87);
 pub(crate) const SURFACE_AMBIENT: f32 = 760.0;
@@ -157,6 +159,9 @@ pub(crate) fn setup_scene(
 pub(crate) fn update_view_distance(
     mut commands: Commands,
     config: Res<GameConfig>,
+    construction: Option<Res<terra_player::ConstructionCamera>>,
+    limit: Option<Res<terra_world::streaming::StreamingRadiusLimit>>,
+    mut previous_offset: Local<(f32, Option<u8>)>,
     mut cameras: Query<
         (
             Entity,
@@ -167,11 +172,13 @@ pub(crate) fn update_view_distance(
         With<TerraCamera>,
     >,
 ) {
-    if !config.is_changed() {
+    let limit = limit.and_then(|limit| limit.0);
+    let range = view_range::CameraRange::limited(&config.client, construction.as_deref(), limit);
+    let offset_changed = *previous_offset != (range.offset, limit);
+    *previous_offset = (range.offset, limit);
+    if !config.is_changed() && !offset_changed {
         return;
     }
-    let range = f32::from(config.client.view_distance.max(1)) * 16.0;
-    let (fog_start, fog_end) = surface_fog_range(range, config.client.fog_distance);
     let occlusion = use_occlusion_culling(config.client.view_distance);
     for (entity, mut projection, mut fog, has_occlusion) in &mut cameras {
         if occlusion != has_occlusion {
@@ -182,11 +189,11 @@ pub(crate) fn update_view_distance(
             }
         }
         if let Projection::Perspective(p) = &mut *projection {
-            p.far = range + 16.0;
+            p.far = range.far;
         }
         fog.falloff = FogFalloff::Linear {
-            start: fog_start,
-            end: fog_end,
+            start: range.fog.0,
+            end: range.fog.1,
         };
     }
 }

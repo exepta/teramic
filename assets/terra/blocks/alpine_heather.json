@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": 427,
+  "name": "Alpine Heather",
+  "description": "Alpine Heather, shaped for the regional biome flora.",
+  "creative_category": "nature",
+  "hardness": 0.15,
+  "resistance": 0.4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/alpine_heather.glb",
+  "textures": {
+    "leaf_light": "textures/alpine_heather.png",
+    "leaf": "textures/alpine_heather.png",
+    "pale": "textures/alpine_heather.png",
+    "wood": "textures/alpine_heather.png",
+    "gold": "textures/alpine_heather.png",
+    "pink": "textures/alpine_heather.png"
+  },
+  "struct_block": true,
+  "collision_boxes": []
+}

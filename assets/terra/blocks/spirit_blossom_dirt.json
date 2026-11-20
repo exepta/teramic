@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 307,
+  "name": "Spirit Blossom Dirt",
+  "description": "Violet soil threaded with pale blossom roots.",
+  "creative_category": "terrain",
+  "hardness": 1.4,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "spirit_blossom_dirt": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "spirit_blossom_dirt": "textures/spirit_blossom_dirt.png"
+  },
+  "face_materials": [
+    "spirit_blossom_dirt",
+    "spirit_blossom_dirt",
+    "spirit_blossom_dirt",
+    "spirit_blossom_dirt",
+    "spirit_blossom_dirt",
+    "spirit_blossom_dirt"
+  ],
+  "surface": "earth"
+}

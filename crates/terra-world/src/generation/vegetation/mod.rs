@@ -1,17 +1,20 @@
 mod appearance;
 mod aquatic;
+mod birch;
 mod forms;
 pub(in crate::generation) use appearance::{PlantedAppearanceSource, TreeAppearanceCache};
 pub use appearance::{TreeAppearance, TreeAppearanceSnapshot};
 mod geometry;
 mod ground;
+mod grove;
+mod ornaments;
 pub use ground::GroundCover;
 pub(crate) use ground::understory_cover;
 mod placement;
 #[cfg(feature = "bevy")]
 mod planted;
 #[cfg(feature = "bevy")]
-pub use planted::planted_shape;
+pub use planted::{planted_shape, planted_shape_with_ecology};
 mod species;
 #[cfg(test)]
 mod tests;
@@ -21,6 +24,11 @@ pub(crate) use trunk_fungi::attached_mushroom;
 
 pub(crate) use placement::{trees_in_column, trees_in_region};
 pub(crate) use tree::Tree;
+
+#[cfg(all(test, feature = "bevy"))]
+pub(crate) fn spruce_for_test(origin: [i64; 3], seed: u64) -> Tree {
+    Tree::spruce(origin, seed)
+}
 
 // Includes bent trunks, the longest branch and its outermost crown cluster.
 pub(crate) const MAX_TREE_REACH: i64 = 16;

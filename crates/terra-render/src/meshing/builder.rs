@@ -1,5 +1,5 @@
 use super::DetailLevel;
-use super::connectivity::connected_position;
+use super::connectivity::{connected_position, connected_turf_top};
 use crate::blocks::definitions::{BlockRenderKind, DetailDensity};
 use crate::blocks::{PrimitiveTemplate, TemplateSet, projected_tangent};
 use bevy::prelude::*;
@@ -223,13 +223,20 @@ impl AuthoredFaceCache {
         if !self.0.contains_key(&key) {
             if self.0.len() == Self::LIMIT {
                 for primitive in &block.faces[side] {
-                    append(
-                        batches,
+                    let batch = batches
+                        .entry(primitive.material)
+                        .or_insert_with(|| MeshBatch {
+                            material: primitive.material,
+                            ..default()
+                        });
+                    append_connected(
+                        batch,
                         primitive,
                         offset,
-                        Quat::IDENTITY,
-                        Some((mask, block.bevel_width)),
+                        mask,
+                        block.bevel_width,
                         None,
+                        material == 1 && side == 3,
                     )?;
                 }
                 return Ok(());
@@ -245,6 +252,7 @@ impl AuthoredFaceCache {
                         mask,
                         block.bevel_width,
                         None,
+                        material == 1 && side == 3,
                     )?;
                     Ok(PrimitiveTemplate {
                         material: primitive.material,
@@ -380,7 +388,11 @@ pub(crate) fn compose_section_with_segments(
     let ground = options
         .terrain
         .as_ref()
-        .filter(|_| faces.iter().any(|face| matches!(face.material, 1 | 4 | 5)))
+        .filter(|_| {
+            faces
+                .iter()
+                .any(|face| matches!(face.material, 1 | 4 | 5 | 306 | 400))
+        })
         .map(|t| crate::appearance::GroundTint::new(t, origin));
     let tint = super::tree_appearance::SurfaceTint {
         caves: options
@@ -411,9 +423,10 @@ pub(crate) fn compose_section_with_segments(
             .terrain
             .as_ref()
             .filter(|_| {
-                faces
-                    .iter()
-                    .any(|face| matches!(face.material, 6..=10|36|132..=134|195))
+                faces.iter().any(|face| {
+                    terra_voxel::MaterialId::FOLIAGE.contains(&face.material)
+                        || matches!(face.material, 6 | 10 | 36 | 134 | 313)
+                })
             })
             .map(|terrain| terrain.tree_appearance(origin)),
         origin,
@@ -434,8 +447,8 @@ pub(crate) fn compose_section_with_segments(
     }
     let mut tree_faces = Vec::with_capacity(faces.len());
     for &face in faces {
-        if face.side == 3
-            && matches!(face.material, 1 | 4 | 5)
+        if face.side != 2
+            && matches!(face.material, 1 | 4 | 5 | 306 | 400)
             && (options.detail_level != DetailLevel::Near
                 || coarse_authored(templates, face.material))
             && let Some(ground) = &tint.ground
@@ -497,7 +510,7 @@ pub(crate) fn compose_section_with_segments(
                 .unwrap_or(base_block)
         };
         if block.render_kind == BlockRenderKind::Cube
-            && matches!(face.material, 7..=9 | 132 | 133 | 195)
+            && terra_voxel::MaterialId::FOLIAGE.contains(&face.material)
             && options.detail_level != DetailLevel::Far
             && templates.block_details.leaf_geometry_quality != terra_core::BlockDetailQuality::Low
         {
@@ -511,10 +524,15 @@ pub(crate) fn compose_section_with_segments(
                         .copied()
                         .unwrap_or_default();
                     let crown = base_block;
+                    let cluster = templates.foliage_clusters.get(&face.material).copied();
                     let mut starts = BTreeMap::new();
                     let tree_tint = tint.tree_tint(cell, face.material);
                     if condition != Default::default() || tree_tint != [1.0; 3] {
-                        for &slot in &crown.face_materials {
+                        for slot in crown
+                            .face_materials
+                            .into_iter()
+                            .chain(cluster.into_iter().flat_map(|cluster| cluster.slots()))
+                        {
                             starts.entry(slot).or_insert_with(|| {
                                 batches.get(&slot).map_or(0, |batch| batch.positions.len())
                             });
@@ -533,7 +551,11 @@ pub(crate) fn compose_section_with_segments(
                         } else {
                             DetailLevel::Middle
                         },
-                        (face.material, tint.tree(cell, face.material)),
+                        super::tree_details::CrownStyle {
+                            material: face.material,
+                            species: tint.tree(cell, face.material),
+                            cluster,
+                        },
                     )?;
                     for (slot, start) in starts {
                         if let Some(batch) = batches.get_mut(&slot) {
@@ -553,7 +575,7 @@ pub(crate) fn compose_section_with_segments(
         if block.render_kind == BlockRenderKind::Cube
             && (options.detail_level != DetailLevel::Near
                 || coarse_authored(templates, face.material)
-                || matches!(face.material, 7..=9 | 132 | 133 | 195)
+                || terra_voxel::MaterialId::FOLIAGE.contains(&face.material)
                     && templates.block_details.leaf_geometry_quality
                         == terra_core::BlockDetailQuality::Low)
         {
@@ -576,6 +598,25 @@ pub(crate) fn compose_section_with_segments(
                     options,
                     snow_climate.as_ref(),
                 );
+                if part.material == terra_voxel::MaterialId::Cactus as u16 {
+                    for cell in cells(*part) {
+                        if open_neighbors[cell_index(cell)] & (1 << part.side) != 0 {
+                            super::cactus_details::append(
+                                &mut batches,
+                                templates
+                                    .blocks
+                                    .get(&(terra_voxel::MaterialId::WhiteClay as u16))
+                                    .map_or(block.face_materials[part.side], |ivory| {
+                                        ivory.face_materials[3]
+                                    }),
+                                Vec3::from_array(cell.map(|p| p as f32)),
+                                std::array::from_fn(|axis| origin[axis] + i64::from(cell[axis])),
+                                part.side,
+                                options.detail_level,
+                            )?;
+                        }
+                    }
+                }
                 if matches!(part.material, 20..=26) && options.detail_level == DetailLevel::Middle {
                     for cell in cells(*part) {
                         if open_neighbors[cell_index(cell)] & (1 << part.side) != 0 {
@@ -703,6 +744,23 @@ pub(crate) fn compose_section_with_segments(
                     ),
                 )?;
             }
+            if face.material == terra_voxel::MaterialId::Cactus as u16
+                && open_neighbors[cell_index(cell)] & (1 << face.side) != 0
+            {
+                super::cactus_details::append(
+                    &mut batches,
+                    templates
+                        .blocks
+                        .get(&(terra_voxel::MaterialId::WhiteClay as u16))
+                        .map_or(block.face_materials[face.side], |ivory| {
+                            ivory.face_materials[3]
+                        }),
+                    translation,
+                    std::array::from_fn(|axis| origin[axis] + i64::from(cell[axis])),
+                    face.side,
+                    options.detail_level,
+                )?;
+            }
             if options.detail_level == DetailLevel::Near
                 && matches!(face.material, 20..=26)
                 && open_neighbors[cell_index(cell)] & (1 << face.side) != 0
@@ -720,7 +778,7 @@ pub(crate) fn compose_section_with_segments(
                 )?;
             }
             if options.detail_level == DetailLevel::Near
-                && matches!(face.material, 6 | 10 | 36 | 134)
+                && matches!(face.material, 6 | 10 | 36 | 134 | 313)
                 && open_neighbors[cell_index(cell)] & (1 << 3) != 0
             {
                 let global = std::array::from_fn(|i| origin[i] + i64::from(cell[i]));
@@ -961,7 +1019,8 @@ fn tint_surface(
         .blocks
         .get(&1)
         .map(|block| block.face_materials[3]);
-    let authored = templates.cube_lods.contains_key(&face.material)
+    let authored = matches!(face.material, 306 | 400)
+        || templates.cube_lods.contains_key(&face.material)
         || templates.blocks.get(&face.material).is_some_and(|block| {
             block
                 .face_materials
@@ -985,12 +1044,9 @@ fn tint_surface(
         if index == 1 && slot == starts[0].0 {
             continue;
         }
-        let is_grass = face.material == 1
-            && if templates.cube_lods.contains_key(&1) {
-                face.side == 3
-            } else {
-                Some(slot) == grass
-            };
+        let is_grass = matches!(face.material, 1 | 306 | 400)
+            && face.side != 2
+            && (face.material != 1 || templates.cube_lods.contains_key(&1) || Some(slot) == grass);
         let is_ground = is_grass || (face.side == 3 && matches!(face.material, 4 | 5));
         if (!is_ground || tint.ground.is_none())
             && condition == Default::default()
@@ -1147,7 +1203,7 @@ fn append_rectangle(
         .cross(Vec3::from_array(d) - Vec3::from_array(a));
     let start = u32::try_from(batch.positions.len()).map_err(|_| "Mesh index overflow")?;
     batch.positions.extend([a, b, c, d]);
-    if matches!(face.material, 7..=9 | 132 | 133 | 195) {
+    if terra_voxel::MaterialId::FOLIAGE.contains(&face.material) {
         batch.foliage_owners.push(FoliageOwner {
             vertices: start as usize..batch.positions.len(),
             cell: face.minimum,
@@ -1231,7 +1287,7 @@ fn append(
             ..default()
         });
     if let Some((mask, bevel)) = connection {
-        return append_connected(batch, primitive, offset, mask, bevel, cube_side);
+        return append_connected(batch, primitive, offset, mask, bevel, cube_side, false);
     }
     let start =
         u32::try_from(batch.positions.len()).map_err(|_| "Section exceeds u32 mesh index limit")?;
@@ -1298,6 +1354,7 @@ fn append_connected(
     mask: u8,
     bevel: f32,
     cube_side: Option<usize>,
+    turf_top: bool,
 ) -> Result<(), String> {
     let has_tangents = !primitive.tangents.is_empty() || !batch.tangents.is_empty();
     // Local six-vertex indexing shares each quad's identical corners without
@@ -1310,11 +1367,12 @@ fn append_connected(
         for triangle in pair.chunks_exact(3) {
             let source = [triangle[0], triangle[1], triangle[2]];
             let points = source.map(|i| {
-                Vec3::from_array(connected_position(
-                    primitive.positions[i as usize],
-                    mask,
-                    bevel,
-                )) + offset
+                let point = primitive.positions[i as usize];
+                Vec3::from_array(if turf_top {
+                    connected_turf_top(point, mask, bevel)
+                } else {
+                    connected_position(point, mask, bevel)
+                }) + offset
             });
             let normal = (points[1] - points[0]).cross(points[2] - points[0]);
             if normal.length_squared() < 1e-12 {
@@ -1402,7 +1460,7 @@ mod indexing_tests {
             indices: vec![0, 1, 2, 0, 2, 3],
         };
         let mut batch = MeshBatch::default();
-        append_connected(&mut batch, &primitive, Vec3::ZERO, 63, 0.0, Some(3)).unwrap();
+        append_connected(&mut batch, &primitive, Vec3::ZERO, 63, 0.0, Some(3), false).unwrap();
         assert_eq!(batch.positions.len(), 4);
         assert_eq!(
             batch
@@ -1419,7 +1477,7 @@ mod indexing_tests {
         assert_eq!(batch.normals, vec![[0.0, -1.0, 0.0]; 4]);
         primitive.positions[2][1] += 0.2;
         let mut batch = MeshBatch::default();
-        append_connected(&mut batch, &primitive, Vec3::ZERO, 63, 0.0, None).unwrap();
+        append_connected(&mut batch, &primitive, Vec3::ZERO, 63, 0.0, None, false).unwrap();
         assert_eq!(
             batch.positions.len(),
             6,

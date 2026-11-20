@@ -84,6 +84,16 @@ fn candidates(terrain: &TerraGenerator, start: [i64; 3], size: usize, vertical: 
                 species = TreeSpecies::Apple;
             }
             let suitable_ground = match species {
+                TreeSpecies::Bloodwood => matches!(
+                    column.surface_material,
+                    terra_voxel::MaterialId::BloodGrass
+                        | terra_voxel::MaterialId::BloodMoss
+                        | terra_voxel::MaterialId::CrimsonMycelium
+                ),
+                TreeSpecies::SpiritBlossom(_) => matches!(
+                    column.surface_material,
+                    terra_voxel::MaterialId::SpiritBlossomGrass | terra_voxel::MaterialId::Grass
+                ),
                 TreeSpecies::Palm => matches!(
                     column.surface_material,
                     terra_voxel::MaterialId::Sand | terra_voxel::MaterialId::Grass
@@ -213,6 +223,8 @@ mod apple_rate_tests {
                 mushroom_park: 0.,
                 cliffted_desert: 0.,
                 cherry_forest: 0.,
+                spirit_blossom: 0.0,
+                blood_forest: 0.0,
             },
         }
     }

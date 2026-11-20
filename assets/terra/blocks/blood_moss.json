@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": 408,
+  "name": "Blood Moss",
+  "description": "Blood Moss from the crimson woodland.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "blood_moss": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "blood_moss_side": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "blood_moss_bottom": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "blood_moss": "textures/blood_moss.png",
+    "blood_moss_side": "textures/blood_moss_side.png",
+    "blood_moss_bottom": "textures/blood_moss_bottom.png"
+  },
+  "face_materials": [
+    "blood_moss_side",
+    "blood_moss_side",
+    "blood_moss_bottom",
+    "blood_moss",
+    "blood_moss_side",
+    "blood_moss_side"
+  ],
+  "surface": "turf"
+}

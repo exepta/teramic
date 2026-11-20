@@ -1,5 +1,5 @@
 use super::{
-    acoustics, clips,
+    acoustics, ambience, clips,
     source::{Category, Controls, Cue, RecordedSoundscape},
 };
 use bevy::{
@@ -23,6 +23,7 @@ struct Timing {
     step: f32,
     eat: f32,
     behavior: Behavior,
+    worm: super::worm::Cadence,
 }
 #[derive(Resource, Default)]
 pub(super) struct Soundscape {
@@ -34,6 +35,7 @@ pub(super) struct Soundscape {
     next_update: f32,
     next_environment: f32,
     next_fire: f32,
+    ambience: ambience::Cadence,
     pub(super) room: terra_world::enclosure::Enclosure,
 }
 pub(super) fn load(mut sounds: ResMut<Soundscape>) {
@@ -99,6 +101,7 @@ pub(super) fn update(
         }
         sounds.animals.clear();
         sounds.next_environment = 0.0;
+        sounds.ambience.reset();
         for gain in &sounds.controls.ambient {
             gain.store(0, Ordering::Relaxed);
         }
@@ -185,26 +188,21 @@ pub(super) fn update(
     }
     if now >= sounds.next_environment {
         sounds.next_environment = now + 0.5;
-        let height = world
+        let surface = world
             .terrain
             .0
-            .surface_column(f64::from(listener.x), f64::from(listener.z))
-            .height;
+            .surface_column(f64::from(listener.x), f64::from(listener.z));
+        let height = surface.height;
         sounds.room =
             terra_world::enclosure::sample(listener.to_array().map(f64::from), height, |p| {
                 habitat.block(p)
             });
-        let biome = world
-            .terrain
-            .0
-            .biome_at(f64::from(listener.x), f64::from(listener.z));
-        let phase = world.clock.as_ref().map_or(0.5, |clock| clock.phase);
-        let levels = environment(
-            sounds.room.cave,
-            phase as f32,
-            biome.humidity as f32,
-            (biome.weights.forest + biome.weights.plains + biome.weights.mushroom_park) as f32,
+        let weights = acoustics::biome_neighborhood(
+            [f64::from(listener.x), f64::from(listener.z)],
+            surface.biome.weights.values(),
+            |x, z| world.terrain.0.biome_at(x, z).weights.values(),
         );
+        let phase = world.clock.as_ref().map_or(0.5, |clock| clock.phase);
         let local = world.weather.as_ref().map(|weather| {
             weather_probe.sample(
                 weather,
@@ -215,15 +213,18 @@ pub(super) fn update(
             )
         });
         let weather_intensity = local.map_or(0.0, |local| local.rain + local.snow);
-        for (index, (target, gain)) in sounds.controls.ambient.iter().zip(levels).enumerate() {
-            let gain = gain
-                * if index < 2 {
-                    1.0 - weather_intensity * 0.72
-                } else {
-                    1.0
-                };
+        let atmosphere = ambience::profile(
+            weights,
+            sounds.room.cave,
+            phase as f32,
+            listener.y - height as f32,
+            weather_intensity,
+        );
+        for (target, gain) in sounds.controls.ambient.iter().zip(atmosphere.levels) {
             target.store(gain.to_bits(), Ordering::Relaxed);
         }
+        let controls = sounds.controls.clone();
+        sounds.ambience.update(now, atmosphere, &controls);
         let position = listener.floor().as_i64vec3().to_array();
         let roof = (1..=64).any(|y| {
             habitat
@@ -275,9 +276,15 @@ pub(super) fn update(
         .creatures
         .values()
         .filter_map(|track| {
-            let position = track.position() + Vec3::Y * (track.current.size()[1] as f32 * 0.55);
+            let position = if track.current.kind == Kind::SandWorm {
+                super::worm::mouth(&presented_worm(track), track.position())
+            } else {
+                track.position() + Vec3::Y * (track.current.size()[1] as f32 * 0.55)
+            };
             let d = listener.distance(position);
-            (d < if track.current.kind.is_aquatic() && track.current.kind != Kind::Fish {
+            (d < if track.current.kind == Kind::SandWorm {
+                64.0
+            } else if track.current.kind.is_aquatic() && track.current.kind != Kind::Fish {
                 if submerged { 14.0 } else { 2.0 }
             } else if matches!(track.current.kind, Kind::Fish | Kind::Bee) {
                 5.0
@@ -287,10 +294,14 @@ pub(super) fn update(
             .then_some((d, position, track))
         })
         .collect();
-    nearby.sort_by(|a, b| a.0.total_cmp(&b.0));
+    nearby.sort_by(|a, b| {
+        (b.2.current.kind == Kind::SandWorm)
+            .cmp(&(a.2.current.kind == Kind::SandWorm))
+            .then(a.0.total_cmp(&b.0))
+    });
     let controls = sounds.controls.clone();
     let mut budget = 8;
-    for (distance, position, track) in nearby {
+    for (_, mut position, track) in nearby {
         if budget == 0 {
             break;
         }
@@ -300,9 +311,20 @@ pub(super) fn update(
             step: now,
             eat: now,
             behavior: Behavior::Rest,
+            worm: Default::default(),
         });
         let speed = Vec3::from_array(animal.velocity).length();
-        let cue = if animal.kind == Kind::Stalker {
+        let mut radius = 24.0;
+        let mut ground_borne = false;
+        let cue = if animal.kind == Kind::SandWorm {
+            let presented = presented_worm(track);
+            timing.worm.update(&presented, now).map(|emission| {
+                radius = emission.sound.radius();
+                ground_borne = emission.sound.ground_borne();
+                position = emission.sound.position(&presented, track.position());
+                (emission.sound.clip(), emission.level)
+            })
+        } else if animal.kind == Kind::Stalker {
             stalker_cue(animal, timing, now)
         } else if animal.kind.is_spider() {
             spider_cue(animal, timing, now, speed)
@@ -368,13 +390,22 @@ pub(super) fn update(
         };
         timing.behavior = animal.behavior;
         if let Some((sound, level)) = cue {
-            let transmission =
+            let distance = listener.distance(position);
+            if distance >= radius {
+                continue;
+            }
+            let transmission = if ground_borne {
+                // Sand-borne warning vibration remains audible before the head
+                // breaks the surface; ordinary airborne calls retain occlusion.
+                0.85
+            } else {
                 crate::water_audio::scene::acoustic_transmission(listener, position, |p| {
                     habitat.block(p)
-                });
+                })
+            };
             let direction = (position - listener).normalize_or_zero();
             let pan = direction.dot(right).clamp(-1.0, 1.0);
-            let gain = level * (1.0 - distance / 24.0).powi(2) * transmission;
+            let gain = level * (1.0 - distance / radius).powi(2) * transmission;
             controls.enqueue(Cue {
                 category: Category::Animals,
                 sound,
@@ -389,6 +420,18 @@ pub(super) fn update(
             budget -= 1;
         }
     }
+}
+
+fn presented_worm(track: &terra_network::client::CreatureTrack) -> terra_core::creatures::Creature {
+    let mut animal = track.current.clone();
+    let since = track
+        .received
+        .elapsed()
+        .as_secs_f32()
+        .min(track.interval.clamp(0.0, 0.25));
+    animal.timer = (animal.timer - since).max(0.0);
+    animal.age += f64::from(since);
+    animal
 }
 
 fn stalker_cue(
@@ -503,17 +546,6 @@ fn aquatic_cue(
     } else {
         None
     }
-}
-
-fn environment(cave: f32, phase: f32, humidity: f32, habitat: f32) -> [f32; 3] {
-    let sun = ((phase - 0.25) * std::f32::consts::TAU).sin();
-    let day = ((sun + 0.12) / 0.36).clamp(0.0, 1.0);
-    let ecology = habitat.clamp(0.0, 1.0);
-    [
-        (1.0 - cave) * day * ecology * 0.08,
-        (1.0 - cave) * (1.0 - day) * (0.02 + ecology * humidity * 0.12),
-        cave * 0.14,
-    ]
 }
 
 pub(super) fn water_contacts(
@@ -768,14 +800,5 @@ mod tests {
             assert!(cadence.jitter().abs() <= 0.0251);
         }
         assert_eq!(used.len(), 4);
-    }
-    #[test]
-    fn environment_switches_day_birds_to_night_insects_and_suppresses_both_in_caves() {
-        let day = environment(0.0, 0.5, 0.8, 1.0);
-        let night = environment(0.0, 0.0, 0.8, 1.0);
-        assert!(day[0] > 0.0 && day[1] == 0.0);
-        assert!(night[0] == 0.0 && night[1] > 0.0);
-        assert_eq!(environment(1.0, 0.5, 0.8, 1.0), [0.0, 0.0, 0.14]);
-        assert!(environment(0.0, 0.5, 0.1, 0.1)[0] < day[0]);
     }
 }

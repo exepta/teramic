@@ -1,0 +1,28 @@
+{
+  "id": "teramic::mossy_crypt_arch",
+  "name": "Mossy Crypt Arch",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 354
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 353
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 341
+        },
+        "count": 1
+      }
+    ]
+  }
+}

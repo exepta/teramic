@@ -40,12 +40,22 @@ pub(super) struct WakeField {
 impl WakeField {
     fn push(&mut self, event: &WaterMotion, now: f32) {
         let direction = event.velocity.xz().normalize_or_zero();
-        let speed = event.velocity.xz().length().min(12.0);
+        let speed = if event.kind == Kind::Splash {
+            event
+                .velocity
+                .xz()
+                .length()
+                .max((-event.velocity.y).max(0.0))
+        } else {
+            event.velocity.xz().length()
+        }
+        .min(6.0);
         if !event.position.is_finite()
             || !event.velocity.is_finite()
             || !event.strength.is_finite()
             || !direction.is_finite()
             || speed < 0.25
+            || event.kind == Kind::Bubble
         {
             return;
         }
@@ -56,7 +66,7 @@ impl WakeField {
             direction.x,
             direction.y,
             speed,
-            event.strength.clamp(0.0, 2.0),
+            event.strength.clamp(0.0, 0.75),
         );
     }
 
@@ -135,12 +145,19 @@ fn update(
         if !access.ready() {
             continue;
         }
-        if event.kind == Kind::Wake {
+        if !event.position.is_finite() || !event.velocity.is_finite() || !event.strength.is_finite()
+        {
+            continue;
+        }
+        if matches!(event.kind, Kind::Wake | Kind::Splash) {
             wakes.push(event, time.elapsed_secs());
         }
+        let strength = event.strength.clamp(0.0, 0.7);
         let count = match event.kind {
-            Kind::Splash => (event.strength * 16.0) as usize + 6,
-            Kind::Wake => 2,
+            Kind::Splash => (strength * 10.0) as usize + 3,
+            // The water surface carries the wake; do not paint large white
+            // billboard rings over it for every swimming stroke.
+            Kind::Wake => 0,
             Kind::Bubble => 3,
         };
         for i in 0..count.min(40) {
@@ -150,9 +167,9 @@ fn update(
             let angle = i as f32 * 2.39996 + time.elapsed_secs();
             let velocity = match event.kind {
                 Kind::Splash => Vec3::new(
-                    angle.cos() * event.strength,
-                    0.8 + ((i * 7 % 13) as f32 / 13.0) * event.strength * 2.0,
-                    angle.sin() * event.strength,
+                    angle.cos() * strength * 0.55,
+                    0.35 + ((i * 7 % 13) as f32 / 13.0) * strength * 1.5,
+                    angle.sin() * strength * 0.55,
                 ),
                 Kind::Wake => {
                     -event.velocity * 0.12 + Vec3::new(angle.cos() * 0.08, 0.0, angle.sin() * 0.08)
@@ -172,12 +189,12 @@ fn update(
                 } else if event.kind == Kind::Wake {
                     1.6
                 } else {
-                    0.8 + event.strength * 0.2
+                    0.38 + strength * 0.18
                 },
                 size: if event.kind == Kind::Wake {
                     0.16 + event.strength * 0.10
                 } else {
-                    0.015 + event.strength * 0.012
+                    0.009 + strength * 0.007
                 },
                 kind: event.kind,
             });
@@ -204,7 +221,7 @@ fn update(
     let up = camera.up().as_vec3();
     for p in &state.items {
         let gravity = if p.kind == Kind::Splash {
-            Vec3::NEG_Y * 3.6 * p.age * p.age
+            Vec3::NEG_Y * 4.905 * p.age * p.age
         } else {
             Vec3::ZERO
         };
@@ -323,6 +340,16 @@ mod tests {
         );
         assert_eq!(app.world().entities().len(), count);
         assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 1);
+        for drop in &particles.items {
+            if drop.kind == Kind::Splash {
+                let peak = drop.velocity.y * drop.velocity.y / (2.0 * 9.81);
+                assert!(
+                    peak <= 0.12,
+                    "an actor must not launch metre-high water jets"
+                );
+                assert!(drop.size <= 0.014);
+            }
+        }
         app.world_mut()
             .resource_mut::<Time>()
             .advance_by(std::time::Duration::from_secs(10));

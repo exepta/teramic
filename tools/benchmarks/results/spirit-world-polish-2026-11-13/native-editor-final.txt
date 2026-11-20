@@ -1,0 +1,4 @@
+Isolated standalone building editor run: /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/building-editor/run.Lz0qZZ
+Traceback (most recent call last):
+  File "<stdin>", line 28, in <module>
+AssertionError: ('editor-empty-platform', (2160, 1350), (1440, 900))

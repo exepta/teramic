@@ -1,0 +1,61 @@
+/* Shared Bergfried sections. Component-specific geometry stays beside each template. */
+.keep-section { width: 100%; min-width: 0; display: flex; flex-direction: column; flex-shrink: 0; gap: 16px; color: #f1dfbd; box-sizing: border-box; }
+.keep-section h2 { margin: 0; min-width: 0; font-family: serif; font-size: 20px; line-height: 26px; color: #f3d396; text-wrap: wrap; }
+.keep-section h3 { margin: 0; min-width: 0; font-family: serif; font-size: 16px; line-height: 22px; color: #f0dbb7; text-wrap: wrap; }
+.keep-section p { margin: 0; min-width: 0; font-size: 13px; line-height: 19px; color: #e2ceb0; text-wrap: wrap; }
+.keep-section label { min-width: 0; font-size: 12px; line-height: 18px; color: #c0a886; text-wrap: wrap; }
+.keep-section icon { flex-shrink: 0; color: #d8b774; }
+.keep-section-heading { display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 16px; min-width: 0; padding: 2px 2px 7px; border-bottom: 1px solid #78603b; }
+.keep-section-heading > div { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.keep-section .keep-count-badge { display: flex; flex-direction: row; align-items: center; gap: 9px; flex-shrink: 0; padding: 8px 13px; border: 1px solid #a1824b; background-color: #362819; border-radius: 4px; }
+.keep-card { display: flex; flex-direction: column; min-width: 0; flex-shrink: 0; gap: 11px; padding: 17px; border: 1px solid #8d6e43; border-radius: 5px; background-color: #2c2018; box-sizing: border-box; }
+.keep-card-title { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 9px; min-width: 0; padding-bottom: 7px; border-bottom: 1px solid #665039; }
+.keep-card-title h2, .keep-card-title h3 { flex-grow: 1; }
+.keep-detail-stack { display: flex; flex-direction: column; gap: 15px; min-width: 0; }
+.keep-stat-line { display: flex; flex-direction: row; align-items: center; gap: 9px; min-width: 0; padding: 3px 0; }
+.keep-stat-line label { flex-grow: 1; }
+.keep-stat-line > p, .keep-stat-line > h3 { max-width: 62%; text-align: right; }
+.keep-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.keep-section .keep-muted { color: #bda88b; font-size: 12px; line-height: 18px; }
+.keep-section .keep-available { color: #c1d294; }
+.keep-section .keep-missing { color: #d4977e; }
+.keep-metric { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 13px 9px; border: 1px solid #715a39; border-radius: 4px; background-color: #211912; }
+.keep-metric label, .keep-metric h2 { text-align: center; }
+.keep-metric h2 { font-size: 27px; line-height: 32px; }
+.keep-actions { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 9px; min-width: 0; max-width: 100%; }
+.keep-section .keep-action { display: flex; flex-direction: row; flex-basis: auto; flex-grow: 0; flex-shrink: 0; align-self: flex-start; align-items: center; justify-content: center; gap: 7px; width: auto; min-width: 0; min-height: 39px; height: auto; max-width: 100%; padding: 9px 13px; border: 1px solid #a3824b; border-radius: 4px; background-color: #483221; color: #f4dfb8; font-size: 13px; line-height: 19px; text-wrap: nowrap; box-sizing: border-box; }
+.keep-section .keep-action::value { flex-shrink: 0; font-size: 13px; line-height: 19px; text-wrap: nowrap; text-align: center; }
+.keep-section .keep-action:hover { background-color: #664a2c; border-color: #d3ad68; }
+.keep-section .keep-action:focus { outline: 0; border-color: #e7c77d; }
+.keep-section .keep-action:disabled { opacity: 0.45; }
+.keep-section .keep-action.selected { background-color: #5a6336; border-color: #d3bd72; }
+.keep-section .keep-primary { background-color: #485530; border-color: #a99b58; }
+.keep-section .keep-primary:hover { background-color: #65743e; }
+.keep-section .keep-danger { background-color: #5b2c23; border-color: #a8664c; }
+.keep-section input { min-width: 0; width: 100%; height: 39px; padding: 9px 11px; border: 1px solid #a3824b; border-radius: 4px; background-color: #1d1510; color: #ffedc9; font-size: 13px; line-height: 19px; box-sizing: border-box; }
+.keep-section input::value, .keep-section input::placeholder { font-size: 13px; line-height: 19px; text-align: left; }
+.keep-master-detail { display: grid; grid-template-columns: 310px 1fr; gap: 16px; min-width: 0; }
+.keep-roster { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.keep-section .keep-roster-button { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 11px; width: 100%; min-width: 0; min-height: 65px; height: auto; padding: 12px; border: 1px solid #725a39; border-radius: 4px; background-color: #211912; color: #f1dfbd; box-sizing: border-box; }
+.keep-roster-button > div { min-width: 0; flex-grow: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.keep-roster-button h3, .keep-roster-button p { text-align: left; text-wrap: wrap; }
+.keep-section .keep-roster-button:hover { background-color: #49351f; border-color: #bd965a; }
+.keep-section .keep-roster-button.selected { background-color: #454c2c; border-color: #d4b76d; }
+.keep-section .keep-relation { align-self: flex-start; padding: 6px 10px; border: 1px solid #8c784d; border-radius: 4px; color: #dfc99a; background-color: #382b1d; }
+.keep-section .realm-allied { background-color: #29391f; border-color: #718c4a; color: #c6da9c; }
+.keep-section .realm-hostile { background-color: #45231d; border-color: #a3604b; color: #e6a08b; }
+.keep-section .keep-pending { color: #e4c889; background-color: #3c301c; padding: 7px 10px; border-radius: 4px; }
+.keep-section .kingdom-color-picker { width: 185px !important; max-width: 100% !important; height: 39px !important; min-height: 39px !important; min-width: 0 !important; padding: 9px 10px 9px 36px !important; font-size: 13px !important; line-height: 19px !important; border: 1px solid #a3824b !important; border-radius: 4px !important; background-color: #24190f !important; color: #f1d9b6 !important; }
+.kingdom-color-picker::value, .kingdom-color-picker::placeholder { font-size: 13px !important; line-height: 19px !important; }
+.kingdom-color-picker::preview { left: 8px !important; width: 20px !important; height: 20px !important; border: 1px solid #b6854b !important; border-radius: 3px !important; }
+.kingdom-color-picker::popup { width: 260px !important; padding: 12px !important; background-color: #302118 !important; color: #f1d9b6 !important; border: 1px solid #b6854b !important; border-radius: 5px !important; z-index: 550 !important; }
+.kingdom-color-picker::format { padding: 5px 8px !important; font-size: 12px !important; background-color: #4c3421 !important; color: #ecd0a5 !important; border-color: #8e653f !important; }
+.kingdom-color-picker::selected-format { background-color: #7d552f !important; color: #ffe6b6 !important; border-color: #c19660 !important; }
+.kingdom-color-picker::preview, .kingdom-color-picker::swatch, .kingdom-color-picker::recent-color { border-color: #b6854b !important; }
+.kingdom-color-picker::canvas, .kingdom-color-picker::hue-track, .kingdom-color-picker::alpha-track { width: 100% !important; }
+.kingdom-color-picker:hover, .kingdom-color-picker:focus, .kingdom-color-picker:open { border-color: #c49661 !important; }
+@media (max-width: 1100px) { .keep-master-detail { grid-template-columns: 250px 1fr; gap: 12px; } .keep-card { padding: 13px; } }
+@media (max-width: 760px) { .keep-master-detail { grid-template-columns: 1fr; } .keep-section { gap: 12px; } .keep-section h2 { font-size: 18px; line-height: 24px; } .keep-card { padding: 12px; } }
+/* Catalog sources use supported 32px SVGs; CSS controls their display size. */
+.keep-section icon { width: 24px; height: 24px; }
+.keep-section .keep-action icon { width: 20px; height: 20px; }

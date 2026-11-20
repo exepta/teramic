@@ -181,7 +181,7 @@ fn aim(world: &mut World, ground: [i64; 3]) -> Result<(), String> {
     Ok(())
 }
 
-fn choose_ground(world: &mut World) -> Option<[i64; 3]> {
+pub(crate) fn choose_ground(world: &mut World) -> Option<[i64; 3]> {
     let body = Vec3::from_array(
         world
             .resource::<ClientSession>()

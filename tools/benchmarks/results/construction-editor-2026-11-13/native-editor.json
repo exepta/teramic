@@ -1,0 +1,55 @@
+{
+  "status": "passed",
+  "screens": {
+    "editor-empty-platform": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 1414576
+    },
+    "editor-placed-block": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 1479684
+    },
+    "editor-removed-block": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 1518087
+    },
+    "editor-real-inventory-catalog": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 588501
+    },
+    "editor-loaded-house": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 1316301
+    },
+    "editor-save-browser": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 451688
+    },
+    "editor-overwrite-confirmation": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 630857
+    },
+    "editor-options-english": {
+      "width": 1440,
+      "height": 900,
+      "bytes": 544274
+    }
+  },
+  "application": "standalone terra-building-editor",
+  "input": "actual right/left MouseButtonInput and production HTML component handlers",
+  "catalog": "real shared inventory preview assets",
+  "file": "editor-acceptance.json",
+  "schema_version": 1,
+  "steps": 390,
+  "physical_cells": 392,
+  "materials": 17,
+  "save": "actual default JSON import, exact save/reload and explicit overwrite confirmation",
+  "options": "live English language selection"
+}

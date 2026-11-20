@@ -14,6 +14,8 @@ struct TerraWeather {
     leaves: vec4<f32>, grass: vec4<f32>, vegetation: vec4<f32>,
     flowers: array<vec4<f32>, 64>,
     footprints: array<vec4<f32>, 1024>,
+    liquid: vec4<f32>,
+    particle: vec4<f32>,
 };
 @if(BINDLESS) {
 struct WetMaterialIndices { weather: u32, detail: u32, };
@@ -52,10 +54,12 @@ fn clip_imprint(input: prepass_io::VertexOutput) {
     let slot = mesh[input.instance_index].material_and_lightmap_bind_group_slot & 0xffffu;
     let family = abs(wet_parameters[wet_indices[slot].detail].detail.x);
     let has_imprints = wet_weather[wet_indices[slot].weather].vegetation.w;
+    let particle_domain = wet_weather[wet_indices[slot].weather].particle;
 } @else {
     let slot = 0u;
     let family = abs(terra_detail.x);
     let has_imprints = terra_weather.vegetation.w;
+    let particle_domain = terra_weather.particle;
 }
     let face = cross(dpdx(input.world_position.xyz), dpdy(input.world_position.xyz));
     if has_imprints > 0.5 && (family == 4.0 || family == 5.0) && abs(face.y) > length(face) * 0.98

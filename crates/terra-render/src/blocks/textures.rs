@@ -284,7 +284,7 @@ mod tests {
         assert!(image.data.unwrap().chunks_exact(4).all(|p| p[3] == 255));
     }
     #[test]
-    fn detailed_terrain_stays_opaque_and_leaf_gaps_preserve_the_coverage_budget() {
+    fn detailed_terrain_and_fallback_leaves_keep_authored_opaque_coverage() {
         for pattern in [
             TexturePattern::Turf,
             TexturePattern::Earth,
@@ -307,22 +307,10 @@ mod tests {
             let image = generate(pattern);
             let data = image.data.as_ref().unwrap();
             let base = &data[..512 * 512 * 4];
-            let leaf = matches!(
-                pattern,
-                TexturePattern::Canopy
-                    | TexturePattern::BirchCanopy
-                    | TexturePattern::BlossomCanopy
-            );
             if pattern == TexturePattern::BlossomCanopy {
                 assert!(base.chunks_exact(4).all(|p| p[0] == p[1] && p[1] == p[2]));
             }
-            if leaf {
-                let coverage = base.chunks_exact(4).filter(|p| p[3] >= 128).count() as f32
-                    / (512 * 512) as f32;
-                assert!((0.82..0.93).contains(&coverage));
-            } else {
-                assert!(data.chunks_exact(4).all(|p| p[3] == 255));
-            }
+            assert!(data.chunks_exact(4).all(|p| p[3] == 255));
         }
     }
 

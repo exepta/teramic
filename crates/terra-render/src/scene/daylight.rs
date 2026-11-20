@@ -73,6 +73,7 @@ impl Daylight {
 }
 
 pub(crate) fn install(app: &mut App) {
+    super::biome_atmosphere::install(app);
     app.init_resource::<Daylight>().add_systems(
         Update,
         update
@@ -108,10 +109,11 @@ fn terrain_light_direction(direction: Vec3) -> Vec3 {
     Vec3::new(horizontal.x, height, horizontal.y)
 }
 
-fn update(
+pub(super) fn update(
     clock: Res<WorldClock>,
     config: Res<terra_core::GameConfig>,
     graphics: Option<Res<GraphicsConfig>>,
+    atmosphere: Option<Res<super::biome_atmosphere::BiomeAtmosphere>>,
     mut state: ResMut<Daylight>,
     mut lights: CelestialLights,
     mut cameras: Query<(&mut Exposure, &mut AmbientLight), With<TerraCamera>>,
@@ -119,6 +121,7 @@ fn update(
     if !clock.is_changed()
         && !config.is_changed()
         && graphics.as_ref().is_none_or(|g| !g.is_changed())
+        && atmosphere.as_ref().is_none_or(|a| !a.is_changed())
     {
         return;
     }
@@ -134,6 +137,9 @@ fn update(
         state.ambient_color = state
             .ambient_color
             .lerp(Vec3::new(0.74, 0.84, 1.0), winter * 0.16);
+    }
+    if let Some(atmosphere) = atmosphere {
+        atmosphere.apply(&mut state);
     }
     let shadows = graphics
         .as_ref()

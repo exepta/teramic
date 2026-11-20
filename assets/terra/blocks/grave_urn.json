@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 376,
+  "name": "Grave Urn",
+  "description": "Grave Urn for furnishing ancient graves and crypt chambers.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/grave_urn.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/grave_urn.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.23,
+        0.08,
+        0.23
+      ],
+      "maximum": [
+        0.77,
+        0.8,
+        0.77
+      ]
+    }
+  ]
+}

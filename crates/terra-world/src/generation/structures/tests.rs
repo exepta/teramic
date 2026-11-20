@@ -406,6 +406,7 @@ fn cleared_tree_roots_remove_branched_crowns_outside_the_site_and_adjacent_secti
         bounds: [p, p],
         buildings: Vec::new(),
         containers: Vec::new(),
+        grave: None,
     };
     let site = Arc::new(Site {
         summary,
@@ -508,6 +509,7 @@ fn building_tree_clearance_queries_the_full_band_across_a_section_boundary() {
                 bounds,
             }],
             containers: Vec::new(),
+            grave: None,
         },
         sections: BTreeMap::new(),
     });
@@ -550,7 +552,9 @@ fn per_kind_generation_switches_preserve_other_seeded_sites_in_every_contract() 
                 StructureKind::Village | StructureKind::Kingdom | StructureKind::Outpost => {
                     config.structures.villages = false
                 }
-                StructureKind::Ruin => config.structures.ruins = false,
+                StructureKind::Ruin | StructureKind::Cemetery | StructureKind::GraveDungeon => {
+                    config.structures.ruins = false
+                }
                 StructureKind::Mine => config.structures.mines = false,
             }
             let filtered = TerraGenerator::new(config).unwrap();

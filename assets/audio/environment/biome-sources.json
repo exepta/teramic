@@ -1,0 +1,58 @@
+[
+  {
+    "source": "wind1.wav",
+    "url": "https://opengameart.org/sites/default/files/wind1.wav",
+    "page": "https://opengameart.org/content/wind1",
+    "author": "Luke.RUSTLTD",
+    "license": "CC0-1.0",
+    "sha256": "a2856f794fbf77e05f8241dc4adeade7f62fa21c3c9dc49f7725b6c6218060c3"
+  },
+  {
+    "source": "Crows.ogg",
+    "url": "https://opengameart.org/sites/default/files/Crows.ogg",
+    "page": "https://opengameart.org/content/crows-singing",
+    "author": "IgnasD",
+    "license": "CC0-1.0",
+    "sha256": "c2ac86edfe858402a5440488ad8bfa17921e2f4831b58facb544a928f20c3cad"
+  },
+  {
+    "source": "birds-isaiah658.ogg",
+    "url": "https://opengameart.org/sites/default/files/birds-isaiah658.ogg",
+    "page": "https://opengameart.org/content/ambient-bird-sounds",
+    "author": "isaiah658",
+    "license": "CC0-1.0",
+    "sha256": "359e4e3f9da9d75aac64cede511c7e3ef8b461f9d9f8c230f8f80e44c4b3e35f"
+  },
+  {
+    "source": "wave_01_cc0-18363__jasinski__alkaibeach.flac",
+    "url": "https://opengameart.org/sites/default/files/wave_01_cc0-18363__jasinski__alkaibeach.flac",
+    "page": "https://opengameart.org/content/beach-ocean-waves",
+    "author": "jasinski / qubodup",
+    "license": "CC0-1.0",
+    "sha256": "fcfca178eca2eac536e8c2a4ed5cf8096e44c921acd587047b3d9f1d7845435c"
+  },
+  {
+    "source": "wave_02_cc0-18363__jasinski__alkaibeach.flac",
+    "url": "https://opengameart.org/sites/default/files/wave_02_cc0-18363__jasinski__alkaibeach.flac",
+    "page": "https://opengameart.org/content/beach-ocean-waves",
+    "author": "jasinski / qubodup",
+    "license": "CC0-1.0",
+    "sha256": "53b5c28c0edc36f049e77e65f2cf8a86135103328c44c1507c416e6469d18096"
+  },
+  {
+    "source": "wave_03_cc0-18363__jasinski__alkaibeach.flac",
+    "url": "https://opengameart.org/sites/default/files/wave_03_cc0-18363__jasinski__alkaibeach.flac",
+    "page": "https://opengameart.org/content/beach-ocean-waves",
+    "author": "jasinski / qubodup",
+    "license": "CC0-1.0",
+    "sha256": "fc795f95f352b354867d69a587daecb8815334e28e3b56a7798c5f3005349054"
+  },
+  {
+    "source": "wave_04_cc0-18363__jasinski__alkaibeach.flac",
+    "url": "https://opengameart.org/sites/default/files/wave_04_cc0-18363__jasinski__alkaibeach.flac",
+    "page": "https://opengameart.org/content/beach-ocean-waves",
+    "author": "jasinski / qubodup",
+    "license": "CC0-1.0",
+    "sha256": "3c490e736365fdd617ce8405470d8878fc6146d9a8dba448d622addb01cfff3b"
+  }
+]

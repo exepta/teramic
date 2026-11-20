@@ -142,7 +142,7 @@ fn embedded_bytes(uri: &str) -> Vec<u8> {
 }
 
 #[test]
-fn authored_interaction_boxes_match_every_exported_gltf_box_and_render_triangle() {
+fn authored_interaction_boxes_bound_every_exported_render_triangle_and_keep_all_extents() {
     for (material, source) in [
         (
             28,
@@ -162,8 +162,10 @@ fn authored_interaction_boxes_match_every_exported_gltf_box_and_render_triangle(
         let boxes = builtin_boxes(material);
         assert!(!boxes.is_empty());
         assert!(boxes.iter().all(ShapeBox::valid));
-        let mut remaining = vec![true; boxes.len()];
-        let mut exported = 0;
+        // A chamfer keeps the same AABB but no longer has 24 vertices / 12
+        // triangles. Inspect referenced triangles and every collider extremum,
+        // without assuming the exporter stores a sequence of uncut cuboids.
+        let mut reached = vec![[false; 6]; boxes.len()];
         for primitive in model["meshes"][0]["primitives"].as_array().unwrap() {
             let accessor =
                 &model["accessors"][primitive["attributes"]["POSITION"].as_u64().unwrap() as usize];
@@ -173,7 +175,7 @@ fn authored_interaction_boxes_match_every_exported_gltf_box_and_render_triangle(
             let offset = view["byteOffset"].as_u64().unwrap_or(0) as usize
                 + accessor["byteOffset"].as_u64().unwrap_or(0) as usize;
             let count = accessor["count"].as_u64().unwrap() as usize;
-            assert_eq!(count % 24, 0);
+            assert!(count > 0);
             let positions: Vec<[f64; 3]> = bytes[offset..offset + count * 12]
                 .chunks_exact(12)
                 .map(|vertex| {
@@ -184,53 +186,44 @@ fn authored_interaction_boxes_match_every_exported_gltf_box_and_render_triangle(
                     })
                 })
                 .collect();
-            for vertices in positions.chunks_exact(24) {
-                let bounds = ShapeBox {
-                    hinged: false,
-                    minimum: std::array::from_fn(|axis| {
-                        vertices
-                            .iter()
-                            .map(|v| v[axis])
-                            .fold(f64::INFINITY, f64::min)
-                    }),
-                    maximum: std::array::from_fn(|axis| {
-                        vertices
-                            .iter()
-                            .map(|v| v[axis])
-                            .fold(f64::NEG_INFINITY, f64::max)
-                    }),
-                };
-                let matching = boxes
-                    .iter()
-                    .enumerate()
-                    .find_map(|(index, expected)| {
-                        (remaining[index]
-                            && (0..3).all(|axis| {
-                                (expected.minimum[axis] - bounds.minimum[axis]).abs() < 1.0e-6
-                                    && (expected.maximum[axis] - bounds.maximum[axis]).abs()
-                                        < 1.0e-6
-                            }))
-                        .then_some(index)
-                    })
-                    .unwrap_or_else(|| {
-                        panic!("Model {material} exports an unmatched collision box {bounds:?}")
-                    });
-                remaining[matching] = false;
-                exported += 1;
-            }
             let accessor = &model["accessors"][primitive["indices"].as_u64().unwrap() as usize];
             assert_eq!(accessor["componentType"], 5125);
             let view = &model["bufferViews"][accessor["bufferView"].as_u64().unwrap() as usize];
             let offset = view["byteOffset"].as_u64().unwrap_or(0) as usize;
             let indices_count = accessor["count"].as_u64().unwrap() as usize;
-            assert_eq!(indices_count, positions.len() / 24 * 36);
+            assert_eq!(indices_count % 3, 0);
             for triangle in bytes[offset..offset + indices_count * 4].chunks_exact(12) {
                 let indices: [usize; 3] = std::array::from_fn(|axis| {
                     u32::from_le_bytes(triangle[axis * 4..axis * 4 + 4].try_into().unwrap())
                         as usize
                 });
                 assert!(indices.iter().all(|index| *index < positions.len()));
-                let [a, b, c] = indices.map(|index| positions[index]);
+                let triangle = indices.map(|index| positions[index]);
+                let mut bounded = false;
+                for (index, shape) in boxes.iter().enumerate() {
+                    if !triangle.iter().all(|point| {
+                        (0..3).all(|axis| {
+                            point[axis] >= shape.minimum[axis] - 1.0e-6
+                                && point[axis] <= shape.maximum[axis] + 1.0e-6
+                        })
+                    }) {
+                        continue;
+                    }
+                    bounded = true;
+                    for point in triangle {
+                        for axis in 0..3 {
+                            reached[index][axis * 2] |=
+                                (point[axis] - shape.minimum[axis]).abs() < 1.0e-6;
+                            reached[index][axis * 2 + 1] |=
+                                (point[axis] - shape.maximum[axis]).abs() < 1.0e-6;
+                        }
+                    }
+                }
+                assert!(
+                    bounded,
+                    "Model {material} triangle outside its interaction hull: {triangle:?}"
+                );
+                let [a, b, c] = triangle;
                 let ab: [f64; 3] = std::array::from_fn(|axis| b[axis] - a[axis]);
                 let ac: [f64; 3] = std::array::from_fn(|axis| c[axis] - a[axis]);
                 let cross = [
@@ -241,7 +234,11 @@ fn authored_interaction_boxes_match_every_exported_gltf_box_and_render_triangle(
                 assert!(cross.iter().map(|v| v * v).sum::<f64>() > 0.0);
             }
         }
-        assert_eq!(exported, boxes.len());
-        assert!(remaining.iter().all(|value| !value));
+        for (shape, reached) in boxes.iter().zip(reached) {
+            assert!(
+                reached.into_iter().all(|hit| hit),
+                "Model {material} no longer reaches every interaction-box extremum: {shape:?}"
+            );
+        }
     }
 }

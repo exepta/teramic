@@ -1,4 +1,6 @@
 //! Opt-in native work-panel test after a real founding, spawn and chest-placement ack.
+#[path = "npc_work_direct_smoke.rs"]
+mod direct;
 use bevy::{
     prelude::*,
     render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk},
@@ -11,7 +13,7 @@ use terra_network::client::{ChatCommand, ClientChatCommands, ClientSession};
 use terra_ui::{KingdomMenuAction, KingdomView, NpcWorkUiAction, NpcWorkView};
 
 pub(crate) fn requested() -> bool {
-    std::env::var("TERRA_NPC_WORK_UI_GALLERY").as_deref() == Ok("1")
+    direct::requested() || std::env::var("TERRA_NPC_WORK_UI_GALLERY").as_deref() == Ok("1")
 }
 
 #[derive(Resource)]
@@ -113,6 +115,9 @@ fn shot(world: &mut World, state: &mut Gallery, name: &str) -> Result<(), String
 }
 
 pub(crate) fn run(world: &mut World) -> Result<bool, String> {
+    if direct::requested() {
+        return direct::run(world);
+    }
     if !world.contains_resource::<Gallery>() {
         world.insert_resource(Gallery {
             step: 0,

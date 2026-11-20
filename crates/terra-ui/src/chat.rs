@@ -157,7 +157,9 @@ pub(crate) fn install(app: &mut App) {
         .add_message::<ChatAction>()
         .add_systems(
             PreUpdate,
-            block_opening_frame.after(bevy::input::InputSystems),
+            block_opening_frame
+                .after(bevy::input::InputSystems)
+                .after(crate::npc_work::NpcWorkInputSet),
         )
         .add_systems(
             Update,
@@ -174,8 +176,11 @@ pub(crate) fn install(app: &mut App) {
 
 fn available(world: &World) -> bool {
     !world
-        .get_resource::<crate::kingdom::KingdomMenuState>()
-        .is_some_and(|k| k.blocks_input())
+        .get_resource::<crate::npc_work::WorkUiState>()
+        .is_some_and(|work| work.blocks_input())
+        && !world
+            .get_resource::<crate::kingdom::KingdomMenuState>()
+            .is_some_and(|k| k.blocks_input())
         && !world
             .get_resource::<crate::pets::PetMenuState>()
             .is_some_and(|p| p.blocks_input())
@@ -235,6 +240,9 @@ fn teleport_capture(world: &mut World) {
     let chat = world.resource::<ChatState>();
     let other_owner = chat.open
         || chat.resume_pending
+        || world
+            .get_resource::<crate::NpcWorkView>()
+            .is_some_and(|view| view.direct)
         || world
             .get_resource::<crate::kingdom::KingdomMenuState>()
             .is_some_and(|k| k.blocks_input())

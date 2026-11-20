@@ -3,6 +3,54 @@ use terra_core::WorldConfig;
 use terra_voxel::MaterialId;
 
 #[test]
+fn dominant_blended_deserts_have_sand_and_desert_strata_instead_of_meadows() {
+    let terrain = TerraGenerator::new(WorldConfig {
+        landscape_revision: 8,
+        rivers: false,
+        caves: false,
+        trees: false,
+        ..Default::default()
+    })
+    .unwrap();
+    // Actual dry districts in the default world where desert leads the blend
+    // with less than half the weight. Both desert identities and all coordinate
+    // quadrants are included; these previously generated uninterrupted grass.
+    for [x, z] in [
+        [5120.5, -5119.5],
+        [4096.5, -4607.5],
+        [-5119.5, -1791.5],
+        [-255.5, 1280.5],
+        [-2559.5, 1792.5],
+        [-1791.5, 1792.5],
+        [-2559.5, 2048.5],
+        [2304.5, 2048.5],
+        [1536.5, 2304.5],
+        [2304.5, 2560.5],
+        [3072.5, 5632.5],
+    ] {
+        let column = terrain.surface_column(x, z);
+        assert!(matches!(
+            terrain.surface_biome(&column),
+            terra_core::BiomeKind::Desert | terra_core::BiomeKind::ClifftedDesert
+        ));
+        assert!(column.biome.aridity() < 0.5);
+        assert_eq!(column.water_level, None);
+        assert_eq!(column.oasis_moisture, 0.0);
+        assert_eq!(column.surface_material, MaterialId::Sand, "{x}, {z}");
+        assert_eq!(
+            terrain.column_material(column, 0.5, -0.5),
+            MaterialId::Sand,
+            "{x}, {z}"
+        );
+        assert_eq!(
+            terrain.column_material(column, 2.0, -2.0),
+            MaterialId::Sandstone,
+            "{x}, {z}"
+        );
+    }
+}
+
+#[test]
 fn fractional_surface_heights_have_exactly_one_grass_voxel_then_at_least_three_dirt_voxels() {
     let terrain = TerraGenerator::new(WorldConfig {
         biomes: false,

@@ -34,6 +34,7 @@ fn builder(terrain: &TerraGenerator, seed: u32) -> Builder<'_> {
             bounds: [[0; 3]; 2],
             buildings: Vec::new(),
             containers: Vec::new(),
+            grave: None,
         },
         patches: BTreeMap::new(),
         objects: BTreeMap::new(),

@@ -13,6 +13,14 @@ const MAX_FILE: u64 = 64 * 1024 * 1024;
 const TRANSACTION: &str = ".save-transaction";
 const INDEX: &str = "level.data";
 const MAGIC: &[u8; 8] = b"TERAMIC\0";
+#[cfg(test)]
+#[path = "regions/building_jobs_tests.rs"]
+mod building_jobs_tests;
+#[path = "regions/building_legacy.rs"]
+mod building_legacy;
+#[cfg(test)]
+#[path = "regions/chest_placement_tests.rs"]
+mod chest_placement_tests;
 mod creature_legacy;
 mod kingdom_legacy;
 #[path = "regions/rail_legacy.rs"]
@@ -25,6 +33,9 @@ use kingdom_legacy::{KingdomIndex10, KingdomRecord9, TreeIndex11};
 #[cfg(test)]
 #[path = "regions/hierarchy_tests.rs"]
 mod hierarchy_tests;
+#[cfg(test)]
+#[path = "regions/kingdom_starter_tests.rs"]
+mod kingdom_starter_tests;
 #[cfg(test)]
 #[path = "regions/npc_work_tests.rs"]
 mod npc_work_tests;
@@ -76,6 +87,32 @@ struct TrainIndex {
 struct WorkIndex {
     prior: TrainIndex,
     jobs: terra_core::npc_jobs::WorkRegistry,
+}
+
+// ID22 remains frozen; creation receipts are appended only in ID23.
+#[derive(Serialize, Deserialize)]
+struct StarterIndex {
+    prior: WorkIndex,
+    starters: terra_core::kingdom::KingdomStarterRegistry,
+}
+
+// ID24/25 stay frozen in building_legacy. ID26 adds authoritative Creative funding.
+#[derive(Serialize, Deserialize)]
+struct BuildingIndex {
+    prior: StarterIndex,
+    buildings: terra_core::building_jobs::BuildingRegistry,
+}
+
+fn read_building_index(bytes: &[u8]) -> Result<BuildingIndex, String> {
+    let index: BuildingIndex = match bytes.get(12..16) {
+        Some(b"ID26") => decode(b"ID26", bytes)?,
+        Some(b"ID25") => decode::<building_legacy::BuildingIndex25>(b"ID25", bytes)?.migrate(),
+        _ => decode::<building_legacy::BuildingIndex24>(b"ID24", bytes)?.migrate()?,
+    };
+    if !index.buildings.valid() {
+        return Err("Invalid persistent construction registry".into());
+    }
+    Ok(index)
 }
 
 // Frozen IDX9/F56 registry: capabilities were introduced in ID10.
@@ -238,8 +275,24 @@ struct Index2 {
     index: Index,
     clock: Option<terra_core::WorldClock>,
 }
+fn read_starter_index(bytes: &[u8]) -> Result<StarterIndex, String> {
+    let index: StarterIndex = if matches!(bytes.get(12..16), Some(b"ID24" | b"ID25" | b"ID26")) {
+        read_building_index(bytes)?.prior
+    } else {
+        decode(b"ID23", bytes)?
+    };
+    if !index.starters.valid() {
+        return Err("Invalid persistent kingdom starter receipts".into());
+    }
+    Ok(index)
+}
 fn read_work_index(bytes: &[u8]) -> Result<WorkIndex, String> {
-    let work = if bytes.get(12..16) == Some(b"ID21") {
+    let work = if matches!(
+        bytes.get(12..16),
+        Some(b"ID23" | b"ID24" | b"ID25" | b"ID26")
+    ) {
+        read_starter_index(bytes)?.prior
+    } else if bytes.get(12..16) == Some(b"ID21") {
         let old: work_legacy::WorkIndex21 = decode(b"ID21", bytes)?;
         WorkIndex {
             prior: old.prior,
@@ -254,7 +307,10 @@ fn read_work_index(bytes: &[u8]) -> Result<WorkIndex, String> {
     Ok(work)
 }
 fn read_train_index(bytes: &[u8]) -> Result<TrainIndex, String> {
-    if matches!(bytes.get(12..16), Some(b"ID21" | b"ID22")) {
+    if matches!(
+        bytes.get(12..16),
+        Some(b"ID21" | b"ID22" | b"ID23" | b"ID24" | b"ID25" | b"ID26")
+    ) {
         let work = read_work_index(bytes)?;
         if !work.jobs.valid() {
             return Err("Invalid persistent NPC work registry".into());
@@ -295,6 +351,10 @@ fn read_index(root: &Path) -> Result<KingdomIndex, String> {
                 | b"ID20"
                 | b"ID21"
                 | b"ID22"
+                | b"ID23"
+                | b"ID24"
+                | b"ID25"
+                | b"ID26"
         )
     ) {
         let data: TreeIndex = if matches!(
@@ -310,6 +370,10 @@ fn read_index(root: &Path) -> Result<KingdomIndex, String> {
                     | b"ID20"
                     | b"ID21"
                     | b"ID22"
+                    | b"ID23"
+                    | b"ID24"
+                    | b"ID25"
+                    | b"ID26"
             )
         ) {
             let data = read_train_index(&bytes)?;
@@ -543,6 +607,13 @@ struct RailRegion {
     curves: Vec<([i64; 3], terra_core::rails::CurveSpec)>,
 }
 
+/// Liquid quantities extend the frozen object bytes; old REG*/RGA* payloads are unchanged.
+#[derive(Serialize, Deserialize)]
+struct LiquidRegion {
+    prior: Vec<u8>,
+    liquids: Vec<([i64; 3], terra_world::edits::LiquidState)>,
+}
+
 /// Frozen pre-RGB wire layout. New appearance metadata lives in RGA7, never in old section bytes.
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct StoredSectionDelta {
@@ -602,6 +673,13 @@ mod bees_tests;
 #[path = "regions/pets_tests.rs"]
 mod pet_tests;
 fn read_creature_region(bytes: &[u8]) -> Result<CreatureRegion, String> {
+    if bytes.get(12..16) == Some(b"RG15") {
+        let data: LiquidRegion = decode(b"RG15", bytes)?;
+        if data.prior.get(12..16) == Some(b"RG15") {
+            return Err("Nested liquid wrapper".into());
+        }
+        return read_creature_region(&data.prior);
+    }
     if bytes.get(12..16) == Some(b"RG14") {
         let data: TrainServiceRegion = decode(b"RG14", bytes)?;
         if data.prior.get(12..16) == Some(b"RG14") {
@@ -800,6 +878,7 @@ fn read_region(bytes: &[u8]) -> Result<Region, String> {
                 | b"RG12"
                 | b"RG13"
                 | b"RG14"
+                | b"RG15"
         )
     ) {
         return read_creature_region(bytes).map(|data| data.region);
@@ -863,6 +942,7 @@ fn read_region(bytes: &[u8]) -> Result<Region, String> {
                                     secondary: s.secondary,
                                     wood: terra_core::WoodSpecies::Oak,
                                     rail_curve: None,
+                                    liquid: None,
                                 },
                             )
                         })
@@ -1505,10 +1585,24 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
     sections.sort_unstable_by_key(|p| (p.x, p.y, p.z));
     let mut belts: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
     let mut rail_curves: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
+    let mut liquid_states: BTreeMap<[i64; 2], Vec<_>> = BTreeMap::new();
     for p in sections {
         let position = [p.x.div_euclid(32), p.z.div_euclid(32)];
         let delta = journal.section_delta(p);
         for (local, state) in &delta.objects {
+            if let Some(liquid) = state.liquid {
+                let cell = p
+                    .global_block(local.map(usize::from))
+                    .map_err(|error| error.to_string())?;
+                let material = journal.block(cell).ok_or("Orphaned liquid state")?;
+                if !state.valid_for(cell, material) {
+                    return Err("Invalid liquid state".into());
+                }
+                liquid_states
+                    .entry(position)
+                    .or_default()
+                    .push((cell, liquid));
+            }
             if let Some(curve) = state.rail_curve {
                 let cell = p
                     .global_block(local.map(usize::from))
@@ -2139,6 +2233,18 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
                 },
             )?
         };
+        let liquids = liquid_states.remove(&p).unwrap_or_default();
+        let bytes = if liquids.is_empty() {
+            bytes
+        } else {
+            encode(
+                b"RG15",
+                &LiquidRegion {
+                    prior: bytes,
+                    liquids,
+                },
+            )?
+        };
         stage(region_name(p), bytes)?;
     }
     for player in players {
@@ -2176,8 +2282,10 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         };
         stage(format!("players/{player}.data"), bytes)?;
     }
-    let bytes = if gameplay.trains != Default::default()
+    let bytes = if gameplay.buildings != Default::default()
+        || gameplay.trains != Default::default()
         || gameplay.jobs != Default::default()
+        || gameplay.kingdom_starters != Default::default()
         || gameplay.trees != Default::default()
         || gameplay.kingdoms != Default::default()
     {
@@ -2194,7 +2302,38 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
             },
             trees: gameplay.trees.clone(),
         };
-        if gameplay.jobs != Default::default() {
+        if gameplay.buildings != Default::default() {
+            encode(
+                b"ID26",
+                &BuildingIndex {
+                    prior: StarterIndex {
+                        prior: WorkIndex {
+                            prior: TrainIndex {
+                                prior,
+                                trains: gameplay.trains.clone(),
+                            },
+                            jobs: gameplay.jobs.clone(),
+                        },
+                        starters: gameplay.kingdom_starters.clone(),
+                    },
+                    buildings: gameplay.buildings.clone(),
+                },
+            )?
+        } else if gameplay.kingdom_starters != Default::default() {
+            encode(
+                b"ID23",
+                &StarterIndex {
+                    prior: WorkIndex {
+                        prior: TrainIndex {
+                            prior,
+                            trains: gameplay.trains.clone(),
+                        },
+                        jobs: gameplay.jobs.clone(),
+                    },
+                    starters: gameplay.kingdom_starters.clone(),
+                },
+            )?
+        } else if gameplay.jobs != Default::default() {
             encode(
                 b"ID22",
                 &WorkIndex {
@@ -2274,6 +2413,10 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
                     | b"ID20"
                     | b"ID21"
                     | b"ID22"
+                    | b"ID23"
+                    | b"ID24"
+                    | b"ID25"
+                    | b"ID26"
             )
         ) {
             let data = read_train_index(&bytes)?;
@@ -2299,10 +2442,32 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
     journal.clock = timed.clock;
     journal.weather = timed.weather;
     let mut gameplay = GameplayState {
+        buildings: {
+            let bytes = read(&root.join(INDEX))?;
+            if matches!(bytes.get(12..16), Some(b"ID24" | b"ID25" | b"ID26")) {
+                read_building_index(&bytes)?.buildings
+            } else {
+                Default::default()
+            }
+        },
         jobs: {
             let bytes = read(&root.join(INDEX))?;
-            if matches!(bytes.get(12..16), Some(b"ID21" | b"ID22")) {
+            if matches!(
+                bytes.get(12..16),
+                Some(b"ID21" | b"ID22" | b"ID23" | b"ID24" | b"ID25" | b"ID26")
+            ) {
                 read_work_index(&bytes)?.jobs
+            } else {
+                Default::default()
+            }
+        },
+        kingdom_starters: {
+            let bytes = read(&root.join(INDEX))?;
+            if matches!(
+                bytes.get(12..16),
+                Some(b"ID23" | b"ID24" | b"ID25" | b"ID26")
+            ) {
+                read_starter_index(&bytes)?.starters
             } else {
                 Default::default()
             }
@@ -2355,6 +2520,19 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
             return Err("Duplicate region index".into());
         }
         let mut bytes = read(&root.join(region_name(p)))?;
+        let mut liquid_states = BTreeMap::new();
+        if bytes.get(12..16) == Some(b"RG15") {
+            let data: LiquidRegion = decode(b"RG15", &bytes)?;
+            if data.liquids.len() > 131_072 || data.prior.get(12..16) == Some(b"RG15") {
+                return Err("Invalid liquid count or nesting".into());
+            }
+            for (cell, state) in data.liquids {
+                if region_at(cell) != p || liquid_states.insert(cell, state).is_some() {
+                    return Err("Duplicate or misplaced liquid state".into());
+                }
+            }
+            bytes = data.prior;
+        }
         let mut rail_curves = BTreeMap::new();
         if bytes.get(12..16) == Some(b"RG14") {
             let data: TrainServiceRegion = decode(b"RG14", &bytes)?;
@@ -2777,6 +2955,7 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
                     .global_block(local.map(usize::from))
                     .map_err(|error| error.to_string())?;
                 state.rail_curve = rail_curves.remove(&cell);
+                state.liquid = liquid_states.remove(&cell);
             }
             delta.tints = tints
                 .remove(&(owner.x, owner.y, owner.z))
@@ -2788,6 +2967,9 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
         }
         if !rail_curves.is_empty() {
             return Err("Orphaned rail curve state".into());
+        }
+        if !liquid_states.is_empty() {
+            return Err("Liquid metadata has no saved block object".into());
         }
         for drop in region.drops {
             if region_at(drop.position.map(|v| v.floor() as i64)) != p {
@@ -3032,3 +3214,7 @@ mod water_source_tests;
 #[cfg(test)]
 #[path = "regions/tree_tests.rs"]
 mod tree_tests;
+
+#[cfg(test)]
+#[path = "regions/liquid_tests.rs"]
+mod liquid_tests;

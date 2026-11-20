@@ -7,6 +7,42 @@ use crate::{
 use terra_voxel::{MaterialId, SectionPos};
 
 impl TerraGenerator {
+    pub(in crate::generation) fn seagrass_segments_height(
+        &self,
+        column: SurfaceColumn,
+        [x, z]: [f64; 2],
+    ) -> u8 {
+        if self.config().cave_structure_revision == 0 {
+            return 0;
+        }
+        let Some(level) = column.water_level else {
+            return 0;
+        };
+        let ground = (column.height - 0.5).floor() as i64;
+        let support = [x.floor() as i64, ground, z.floor() as i64];
+        // The heightfield is only an envelope: connector/cave CSG can remove
+        // this cell. Use the final density, including the protected ocean bed.
+        let density = self
+            .cave_density_with_column([x, ground as f64 + 0.5, z], column)
+            .0;
+        let material = self.column_material(column, column.height - ground as f64 - 0.5, density);
+        let Some(prop) = self.aquatic_prop(
+            support,
+            terra_voxel::global_to_section(support).0,
+            material as u16,
+            column,
+            level - ground as f64 - 1.0,
+        ) else {
+            return 0;
+        };
+        if prop.kind != PropKind::Seagrass {
+            return 0;
+        }
+        ((prop.bounds()[1][1] - prop.position[1]).ceil() as u8)
+            .min((level - ground as f64 - 1.2).floor().max(0.0) as u8)
+            .min(8)
+    }
+
     pub(in crate::generation) fn aquatic_prop(
         &self,
         support: [i64; 3],
@@ -138,6 +174,50 @@ impl TerraGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn surrogate_seagrass_uses_the_final_density_instead_of_a_carved_heightfield_root() {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            landscape_revision: 3,
+            cave_structure_revision: 1,
+            caves: false,
+            biomes: false,
+            rivers: false,
+            ..Default::default()
+        })
+        .unwrap();
+        let mut column = terrain.surface_column(0.5, 0.5);
+        column.height = 12.0;
+        column.water_level = Some(20.0);
+        column.surface_material = MaterialId::Sand;
+        column.slope = 0.0;
+        column.river_cavity = None;
+        column.cave_cavity = None;
+        column.cave = Default::default();
+        column.ocean.weights = [0.0, 1.0, 0.0];
+        column.ocean.cover = 1.0;
+        let x = (0..128)
+            .map(|x| f64::from(x) + 0.5)
+            .find(|&x| terrain.seagrass_segments_height(column, [x, 0.5]) > 0)
+            .expect("fixture must contain a deterministic meadow root");
+        column.seagrass_height = terrain.seagrass_segments_height(column, [x, 0.5]);
+        let root = terrain.sample_with_column([x, 11.5, 0.5], column);
+        assert!(root.density <= 0.0);
+        assert!(MaterialId::from_raw(root.material).is_some_and(MaterialId::supports_water_plants));
+        assert_eq!(
+            terrain.sample_with_column([x, 12.5, 0.5], column).material,
+            MaterialId::Seagrass as u16
+        );
+        column.river_cavity = Some([10.5, 14.0]);
+        column.seagrass_height = terrain.seagrass_segments_height(column, [x, 0.5]);
+        assert_eq!(column.seagrass_height, 0);
+        for y in [11.5, 12.5, 13.5] {
+            assert_eq!(
+                terrain.sample_with_column([x, y, 0.5], column).material,
+                MaterialId::Air as u16
+            );
+        }
+    }
+
     #[test]
     fn reefs_are_deterministic_rooted_underwater_and_include_all_seven_species() {
         let terrain = TerraGenerator::new(terra_core::WorldConfig {

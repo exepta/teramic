@@ -1,0 +1,22 @@
+{
+  "id": "teramic::cracked_grave_slab",
+  "name": "Cracked Floor Slab",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 347
+    },
+    "count": 6
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 339
+        },
+        "count": 3
+      }
+    ]
+  }
+}

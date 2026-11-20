@@ -5,6 +5,18 @@ Inventare und Serverantworten. Bergarbeiter, Landwirte, Sammler und Holzfaeller
 arbeiten mit tatsaechlich geladenen Weltobjekten und vorhandenen Vorraeten.
 Berufsstationen verbinden diese Arbeit mit eigenen Lagerbloecken.
 
+Arbeitskraefte lassen sich jetzt direkt per Rechtsklick oeffnen. Der Dialog zeigt
+ihr privates Inventar und bietet Gebiets-/Lagerwahl in der Welt mit HUD-Modus.
+Bedienung und Grenzen: [Direkte NPC-Interaktion](npc-interaction-and-kingdom.md).
+Dieselbe Inventaransicht erscheint bei Auswahl einer eigenen Arbeitskraft in der
+Bergfriedliste. Im eigenen Reich ist diese Verwaltung auch jenseits der normalen
+Nahdistanz moeglich; Besitz, tatsaechliche Gebietszugehoerigkeit und Rechte bleiben
+serverseitig geprueft.
+
+**Handwerker** verwenden einen getrennten Bauauftrag ohne persoenliches Arbeitsgebiet.
+Stadtlager, Hausplaetze und Baufortschritt werden unter **Lokales Bauen / Building
+Local** verwaltet: [Handwerker und lokaler Hausbau](settlement-building.md).
+
 ## Auftrag Zuweisen
 
 1. Einen bereits gegruendeten Bergfried oeffnen und den Tab **Arbeitsauftraege**
@@ -20,7 +32,9 @@ Berufsstationen verbinden diese Arbeit mit eigenen Lagerbloecken.
 5. Prioritaet 0 bis 9 einstellen und **Auftrag speichern** waehlen. Hoehere Werte
    haben Vorrang; der Server bestaetigt oder verwirft die Zuweisung.
 
-Bei der Zuweisung muss der Spieler hoechstens 128 Meter vom NPC entfernt sein.
+Bei der normalen Zuweisung muss der Spieler hoechstens 128 Meter vom NPC entfernt
+sein. Fuer den eigenen NPC im selben Reich entfaellt diese Spieler-NPC-Grenze,
+solange der Spieler in dessen eigenem beanspruchtem Gebiet steht.
 Beide angegebenen Gebietsenden und das Lager duerfen hoechstens 64 Meter vom NPC
 entfernt liegen. Fremde Arbeitskraefte lassen sich nicht uebernehmen. Das Lager
 muss geladen sein; Zuweisung und Ausfuehrung pruefen die Kingdom-Rechte fuer
@@ -93,10 +107,25 @@ ueber dessen Rand hinausragen; auch dort gelten die jeweiligen Rechte. Fehlende
 Sections eines bereits ausgewaehlten Baums werden ueber das vorhandene begrenzte
 Streaming angefordert.
 
-Die Arbeitskraft holt eine echte Axt am Lager ab und laeuft zum Stamm. Die
-Arbeitszeit richtet sich nach Stammzahl und Axttyp. Anschliessend entfernt sie
+Nach der Zuweisung verlangt die Arbeitskraft zuerst eine echte Holzfaeller-Station.
+Diese muss im Arbeitsgebiet oder hoechstens vier Bloecke in X/Z und zwei in Y
+vom Lager entfernt stehen. Eine normale Truhe oder falsche Berufsstation
+zaehlt nicht. Der NPC muss die Station physisch erreichen; erst dann wechselt
+er das Berufsmodell, unter Beibehaltung seines dauerhaften Geschlechts und
+seiner Identitaet. Bei entferntem, ungeladenem oder verweigertem Tisch wartet er
+mit erhaltenem Inventar und Baumfortschritt.
+
+Danach holt die Arbeitskraft eine echte Axt am Lager ab und laeuft zum Stamm.
+Fehlt das benoetigte Werkzeug im Ausgabelager, dient die zuvor besuchte
+Holzfaeller-Station als weitere reale Versorgungsquelle. Dasselbe gilt fuer
+passende Setzlinge zur Nachpflanzung. Der NPC muss auch diesen Vorrat physisch
+erreichen; Rechte und erlaubter Transportweg werden geprueft. Ertraege gehen
+weiterhin in das zugewiesene Ausgabelager.
+Die Arbeitszeit richtet sich nach Stammzahl und Axttyp. Anschliessend entfernt sie
 zugeordnete Bloecke in begrenzten Schritten. Jeder tatsaechlich entfernte Stamm
-erzeugt einen echten Holz-Drop; pro Baum entsteht einmal ein passender Setzling.
+erzeugt einen echten Holz-Drop. Jeder entfernte Laubblock hat unabhaengig eine
+20-%-Chance auf einen Setzling derselben Baumart; Holz erzeugt keinen garantierten
+Setzling. Normale Laubernte gibt den verbrauchten Laubblock nicht zusaetzlich zurueck.
 Die gespeicherten Drop-IDs verhindern ein erneutes Erzeugen beim Fortsetzen.
 Bereits von einem Spieler oder Sammler aufgenommene Drops werden nicht ersetzt.
 Der Holzfaeller laeuft die Drops an, nimmt sie auf und bringt die Fracht zum Lager.
@@ -109,6 +138,10 @@ und innerhalb des Arbeitsgebiets. Die normale Setzlingspruefung beachtet Boden,
 Wasser, belegte Flaechen und Rechte. Ohne Vorrat oder geeigneten Pflanzplatz bleibt
 der Teilauftrag mit entsprechendem Wartegrund erhalten; ein Setzling wird nicht
 bei einem gescheiterten Pflanzversuch verbraucht.
+
+Ein noch nicht begonnener Baum, fuer den wiederholt keine erreichbare Arbeitsseite
+gefunden wird, erhaelt eine begrenzte Wiederholpause. Dadurch koennen andere Baeume
+im Arbeitsgebiet gewaehlt werden; begonnene Teilbaeume werden nicht verworfen.
 
 ### Reale Axt-Haltbarkeit
 
@@ -137,7 +170,7 @@ durch einen Spieler vermindert die gespeicherte Resthaltbarkeit noch nicht.
 
 Die Ansicht zeigt den bestaetigten Zustand: bereit, unterwegs, bei der Arbeit,
 Anlieferung oder einen Wartegrund. Dazu gehoeren fehlende Werkzeuge oder Samen,
-volle Lager, versperrte Wege, ungeladene Bereiche, fehlende Rechte, fehlende
+fehlende Berufsstationen, volle Lager, versperrte Wege, ungeladene Bereiche, fehlende Rechte, fehlende
 Arbeitsziele und ein ungeeigneter Pflanzplatz. Nachts ruht die Arbeit entsprechend
 dem Villager-Tagesrhythmus; die vorhandene Bewohnerlogik uebernimmt Heimkehr und
 Schlaf, statt den NPC parallel weiterarbeiten zu lassen.
@@ -151,13 +184,23 @@ Lager geaendert werden koennen; Pausieren und Fortsetzen bleiben moeglich.
 Die Anzeige bleibt bis zur Serverbestaetigung beim autoritativen Zustand. Es gibt
 keinen Loeschen-Button, der einen getragenen Vorrat unbemerkt entsorgen koennte.
 
+Untatige eigene zivile NPCs laufen tagsueber in geladenen Build-Claims ihres Reichs
+umher. Das gilt auch bei **Keine Arbeitsziele**, waehrend die begrenzte Zielsuche
+weiterlaeuft. Konkrete Arbeit, fehlendes Werkzeug fuer einen begonnenen Auftrag,
+Baustellen, explizite Befehle und die vorhandene Schlaflogik behalten Vorrang.
+Reine Territoriumsclaims sind keine automatischen Wanderflaechen.
+
 ## Speicherung Und Grenzen
 
 Auftraege, Aktivierung, NPC-Inventare und begonnene Baumauftraege werden im
-Speicherindex **ID22** persistiert. Der eingefrorene **ID21**-Decoder uebernimmt
+Speicherindex **ID25** persistiert. ID22 ergaenzte Baumauftraege, ID23 erhaelt
+zusaetzlich die einmaligen Kingdom-Gruendungsbelege; ID24 ergaenzt getrennte
+Bauauftraege, Stadtlagerbereiche und Handwerkerinventare. Der eingefrorene **ID21**-Decoder uebernimmt
 bisherige F58-Auftraege und Inventare und ergaenzt leere Baumauftragsdaten.
 Aeltere Indexversionen laden weiterhin ohne erfundene Arbeitsauftraege.
-Client und Server benoetigen gemeinsam Netzwerkprotokoll **135**.
+ID25 speichert die gewaehlte Bauvorlage fuer automatische Wohngebiete.
+
+Client und Server benoetigen gemeinsam Netzwerkprotokoll **140**.
 
 Die Autoritaet arbeitet mit 10 Hz und begrenztem Budget: hoechstens 16
 Arbeitskraefte pro Aufruf und 64 Rasterkandidaten je besuchter Arbeitskraft.
@@ -179,9 +222,13 @@ Die erste Fassung ist bewusst begrenzt:
   oder in deren unmittelbarer Umgebung nach. Eine allgemeine Forstflaechenplanung,
   Terrainglaettung und neue Wege gehoeren nicht zum Auftrag.
 - Die sechs weiteren Stationsberufe haben noch keine produktive Automatisierung.
-- Weitergehende Navigation und schwierige Hoehen-/Tuersituationen bleiben F49.
+- Lokale Hindernis-, Hoehen- und Tuersituationen verwenden die
+  [Navigation aus F49](navigation-and-founding.md). Globale Transportrouten
+  bleiben F69.
 
 Implementierung: `terra-core::npc_jobs`, `terra-world::npc_work`,
 `terra-network::server_npc_work`, `terra-core::profession_stations` und
 `terra-ui::npc_work` mit der TiltUI-Komponente
 `src-ui/components/npc-work-panel/npc-work-panel.component.*`.
+
+Stationsablauf, Geschlechtermodelle und 20-%-Laubbeute: [Holzfaeller und Setzlinge](lumberjack-stations-and-drops.md).

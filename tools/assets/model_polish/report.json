@@ -1,0 +1,1956 @@
+[
+  {
+    "path": "assets/terra/blocks/fixtures/pedestal.gltf",
+    "triangles_before": 6,
+    "triangles_after": 6,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/active_rune_block.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/army_station.glb",
+    "triangles_before": 992,
+    "triangles_after": 992,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/basin.gltf",
+    "triangles_before": 348,
+    "triangles_after": 348,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/belt_distributor.gltf",
+    "triangles_before": 816,
+    "triangles_after": 816,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/belt_merger.gltf",
+    "triangles_before": 620,
+    "triangles_after": 620,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/bergfried.gltf",
+    "triangles_before": 5272,
+    "triangles_after": 5272,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/bergfried_wall.gltf",
+    "triangles_before": 5764,
+    "triangles_after": 5764,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/birch_bed.gltf",
+    "triangles_before": 1284,
+    "triangles_after": 1892,
+    "beveled_boxes": 19,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/birch_door.gltf",
+    "triangles_before": 2748,
+    "triangles_after": 3036,
+    "beveled_boxes": 9,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/birch_window.gltf",
+    "triangles_before": 612,
+    "triangles_after": 996,
+    "beveled_boxes": 12,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/bishop_station.glb",
+    "triangles_before": 1312,
+    "triangles_after": 1312,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/black_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/blossom_bush.glb",
+    "triangles_before": 4016,
+    "triangles_after": 4016,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/blossom_petal_block.glb",
+    "triangles_before": 12,
+    "triangles_after": 12,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/blossoming_vines.glb",
+    "triangles_before": 3468,
+    "triangles_after": 3468,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/blue_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/bone_pile.glb",
+    "triangles_before": 1116,
+    "triangles_after": 1116,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/bordered_grave.glb",
+    "triangles_before": 600,
+    "triangles_after": 600,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/butcher_station.glb",
+    "triangles_before": 936,
+    "triangles_after": 936,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/campfire.gltf",
+    "triangles_before": 288,
+    "triangles_after": 288,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_arch_left.gltf",
+    "triangles_before": 206,
+    "triangles_after": 206,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_arch_right.gltf",
+    "triangles_before": 206,
+    "triangles_after": 206,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_arrow_slit.gltf",
+    "triangles_before": 3872,
+    "triangles_after": 3872,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_battlement_corner.gltf",
+    "triangles_before": 9988,
+    "triangles_after": 9988,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_battlement_pillar.gltf",
+    "triangles_before": 8096,
+    "triangles_after": 8096,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_battlement_straight.gltf",
+    "triangles_before": 8492,
+    "triangles_after": 8492,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_blackstone_wall.gltf",
+    "triangles_before": 1452,
+    "triangles_after": 1452,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_cracked_wall.gltf",
+    "triangles_before": 2892,
+    "triangles_after": 2892,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_desert_wall.gltf",
+    "triangles_before": 1516,
+    "triangles_after": 1516,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_iron_wall.gltf",
+    "triangles_before": 2156,
+    "triangles_after": 2156,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_moss_wall.gltf",
+    "triangles_before": 2508,
+    "triangles_after": 2508,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_overgrown_wall.gltf",
+    "triangles_before": 4900,
+    "triangles_after": 4900,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_royal_wall.gltf",
+    "triangles_before": 3996,
+    "triangles_after": 3996,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_sandstone_wall.gltf",
+    "triangles_before": 1452,
+    "triangles_after": 1452,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_snow_wall.gltf",
+    "triangles_before": 1672,
+    "triangles_after": 1672,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_stone_wall.gltf",
+    "triangles_before": 1452,
+    "triangles_after": 1452,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_timber_wall.gltf",
+    "triangles_before": 2332,
+    "triangles_after": 2332,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/castle_window.gltf",
+    "triangles_before": 3568,
+    "triangles_after": 3568,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/cauldron.gltf",
+    "triangles_before": 1712,
+    "triangles_after": 1712,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/chain.gltf",
+    "triangles_before": 704,
+    "triangles_after": 704,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/cherry_door.gltf",
+    "triangles_before": 2556,
+    "triangles_after": 2844,
+    "beveled_boxes": 9,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/cherry_window.gltf",
+    "triangles_before": 564,
+    "triangles_after": 948,
+    "beveled_boxes": 12,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/chest.gltf",
+    "triangles_before": 768,
+    "triangles_after": 2016,
+    "beveled_boxes": 39,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/chimney_bend_down.gltf",
+    "triangles_before": 272,
+    "triangles_after": 528,
+    "beveled_boxes": 8,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/chimney_bend_up.gltf",
+    "triangles_before": 272,
+    "triangles_after": 528,
+    "beveled_boxes": 8,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/chimney_elbow.gltf",
+    "triangles_before": 304,
+    "triangles_after": 560,
+    "beveled_boxes": 8,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/chimney_horizontal.gltf",
+    "triangles_before": 304,
+    "triangles_after": 560,
+    "beveled_boxes": 8,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/chimney_straight.gltf",
+    "triangles_before": 304,
+    "triangles_after": 560,
+    "beveled_boxes": 8,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/conveyor.gltf",
+    "triangles_before": 636,
+    "triangles_after": 636,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/cracked_grave_slab.glb",
+    "triangles_before": 440,
+    "triangles_after": 440,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/cracked_grave_stone.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/cross_relief.glb",
+    "triangles_before": 308,
+    "triangles_after": 308,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crusher.gltf",
+    "triangles_before": 3248,
+    "triangles_after": 3248,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_arch.glb",
+    "triangles_before": 280,
+    "triangles_after": 280,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_arrow_trap.glb",
+    "triangles_before": 296,
+    "triangles_after": 296,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_books.glb",
+    "triangles_before": 1232,
+    "triangles_after": 1232,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_brick.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_candles.glb",
+    "triangles_before": 724,
+    "triangles_after": 724,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_capital.glb",
+    "triangles_before": 148,
+    "triangles_after": 148,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_chain.glb",
+    "triangles_before": 1440,
+    "triangles_after": 1440,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_chandelier.glb",
+    "triangles_before": 1220,
+    "triangles_after": 1220,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_column.glb",
+    "triangles_before": 388,
+    "triangles_after": 388,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_column_base.glb",
+    "triangles_before": 148,
+    "triangles_after": 148,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_curtain.glb",
+    "triangles_before": 740,
+    "triangles_after": 740,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_heraldic_banner.glb",
+    "triangles_before": 948,
+    "triangles_after": 948,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_lever.glb",
+    "triangles_before": 132,
+    "triangles_after": 132,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_portcullis.glb",
+    "triangles_before": 352,
+    "triangles_after": 352,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_pressure_plate.glb",
+    "triangles_before": 88,
+    "triangles_after": 88,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_spike_trap.glb",
+    "triangles_before": 296,
+    "triangles_after": 296,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_torn_banner.glb",
+    "triangles_before": 948,
+    "triangles_after": 948,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_wall_niche.glb",
+    "triangles_before": 708,
+    "triangles_after": 708,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_wall_switch.glb",
+    "triangles_before": 132,
+    "triangles_after": 132,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/crypt_wall_torch.glb",
+    "triangles_before": 216,
+    "triangles_after": 216,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/dark_grave_stone.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/dark_gray_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/dark_mushrooms.glb",
+    "triangles_before": 1188,
+    "triangles_after": 1188,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/dead_grass.glb",
+    "triangles_before": 260,
+    "triangles_after": 260,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/farm_station.glb",
+    "triangles_before": 2028,
+    "triangles_after": 2028,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/faucet.gltf",
+    "triangles_before": 404,
+    "triangles_after": 404,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/filtered_funnel.gltf",
+    "triangles_before": 944,
+    "triangles_after": 944,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/filtered_tunnel.gltf",
+    "triangles_before": 716,
+    "triangles_after": 716,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/fiverr_grass_faces.glb",
+    "triangles_before": 1220,
+    "triangles_after": 1220,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/fluid_infuser.gltf",
+    "triangles_before": 1488,
+    "triangles_after": 1488,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/furnace.gltf",
+    "triangles_before": 1792,
+    "triangles_after": 3264,
+    "beveled_boxes": 46,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/gearbox_horizontal.gltf",
+    "triangles_before": 1772,
+    "triangles_after": 1772,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/gearbox_vertical.gltf",
+    "triangles_before": 1772,
+    "triangles_after": 1772,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/glass_pipe.gltf",
+    "triangles_before": 1452,
+    "triangles_after": 1452,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/glowing_lantern_stone.glb",
+    "triangles_before": 12,
+    "triangles_after": 12,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/glowing_purple_mushrooms.glb",
+    "triangles_before": 1188,
+    "triangles_after": 1188,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/glowing_spirit_flowers.glb",
+    "triangles_before": 1704,
+    "triangles_after": 1704,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/grave_cross.glb",
+    "triangles_before": 132,
+    "triangles_after": 132,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/grave_lantern_post.glb",
+    "triangles_before": 520,
+    "triangles_after": 520,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/grave_moss.glb",
+    "triangles_before": 432,
+    "triangles_after": 432,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/grave_relief_wall.glb",
+    "triangles_before": 788,
+    "triangles_after": 788,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/grave_skull.glb",
+    "triangles_before": 481,
+    "triangles_after": 481,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/grave_stone.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/grave_stone_slab.glb",
+    "triangles_before": 220,
+    "triangles_after": 220,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/grave_urn.glb",
+    "triangles_before": 464,
+    "triangles_after": 464,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/gravestone_large.glb",
+    "triangles_before": 456,
+    "triangles_after": 456,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/gravestone_medium.glb",
+    "triangles_before": 456,
+    "triangles_after": 456,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/gravestone_small.glb",
+    "triangles_before": 456,
+    "triangles_after": 456,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/gray_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/green_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/hand_crank.gltf",
+    "triangles_before": 724,
+    "triangles_after": 724,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/hanging_blossom_lantern.glb",
+    "triangles_before": 1444,
+    "triangles_after": 1444,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/hanging_ivy.glb",
+    "triangles_before": 588,
+    "triangles_after": 588,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/hold_block.gltf",
+    "triangles_before": 504,
+    "triangles_after": 504,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/inactive_rune_block.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/inscribed_grave_slab.glb",
+    "triangles_before": 877,
+    "triangles_after": 877,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/iron_gear.gltf",
+    "triangles_before": 1824,
+    "triangles_after": 1824,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/iron_large_gear.gltf",
+    "triangles_before": 2976,
+    "triangles_after": 2976,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/iron_pipe.gltf",
+    "triangles_before": 1452,
+    "triangles_after": 1452,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/iron_shaft.gltf",
+    "triangles_before": 576,
+    "triangles_after": 576,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/item_hopper.gltf",
+    "triangles_before": 536,
+    "triangles_after": 536,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/item_importer.gltf",
+    "triangles_before": 740,
+    "triangles_after": 740,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/lantern.gltf",
+    "triangles_before": 9328,
+    "triangles_after": 9328,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/lavender_blossom_leaves.glb",
+    "triangles_before": 12,
+    "triangles_after": 12,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/lily_pad.glb",
+    "triangles_before": 236,
+    "triangles_after": 236,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/lime_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/locked_crypt_gate.glb",
+    "triangles_before": 440,
+    "triangles_after": 440,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/lotus_flower.glb",
+    "triangles_before": 1240,
+    "triangles_after": 1240,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/lumberjack_station.glb",
+    "triangles_before": 1328,
+    "triangles_after": 1328,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/market_station.glb",
+    "triangles_before": 2968,
+    "triangles_after": 2968,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/mine_station.glb",
+    "triangles_before": 1844,
+    "triangles_after": 1844,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/mixer.gltf",
+    "triangles_before": 3996,
+    "triangles_after": 3996,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/mosaic_grave_slab.glb",
+    "triangles_before": 220,
+    "triangles_after": 220,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/moss_grave_stone.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/mossy_crypt_arch.glb",
+    "triangles_before": 344,
+    "triangles_after": 344,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/mystic_mist_block.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/oak_bed.gltf",
+    "triangles_before": 1284,
+    "triangles_after": 1892,
+    "beveled_boxes": 19,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/oak_door.gltf",
+    "triangles_before": 2556,
+    "triangles_after": 2844,
+    "beveled_boxes": 9,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/oak_window.gltf",
+    "triangles_before": 564,
+    "triangles_after": 948,
+    "beveled_boxes": 12,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/orange_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/ornate_crypt_chest.glb",
+    "triangles_before": 748,
+    "triangles_after": 748,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/ornate_crypt_column.glb",
+    "triangles_before": 684,
+    "triangles_after": 684,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/ornate_grave_slab.glb",
+    "triangles_before": 300,
+    "triangles_after": 300,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/ornate_grave_stone.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/overgrown_grave_stone.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/petal_ground_cover.glb",
+    "triangles_before": 3360,
+    "triangles_after": 3360,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/pink_blossom_leaves.glb",
+    "triangles_before": 12,
+    "triangles_after": 12,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/pink_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/pump.gltf",
+    "triangles_before": 1032,
+    "triangles_after": 1032,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/purple_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_buffer.gltf",
+    "triangles_before": 1452,
+    "triangles_after": 1452,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_crossing.gltf",
+    "triangles_before": 3988,
+    "triangles_after": 3988,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_curve_large.gltf",
+    "triangles_before": 5008,
+    "triangles_after": 5008,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_curve_small.gltf",
+    "triangles_before": 2686,
+    "triangles_after": 2686,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_slope.gltf",
+    "triangles_before": 1464,
+    "triangles_after": 1464,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_slope_entry.gltf",
+    "triangles_before": 2856,
+    "triangles_after": 2856,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_slope_exit.gltf",
+    "triangles_before": 2856,
+    "triangles_after": 2856,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_straight.gltf",
+    "triangles_before": 1392,
+    "triangles_after": 1392,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_switch_left.gltf",
+    "triangles_before": 4537,
+    "triangles_after": 4536,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved",
+    "removed_collapsed_triangles": 1
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_switch_right.gltf",
+    "triangles_before": 4533,
+    "triangles_after": 4533,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_switch_stand.gltf",
+    "triangles_before": 220,
+    "triangles_after": 220,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/rail_turntable.gltf",
+    "triangles_before": 8950,
+    "triangles_after": 8950,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/railway_station.glb",
+    "triangles_before": 1496,
+    "triangles_after": 1496,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/red_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/sarcophagus_closed.glb",
+    "triangles_before": 484,
+    "triangles_after": 484,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/sarcophagus_open.glb",
+    "triangles_before": 804,
+    "triangles_after": 804,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/skeleton_remains.glb",
+    "triangles_before": 1297,
+    "triangles_after": 1297,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/skull_relief.glb",
+    "triangles_before": 701,
+    "triangles_after": 701,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/smith_station.glb",
+    "triangles_before": 1113,
+    "triangles_after": 1113,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/soul_brazier.glb",
+    "triangles_before": 792,
+    "triangles_after": 792,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/soul_crystal_large.glb",
+    "triangles_before": 200,
+    "triangles_after": 200,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/soul_crystal_small.glb",
+    "triangles_before": 200,
+    "triangles_after": 200,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/spirit_blossom_dirt.glb",
+    "triangles_before": 12,
+    "triangles_after": 12,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/spirit_blossom_grass.glb",
+    "triangles_before": 12,
+    "triangles_after": 12,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/spirit_blossom_log.glb",
+    "triangles_before": 12,
+    "triangles_after": 12,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/spirit_blossom_planks.glb",
+    "triangles_before": 12,
+    "triangles_after": 12,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/spirit_lantern_post.glb",
+    "triangles_before": 1576,
+    "triangles_after": 1576,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/spirit_shrine_stone.glb",
+    "triangles_before": 1628,
+    "triangles_after": 1628,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/spirit_stone.glb",
+    "triangles_before": 12,
+    "triangles_after": 12,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/spruce_bed.gltf",
+    "triangles_before": 1284,
+    "triangles_after": 1892,
+    "beveled_boxes": 19,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/spruce_door.gltf",
+    "triangles_before": 2556,
+    "triangles_after": 2844,
+    "beveled_boxes": 9,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/spruce_window.gltf",
+    "triangles_before": 564,
+    "triangles_after": 948,
+    "beveled_boxes": 12,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/stone_gear.gltf",
+    "triangles_before": 1824,
+    "triangles_after": 1824,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/stone_large_gear.gltf",
+    "triangles_before": 2976,
+    "triangles_after": 2976,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/stone_pipe.gltf",
+    "triangles_before": 1452,
+    "triangles_after": 1452,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/stone_shaft.gltf",
+    "triangles_before": 576,
+    "triangles_after": 576,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/thorn_bush.glb",
+    "triangles_before": 612,
+    "triangles_after": 612,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/torch.gltf",
+    "triangles_before": 2528,
+    "triangles_after": 3008,
+    "beveled_boxes": 15,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_assembly_station.gltf",
+    "triangles_before": 264,
+    "triangles_after": 264,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_axle.gltf",
+    "triangles_before": 152,
+    "triangles_after": 152,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_black_iron_block.gltf",
+    "triangles_before": 572,
+    "triangles_after": 572,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_black_iron_inner_corner.gltf",
+    "triangles_before": 660,
+    "triangles_after": 660,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_black_iron_outer_corner.gltf",
+    "triangles_before": 616,
+    "triangles_after": 616,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_black_iron_slab.gltf",
+    "triangles_before": 572,
+    "triangles_after": 572,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_black_iron_slope.gltf",
+    "triangles_before": 8,
+    "triangles_after": 8,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_black_iron_stairs.gltf",
+    "triangles_before": 660,
+    "triangles_after": 660,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_bogie.gltf",
+    "triangles_before": 4548,
+    "triangles_after": 4548,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_boiler_curved.gltf",
+    "triangles_before": 1204,
+    "triangles_after": 1204,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_boiler_end.gltf",
+    "triangles_before": 1592,
+    "triangles_after": 1592,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_boiler_straight.gltf",
+    "triangles_before": 1528,
+    "triangles_after": 1528,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_bolt.gltf",
+    "triangles_before": 396,
+    "triangles_after": 396,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_brass_pipe_bend.gltf",
+    "triangles_before": 192,
+    "triangles_after": 192,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_brass_pipe_straight.gltf",
+    "triangles_before": 128,
+    "triangles_after": 128,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_buffer.gltf",
+    "triangles_before": 172,
+    "triangles_after": 172,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_buffer_beam.gltf",
+    "triangles_before": 700,
+    "triangles_after": 700,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_cab.gltf",
+    "triangles_before": 748,
+    "triangles_after": 748,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_cab_door.gltf",
+    "triangles_before": 2556,
+    "triangles_after": 2844,
+    "beveled_boxes": 9,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_cab_wall_front.gltf",
+    "triangles_before": 584,
+    "triangles_after": 584,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_cab_wall_side.gltf",
+    "triangles_before": 308,
+    "triangles_after": 308,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_cab_window.gltf",
+    "triangles_before": 564,
+    "triangles_after": 948,
+    "beveled_boxes": 12,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_cargo.gltf",
+    "triangles_before": 220,
+    "triangles_after": 220,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_ceiling_light.gltf",
+    "triangles_before": 88,
+    "triangles_after": 88,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_chassis.gltf",
+    "triangles_before": 308,
+    "triangles_after": 308,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_chimney.gltf",
+    "triangles_before": 344,
+    "triangles_after": 344,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_coal_load.gltf",
+    "triangles_before": 748,
+    "triangles_after": 748,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_coal_piece.gltf",
+    "triangles_before": 704,
+    "triangles_after": 704,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_connecting_rod_long.gltf",
+    "triangles_before": 172,
+    "triangles_after": 172,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_connecting_rod_short.gltf",
+    "triangles_before": 172,
+    "triangles_after": 172,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_coupler.gltf",
+    "triangles_before": 220,
+    "triangles_after": 220,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_crosshead.gltf",
+    "triangles_before": 216,
+    "triangles_after": 216,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_dark_steel_block.gltf",
+    "triangles_before": 572,
+    "triangles_after": 572,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_dark_steel_inner_corner.gltf",
+    "triangles_before": 660,
+    "triangles_after": 660,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_dark_steel_outer_corner.gltf",
+    "triangles_before": 616,
+    "triangles_after": 616,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_dark_steel_slab.gltf",
+    "triangles_before": 572,
+    "triangles_after": 572,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_dark_steel_slope.gltf",
+    "triangles_before": 8,
+    "triangles_after": 8,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_dark_steel_stairs.gltf",
+    "triangles_before": 660,
+    "triangles_after": 660,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_frame.gltf",
+    "triangles_before": 308,
+    "triangles_after": 308,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_fuel_engine.gltf",
+    "triangles_before": 636,
+    "triangles_after": 636,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_grate_block.gltf",
+    "triangles_before": 440,
+    "triangles_after": 440,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_grate_inner_corner.gltf",
+    "triangles_before": 1320,
+    "triangles_after": 1320,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_grate_outer_corner.gltf",
+    "triangles_before": 880,
+    "triangles_after": 880,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_grate_slab.gltf",
+    "triangles_before": 440,
+    "triangles_after": 440,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_grate_slope.gltf",
+    "triangles_before": 120,
+    "triangles_after": 120,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_grate_stairs.gltf",
+    "triangles_before": 1320,
+    "triangles_after": 1320,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_handrail.gltf",
+    "triangles_before": 172,
+    "triangles_after": 172,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_handrail_post.gltf",
+    "triangles_before": 108,
+    "triangles_after": 108,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_hatch.gltf",
+    "triangles_before": 396,
+    "triangles_after": 396,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_headlight_front.gltf",
+    "triangles_before": 300,
+    "triangles_after": 300,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_headlight_side.gltf",
+    "triangles_before": 344,
+    "triangles_after": 344,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_ladder_front.gltf",
+    "triangles_before": 264,
+    "triangles_after": 264,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_ladder_side.gltf",
+    "triangles_before": 352,
+    "triangles_after": 352,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_main_frame.gltf",
+    "triangles_before": 572,
+    "triangles_after": 572,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_number_plate.gltf",
+    "triangles_before": 308,
+    "triangles_after": 308,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_piston_rod.gltf",
+    "triangles_before": 172,
+    "triangles_after": 172,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_pressure_gauge.gltf",
+    "triangles_before": 292,
+    "triangles_after": 292,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_pressure_unit.gltf",
+    "triangles_before": 420,
+    "triangles_after": 420,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_rail_builder.gltf",
+    "triangles_before": 2204,
+    "triangles_after": 2204,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_railing.gltf",
+    "triangles_before": 344,
+    "triangles_after": 344,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_red_frame.gltf",
+    "triangles_before": 572,
+    "triangles_after": 572,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_rivet_plate.gltf",
+    "triangles_before": 308,
+    "triangles_after": 308,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_rod_joint.gltf",
+    "triangles_before": 216,
+    "triangles_after": 216,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_roof_curved.gltf",
+    "triangles_before": 352,
+    "triangles_after": 352,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_roof_flat.gltf",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_roof_vent.gltf",
+    "triangles_before": 264,
+    "triangles_after": 264,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_sand_dome.gltf",
+    "triangles_before": 408,
+    "triangles_after": 408,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_seat.gltf",
+    "triangles_before": 352,
+    "triangles_after": 352,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_sheet_metal_block.gltf",
+    "triangles_before": 572,
+    "triangles_after": 572,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_sheet_metal_inner_corner.gltf",
+    "triangles_before": 660,
+    "triangles_after": 660,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_sheet_metal_outer_corner.gltf",
+    "triangles_before": 616,
+    "triangles_after": 616,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_sheet_metal_slab.gltf",
+    "triangles_before": 572,
+    "triangles_after": 572,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_sheet_metal_slope.gltf",
+    "triangles_before": 8,
+    "triangles_after": 8,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_sheet_metal_stairs.gltf",
+    "triangles_before": 660,
+    "triangles_after": 660,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_smokebox.gltf",
+    "triangles_before": 1528,
+    "triangles_after": 1528,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_smokebox_door.gltf",
+    "triangles_before": 1660,
+    "triangles_after": 1660,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_steam_dome.gltf",
+    "triangles_before": 408,
+    "triangles_after": 408,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_steam_valve.gltf",
+    "triangles_before": 408,
+    "triangles_after": 408,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_tender_front.gltf",
+    "triangles_before": 352,
+    "triangles_after": 352,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_tender_wall.gltf",
+    "triangles_before": 352,
+    "triangles_after": 352,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_toolbox.gltf",
+    "triangles_before": 220,
+    "triangles_after": 220,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_water_tank.gltf",
+    "triangles_before": 196,
+    "triangles_after": 196,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_wheel_large.gltf",
+    "triangles_before": 1136,
+    "triangles_after": 1136,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_wheel_medium.gltf",
+    "triangles_before": 1136,
+    "triangles_after": 1136,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_wheel_small.gltf",
+    "triangles_before": 1136,
+    "triangles_after": 1136,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/train_wooden_plank.gltf",
+    "triangles_before": 528,
+    "triangles_after": 528,
+    "beveled_boxes": 0,
+    "reason": "already_curved_or_thin"
+  },
+  {
+    "path": "assets/terra/blocks/models/turquoise_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/valve.gltf",
+    "triangles_before": 464,
+    "triangles_after": 464,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/water_wheel.gltf",
+    "triangles_before": 3920,
+    "triangles_after": 3920,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/white_blossom_leaves.glb",
+    "triangles_before": 12,
+    "triangles_after": 12,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/white_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/wood_pipe.gltf",
+    "triangles_before": 1452,
+    "triangles_after": 1452,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/wooden_gear.gltf",
+    "triangles_before": 1824,
+    "triangles_after": 1824,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/wooden_large_gear.gltf",
+    "triangles_before": 2976,
+    "triangles_after": 2976,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/wooden_shaft.gltf",
+    "triangles_before": 576,
+    "triangles_after": 576,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  },
+  {
+    "path": "assets/terra/blocks/models/workbench.gltf",
+    "triangles_before": 756,
+    "triangles_after": 1812,
+    "beveled_boxes": 33,
+    "reason": "closed_prop_cuboids_beveled"
+  },
+  {
+    "path": "assets/terra/blocks/models/yellow_clay.glb",
+    "triangles_before": 44,
+    "triangles_after": 44,
+    "beveled_boxes": 0,
+    "reason": "terrain_seam_or_authored_mechanical_profile_preserved"
+  }
+]

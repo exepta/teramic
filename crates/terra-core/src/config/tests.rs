@@ -5,12 +5,12 @@ fn main_landscape_is_default_and_all_saved_revisions_remain_readable() {
     let legacy = WorldConfig::from_toml("seed=42042").unwrap();
     assert_eq!(legacy.landscape_revision, 0);
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.landscape_revision, 1);
+    assert_eq!(fresh.landscape_revision, 9);
     assert_eq!(fresh.sea_level, 8.0);
     assert!(fresh.biome_definitions.is_none());
     assert!(!legacy.rivers);
     assert!(!fresh.rivers);
-    for revision in 0..=5 {
+    for revision in 0..=9 {
         let saved = WorldConfig {
             landscape_revision: revision,
             ..fresh.clone()
@@ -26,12 +26,12 @@ fn main_landscape_is_default_and_all_saved_revisions_remain_readable() {
             revision
         );
     }
-    assert!(WorldConfig::from_toml("landscape_revision=6").is_err());
+    assert!(WorldConfig::from_toml("landscape_revision=10").is_err());
     assert_eq!(
         WorldConfig::from_toml(include_str!("../../../../configs/world.toml"))
             .unwrap()
             .landscape_revision,
-        0
+        9
     );
 }
 
@@ -90,12 +90,12 @@ fn saved_landscape_profiles_roundtrip_and_participate_in_terrain_cache_identity(
 
 #[test]
 fn prepared_terrain_identity_distinguishes_every_landscape_revision() {
-    for old_revision in 0..=5 {
+    for old_revision in 0..=9 {
         let saved = WorldConfig {
             landscape_revision: old_revision,
             ..Default::default()
         };
-        for new_revision in 0..=5 {
+        for new_revision in 0..=9 {
             let changed = WorldConfig {
                 landscape_revision: new_revision,
                 ..saved.clone()
@@ -114,7 +114,7 @@ fn cherry_ecology_is_saved_and_never_retroactively_enabled_in_old_worlds() {
     let legacy = WorldConfig::from_toml("seed=42042").unwrap();
     assert_eq!(legacy.ecology_revision, 0);
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.ecology_revision, 4);
+    assert_eq!(fresh.ecology_revision, 11);
     let serialized = toml::to_string(&fresh).unwrap();
     assert_eq!(WorldConfig::from_toml(&serialized).unwrap(), fresh);
     assert!(!fresh.same_terrain(&WorldConfig {
@@ -133,7 +133,49 @@ fn cherry_ecology_is_saved_and_never_retroactively_enabled_in_old_worlds() {
             .ecology_revision,
         4
     );
-    assert!(WorldConfig::from_toml("ecology_revision=5").is_err());
+    assert_eq!(
+        WorldConfig::from_toml("ecology_revision=5")
+            .unwrap()
+            .ecology_revision,
+        5
+    );
+    assert_eq!(
+        WorldConfig::from_toml("ecology_revision=6")
+            .unwrap()
+            .ecology_revision,
+        6
+    );
+    assert_eq!(
+        WorldConfig::from_toml("ecology_revision=7")
+            .unwrap()
+            .ecology_revision,
+        7
+    );
+    assert_eq!(
+        WorldConfig::from_toml("ecology_revision=8")
+            .unwrap()
+            .ecology_revision,
+        8
+    );
+    assert_eq!(
+        WorldConfig::from_toml("ecology_revision=9")
+            .unwrap()
+            .ecology_revision,
+        9
+    );
+    assert_eq!(
+        WorldConfig::from_toml("ecology_revision=10")
+            .unwrap()
+            .ecology_revision,
+        10
+    );
+    assert_eq!(
+        WorldConfig::from_toml("ecology_revision=11")
+            .unwrap()
+            .ecology_revision,
+        11
+    );
+    assert!(WorldConfig::from_toml("ecology_revision=12").is_err());
 }
 
 #[test]
@@ -141,7 +183,7 @@ fn waterfall_terrain_revision_is_saved_without_changing_legacy_world_contracts()
     let legacy = WorldConfig::from_toml("seed=42042\nrivers=true").unwrap();
     assert_eq!(legacy.river_terrain_revision, 0);
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.river_terrain_revision, 4);
+    assert_eq!(fresh.river_terrain_revision, 7);
     assert_eq!(
         WorldConfig::from_toml(&toml::to_string(&fresh).unwrap()).unwrap(),
         fresh
@@ -150,7 +192,7 @@ fn waterfall_terrain_revision_is_saved_without_changing_legacy_world_contracts()
         river_terrain_revision: 0,
         ..fresh.clone()
     }));
-    for revision in 0..=4 {
+    for revision in 0..=7 {
         assert_eq!(
             WorldConfig::from_toml(&format!("river_terrain_revision={revision}"))
                 .unwrap()
@@ -158,12 +200,12 @@ fn waterfall_terrain_revision_is_saved_without_changing_legacy_world_contracts()
             revision
         );
     }
-    assert!(WorldConfig::from_toml("river_terrain_revision=5").is_err());
+    assert!(WorldConfig::from_toml("river_terrain_revision=8").is_err());
     assert_eq!(
         WorldConfig::from_toml(include_str!("../../../../configs/world.toml"))
             .unwrap()
             .river_terrain_revision,
-        4
+        7
     );
 }
 
@@ -196,7 +238,7 @@ fn structures_contract_is_explicit_for_fresh_worlds_and_absent_in_legacy_manifes
     let legacy = WorldConfig::from_toml("seed=42042").unwrap();
     assert_eq!(legacy.structures_revision, 0);
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.structures_revision, 9);
+    assert_eq!(fresh.structures_revision, 10);
     assert_eq!(
         WorldConfig::from_toml(&toml::to_string(&fresh).unwrap()).unwrap(),
         fresh
@@ -214,12 +256,13 @@ fn structures_contract_is_explicit_for_fresh_worlds_and_absent_in_legacy_manifes
     assert!(WorldConfig::from_toml("structures_revision=7").is_ok());
     assert!(WorldConfig::from_toml("structures_revision=8").is_ok());
     assert!(WorldConfig::from_toml("structures_revision=9").is_ok());
-    assert!(WorldConfig::from_toml("structures_revision=10").is_err());
+    assert!(WorldConfig::from_toml("structures_revision=10").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=11").is_err());
     assert_eq!(
         WorldConfig::from_toml(include_str!("../../../../configs/world.toml"))
             .unwrap()
             .structures_revision,
-        9
+        10
     );
 }
 
@@ -253,7 +296,7 @@ fn defaults_and_partial_toml() {
     assert_eq!(config.fly_boost_multiplier, 3.0);
     assert_eq!(config.fly_precision_multiplier, 0.25);
     assert_eq!(config.mouse_sensitivity, 0.0022);
-    assert_eq!(config.view_distance, 12);
+    assert_eq!(config.view_distance, 8);
     assert_eq!(WorldConfig::from_toml("").unwrap().seed, WorldSeed(42042));
     let world = WorldConfig::from_toml("").unwrap();
     assert_eq!(world.tree_density, 0.8);

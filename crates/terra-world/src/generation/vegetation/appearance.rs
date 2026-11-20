@@ -59,7 +59,9 @@ impl TreeAppearance {
             TreeSpecies::Apple => Self::Apple,
             TreeSpecies::Palm => Self::Palm,
             TreeSpecies::Mushroom(_) => Self::Mushroom,
-            TreeSpecies::Cherry(_) => Self::Cherry,
+            TreeSpecies::Cherry(_) | TreeSpecies::SpiritBlossom(_) | TreeSpecies::Bloodwood => {
+                Self::Cherry
+            }
         }
     }
 }
@@ -220,7 +222,7 @@ impl TreeAppearanceSnapshot {
         if material == 195 {
             return Some(TreeAppearance::Apple);
         }
-        if material == 36 {
+        if matches!(material, 36 | 134 | 310..=313 | 405..=406) {
             return self.uncached(global, material);
         }
         if !matches!(material, 6..=10) || self.trees.is_empty() {
@@ -257,8 +259,8 @@ impl TreeAppearanceSnapshot {
     fn uncached(&self, global: [i64; 3], material: u16) -> Option<TreeAppearance> {
         let tree = self.trees.iter().find(|tree| {
             let generated = match material {
-                6 | 10 | 36 | 134 => tree.wood_at(global),
-                7..=9 | 132 | 133 | 195 => tree.leaves_at(global),
+                6 | 10 | 36 | 134 | 313 | 405 => tree.wood_at(global),
+                7..=9 | 132 | 133 | 195 | 310..=312 | 406 => tree.leaves_at(global),
                 _ => None,
             };
             generated.is_some_and(|generated| generated as u16 == material)
@@ -279,6 +281,10 @@ mod tests {
             (TreeSpecies::Spruce, TreeAppearance::Spruce),
             (TreeSpecies::Fir, TreeAppearance::Fir),
             (TreeSpecies::Apple, TreeAppearance::Apple),
+            (TreeSpecies::SpiritBlossom(0), TreeAppearance::Cherry),
+            (TreeSpecies::SpiritBlossom(1), TreeAppearance::Cherry),
+            (TreeSpecies::SpiritBlossom(2), TreeAppearance::Cherry),
+            (TreeSpecies::Bloodwood, TreeAppearance::Cherry),
         ] {
             let tree = Tree::with_species([-16, 100, -16], 42, [0.0; 4], species);
             let material = species.leaves() as u16;
@@ -291,13 +297,16 @@ mod tests {
                                 tree.origin[1] + i64::from(y),
                                 tree.origin[2] + i64::from(z),
                             ];
-                            tree.leaves_at(global).map(|_| global)
+                            tree.leaves_at(global)
+                                .filter(|id| *id as u16 == material)
+                                .map(|_| global)
                         })
                     })
                 })
                 .expect("generated crown");
             let column = crate::PreparedColumn {
                 structures: Vec::new(),
+                natural_features: Vec::new(),
                 config: Default::default(),
                 coordinate: [-1, -1],
                 padding: 0,
@@ -313,6 +322,16 @@ mod tests {
             assert_eq!(column.tree_appearance_at(leaf, material), Some(expected));
             assert_eq!(column.tree_appearance_at(leaf, 3), None);
             assert_eq!(column.tree_appearance_at([1000, 100, 1000], material), None);
+            let snapshot = TreeAppearanceSnapshot {
+                trees: Arc::new(column.trees),
+                origin: [-16, 96, -16],
+                cells: cell_memo(),
+                planted: None,
+            };
+            assert_eq!(snapshot.at(leaf, material), Some(expected));
+            if species == TreeSpecies::Bloodwood {
+                assert_eq!(snapshot.at([1000, 100, 1000], material), None);
+            }
         }
     }
 
@@ -323,6 +342,7 @@ mod tests {
             (TreeSpecies::Birch, TreeAppearance::Birch),
             (TreeSpecies::Spruce, TreeAppearance::Spruce),
             (TreeSpecies::Fir, TreeAppearance::Fir),
+            (TreeSpecies::Bloodwood, TreeAppearance::Cherry),
         ] {
             let tree = Tree::with_species([-16, 100, -16], 42, [0.0; 4], species);
             let snapshot = TreeAppearanceSnapshot {

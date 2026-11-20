@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": 310,
+  "name": "Pink Blossom Leaves",
+  "description": "Dense pink blossoms from the Spirit Blossom trees.",
+  "creative_category": "nature",
+  "hardness": 0.3,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "pink_blossom_leaves": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "pink_blossom_leaves_top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "leaf_cluster": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    }
+  },
+  "textures": {
+    "pink_blossom_leaves": "textures/foliage/spirit_pink_side.png",
+    "pink_blossom_leaves_top": "textures/foliage/spirit_pink_top.png",
+    "leaf_cluster": "textures/foliage/spirit_pink_cluster.png"
+  },
+  "face_materials": [
+    "pink_blossom_leaves",
+    "pink_blossom_leaves",
+    "pink_blossom_leaves",
+    "pink_blossom_leaves_top",
+    "pink_blossom_leaves",
+    "pink_blossom_leaves"
+  ],
+  "foliage_cluster": {
+    "material": "leaf_cluster"
+  }
+}

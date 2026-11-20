@@ -69,6 +69,7 @@ struct Fixture {
     position: [i64; 3],
     id: Option<KingdomId>,
     reload: bool,
+    press: Option<(Entity, u8)>,
     release: Option<(Entity, u8)>,
     use_held: bool,
     old_edit: u64,
@@ -91,6 +92,7 @@ pub(crate) fn install(app: &mut App) {
         position: [0; 3],
         id: None,
         reload: std::env::var("TERRA_KINGDOM_RELOAD").as_deref() == Ok("1"),
+        press: None,
         release: None,
         use_held: false,
         old_edit: 0,
@@ -104,6 +106,7 @@ pub(crate) fn install(app: &mut App) {
     .add_systems(
         PreUpdate,
         run.after(bevy::input::InputSystems)
+            .before(terra_ui::NpcWorkInputSet)
             .before(terra_ui::KingdomInputSet),
     );
 }
@@ -125,8 +128,10 @@ fn element(world: &mut World, id: &str) -> Option<Entity> {
 
 fn click(world: &mut World, state: &mut Fixture, id: &str, next: u8) -> Result<(), String> {
     let target = element(world, id).ok_or_else(|| format!("Missing kingdom control {id}"))?;
-    crate::inventory_smoke::pointer(world, target, Some(true))?;
-    state.release = Some((target, next));
+    // Let picking observe the new cursor position in a complete native frame
+    // before pressing. The OS helper blocks the current Bevy frame while it runs.
+    crate::inventory_smoke::pointer(world, target, None)?;
+    state.press = Some((target, next));
     state.entered = Instant::now();
     Ok(())
 }
@@ -283,7 +288,16 @@ fn run(world: &mut World) {
                 state.use_held = false;
             }
             world.resource_mut::<CameraInputState>().captured = matches!(state.stage, 0 | 2);
-            if crate::kingdom_ui_smoke::requested() && ((2..=5).contains(&state.stage) || (state.stage==100 && !crate::npc_work_smoke::requested())) {aim(world,state.position);}
+            if crate::kingdom_ui_smoke::requested() && ((2..=5).contains(&state.stage) || (state.stage==100 && !crate::npc_work_smoke::requested() && !crate::building_local_smoke::requested())) {aim(world,state.position);}
+            if let Some((target, next)) = state.press {
+                if state.entered.elapsed() >= Duration::from_millis(180) {
+                    crate::inventory_smoke::pointer(world, target, Some(true))?;
+                    state.press = None;
+                    state.release = Some((target, next));
+                    state.entered = Instant::now();
+                }
+                return Ok(false);
+            }
             if let Some((target, next)) = state.release {
                 if state.entered.elapsed() >= Duration::from_millis(180) {
                     crate::inventory_smoke::pointer(world, target, Some(false))?;
@@ -348,6 +362,7 @@ fn run(world: &mut World) {
                         if !view.bound || !view.founder_controls || view.title != RENAMED {
                             return Err("Reloaded Bergfried did not open the authoritative founder UI".into());
                         }
+                        if !crate::kingdom_starters_smoke::verify(world, state.id.ok_or("Missing reloaded kingdom ID")?, true)? { return Ok(false); }
                         shot(world, "kingdom-reloaded")?;
                         click(world, &mut state, "kingdom-dissolve-prompt", 10)?;
                     } else {
@@ -420,6 +435,7 @@ fn run(world: &mut World) {
                 }
                 9 => {
                     if !save_ready(&mut state)? || state.captures < 3 { return Ok(false); }
+                    if !crate::kingdom_starters_smoke::verify(world, state.id.ok_or("Missing founded kingdom ID")?, false)? { return Ok(false); }
                     info!(id = ?state.id, position = ?state.position, captures = state.captures,
                         "Native kingdom creation passed: actual block placement and remappable use, typed name, OS Found/Rename clicks, protected keep, authoritative registry and acknowledged persistent save");
                     return Ok(true);

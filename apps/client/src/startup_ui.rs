@@ -6,6 +6,7 @@ use std::{
 };
 
 const STATIC_TEXTURES: &[&str] = &[
+    "biome-choice-blood-forest.png",
     "biome-choice-cherry-forest.png",
     "biome-choice-cliffted-desert.png",
     "biome-choice-desert.png",
@@ -14,6 +15,7 @@ const STATIC_TEXTURES: &[&str] = &[
     "biome-choice-mushroom-park.png",
     "biome-choice-ocean.png",
     "biome-choice-plains.png",
+    "biome-choice-spirit-blossom.png",
     "cauldron-recipe-184.png",
     "furnace-recipe-185.png",
     "hand.png",

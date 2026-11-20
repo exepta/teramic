@@ -1,0 +1,65 @@
+[
+  {
+    "file": "audio/blood-forest.wav",
+    "channels": 2,
+    "sample_rate": 48000,
+    "seconds": 8,
+    "rms": 0.007871020820541377,
+    "peak": 0.04156494140625,
+    "sha256": "e55a0c08a36c551cb25b46616f3941093501cbedc940351b2772627751ba51f2"
+  },
+  {
+    "file": "audio/caves.wav",
+    "channels": 2,
+    "sample_rate": 48000,
+    "seconds": 8,
+    "rms": 0.007780130977122707,
+    "peak": 0.054595947265625,
+    "sha256": "80107fea6590f4b12f4edeb5873031233beffe2ce92783b4ba5e77ab81caa1e4"
+  },
+  {
+    "file": "audio/desert.wav",
+    "channels": 2,
+    "sample_rate": 48000,
+    "seconds": 8,
+    "rms": 0.007128336853126004,
+    "peak": 0.04278564453125,
+    "sha256": "2b90102675603d16b778cb7133168250a601c9bf43b0c5966b5979c9e0cea0a4"
+  },
+  {
+    "file": "audio/highlands.wav",
+    "channels": 2,
+    "sample_rate": 48000,
+    "seconds": 8,
+    "rms": 0.009413699617965517,
+    "peak": 0.062408447265625,
+    "sha256": "23e06c106e4546a45836042c76595eabe3e96437f56e7127e05ac64664ee862d"
+  },
+  {
+    "file": "audio/ocean.wav",
+    "channels": 2,
+    "sample_rate": 48000,
+    "seconds": 8,
+    "rms": 0.0034097858210150305,
+    "peak": 0.030059814453125,
+    "sha256": "8006ff5fb568565ee01f8c00eb2e1b4c6cb490c245ba3b14b3d3ef93d5ac7484"
+  },
+  {
+    "file": "audio/spirit-forest.wav",
+    "channels": 2,
+    "sample_rate": 48000,
+    "seconds": 8,
+    "rms": 0.005612467240461397,
+    "peak": 0.03411865234375,
+    "sha256": "73f0a78830580d7bae4bc16a69abb9dd817e2d4d32b11bbe585bcf8d19b33153"
+  },
+  {
+    "file": "audio/woodland.wav",
+    "channels": 2,
+    "sample_rate": 48000,
+    "seconds": 8,
+    "rms": 0.0029310974980704873,
+    "peak": 0.023193359375,
+    "sha256": "7f7ce9e4ce4b31f4d73d6eb5a4bbd0a594bc80f79dc77ed0053dd6a96eb7f7c5"
+  }
+]

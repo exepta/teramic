@@ -20,7 +20,11 @@ pub(super) fn install(app: &mut App) {
     if !std::env::args().any(|arg| arg == "--smoke-test-steps") {
         return;
     }
+    let worm = std::env::var_os("TERRA_WORM_AUDIO_INSPECT").is_some();
     app.insert_resource(terra_player::ControllerMode::Walk)
+        // This fixture enters the world directly without the frontend's
+        // graphics initialization. Retained UI scaling still needs its config.
+        .init_resource::<terra_core::GraphicsConfig>()
         .insert_resource(terra_core::AudioConfig::default())
         .insert_resource(terra_ui::menu::MenuState {
             page: terra_ui::menu::MenuPage::Playing,
@@ -31,7 +35,8 @@ pub(super) fn install(app: &mut App) {
         .add_systems(
             Update,
             run.after(terra_player::PlayerSet::Movement)
-                .before(FootstepSet),
+                .before(FootstepSet)
+                .run_if(move || !worm),
         );
 }
 

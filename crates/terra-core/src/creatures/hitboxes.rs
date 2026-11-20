@@ -1,7 +1,7 @@
 //! Anatomical picking volumes, separate from conservative locomotion clearance.
 use super::{Creature, CreatureBehavior, CreatureKind as Kind};
 
-const CAPACITY: usize = 24;
+const CAPACITY: usize = 48;
 const IDENTITY: [[f64; 3]; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
 
 #[derive(Debug, Clone, Copy)]
@@ -163,6 +163,9 @@ pub fn model_reference_size(kind: Kind) -> [f64; 3] {
         Kind::Pig => [0.8, 1.0, 1.15],
         Kind::Fish => [0.3, 0.35, 0.7],
         Kind::Bee => [0.095, 0.095, 0.115],
+        // Keep the original sculpture reference: changing the authored mob
+        // size then scales both rendered wings and anatomical targets by 50%.
+        Kind::Butterfly => [0.22, 0.22, 0.30],
         Kind::Bear => [1.0, 1.3, 1.8],
         Kind::Horse => [0.595, 1.95, 2.15],
         Kind::Squid => [0.95, 0.95, 2.0],
@@ -212,6 +215,74 @@ pub fn for_creature(a: &Creature) -> Hitboxes {
         },
     };
     match a.kind {
+        Kind::SandWorm => {
+            if matches!(
+                a.behavior,
+                CreatureBehavior::Burrowed | CreatureBehavior::Tremor
+            ) {
+                // Underground anatomy is not a visible or hittable surface decoration.
+            } else {
+                for index in 0..=super::sandworm::HEAD_SEGMENT {
+                    let pose = super::sandworm::pose(a, index);
+                    if !super::sandworm::anatomy_visible(a.behavior, pose, index) {
+                        continue;
+                    }
+                    let (sin, cos) = f64::from(pose.pitch).sin_cos();
+                    let axes = [[1.0, 0.0, 0.0], [0.0, cos, sin], [0.0, -sin, cos]];
+                    result.oriented(
+                        super::sandworm::target_center(pose, index).map(f64::from),
+                        super::sandworm::target_size(index).map(f64::from),
+                        axes,
+                    );
+                }
+            }
+        }
+
+        Kind::Butterfly => {
+            result.add([0.0, 0.14, -0.02], [0.14, 0.25, 0.30]);
+            for side in [-1.0, 1.0] {
+                result.add([side * 0.25, 0.14, 0.0], [0.45, 0.12, 0.52]);
+            }
+        }
+        Kind::Skeleton => {
+            result.add([0.0, 1.20, 0.0], [0.47, 0.46, 0.34]);
+            result.add([0.0, 1.69, 0.0], [0.48, 0.47, 0.42]);
+            result.add([0.0, 0.83, 0.0], [0.43, 0.22, 0.25]);
+            for side in [-1.0, 1.0] {
+                result.segment([side * 0.29, 1.39, 0.0], [side * 0.335, 0.68, -0.05], 0.17);
+                result.segment([side * 0.125, 0.74, 0.0], [side * 0.16, 0.05, -0.04], 0.17);
+            }
+        }
+        Kind::BloodStalker => {
+            result.add([0.0, 0.50, 0.22], [0.61, 0.42, 0.72]);
+            result.add([0.0, 0.50, -0.25], [0.48, 0.30, 0.32]);
+            for side in [-1.0, 1.0] {
+                for index in 0..4 {
+                    let z = -0.23 + f64::from(index) * 0.19;
+                    let root = [side * 0.23, 0.48, z];
+                    let knee = [side * 0.59, 0.50, z + (f64::from(index) - 1.5) * 0.13];
+                    let foot = [side * 0.74, 0.01, z + (f64::from(index) - 1.5) * 0.20];
+                    result.segment(root, knee, 0.11);
+                    result.segment(knee, foot, 0.09);
+                }
+            }
+        }
+        Kind::Raven => {
+            result.add([0.0, 0.23, 0.04], [0.30, 0.36, 0.42]);
+            result.add([0.0, 0.41, -0.12], [0.22, 0.21, 0.24]);
+            for side in [-1.0, 1.0] {
+                result.add([side * 0.25, 0.30, 0.12], [0.35, 0.15, 0.40]);
+            }
+        }
+        Kind::SpiritFox => {
+            result.add([0.0, 0.45, 0.07], [0.46, 0.53, 0.79]);
+            result.add([0.0, 0.79, -0.34], [0.48, 0.40, 0.42]);
+            for side in [-1.0, 1.0] {
+                for front in [-1.0, 1.0] {
+                    result.add([side * 0.16, 0.16, front * 0.26], [0.16, 0.32, 0.22]);
+                }
+            }
+        }
         Kind::Villager => {
             result.add([0.0, 1.13, 0.0], [0.43, 0.54, 0.29]);
             result.add([0.0, 1.57, -0.015], [0.36, 0.37, 0.33]);

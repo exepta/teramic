@@ -1,0 +1,84 @@
+{
+  "cactus": null,
+  "captures": {
+    "close": {
+      "camera": [
+        -137.5,
+        92.5,
+        -273.5
+      ],
+      "camera_in_loaded_air": true,
+      "clear_loaded_voxel_sightline": true,
+      "verified_voxel_probes": 6
+    },
+    "overview": {
+      "camera": [
+        -131.5,
+        97.5,
+        -265.5
+      ],
+      "camera_in_loaded_air": true,
+      "clear_loaded_voxel_sightline": true,
+      "verified_voxel_probes": 6
+    }
+  },
+  "ecology_revision": 6,
+  "fixture_edits": 0,
+  "scene": "reference-plains",
+  "seed": 42042,
+  "source_cells": [
+    [
+      [
+        -143,
+        90,
+        -278
+      ],
+      426
+    ],
+    [
+      [
+        -142,
+        90,
+        -279
+      ],
+      426
+    ],
+    [
+      [
+        -141,
+        90,
+        -278
+      ],
+      426
+    ],
+    [
+      [
+        -141,
+        90,
+        -277
+      ],
+      426
+    ],
+    [
+      [
+        -140,
+        90,
+        -275
+      ],
+      426
+    ],
+    [
+      [
+        -139,
+        89,
+        -276
+      ],
+      426
+    ]
+  ],
+  "status": "passed",
+  "tile": [
+    -5,
+    -9
+  ]
+}

@@ -196,6 +196,20 @@ pub enum ItemKind {
         tool: ToolKind,
         remaining: u16,
     },
+    // Append-only: persisted item variants and protocol ordinals remain stable.
+    BloodBerry,
+    CrimsonMushroom,
+    ThornTwig,
+    BloodCrystal,
+    DarkSap,
+    BloodLeaf,
+    BloodSpore,
+    BloodSlimeGel,
+    Bone,
+    Bitumen,
+    RoadAggregate,
+    GloomEssence,
+    LightSplitter,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -306,6 +320,8 @@ pub enum ToolKind {
     WoodSpoon,
     StoneSpoon,
     GoldSpoon,
+    TarBucket,
+    BileBucket,
 }
 impl ToolKind {
     /// Uses per log for productive woodcutters. Other tools have no wear model yet.
@@ -320,7 +336,7 @@ impl ToolKind {
             _ => 0,
         }
     }
-    pub const ALL: [Self; 41] = [
+    pub const ALL: [Self; 43] = [
         Self::WoodPickaxe,
         Self::StonePickaxe,
         Self::StoneAxe,
@@ -362,6 +378,8 @@ impl ToolKind {
         Self::WoodSpoon,
         Self::StoneSpoon,
         Self::GoldSpoon,
+        Self::TarBucket,
+        Self::BileBucket,
     ];
     pub fn slug(self) -> &'static str {
         match self {
@@ -406,6 +424,8 @@ impl ToolKind {
             Self::WoodSpoon => "wood_spoon",
             Self::StoneSpoon => "stone_spoon",
             Self::GoldSpoon => "gold_spoon",
+            Self::TarBucket => "tar_bucket",
+            Self::BileBucket => "bile_bucket",
         }
     }
     pub const fn class(self) -> Option<crate::block_properties::ToolClass> {
@@ -572,6 +592,8 @@ impl ItemKind {
             | Self::Tool(
                 ToolKind::Bucket
                 | ToolKind::WaterBucket
+                | ToolKind::TarBucket
+                | ToolKind::BileBucket
                 | ToolKind::Wrench
                 | ToolKind::WoodSpoon
                 | ToolKind::StoneSpoon
@@ -625,7 +647,7 @@ impl ItemKind {
             Self::WoodenBlock { material, wood }
         }
     }
-    pub const EXTRA: [Self; 193] = [
+    pub const EXTRA: [Self; 208] = [
         Self::GlassBottle,
         Self::WaterBottle,
         Self::Potion(1),
@@ -646,6 +668,8 @@ impl ItemKind {
         Self::Tool(ToolKind::Wrench),
         Self::Tool(ToolKind::Bucket),
         Self::Tool(ToolKind::WaterBucket),
+        Self::Tool(ToolKind::TarBucket),
+        Self::Tool(ToolKind::BileBucket),
         Self::Tool(ToolKind::WoodWateringCan),
         Self::Tool(ToolKind::IronWateringCan),
         Self::Tool(ToolKind::GoldWateringCan),
@@ -1035,6 +1059,19 @@ impl ItemKind {
             material: 268,
             wood: WoodSpecies::Cherry,
         },
+        Self::BloodBerry,
+        Self::CrimsonMushroom,
+        Self::ThornTwig,
+        Self::BloodCrystal,
+        Self::DarkSap,
+        Self::BloodLeaf,
+        Self::BloodSpore,
+        Self::BloodSlimeGel,
+        Self::Bone,
+        Self::Bitumen,
+        Self::RoadAggregate,
+        Self::GloomEssence,
+        Self::LightSplitter,
     ];
     pub fn can_harvest(self, material: u16) -> bool {
         if let Some(ore) = crate::OreKind::from_material(material) {
@@ -1067,6 +1104,19 @@ impl ItemKind {
             Self::FilledWateringCan { tool, units } => {
                 format!("teramic::{}#water={units}", tool.slug())
             }
+            Self::BloodBerry => "teramic::blood_berry".into(),
+            Self::CrimsonMushroom => "teramic::crimson_mushroom".into(),
+            Self::ThornTwig => "teramic::thorn_twig".into(),
+            Self::BloodCrystal => "teramic::blood_crystal".into(),
+            Self::DarkSap => "teramic::dark_sap".into(),
+            Self::BloodLeaf => "teramic::blood_leaf".into(),
+            Self::BloodSpore => "teramic::blood_spore".into(),
+            Self::BloodSlimeGel => "teramic::blood_slime_gel".into(),
+            Self::Bone => "teramic::bone".into(),
+            Self::Bitumen => "teramic::bitumen".into(),
+            Self::RoadAggregate => "teramic::road_aggregate".into(),
+            Self::GloomEssence => "teramic::gloom_essence".into(),
+            Self::LightSplitter => "teramic::light_splitter".into(),
             Self::Apple => "teramic::apple".into(),
             Self::AppleCore => "teramic::apple_core".into(),
             Self::GlassBottle => "teramic::glass_bottle".into(),
@@ -1131,7 +1181,23 @@ impl ItemKind {
             }
             Self::Potion(id) => crate::brewing::recipe(id).is_some(),
             Self::Prop(ResourcePropKind::AppleFruit) => false,
-            Self::GlassBottle | Self::WaterBottle | Self::Apple | Self::AppleCore => true,
+            Self::GlassBottle
+            | Self::WaterBottle
+            | Self::Apple
+            | Self::AppleCore
+            | Self::BloodBerry
+            | Self::CrimsonMushroom
+            | Self::ThornTwig
+            | Self::BloodCrystal
+            | Self::DarkSap
+            | Self::BloodLeaf
+            | Self::BloodSpore
+            | Self::BloodSlimeGel
+            | Self::Bone
+            | Self::Bitumen
+            | Self::RoadAggregate
+            | Self::GloomEssence
+            | Self::LightSplitter => true,
             Self::Dye(_) => true,
             Self::Armor(_) | Self::Accessory(_) | Self::Cape(_) | Self::Dust(_) | Self::Crop(_) => {
                 true
@@ -1440,11 +1506,13 @@ pub struct PlayerStats {
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct GameplayState {
+    pub buildings: crate::building_jobs::BuildingRegistry,
     #[serde(default)]
     pub jobs: crate::npc_jobs::WorkRegistry,
     pub trains: crate::trains::TrainRegistry,
     pub trees: crate::trees::TreeRegistry,
     pub kingdoms: crate::kingdom::KingdomRegistry,
+    pub kingdom_starters: crate::kingdom::KingdomStarterRegistry,
     pub creatures: crate::creatures::CreaturePopulation,
     pub animal_bonds: BTreeMap<u64, crate::creatures::taming::AnimalBond>,
     pub pet_orders: BTreeMap<u64, crate::creatures::taming::CompanionMode>,
@@ -1461,9 +1529,13 @@ impl GameplayState {
     pub fn valid(&self) -> bool {
         let mut ids = HashSet::new();
         self.trains.valid()
+            && self.buildings.valid()
             && self.jobs.valid()
             && self.trees.valid()
             && self.kingdoms.valid()
+            && self
+                .kingdom_starters
+                .valid_for(&self.kingdoms, &self.creatures)
             && self.creatures.valid()
             && self.pet_orders.len() <= crate::creatures::MAX_CREATURES
             && self.pet_orders.keys().all(|id| {

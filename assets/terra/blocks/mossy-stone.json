@@ -9,7 +9,15 @@
   "bevel_width": 0.0,
   "materials": {
     "Moss patches": {
-      "texture_pattern": "mossy_stone"
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.12,
+      "normal_texture": "textures/block_palette/cobble_normal.png"
     }
   },
   "face_materials": [
@@ -23,5 +31,8 @@
   "hardness": 1.25,
   "resistance": 6.0,
   "required_tool": "pickaxe",
-  "mining_level": 1
+  "mining_level": 1,
+  "textures": {
+    "Moss patches": "textures/block_palette/cobble.png"
+  }
 }

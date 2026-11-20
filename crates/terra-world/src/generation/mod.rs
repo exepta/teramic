@@ -21,7 +21,9 @@ mod geology_tests;
 mod lakes;
 mod landforms;
 mod landscape;
+pub mod natural_features;
 pub use landscape::LandscapeNoise;
+mod fantasy_relief;
 mod landscape_regions;
 pub use landscape_regions::{LandformKind, LandscapeRegionSample};
 mod oases;
@@ -41,6 +43,7 @@ mod reference_tests;
 mod section_tests;
 pub mod sections;
 mod seed;
+mod spirit_blossom;
 pub mod structures;
 mod surface;
 mod terrain;
@@ -57,4 +60,6 @@ pub use terrain::{MAX_SAMPLE_COORDINATE, TerrainGenerator};
 pub use vegetation::{GroundCover, TreeAppearance, TreeAppearanceSnapshot};
 
 #[cfg(feature = "bevy")]
-pub use vegetation::planted_shape;
+pub use vegetation::{planted_shape, planted_shape_with_ecology};
+
+mod blood_forest;

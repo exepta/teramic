@@ -14,7 +14,7 @@ pub(crate) fn options(
     requested: Option<&str>,
 ) -> Result<MemoryHints, &'static str> {
     let Some(requested) = requested.filter(|_| smoke_test) else {
-        return Ok(MemoryHints::default());
+        return Ok(MemoryHints::MemoryUsage);
     };
     let mib = requested
         .trim()
@@ -68,16 +68,16 @@ mod tests {
         for requested in [None, Some("256"), Some("0"), Some("invalid"), Some("")] {
             assert!(matches!(
                 options(false, requested).unwrap(),
-                MemoryHints::Performance
+                MemoryHints::MemoryUsage
             ));
         }
     }
 
     #[test]
-    fn smoke_without_an_override_keeps_the_performance_default() {
+    fn normal_and_smoke_defaults_prefer_reduced_memory_reservation() {
         assert!(matches!(
             options(true, None).unwrap(),
-            MemoryHints::Performance
+            MemoryHints::MemoryUsage
         ));
     }
 

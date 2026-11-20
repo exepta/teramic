@@ -48,6 +48,22 @@ impl Resolver for EmbeddedShaders {
         if let Some(source) = self.sources.borrow().get(path) {
             return Ok(Cow::Owned(source.clone()));
         }
+        // Runtime shaders use Bevy's auto-loaded absolute asset imports. This
+        // test root is named terra::imprint, so package:: resolves to terra here.
+        if (matches!(&path.origin, PathOrigin::Absolute)
+            || matches!(&path.origin, PathOrigin::Package(package) if package == "terra"))
+            && path
+                .components
+                .first()
+                .is_some_and(|value| value == "shaders")
+        {
+            let local = terra_core::asset_directory()
+                .join(path.components.join("/"))
+                .with_extension("wesl");
+            return std::fs::read_to_string(local)
+                .map(Cow::Owned)
+                .map_err(|error| ResolveError::ModuleNotFound(path.clone(), error.to_string()));
+        }
         let PathOrigin::Package(package) = &path.origin else {
             return Err(ResolveError::ModuleNotFound(
                 path.clone(),
@@ -80,6 +96,29 @@ impl Resolver for EmbeddedShaders {
             _ => path.clone(),
         }
     }
+}
+
+#[test]
+fn only_the_new_reconstructed_surface_uses_active_domain_coverage() {
+    let path = "shaders/terra_particle_surface.wesl";
+    let source = std::fs::read_to_string(terra_core::asset_directory().join(path)).unwrap();
+    let shader = bevy::shader::Shader::from_wesl(source, path);
+    assert!(shader.imports.iter().any(|import| matches!(import,
+        bevy::shader::ShaderImport::AssetPath(path) if path == "/shaders/terra_fluid_coverage"
+    )));
+    for file in ["terra_water", "terra_wet_surface", "terra_imprint_prepass"] {
+        let source = std::fs::read_to_string(
+            terra_core::asset_directory().join(format!("shaders/{file}.wesl")),
+        )
+        .unwrap();
+        assert!(
+            !source.contains("particle_surface_pixel"),
+            "{file} must never expose a second surface outside the near region"
+        );
+    }
+    let optics = include_str!("../../../assets/shaders/terra_caves.wesl");
+    assert!(!optics.contains("fn water_path"));
+    assert!(!optics.contains("let ripple ="));
 }
 
 fn engine_shaders() -> EmbeddedShaders {
@@ -181,6 +220,194 @@ fn actual_imprint_prepass_composition_enables_arrays_even_without_stock_texture_
                 assert!(has_binding_arrays(&compiled.syntax));
                 assert!(!enables_binding_arrays(&compiled.syntax));
                 resolver.root = original;
+            }
+        }
+    }
+}
+
+#[test]
+fn actual_liquid_vertex_compiles_forward_depth_and_motion_prepasses_in_both_binding_modes() {
+    let mut resolver = engine_shaders();
+    resolver.root = include_str!("../../../assets/shaders/terra_liquid_vertex.wesl").into();
+    let path = "terra::imprint".parse::<ModulePath>().unwrap();
+    for bindless in [false, true] {
+        for liquid in [false, true] {
+            for (prepass, normal_motion, deferred, unclipped) in [
+                (false, false, false, false),
+                (true, false, false, false),
+                (true, true, false, false),
+                (true, true, true, true),
+            ] {
+                let mut options = wesl::CompileOptions {
+                    visibility: false,
+                    ..default()
+                };
+                for (feature, enabled) in [
+                    ("BINDLESS", bindless),
+                    ("LIQUID_MOTION", liquid),
+                    ("PREPASS_PIPELINE", prepass),
+                    ("NORMAL_PREPASS_OR_DEFERRED_PREPASS", normal_motion),
+                    ("NORMAL_PREPASS", normal_motion && !deferred),
+                    ("DEFERRED_PREPASS", deferred),
+                    ("MOTION_VECTOR_PREPASS", normal_motion),
+                    ("VERTEX_POSITIONS", true),
+                    ("VERTEX_NORMALS", true),
+                    ("VERTEX_UVS", true),
+                    ("VERTEX_UVS_A", true),
+                    ("VERTEX_UVS_B", true),
+                    ("VERTEX_TANGENTS", true),
+                    ("VERTEX_COLORS", true),
+                    ("VERTEX_OUTPUT_INSTANCE_INDEX", true),
+                    ("VISIBILITY_RANGE_DITHER", true),
+                    ("UNCLIPPED_DEPTH_ORTHO_EMULATION", unclipped),
+                ] {
+                    options.features.set(feature, enabled);
+                }
+                let compiled = wesl::compile(&path, &options, &resolver).unwrap();
+                let wgsl = compiled.syntax.to_string();
+                let module = naga::front::wgsl::parse_str(&wgsl)
+                    .unwrap_or_else(|error| panic!("{}", error.emit_to_string(&wgsl)));
+                naga::valid::Validator::new(
+                    naga::valid::ValidationFlags::all(),
+                    naga::valid::Capabilities::all(),
+                )
+                .validate(&module)
+                .unwrap_or_else(|error| panic!("{}", error.emit_to_string(&wgsl)));
+
+                if liquid && normal_motion && !deferred {
+                    // Conditional WESL blocks flatten into one WGSL scope. The
+                    // original native failure reused the current-position name
+                    // in the previous-position branch; real WGSL validation must
+                    // reject that regression in both material binding modes.
+                    let fixed = resolver.root.clone();
+                    resolver.root = fixed.replace("previous_phase", "phase");
+                    if let Ok(broken) = wesl::compile(&path, &options, &resolver) {
+                        assert!(naga::front::wgsl::parse_str(&broken.syntax.to_string()).is_err());
+                    }
+                    resolver.root = fixed;
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn actual_particle_solver_and_reconstruction_compile_all_gpu_entry_points() {
+    let mut resolver = engine_shaders();
+    let path = "terra::imprint".parse::<ModulePath>().unwrap();
+    for source in [
+        include_str!("../../../assets/shaders/terra_particle_solver.wesl"),
+        include_str!("../../../assets/shaders/terra_particle_field.wesl"),
+    ] {
+        resolver.root = source.into();
+        let options = wesl::CompileOptions {
+            visibility: false,
+            keep_main: true,
+            ..default()
+        };
+        let compiled = wesl::compile(&path, &options, &resolver).unwrap();
+        let wgsl = compiled.syntax.to_string();
+        let module = naga::front::wgsl::parse_str(&wgsl)
+            .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&wgsl)));
+        naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        )
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&wgsl)));
+        assert!(
+            module
+                .entry_points
+                .iter()
+                .all(|entry| entry.stage == naga::ShaderStage::Compute)
+        );
+        assert!(module.entry_points.len() >= 3);
+    }
+}
+
+#[test]
+fn actual_particle_isosurface_compiles_with_and_without_opaque_depth_clipping() {
+    let mut resolver = engine_shaders();
+    resolver.root = include_str!("../../../assets/shaders/terra_particle_surface.wesl").into();
+    let path = "terra::imprint".parse::<ModulePath>().unwrap();
+    for depth in [false, true] {
+        let mut options = wesl::CompileOptions {
+            visibility: false,
+            ..default()
+        };
+        for (name, value) in [("DEPTH_PREPASS", depth), ("VERTEX_POSITIONS", true)] {
+            options.features.set(name, value);
+        }
+        let compiled = wesl::compile(&path, &options, &resolver).unwrap();
+        let wgsl = compiled.syntax.to_string();
+        let module = naga::front::wgsl::parse_str(&wgsl)
+            .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&wgsl)));
+        naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        )
+        .validate(&module)
+        .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&wgsl)));
+        assert_eq!(module.entry_points.len(), 2);
+    }
+}
+
+#[test]
+fn actual_fluid_handoff_fragments_compile_in_both_binding_modes() {
+    let mut resolver = engine_shaders();
+    let path = "terra::imprint".parse::<ModulePath>().unwrap();
+    for file in ["terra_water", "terra_wet_surface", "terra_imprint_prepass"] {
+        for bindless in [false, true] {
+            for depth in [false, true] {
+                resolver.root = std::fs::read_to_string(
+                    terra_core::asset_directory().join(format!("shaders/{file}.wesl")),
+                )
+                .unwrap();
+                let mut options = wesl::CompileOptions {
+                    visibility: false,
+                    ..default()
+                };
+                for (feature, value) in [
+                    ("BINDLESS", bindless),
+                    ("VERTEX_POSITIONS", true),
+                    ("VERTEX_NORMALS", true),
+                    ("VERTEX_UVS", true),
+                    ("VERTEX_UVS_A", true),
+                    ("VERTEX_UVS_B", true),
+                    ("VERTEX_TANGENTS", true),
+                    ("VERTEX_COLORS", true),
+                    ("VERTEX_OUTPUT_INSTANCE_INDEX", true),
+                    ("DEPTH_PREPASS", depth),
+                    ("PREPASS_PIPELINE", file == "terra_imprint_prepass"),
+                    ("PREPASS_FRAGMENT", file == "terra_imprint_prepass"),
+                    ("NORMAL_PREPASS", file == "terra_imprint_prepass"),
+                    (
+                        "NORMAL_PREPASS_OR_DEFERRED_PREPASS",
+                        file == "terra_imprint_prepass",
+                    ),
+                    ("MAY_DISCARD", true),
+                ] {
+                    options.features.set(feature, value);
+                }
+                let compiled = wesl::compile(&path, &options, &resolver).unwrap();
+                let wgsl = compiled.syntax.to_string();
+                let module = naga::front::wgsl::parse_str(&wgsl).unwrap_or_else(|e| {
+                    panic!(
+                        "{file} bindless{bindless} depth{depth}: {}",
+                        e.emit_to_string(&wgsl)
+                    )
+                });
+                naga::valid::Validator::new(
+                    naga::valid::ValidationFlags::all(),
+                    naga::valid::Capabilities::all(),
+                )
+                .validate(&module)
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "{file} bindless{bindless} depth{depth}: {}",
+                        e.emit_to_string(&wgsl)
+                    )
+                });
             }
         }
     }

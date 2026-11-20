@@ -1,0 +1,171 @@
+   Compiling syn v2.0.119
+   Compiling equivalent v1.0.2
+   Compiling crossbeam-utils v0.8.23
+   Compiling parking v2.2.1
+   Compiling hashbrown v0.17.1
+   Compiling indexmap v2.14.2
+   Compiling winnow v1.0.4
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling serde v1.0.229
+   Compiling futures-core v0.3.34
+   Compiling toml_edit v0.25.17+spec-1.1.0
+   Compiling fastrand v2.5.0
+   Compiling futures-io v0.3.34
+   Compiling futures-lite v2.6.1
+   Compiling bevy_macro_utils v0.20.0
+   Compiling concurrent-queue v2.5.0
+   Compiling event-listener v5.4.2
+   Compiling unicode-segmentation v1.13.3
+   Compiling convert_case v0.10.0
+   Compiling event-listener-strategy v0.5.4
+   Compiling hashbrown v0.16.1
+   Compiling spin v0.12.3
+   Compiling foldhash v0.2.0
+   Compiling typeid v1.0.3
+   Compiling unicode-xid v0.2.6
+   Compiling bevy_platform v0.20.0
+   Compiling async-channel v2.5.0
+   Compiling thread_local v1.1.10
+   Compiling erased-serde v0.4.10
+   Compiling libc v0.2.190
+   Compiling smallvec v1.16.3
+   Compiling disqualified v1.1.0
+   Compiling bevy_utils v0.20.0
+   Compiling glam v0.33.12
+   Compiling derive_more-impl v2.1.1
+   Compiling assert_type_match v0.1.1
+   Compiling bevy_reflect_derive v0.20.0
+   Compiling derive_more v2.1.1
+   Compiling version_check v0.9.5
+   Compiling bevy_ptr v0.20.0
+   Compiling downcast-rs v2.0.2
+   Compiling cfg_aliases v0.2.2
+   Compiling nix v0.31.3
+   Compiling bevy_reflect v0.20.0
+   Compiling slotmap v1.1.1
+   Compiling log v0.4.34
+   Compiling slab v0.4.12
+   Compiling async-task v4.7.1
+   Compiling bitflags v2.13.2
+   Compiling async-executor v1.14.0
+   Compiling bevy_ecs_macro_logic v0.20.0
+   Compiling crossbeam-queue v0.3.14
+   Compiling atomic-waker v1.1.2
+   Compiling arrayvec v0.7.8
+   Compiling bevy_tasks v0.20.0
+   Compiling bevy_ecs_macros v0.20.0
+   Compiling nonmax v0.5.5
+   Compiling fixedbitset v0.5.7
+   Compiling bumpalo v3.20.3
+   Compiling bevy_ecs v0.20.0
+   Compiling ctrlc v3.5.2
+   Compiling bevy_derive v0.20.0
+   Compiling bevy_app v0.20.0
+   Compiling tracing-core v0.1.36
+   Compiling regex-syntax v0.8.11
+   Compiling regex-automata v0.4.18
+   Compiling bevy_math v0.20.0
+   Compiling tracing-attributes v0.1.31
+   Compiling lazy_static v1.5.1
+   Compiling sharded-slab v0.1.7
+   Compiling matchers v0.2.0
+   Compiling tracing-log v0.2.0
+   Compiling crossbeam-channel v0.5.17
+   Compiling nu-ansi-term v0.50.3
+   Compiling bevy_time v0.20.0
+   Compiling tracing v0.1.44
+   Compiling tracing-subscriber v0.3.23
+   Compiling const-fnv1a-hash v1.1.0
+   Compiling bevy_diagnostic v0.20.0
+   Compiling bevy_log v0.20.0
+   Compiling bevy_input v0.20.0
+   Compiling bevy_transform v0.20.0
+   Compiling bevy_shape v0.20.0
+   Compiling bevy_internal v0.20.0
+   Compiling getrandom v0.4.3
+   Compiling terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel)
+   Compiling uuid v1.28.0
+   Compiling bevy v0.20.0
+   Compiling terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Finished `test` profile [optimized + debuginfo] target(s) in 4m 19s
+     Running unittests src/lib.rs (target/world-validation/debug/deps/terra_world-241b0ee1f61de9ef)
+
+running 50 tests
+test generation::rivers::distributaries::tests::long_channel_segments_cannot_cross_between_their_sampled_points ... ok
+test generation::rivers::erosion::tests::plunge_openings_are_wide_asymmetric_local_and_preserve_the_hydraulic_lip ... ok
+test generation::rivers::distributaries::tests::submerged_ocean_courses_are_not_land_river_forks ... ok
+brook seed=42042 at=[-2650.914802270169, 34.106615683456326, -2560.0] width=1.29
+test generation::rivers::distributaries::tests::real_fork_keeps_shared_split_but_has_its_own_course_direction_and_mouth ... ok
+brook seed=42042 at=[-1094.test generation::rivers::network::tests::drainage_accumulation_is_acyclic_conservative_and_reaches_its_actual_outlet ... 2955051453066ok, 
+18.33609892327666, -2560.0] width=1.5699999999999998
+test generation::rivers::network::tests::dry_trunk_bank_never_overrides_a_wet_incoming_tributary ... ok
+test generation::rivers::network::tests::enclosed_drainage_sinks_do_not_create_a_fake_connection_or_loop ... ok
+test generation::rivers::network::tests::regional_eviction_removes_one_distant_completed_entry_and_never_inflight_cells ... ok
+test generation::rivers::network::tests::angled_tributaries_keep_real_water_at_nearest_voxel_centres_in_all_directions ... ok
+brook seed=42042 at=[966.9917455215465, 8.0, -2560.0] width=1.71
+test generation::rivers::distributaries::tests::ocean_offshoots_bypass_intermediate_lakes_without_sampled_water_level_ascents ... ok
+test generation::rivers::connected::tests::fractional_shore_voxels_keep_their_wet_neighbors_supported ... ok
+waterfall terrain seed=42042 x=-423.2 z=590.0 removed_solid_voxels=689 widened_columns=32 rock_columns=19
+test generation::rivers::distributaries::tests::old_hydrology_contracts_keep_their_original_routing_and_main_heightfield ... ok
+test generation::rivers::tests::cataract_roofs_taper_downstream_instead_of_ending_on_a_vertical_wall ... ok
+test generation::rivers::tests::bed_depth_and_width_form_pools_and_riffles_without_uphill_water ... ok
+test generation::rivers::tests::buried_terminal_galleries_extend_the_wet_channel_without_cutting_the_roof ... ok
+waterfall terrain seed=1337 x=-426.9 z=6.0 removed_solid_voxels=639 widened_columns=30 rock_columns=22
+test generation::rivers::distributaries::tests::branch_columns_share_negative_chunk_boundaries_and_have_solid_water_support ... ok
+test generation::rivers::erosion::tests::unaffected_reaches_and_legacy_revision_keep_exact_height_and_material_samples ... ok
+test generation::rivers::tests::hydraulic_falls_keep_their_full_height_while_exterior_banks_are_continuous ... ok
+test generation::rivers::network::tests::revisions_three_and_four_retain_unbranched_catchment_topology ... ok
+test generation::rivers::erosion::tests::waterfall_section_data_is_deterministic_across_negative_seams_and_generation_order ... ok
+river tunnel fixture: x=-498 z=-1680 level=32.126983747386916 roof=39.135373294915105
+test generation::rivers::density_tests::revision_three_keeps_old_course_selection_and_river_toggle_contracts ... ok
+river tunnel fixture: x=33 z=-1694 level=54.07479687468957 roof=60.85480468560026
+river tunnel fixture: x=-970 z=-1174 level=85.04020597089288 roof=92.42630708251558
+test generation::rivers::tests::covered_rivers_keep_solid_roofs_and_real_water_in_headless_and_render_sections ... ok
+eroded river portal fixture: x=-952.1 z=115.0
+test generation::rivers::connected::tests::arbitrary_course_frames_preserve_world_flow_and_cross_chunk_coordinates ... ok
+test generation::rivers::tests::river_valleys_only_carve_land_and_blend_back_into_the_original_terrain ... ok
+eroded river portal fixture: x=1120.4 z=172.0
+test generation::rivers::brook_tests::brooks_use_existing_drains_and_flow_downhill_across_negative_section_edges ... ok
+test generation::rivers::tests::small_drops_slope_continuously_and_only_five_meter_cliffs_fall ... ok
+river bifurcation fixture: main=(59.3,-1544.0) side=(39.3,-1544.0) level=54.075
+test generation::rivers::connected::tests::new_lakes_vary_in_size_and_river_toggle_keeps_the_same_basin ... ok
+river bifurcation fixture: main=(-982.4,-1128.0) side=(-961.4,-1128.0) level=85.040
+river bifurcation fixture: main=(69.0,-1100.0) side=(47.0,-1100.0) level=122.763
+test generation::rivers::tests::side_channels_split_and_rejoin_with_a_real_dry_island ... ok
+test generation::rivers::connected::tests::courses_have_no_dry_gaps_and_use_real_fluid_cells_across_negative_section_edges ... ok
+eroded river portal fixture: x=34.2 z=932.0
+test generation::rivers::tests::portal_roofs_close_gradually_with_asymmetric_eroded_edges ... ok
+waterfall terrain seed=99173 x=-2462.1 z=462.0 removed_solid_voxels=886 widened_columns=32 rock_columns=27
+test generation::rivers::erosion::tests::actual_cataracts_remove_solid_trench_banks_and_expose_rock_across_three_seeds ... ok
+hydrology_density seed=42042 area_km2=16.777216 before=Density { rivers: 3, tributaries: 0, brooks: 31, river_metres: 4231.582761735504, brook_metres: 9618.276793650992 } after=Density { rivers: 3, tributaries: 4, brooks: 36, river_metres: 5197.40813123862, brook_metres: 10752.24620280801 }
+test generation::rivers::distributaries::tests::generated_distributaries_reach_reservoirs_and_survive_cache_eviction_and_reload ... ok
+test generation::rivers::tests::widened_river_banks_join_unchanged_terrain_at_drainage_cell_edges ... ok
+test generation::rivers::tests::generated_long_cataract_has_an_open_shaft_and_water_in_every_vertical_section ... ok
+test generation::rivers::brook_tests::revision_three_preserves_whole_cherry_forest_and_highland_brooks_without_hydro_conflicts ... ok
+hydrology_density seed=7 area_km2=16.777216 before=Density { rivers: 2, tributaries: 0, brooks: 8, river_metres: 218.98382928917042, brook_metres: 1318.8707693429978 } after=Density { rivers: 2, tributaries: 4, brooks: 8, river_metres: 889.4811589847126, brook_metres: 1436.3342405170213 }
+test generation::rivers::connected::tests::lake_shores_are_supported_beyond_the_channel_and_basin_level_stays_constant ... ok
+test generation::rivers::tests::river_water_has_supported_banks_including_negative_and_terminal_edges ... ok
+test generation::rivers::connected::tests::region_reload_query_order_and_negative_boundaries_preserve_hydrology ... ok
+test generation::rivers::connected::tests::connected_courses_reach_real_lakes_or_sea_and_vary_in_length ... ok
+test generation::rivers::density_tests::revision_four_brooks_fit_their_cells_and_preserve_regional_rivers_and_disabled_worlds ... ok
+test generation::rivers::connected::tests::continuous_lake_connections_hold_one_level_and_never_reverse_the_flow ... ok
+hydrology_density seed=99173 area_km2=16.777216 before=Density { rivers: 2, tributaries: 0, brooks: 5, river_metres: 1442.5018865752997, brook_metres: 1396.9387428211544 } after=Density { rivers: 2, tributaries: 0, brooks: 9, river_metres: 1442.5018865752997, brook_metres: 2414.9560636328642 }
+test generation::rivers::density_tests::revision_three_increases_actual_open_watercourse_density_on_the_main_terrain ... ok
+test generation::rivers::tests::real_waterfalls_do_not_project_a_flat_cliff_across_the_entire_valley ... ok
+test generation::rivers::tests::open_fork_islands_are_low_banks_instead_of_mountain_pillars ... ok
+river_coverage seed=42042 old=[49108, 267] current=[49106, 302]
+test generation::rivers::network::tests::revision_five_tributaries_have_real_connected_water_and_survive_reload_and_edits ... ok
+test generation::rivers::tests::paths_are_deterministic_downhill_and_legacy_worlds_are_unchanged ... ok
+test generation::rivers::tests::desert_rarity_selects_whole_paths_deterministically ... ok
+river_coverage seed=7 old=[13786, 41] current=[13785, 43]
+test generation::rivers::tests::eroded_portal_roofs_remain_face_connected_to_their_banks ... ok
+river_coverage seed=99173 old=[19623, 58] current=[19622, 81]
+test generation::rivers::connected::tests::traced_union_lake_edges_and_fractional_river_banks_have_no_unsupported_water ... ok
+river_coverage seed=12345 old=[39243, 91] current=[39242, 130]
+river_coverage seed=86420 old=[48295, 183] current=[48295, 241]
+test generation::rivers::density_tests::revision_four_increases_real_open_river_coverage_across_multiple_seeds ... ok
+
+test result: ok. 50 passed; 0 failed; 0 ignored; 0 measured; 1378 filtered out; finished in 4.22s
+

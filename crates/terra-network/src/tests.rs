@@ -9,6 +9,10 @@ use terra_world::{
 
 #[path = "bee_tests.rs"]
 mod bee_tests;
+#[path = "building_templates_udp_tests.rs"]
+mod building_templates_udp_tests;
+#[path = "chest_placement_udp_tests.rs"]
+mod chest_placement_udp_tests;
 #[path = "kingdom_tests.rs"]
 mod kingdom_tests;
 #[path = "location_tests.rs"]
@@ -19,6 +23,8 @@ mod movement_prediction_tests;
 mod npc_work_udp_tests;
 #[path = "pet_command_tests.rs"]
 mod pet_command_tests;
+#[path = "pvp_udp_tests.rs"]
+mod pvp_udp_tests;
 #[path = "riding_tests.rs"]
 mod riding_tests;
 #[path = "tree_felling_tests.rs"]
@@ -794,6 +800,8 @@ mod equipment_tests;
 mod gameplay_tests;
 #[path = "inventory_tests.rs"]
 mod inventory_tests;
+#[path = "sandworm_udp_tests.rs"]
+mod sandworm_udp_tests;
 #[path = "spawn_tests.rs"]
 mod spawn_tests;
 #[path = "stalker_bridge_tests.rs"]

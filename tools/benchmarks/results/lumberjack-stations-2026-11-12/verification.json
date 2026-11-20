@@ -1,0 +1,90 @@
+{
+  "status": "passed",
+  "screens": {
+    "npc-direct-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 739308
+    },
+    "npc-selection-de-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 1571778
+    },
+    "npc-selection-en-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 693661
+    },
+    "npc-direct-en-wide": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 697538
+    },
+    "npc-direct-de-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 217890
+    },
+    "npc-direct-en-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 221560
+    },
+    "npc-direct-en-compact-paused": {
+      "width": 960,
+      "height": 640,
+      "bytes": 222099
+    },
+    "npc-lumberjack-missing-station-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 225637
+    },
+    "npc-lumberjack-profession-compact": {
+      "width": 960,
+      "height": 640,
+      "bytes": 595598
+    }
+  },
+  "input": "real target raycasts and frame-controlled gameplay/HTML handlers",
+  "transport": "real local UDP server",
+  "private_inventory": true,
+  "kingdom_hotkey": true,
+  "responsive_geometry": true,
+  "date": "2026-11-12",
+  "protocol": 138,
+  "save_migration": false,
+  "tests": {
+    "passed": 4763,
+    "failed": 0,
+    "ignored_existing": 10,
+    "filtered_missing_external_glb": 1
+  },
+  "checks": {
+    "fmt": "passed",
+    "check": "passed",
+    "clippy": "passed",
+    "doctests": "passed",
+    "build": "passed"
+  },
+  "lumberjack_station": {
+    "missing_status": true,
+    "real_station_placement": true,
+    "physical_visit": true,
+    "avatar_refreshed": true,
+    "sex_before_and_after": "Female"
+  },
+  "native_language": {
+    "status": "passed",
+    "captures": 4,
+    "width": 960,
+    "height": 640,
+    "saved_preference": true
+  },
+  "headless": {
+    "status": "passed",
+    "sections": 27,
+    "display": false
+  }
+}

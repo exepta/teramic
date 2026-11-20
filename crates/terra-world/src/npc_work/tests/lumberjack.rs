@@ -1,7 +1,7 @@
 use super::*;
 use terra_core::{TreeRecord, TreeSpecies, TreeStage, npc_jobs::TreeWorkStage};
 
-fn planted(chunks: &mut ChunkStore, journal: &mut EditJournal, owner: PlayerUuid) {
+pub(super) fn planted(chunks: &mut ChunkStore, journal: &mut EditJournal, owner: PlayerUuid) {
     let root = [6, 1, 0];
     set(chunks, [6, 0, 0], 2);
     let wood = vec![[0, 0, 0], [0, 1, 0], [0, 2, 0]];
@@ -29,9 +29,12 @@ fn planted(chunks: &mut ChunkStore, journal: &mut EditJournal, owner: PlayerUuid
         fruit: None,
         revision: 0,
     }));
+    // Replanting consumes real supplies; a three-leaf fixture must not assume
+    // that a probabilistic leaf roll is guaranteed to produce a sapling.
+    put_tool(journal, ItemKind::Prop(TreeSpecies::Oak.sapling()));
 }
 
-fn advance(
+pub(super) fn advance(
     chunks: &mut ChunkStore,
     journal: &mut EditJournal,
     terrain: &TerraGenerator,
@@ -46,7 +49,7 @@ fn advance(
     }
 }
 
-fn put_tool(journal: &mut EditJournal, item: ItemKind) {
+pub(super) fn put_tool(journal: &mut EditJournal, item: ItemKind) {
     let mut chest = journal.container_at([0, 1, 0]).cloned().unwrap_or_default();
     assert_eq!(chest.insert(item, 1), 0);
     journal.set_container([0, 1, 0], chest).unwrap();
@@ -99,7 +102,10 @@ fn lumberjack_fetches_axe_cuts_attributed_tree_collects_real_drops_and_replants_
             .container_at([0, 1, 0])
             .unwrap()
             .count(ItemKind::Prop(TreeSpecies::Oak.sapling())),
-        0
+        [[5, 3, 0], [7, 3, 0], [6, 4, 0]]
+            .into_iter()
+            .filter(|cell| crate::saplings::leaf_drop_roll(*cell))
+            .count() as u16
     );
     assert!(journal.gameplay().valid());
     advance(&mut chunks, &mut journal, &terrain, &mut runtime, 200);
@@ -249,7 +255,7 @@ fn lumberjack_missing_sapling_keeps_completed_task_and_reports_supply_or_plantin
         journal.gameplay().jobs.workers[&npc].status,
         journal.gameplay().jobs.workers[&npc].tree
     );
-    assert_eq!(withdrawn.count(item), 1);
+    assert!(withdrawn.count(item) >= 1);
     advance(&mut chunks, &mut journal, &terrain, &mut runtime, 200);
     assert_eq!(
         journal.gameplay().jobs.workers[&npc].status,
@@ -368,6 +374,15 @@ fn lumberjack_uses_natural_generator_attribution_in_negative_sections() {
     let mut chest = Inventory::default();
     assert_eq!(chest.insert(ItemKind::Tool(ToolKind::RubyAxe), 4), 0);
     journal.set_container(storage, chest).unwrap();
+    let station = [storage[0], storage[1], storage[2] + 2];
+    set(
+        &mut chunks,
+        station,
+        terra_core::profession_stations::LUMBERJACK,
+    );
+    journal
+        .record(station, terra_core::profession_stations::LUMBERJACK)
+        .unwrap();
     let order = journal.gameplay_mut().jobs.orders.get_mut(&1).unwrap();
     order.area = WorkArea::new(root, root).unwrap();
     order.storage = storage;
@@ -393,6 +408,9 @@ fn lumberjack_uses_natural_generator_attribution_in_negative_sections() {
     );
     let expected = plan.wood_count() as u16;
     let species = plan.worker_task().unwrap().species;
+    let mut chest = journal.container_at(storage).cloned().unwrap();
+    assert_eq!(chest.insert(ItemKind::Prop(species.sapling()), 1), 0);
+    journal.set_container(storage, chest).unwrap();
     for _ in 0..12_000 {
         advance(&mut chunks, &mut journal, &terrain, &mut runtime, 1);
         if journal

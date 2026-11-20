@@ -1,0 +1,15 @@
+{
+  "rust_libraries": [
+    "terra-render",
+    "terra-world",
+    "terra-voxel"
+  ],
+  "rust_passed": 2661,
+  "rust_failed": 0,
+  "rust_ignored": 7,
+  "python_passed": 16,
+  "native_captures": 15,
+  "user_world_files_unchanged": 20,
+  "final_png_mips": "passed",
+  "client_sha256": "e1b5f902efd96d2e002d307a9fb91fe003abc3822e64af4bbbbad08b23200b64"
+}

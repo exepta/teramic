@@ -262,8 +262,10 @@ mod tests {
         use crate::crafting::{CraftDestination, CraftStation, RecipeBook, recipe_key};
         use crate::furnace::{self, FurnaceState, SmeltingRecipe};
         use crate::{Inventory, ItemStack};
-        let recipe: SmeltingRecipe =
-            serde_json::from_str(include_str!("../../../assets/smelting/iron.json")).unwrap();
+        let recipe: SmeltingRecipe = serde_json::from_str(include_str!(
+            "../../../assets/crafting/processes/smelting/iron.json"
+        ))
+        .unwrap();
         assert_eq!(furnace::recipe_for(recipe.input), Some(&recipe));
         assert_eq!(
             recipe.output.item,

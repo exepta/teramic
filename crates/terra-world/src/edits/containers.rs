@@ -353,6 +353,38 @@ impl EditJournal {
             .iter()
             .map(|(&position, inventory)| (position, inventory))
     }
+
+    /// Bounded callers can inspect a town without scanning unrelated world chests.
+    pub fn containers_in_x(
+        &self,
+        min_x: i64,
+        max_x: i64,
+    ) -> impl Iterator<Item = ([i64; 3], &Inventory)> + '_ {
+        self.containers
+            .range([min_x, i64::MIN, i64::MIN]..=[max_x.max(min_x), i64::MAX, i64::MAX])
+            .filter(move |_| min_x <= max_x)
+            .map(|(&position, inventory)| (position, inventory))
+    }
+    /// Inspect only physical inventories inside an inclusive, caller-bounded area.
+    /// Prefix ranges avoid visiting unrelated chests with the same world X.
+    pub fn containers_in_area(
+        &self,
+        minimum: [i64; 3],
+        maximum: [i64; 3],
+    ) -> impl Iterator<Item = ([i64; 3], &Inventory)> + '_ {
+        (0..3)
+            .all(|axis| minimum[axis] <= maximum[axis])
+            .then_some(minimum[0]..=maximum[0])
+            .into_iter()
+            .flatten()
+            .flat_map(move |x| {
+                (minimum[1]..=maximum[1]).flat_map(move |y| {
+                    self.containers
+                        .range([x, y, minimum[2]]..=[x, y, maximum[2]])
+                        .map(|(&position, inventory)| (position, inventory))
+                })
+            })
+    }
     pub fn container_nonempty(&self, position: [i64; 3]) -> bool {
         self.container_at(position)
             .is_some_and(|inventory| inventory.occupied_slots() > 0)
@@ -447,7 +479,10 @@ mod tests {
 
     #[test]
     fn profession_station_depots_keep_rotation_contents_and_real_removal_drops() {
-        for material in terra_core::profession_stations::ALL {
+        for material in terra_core::profession_stations::ALL
+            .into_iter()
+            .chain([terra_core::grave_blocks::ORNATE_CHEST])
+        {
             let position = [-1, 20, -1];
             let mut journal = EditJournal::default();
             journal.record(position, material).unwrap();
@@ -679,5 +714,41 @@ mod tests {
         );
         assert_eq!(journal.container_at(positions[0]), Some(&inventory));
         assert_eq!(journal.gameplay().inventories[&player_uuid], inventory);
+    }
+
+    #[test]
+    fn bounded_container_queries_include_only_requested_cells_and_handle_reversed_bounds() {
+        let mut journal = EditJournal::default();
+        let positions = [
+            [-2, 3, -4],
+            [-2, 3, -3],
+            [-1, 4, -3],
+            [-2, 2, -4],
+            [-2, 5, -4],
+            [-2, 3, 200],
+            [200, 3, -4],
+        ];
+        for position in positions {
+            journal.record(position, 29).unwrap();
+            journal
+                .set_container(position, Inventory::default())
+                .unwrap();
+        }
+        assert_eq!(
+            journal
+                .containers_in_area([-2, 3, -4], [-1, 4, -3])
+                .map(|(position, _)| position)
+                .collect::<Vec<_>>(),
+            vec![[-2, 3, -4], [-2, 3, -3], [-1, 4, -3]]
+        );
+        for (minimum, maximum) in [
+            ([0, 3, -4], [-1, 4, -3]),
+            ([-2, 5, -4], [-1, 4, -3]),
+            ([-2, 3, 0], [-1, 4, -3]),
+        ] {
+            assert_eq!(journal.containers_in_area(minimum, maximum).count(), 0);
+        }
+        assert_eq!(journal.containers_in_x(0, -1).count(), 0);
+        assert_eq!(journal.containers_in_x(-2, -2).count(), 5);
     }
 }

@@ -306,7 +306,7 @@ fn a_solid_block_displaces_the_source_and_persists_without_hidden_liquid() {
 }
 
 #[test]
-fn a_high_source_has_a_continuous_column_without_floating_shelves_and_then_drains() {
+fn a_high_source_has_a_continuous_paid_column_and_its_floor_drains_after_removal() {
     let terrain = terrain();
     let owner = SectionPos::new(-1, 1, -1);
     let mut chunks = ChunkStore::default();
@@ -333,9 +333,8 @@ fn a_high_source_has_a_continuous_column_without_floating_shelves_and_then_drain
     }
     assert!(journal.fluid([-8, 17, -8]).unwrap().amount > 0);
     for y in 18..=30 {
-        assert_eq!(
-            journal.fluid([-8, y, -8]).unwrap().amount,
-            8,
+        assert!(
+            (1..=8).contains(&journal.fluid([-8, y, -8]).unwrap().amount),
             "gap at y={y}"
         );
     }
@@ -366,15 +365,21 @@ fn a_high_source_has_a_continuous_column_without_floating_shelves_and_then_drain
         assert_eq!(step.sourced, 0);
         drained += step.drained + step.absorbed;
     }
+    assert_eq!(amount(&journal) + drained, before - 8);
+    assert_eq!(
+        drained,
+        before - 8,
+        "Even a supported floor must lose source-free water"
+    );
     assert_eq!(amount(&journal), 0);
-    assert_eq!(drained, before - 8);
+    assert!(journal.fluid_cells().all(|(_, cell)| !cell.source));
     let mut restored = EditJournal::default();
     restored.import_delta(journal.section_delta(owner)).unwrap();
     assert_eq!(amount(&restored), 0);
 }
 
 #[test]
-fn flowing_water_beside_partial_blocks_drains_when_its_source_is_blocked_across_a_section_edge() {
+fn flowing_water_beside_partial_blocks_recedes_with_an_exact_ledger_after_source_cutoff() {
     use crate::edits::BlockObjectState;
 
     let terrain = terrain();
@@ -439,13 +444,17 @@ fn flowing_water_beside_partial_blocks_drains_when_its_source_is_blocked_across_
             let cell = journal
                 .fluid(curtain)
                 .expect("gravity flow must remain next to the shape");
-            assert_eq!(cell.amount, 8);
+            assert!((1..=8).contains(&cell.amount));
             assert!(!cell.source);
-            assert_eq!(
-                fluid_cell_at(&terrain, &journal, beside, material).amount,
-                0,
-                "fix must not put hidden water inside the solid construction"
-            );
+            if let Some(water) = journal.fluid(beside) {
+                let free =
+                    super::super::space::FluidSpace::at(&journal, beside, |p| chunks.block_at(p));
+                assert_eq!(
+                    free.clamp(water),
+                    water,
+                    "paid water must occupy the actual free region of material={material} facing={facing}"
+                );
+            }
             assert!(
                 commit_block_edit(
                     &mut chunks,
@@ -458,13 +467,18 @@ fn flowing_water_beside_partial_blocks_drains_when_its_source_is_blocked_across_
                 )
                 .unwrap()
             );
+            let retained = amount(&journal);
+            let mut drained = 0;
             for _ in 0..400 {
-                simulate_fluid_step(&terrain, &chunks, &mut journal, 512).unwrap();
+                let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 512).unwrap();
+                assert_eq!(step.sourced + step.replenished, 0);
+                drained += step.drained + step.absorbed;
+                assert_eq!(amount(&journal) + drained, retained);
             }
             assert_eq!(
                 amount(&journal),
                 0,
-                "remaining fluid beside material={material} facing={facing} owner={owner:?}"
+                "orphaned fluid beside material={material} facing={facing} owner={owner:?}"
             );
             let mut reloaded = EditJournal::default();
             for position in journal.changed_sections().collect::<Vec<_>>() {
@@ -652,7 +666,7 @@ fn flood_contact_reaches_prop_owner_below_a_negative_section_boundary() {
 }
 
 #[test]
-fn disconnected_cells_recede_with_accounted_mass_across_negative_boundaries() {
+fn disconnected_cells_recede_with_an_exact_ledger_across_negative_boundaries() {
     let terrain = terrain();
     let mut chunks = ChunkStore::default();
     for x in -1..=0 {
@@ -681,7 +695,7 @@ fn disconnected_cells_recede_with_accounted_mass_across_negative_boundaries() {
         }
         let mut drained = 0;
         let mut replenished = 0;
-        let mut crossed = false;
+        let mut receded = false;
         for _ in 0..120 {
             let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 64).unwrap();
             assert!(step.visited <= 64);
@@ -689,10 +703,17 @@ fn disconnected_cells_recede_with_accounted_mass_across_negative_boundaries() {
             drained += step.drained + step.absorbed;
             replenished += step.replenished;
             assert_eq!(amount(&journal) + drained, 16 + replenished);
-            crossed |= journal.fluid_cells().any(|(p, _)| p[0] >= 0 && p[1] < 20);
+            receded |= journal
+                .fluid_cells()
+                .any(|(_, cell)| (1..8).contains(&cell.amount));
         }
-        assert!(crossed);
+        assert!(
+            receded,
+            "Source withdrawal should visibly recede before becoming dry"
+        );
         assert_eq!(amount(&journal), 0);
+        assert_eq!(drained, 16);
+        assert_eq!(replenished, 0);
         let mut deltas: Vec<_> = journal
             .changed_sections()
             .map(|p| journal.section_delta(p))
@@ -762,7 +783,7 @@ fn mining_bed_wakes_natural_source_and_replacing_barrier_stops_its_debit() {
         assert_eq!(amount(&journal) + drained, sourced - u64::from(displaced));
     }
     assert!(retained > 0);
-    assert_eq!(amount(&journal), retained);
+    assert_eq!(amount(&journal), 0);
     assert!(
         journal
             .fluid_cells()
@@ -770,8 +791,7 @@ fn mining_bed_wakes_natural_source_and_replacing_barrier_stops_its_debit() {
     );
     let fluid_epoch = journal.fluid_epoch(SectionPos::default());
     let water_epoch = journal.water_mesh_epoch(SectionPos::default());
-    // Replacing the inlet leaves a sealed, fully supported 1x4 trough. Its
-    // finite water settles instead of vanishing after the source is cut off.
+    // The sealed trough must now be dry and quiet after its inlet is cut off.
     for _ in 0..64 {
         let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 64).unwrap();
         assert!(!step.changed);
@@ -801,6 +821,7 @@ fn unloaded_floors_pause_without_discarding_water_and_resume_on_reload() {
             [7, 16, 7],
             FluidCell {
                 amount: 8,
+                source: true,
                 ..Default::default()
             },
         )
@@ -815,8 +836,14 @@ fn unloaded_floors_pause_without_discarding_water_and_resume_on_reload() {
     block(&mut chunks, [7, 15, 7], 0);
     journal.resume_fluids(lower);
     let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 64).unwrap();
-    assert_eq!(journal.fluid([7, 15, 7]).unwrap().amount, 8);
-    assert_eq!(amount(&journal) + step.drained, 8 + step.replenished);
+    assert!(
+        (1..8).contains(&journal.fluid([7, 15, 7]).unwrap().amount),
+        "resuming a fall transfers a paid partial amount first"
+    );
+    assert_eq!(
+        amount(&journal) + step.drained,
+        8 + step.sourced + step.replenished
+    );
     let delta = journal.section_delta(lower);
     let mut restored = EditJournal::default();
     restored.import_delta(delta.clone()).unwrap();
@@ -910,7 +937,7 @@ fn replica_system_never_simulates_local_liquid() {
 }
 
 #[test]
-fn a_large_disconnected_pool_cannot_self_feed_and_recedes_after_mid_drain_reload() {
+fn a_large_disconnected_pool_recedes_without_self_feeding_across_reload() {
     let terrain = terrain();
     let mut chunks = ChunkStore::default();
     for x in 0..2 {
@@ -938,15 +965,16 @@ fn a_large_disconnected_pool_cannot_self_feed_and_recedes_after_mid_drain_reload
                 .unwrap();
         }
     }
+    let initial = 28 * 28 * 8;
+    let mut drained = 0;
     for _ in 0..10 {
-        assert!(
-            simulate_fluid_step(&terrain, &chunks, &mut journal, 256)
-                .unwrap()
-                .visited
-                <= 256
-        );
+        let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+        assert!(step.visited <= 256);
+        assert_eq!(step.sourced + step.replenished, 0);
+        drained += step.drained + step.absorbed;
+        assert_eq!(amount(&journal) + drained, initial);
     }
-    assert!(amount(&journal) > 0 && amount(&journal) < 28 * 28 * 8);
+    assert!(amount(&journal) > 0 && amount(&journal) < initial);
     let mut restored = EditJournal::default();
     let mut positions: Vec<_> = journal.changed_sections().collect();
     positions.sort_unstable_by_key(|p| (p.x, p.y, p.z));
@@ -955,14 +983,15 @@ fn a_large_disconnected_pool_cannot_self_feed_and_recedes_after_mid_drain_reload
         restored.resume_fluids(p);
     }
     for _ in 0..250 {
-        assert!(
-            simulate_fluid_step(&terrain, &chunks, &mut restored, 256)
-                .unwrap()
-                .visited
-                <= 256
-        );
+        let step = simulate_fluid_step(&terrain, &chunks, &mut restored, 256).unwrap();
+        assert!(step.visited <= 256);
+        assert_eq!(step.sourced + step.replenished, 0);
+        drained += step.drained + step.absorbed;
+        assert_eq!(amount(&restored) + drained, initial);
     }
     assert_eq!(amount(&restored), 0);
+    assert_eq!(drained, initial);
+    assert!(restored.fluid_cells().all(|(_, cell)| !cell.source));
 }
 
 #[test]
@@ -986,9 +1015,8 @@ fn a_falling_source_joins_a_natural_reservoir_without_an_air_gap_or_extra_surfac
         simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
     }
     for y in 8..=13 {
-        assert_eq!(
-            journal.fluid([7, y, 7]).unwrap().amount,
-            8,
+        assert!(
+            (1..=8).contains(&journal.fluid([7, y, 7]).unwrap().amount),
             "air gap at reservoir y={y}"
         );
     }
@@ -1051,7 +1079,10 @@ fn fractional_sources_feed_a_dry_bank_and_reservoir_return_is_accounted() {
         .unwrap();
     let before = amount(&journal);
     let result = simulate_fluid_step(&wet_terrain, &chunks, &mut journal, 64).unwrap();
-    assert_eq!(result.absorbed, 8);
+    assert!(
+        (1..8).contains(&result.absorbed),
+        "a reservoir absorbs a bounded amount of the arriving jet per step"
+    );
     assert_eq!(amount(&journal), before + result.sourced - result.absorbed);
 }
 
@@ -1159,4 +1190,100 @@ fn repeated_wakes_are_deduplicated_and_basin_reload_does_not_accumulate_work() {
         assert_eq!(journal.fluid_work_counts(), stable);
         assert_eq!(saved_fluid_state(&journal), saved);
     }
+}
+
+#[test]
+fn local_flux_transport_never_copies_a_full_neighbor_and_pays_every_front() {
+    let terrain = terrain();
+    let mut chunks = ChunkStore::default();
+    chunks
+        .loaded
+        .insert(SectionPos::default(), section(SectionPos::default(), 0));
+    for x in 0..16 {
+        for z in 0..16 {
+            block(&mut chunks, [x, 10, z], 3);
+        }
+    }
+    let mut journal = EditJournal::default();
+    let p = [8, 11, 8];
+    journal
+        .set_fluid(
+            p,
+            FluidCell {
+                amount: 8,
+                source: false,
+                flow: [0; 2],
+            },
+        )
+        .unwrap();
+    let before = amount(&journal);
+    let mut sampler = Sampler {
+        terrain: &terrain,
+        chunks: &chunks,
+        columns: HashMap::new(),
+        spaces: HashMap::new(),
+        river_columns: HashMap::new(),
+        river_origins: HashMap::new(),
+    };
+    // Isolate transport's debit contract; the authority layer intentionally
+    // recedes this manufactured, source-free pool and is tested separately.
+    flux::advance(&mut sampler, &mut journal, p, &mut FluidStep::default()).unwrap();
+    assert_eq!(amount(&journal), before);
+    for (q, cell) in journal.fluid_cells() {
+        if q != p {
+            assert!(cell.amount <= 1);
+            assert!(!cell.source);
+        }
+    }
+    for _ in 0..30 {
+        let wet: Vec<_> = journal
+            .fluid_cells()
+            .filter_map(|(p, c)| (c.amount > 0).then_some(p))
+            .collect();
+        for p in wet {
+            flux::advance(&mut sampler, &mut journal, p, &mut FluidStep::default()).unwrap();
+        }
+    }
+    assert_eq!(amount(&journal), before);
+}
+
+#[test]
+fn finite_neighbor_flux_preflights_both_debits_before_publishing_any_credit() {
+    let terrain = terrain();
+    let owner = SectionPos::default();
+    let mut chunks = ChunkStore::default();
+    chunks.loaded.insert(owner, section(owner, 0));
+    for x in 0..16 {
+        for z in 0..16 {
+            block(&mut chunks, [x, 10, z], 3);
+        }
+    }
+    let p = [8, 11, 8];
+    let q = [7, 11, 8];
+    let mut journal = EditJournal::default();
+    journal
+        .set_fluid(
+            p,
+            FluidCell {
+                amount: 8,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let mut delta = journal.section_delta(owner);
+    delta.fluid_epoch = u64::MAX - 1;
+    journal.import_delta(delta).unwrap();
+    let before = journal.section_delta(owner);
+    let mut sampler = Sampler {
+        terrain: &terrain,
+        chunks: &chunks,
+        columns: HashMap::new(),
+        spaces: HashMap::new(),
+        river_columns: HashMap::new(),
+        river_origins: HashMap::new(),
+    };
+    assert!(flux::advance(&mut sampler, &mut journal, p, &mut FluidStep::default()).is_err());
+    assert_eq!(journal.section_delta(owner), before);
+    assert_eq!(journal.fluid(p).unwrap().amount, 8);
+    assert_eq!(journal.fluid(q), None);
 }

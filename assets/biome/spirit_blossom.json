@@ -1,0 +1,9 @@
+{
+  "biome": "spirit_blossom",
+  "selection_weight": 1.0,
+  "terrain": {
+    "min_height": 38, "max_height": 155, "horizontal_scale": 720,
+    "detail_strength": 0.18, "relief_strength": 0.75,
+    "soil_depth": 4.5, "tree_density": 1.12, "terrace_strength": 0.62
+  }
+}

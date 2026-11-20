@@ -1,0 +1,148 @@
+{
+  "grave-knight": {
+    "center": [
+      -2872,
+      28,
+      -4045
+    ],
+    "entrance": [
+      -2872,
+      28,
+      -4057
+    ],
+    "levels": [
+      [
+        -2880,
+        10,
+        -4035
+      ],
+      [
+        -2864,
+        2,
+        -4045
+      ],
+      [
+        -2880,
+        -6,
+        -4045
+      ]
+    ],
+    "name": "Eldric",
+    "region": [
+      -8,
+      -11
+    ],
+    "scenario": "grave-knight",
+    "seed": 42042,
+    "spirit_blossom_revision": 2,
+    "structures_revision": 10
+  },
+  "grave-priestess": {
+    "center": [
+      6340,
+      22,
+      2102
+    ],
+    "entrance": [
+      6340,
+      22,
+      2090
+    ],
+    "levels": [
+      [
+        6332,
+        8,
+        2108
+      ],
+      [
+        6348,
+        0,
+        2102
+      ],
+      [
+        6332,
+        -8,
+        2102
+      ],
+      [
+        6348,
+        -16,
+        2102
+      ]
+    ],
+    "name": "Maelis",
+    "region": [
+      16,
+      5
+    ],
+    "scenario": "grave-priestess",
+    "seed": 42042,
+    "spirit_blossom_revision": 2,
+    "structures_revision": 10
+  },
+  "grave-scholar": {
+    "center": [
+      6352,
+      16,
+      2489
+    ],
+    "entrance": [
+      6352,
+      16,
+      2477
+    ],
+    "levels": [
+      [
+        6344,
+        3,
+        2494
+      ],
+      [
+        6360,
+        -5,
+        2489
+      ],
+      [
+        6344,
+        -13,
+        2489
+      ],
+      [
+        6360,
+        -21,
+        2489
+      ]
+    ],
+    "name": "Corvin",
+    "region": [
+      16,
+      6
+    ],
+    "scenario": "grave-scholar",
+    "seed": 42042,
+    "spirit_blossom_revision": 2,
+    "structures_revision": 10
+  },
+  "cemetery": {
+    "center": [
+      -6715,
+      28,
+      -5564
+    ],
+    "entrance": [
+      -6715,
+      28,
+      -5564
+    ],
+    "levels": [],
+    "name": "",
+    "region": [
+      -18,
+      -15
+    ],
+    "scenario": "cemetery",
+    "seed": 42042,
+    "spirit_blossom_revision": 2,
+    "structures_revision": 10
+  }
+}

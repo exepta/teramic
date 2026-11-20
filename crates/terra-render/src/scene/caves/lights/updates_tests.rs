@@ -147,6 +147,70 @@ fn metadata_only_replica_updates_never_seed_or_rediscover_the_loaded_world() {
 }
 
 #[test]
+fn a_distant_loaded_village_lamp_is_discovered_before_nearer_empty_sky_sections() {
+    let mut app = app();
+    for x in -3..=3 {
+        for y in -2..=2 {
+            for z in -3..=3 {
+                section(app.world_mut(), SectionPos::new(x, y, z), &[]);
+            }
+        }
+    }
+    let far = SectionPos::new(9, 0, 0);
+    section(
+        app.world_mut(),
+        far,
+        &[([3, 4, 5], terra_core::lantern::LANTERN)],
+    );
+    app.update();
+    assert_eq!(positions(app.world().resource::<Lamps>()), [[147, 4, 5]]);
+    assert!(app.world().resource::<Lamps>().updates.pending.is_empty());
+    assert_reference(app.world());
+}
+
+#[test]
+fn thousands_of_nonempty_terrain_sections_cannot_delay_loaded_crypt_lamps() {
+    let mut app = app();
+    // Reproduce the 3179-section startup burst, with real solid data rather
+    // than empty sky (the old nearest-128 queue postponed the far lamp).
+    for x in -7..=7 {
+        for y in -7..=7 {
+            for z in -7..=7 {
+                let p = SectionPos::new(x, y, z);
+                section(app.world_mut(), p, &[([0, 0, 0], 3)]);
+            }
+        }
+    }
+    let owner = SectionPos::new(10, 0, 0);
+    section(app.world_mut(), owner, &[([3, 4, 5], 369)]);
+    app.update();
+    let cache = app.world().resource::<Lamps>();
+    assert_eq!(positions(cache), [[163, 4, 5]]);
+    assert!(cache.updates.pending.is_empty());
+    assert_eq!(cache.diagnostics.source_scans, 1);
+    assert_eq!(cache.diagnostics.fast_rejections, 3375);
+    assert_reference(app.world());
+}
+
+#[test]
+fn journal_lamp_in_previously_source_free_terrain_bypasses_the_negative_index() {
+    let mut app = app();
+    let p = SectionPos::default();
+    section(app.world_mut(), p, &[([0, 0, 0], 3)]);
+    app.update();
+    app.world_mut().resource_mut::<Fixture>().tick = false;
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .record([3, 4, 5], 369)
+        .unwrap();
+    app.world_mut()
+        .write_message(SectionEditApplied { position: p });
+    app.update();
+    assert_eq!(positions(app.world().resource::<Lamps>()), [[3, 4, 5]]);
+    assert_reference(app.world());
+}
+
+#[test]
 fn message_cursors_drain_between_timer_ticks_and_raw_publications_replace_same_epoch_data() {
     let mut app = app();
     app.update();
@@ -158,16 +222,8 @@ fn message_cursors_drain_between_timer_ticks_and_raw_publications_replace_same_e
     for _ in 0..5 {
         app.update();
     }
-    assert!(
-        app.world()
-            .resource::<Lamps>()
-            .updates
-            .pending
-            .contains_key(&owner)
-    );
-    assert!(app.world().resource::<Lamps>().emitters.is_empty());
-    app.world_mut().resource_mut::<Fixture>().tick = true;
-    app.update();
+    assert!(app.world().resource::<Lamps>().updates.pending.is_empty());
+    // A source arriving between timer ticks is visible immediately.
     assert_reference(app.world());
     assert_eq!(positions(app.world().resource::<Lamps>()), [[-1, 3, -1]]);
 
@@ -328,7 +384,9 @@ fn bounded_discovery_focus_reach_and_reset_do_not_lose_deferred_or_distant_sourc
         section(
             app.world_mut(),
             SectionPos::new(x, 0, 0),
-            if x == 0 { &[([2, 3, 4], 40)] } else { &[] },
+            // Actual candidate sections still obey the 128-section budget;
+            // proven source-free terrain is covered by the separate burst test.
+            &[([1, 0, 1], 3), ([2, 3, 4], 40)],
         );
     }
     app.update();

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": 400,
+  "name": "Blood Grass",
+  "description": "Blood Grass from the crimson woodland.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "blood_grass": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "blood_grass_side": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "blood_grass_bottom": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "blood_grass": "textures/blood_grass.png",
+    "blood_grass_side": "textures/blood_grass_side.png",
+    "blood_grass_bottom": "textures/blood_grass_bottom.png"
+  },
+  "face_materials": [
+    "blood_grass_side",
+    "blood_grass_side",
+    "blood_grass_bottom",
+    "blood_grass",
+    "blood_grass_side",
+    "blood_grass_side"
+  ],
+  "surface": "turf"
+}

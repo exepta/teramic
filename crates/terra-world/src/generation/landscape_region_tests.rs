@@ -15,6 +15,8 @@ fn plains() -> BiomeSample {
             mushroom_park: 0.0,
             cliffted_desert: 0.0,
             cherry_forest: 0.0,
+            spirit_blossom: 0.0,
+            blood_forest: 0.0,
         },
     }
 }
@@ -61,6 +63,12 @@ fn revision_two_regions_preserve_the_previous_executable_snapshots() {
         let terrain = TerraGenerator::new(WorldConfig {
             seed: WorldSeed(seed),
             landscape_revision: 2,
+            blood_forest_revision: 0,
+            // Keep the pre-width-update ecology/drainage contract. `rivers`
+            // disables the main network, but ecology still enables brooks.
+            // New-world defaults must not reinterpret this historical snapshot.
+            ecology_revision: 7,
+            river_terrain_revision: 4,
             rivers: false,
             sea_level: 8.0,
             ..Default::default()

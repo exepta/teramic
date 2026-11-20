@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": 353,
+  "name": "Crypt Arch",
+  "description": "Crypt Arch for monumental entrances, arcades and vaulted halls.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crypt_arch.glb",
+  "struct_block": true,
+  "textures": {
+    "stone": "textures/crypt_arch.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0,
+        0,
+        0.28
+      ],
+      "maximum": [
+        0.18,
+        0.52,
+        0.72
+      ]
+    },
+    {
+      "minimum": [
+        0.82,
+        0,
+        0.28
+      ],
+      "maximum": [
+        1.0,
+        0.52,
+        0.72
+      ]
+    },
+    {
+      "minimum": [
+        0,
+        0.5,
+        0.28
+      ],
+      "maximum": [
+        0.18,
+        1,
+        0.72
+      ]
+    },
+    {
+      "minimum": [
+        0.82,
+        0.5,
+        0.28
+      ],
+      "maximum": [
+        1.0,
+        1,
+        0.72
+      ]
+    },
+    {
+      "minimum": [
+        0.18,
+        0.84,
+        0.28
+      ],
+      "maximum": [
+        0.82,
+        1,
+        0.72
+      ]
+    }
+  ]
+}

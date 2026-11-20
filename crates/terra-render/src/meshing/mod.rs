@@ -1,4 +1,5 @@
 pub(crate) mod builder;
+mod cactus_details;
 mod connectivity;
 pub(crate) mod custom;
 mod glass;

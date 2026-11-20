@@ -1,0 +1,34 @@
+{
+  "id": "teramic::crypt_chandelier",
+  "name": "Crypt Chandelier",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 372
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 371
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "block": 194
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "mineral": "iron_ingot"
+        },
+        "count": 2
+      }
+    ]
+  }
+}

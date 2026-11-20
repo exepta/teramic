@@ -1,9 +1,16 @@
 //! Native views of generated biome features. No fixture blocks or world edits.
+mod blood;
+mod ecology;
+mod graves;
+mod light_timing;
+mod picker;
+mod reference_scene;
 use bevy::{
     app::AppExit,
     prelude::*,
     render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk},
 };
+use picker::views as picker_views;
 use std::{
     path::PathBuf,
     time::{Duration, Instant},
@@ -32,6 +39,9 @@ enum Scene {
     WaterTransition,
     Cherry,
     CherryBrook,
+    BloodForest,
+    Ecology(ecology::Kind),
+    Reference(reference_scene::Kind),
     Landscape(LandformKind),
     LandscapeLandmark,
     ConnectedLake,
@@ -40,6 +50,7 @@ enum Scene {
     KingdomTemperate,
     KingdomWinter,
     Outpost,
+    Grave(graves::Kind),
     Picker(terra_core::BiomeKind),
 }
 
@@ -57,6 +68,9 @@ impl Scene {
             Self::WaterTransition => "water-transition",
             Self::Cherry => "cherry",
             Self::CherryBrook => "cherry-brook",
+            Self::BloodForest => "blood-forest",
+            Self::Ecology(kind) => kind.name(),
+            Self::Reference(kind) => kind.name(),
             Self::Landscape(LandformKind::Plains) => "landscape-plains",
             Self::Landscape(LandformKind::Hills) => "landscape-hills",
             Self::Landscape(LandformKind::Plateau) => "landscape-plateau",
@@ -69,6 +83,7 @@ impl Scene {
             Self::KingdomTemperate => "kingdom-temperate",
             Self::KingdomWinter => "kingdom-winter",
             Self::Outpost => "outpost",
+            Self::Grave(kind) => kind.name(),
             Self::Picker(kind) => match kind {
                 terra_core::BiomeKind::Ocean => "picker-ocean",
                 terra_core::BiomeKind::Plains => "picker-plains",
@@ -78,6 +93,8 @@ impl Scene {
                 terra_core::BiomeKind::MushroomPark => "picker-mushroom-park",
                 terra_core::BiomeKind::ClifftedDesert => "picker-cliffted-desert",
                 terra_core::BiomeKind::CherryForest => "picker-cherry-forest",
+                terra_core::BiomeKind::SpiritBlossom => "picker-spirit-blossom",
+                terra_core::BiomeKind::BloodForest => "picker-blood-forest",
             },
         }
     }
@@ -90,6 +107,7 @@ impl Scene {
                 | Self::WaterHighland
                 | Self::WaterTransition
                 | Self::CherryBrook
+                | Self::BloodForest
                 | Self::ConnectedLake
                 | Self::ConnectedRiver
                 | Self::Picker(terra_core::BiomeKind::Ocean)
@@ -115,6 +133,24 @@ struct BiomeSmoke {
     captures: usize,
     requested: bool,
     failed: bool,
+    atmosphere: bool,
+    first_mist: Option<(usize, [f32; 2])>,
+}
+
+impl BiomeSmoke {
+    fn camera_pose(&self) -> Option<Transform> {
+        let views = self.views.as_ref()?;
+        if self.stage >= 3 {
+            return None;
+        }
+        let animated_overview =
+            matches!(self.scene, Scene::Picker(_)) && self.atmosphere && self.stage == 1;
+        Some(if self.stage == 0 || animated_overview {
+            views.overview
+        } else {
+            views.close
+        })
+    }
 }
 
 pub(crate) fn install(app: &mut App) {
@@ -133,6 +169,15 @@ pub(crate) fn install(app: &mut App) {
         Ok("water-transition") => (Scene::WaterTransition, false),
         Ok("cherry") => (Scene::Cherry, false),
         Ok("cherry-brook") => (Scene::CherryBrook, false),
+        Ok("blood-forest") => (Scene::BloodForest, false),
+        Ok("blood-props") => (Scene::Ecology(ecology::Kind::BloodProps), false),
+        Ok("spirit-props") => (Scene::Ecology(ecology::Kind::SpiritProps), false),
+        Ok("rock-formations") => (Scene::Ecology(ecology::Kind::Rocks), false),
+        Ok("reference-birch") => (Scene::Reference(reference_scene::Kind::Birch), false),
+        Ok("reference-cactus") => (Scene::Reference(reference_scene::Kind::Cactus), false),
+        Ok("reference-plains") => (Scene::Reference(reference_scene::Kind::Plains), false),
+        Ok("reference-desert") => (Scene::Reference(reference_scene::Kind::Desert), false),
+        Ok("reference-spirit") => (Scene::Reference(reference_scene::Kind::Spirit), false),
         Ok("landscape-plains") => (Scene::Landscape(LandformKind::Plains), false),
         Ok("landscape-hills") => (Scene::Landscape(LandformKind::Hills), false),
         Ok("landscape-plateau") => (Scene::Landscape(LandformKind::Plateau), false),
@@ -145,6 +190,10 @@ pub(crate) fn install(app: &mut App) {
         Ok("kingdom-temperate") => (Scene::KingdomTemperate, false),
         Ok("kingdom-winter") => (Scene::KingdomWinter, false),
         Ok("outpost") => (Scene::Outpost, false),
+        Ok("cemetery") => (Scene::Grave(graves::Kind::Cemetery), false),
+        Ok("grave-knight") => (Scene::Grave(graves::Kind::Knight), false),
+        Ok("grave-priestess") => (Scene::Grave(graves::Kind::Priestess), false),
+        Ok("grave-scholar") => (Scene::Grave(graves::Kind::Scholar), false),
         Ok("picker-ocean") => (Scene::Picker(terra_core::BiomeKind::Ocean), false),
         Ok("picker-plains") => (Scene::Picker(terra_core::BiomeKind::Plains), false),
         Ok("picker-forest") => (Scene::Picker(terra_core::BiomeKind::Forest), false),
@@ -155,10 +204,14 @@ pub(crate) fn install(app: &mut App) {
             (Scene::Picker(terra_core::BiomeKind::ClifftedDesert), false)
         }
         Ok("picker-cherry-forest") => (Scene::Picker(terra_core::BiomeKind::CherryForest), false),
+        Ok("picker-spirit-blossom") => (Scene::Picker(terra_core::BiomeKind::SpiritBlossom), false),
+        Ok("picker-blood-forest") => (Scene::Picker(terra_core::BiomeKind::BloodForest), false),
         _ => (Scene::Cave, true),
     };
     let now = Instant::now();
+    blood::install(app);
     app.insert_resource(ControllerMode::Fly)
+        .init_resource::<light_timing::Timing>()
         .insert_resource(BiomeSmoke {
             scene,
             views: None,
@@ -169,15 +222,26 @@ pub(crate) fn install(app: &mut App) {
             captures: 0,
             requested: false,
             failed,
+            atmosphere: std::env::var_os("TERRA_BIOME_ATMOSPHERE").is_some(),
+            first_mist: None,
         })
         .add_systems(PostStartup, locate)
-        .add_systems(Update, run.after(terra_player::PlayerSet::Movement));
+        .add_systems(PostUpdate, light_timing::observe)
+        .add_systems(
+            Update,
+            (hold_camera, run)
+                .chain()
+                .after(terra_player::PlayerSet::Movement)
+                .before(terra_player::PlayerSet::Targeting),
+        );
 }
 
 fn locate(world: &mut World) {
     let terrain = world.resource::<WorldTerrain>().0.clone();
     let scene = world.resource::<BiomeSmoke>().scene;
     let views = match scene {
+        Scene::Grave(kind) => graves::views(world, &terrain, kind),
+        Scene::Picker(terra_core::BiomeKind::BloodForest) => blood::picker_views(world, &terrain),
         Scene::Picker(kind) => picker_views(&terrain, kind),
         Scene::Cave => cave_views(&terrain),
         Scene::Mushroom => mushroom_views(&terrain),
@@ -185,6 +249,9 @@ fn locate(world: &mut World) {
         Scene::Highland => highland_views(&terrain),
         Scene::Cherry => cherry_views(&terrain),
         Scene::CherryBrook => cherry_brook_views(&terrain),
+        Scene::BloodForest => blood::views(world, &terrain),
+        Scene::Ecology(kind) => ecology::views(world, &terrain, kind),
+        Scene::Reference(kind) => reference_scene::views(world, &terrain, kind),
         Scene::Landscape(kind) => landscape_views(&terrain, Some(kind)),
         Scene::LandscapeLandmark => landscape_views(&terrain, None),
         Scene::ConnectedLake | Scene::ConnectedRiver => connected_hydrology_views(&terrain, scene),
@@ -206,10 +273,17 @@ fn locate(world: &mut World) {
         );
         return;
     };
-    world
-        .resource_mut::<terra_core::GameConfig>()
+    if world
+        .resource::<terra_core::GameConfig>()
         .client
-        .fov_degrees = 55.0;
+        .fov_degrees
+        != 55.0
+    {
+        world
+            .resource_mut::<terra_core::GameConfig>()
+            .client
+            .fov_degrees = 55.0;
+    }
     world
         .resource_mut::<bevy::gizmos::config::GizmoConfigStore>()
         .config_mut::<bevy::gizmos::config::DefaultGizmoConfigGroup>()
@@ -218,7 +292,7 @@ fn locate(world: &mut World) {
     set_camera(world, views.overview);
     if matches!(
         scene,
-        Scene::KingdomTemperate | Scene::KingdomWinter | Scene::Outpost
+        Scene::KingdomTemperate | Scene::KingdomWinter | Scene::Outpost | Scene::Grave(_)
     ) {
         // Stream around the real settlement, so a distant overview camera never
         // excludes the rear keep or the ground beneath its own high viewpoint.
@@ -236,9 +310,44 @@ fn set_camera(world: &mut World, transform: Transform) {
         .query_filtered::<&mut Transform, With<TerraCamera>>()
         .iter_mut(world)
     {
-        *camera = transform;
+        if *camera != transform {
+            *camera = transform;
+        }
     }
-    world.resource_mut::<ChunkFocus>().0 = transform.translation.to_array().map(f64::from);
+    let next = transform.translation.to_array().map(f64::from);
+    if world.resource::<ChunkFocus>().0 != next {
+        world.resource_mut::<ChunkFocus>().0 = next;
+    }
+}
+
+fn hold_camera(world: &mut World) {
+    // Player presentation can follow a newly spawned body after PostStartup.
+    // Freeze only this opt-in photo harness, after movement and before targeting
+    // and streaming consume the pose. Normal player controls stay untouched.
+    if let Some(pose) = world.resource::<BiomeSmoke>().camera_pose() {
+        set_camera(world, pose);
+    }
+    if world
+        .get_resource::<terra_ui::HudVisibility>()
+        .is_some_and(|hud| hud.visible)
+    {
+        world.resource_mut::<terra_ui::HudVisibility>().visible = false;
+    }
+}
+
+fn ensure_preview_range(world: &mut World) {
+    for mut projection in world
+        .query_filtered::<&mut Projection, With<TerraCamera>>()
+        .iter_mut(world)
+    {
+        // Taking DerefMut itself triggers Changed<Projection>, even if a max()
+        // assignment leaves the float unchanged. Keep settled camera state idle.
+        if matches!(&*projection, Projection::Perspective(p) if p.far < 512.0)
+            && let Projection::Perspective(p) = &mut *projection
+        {
+            p.far = 512.0;
+        }
+    }
 }
 
 fn surface_eye(terrain: &TerraGenerator, mut eye: Vec3) -> Vec3 {
@@ -326,7 +435,7 @@ fn stronghold_views(terrain: &TerraGenerator, scene: Scene) -> Option<Views> {
         let civilians = settlement
             .residents
             .iter()
-            .filter(|s| s.role < terra_core::creatures::villagers::CIVILIAN_ROLE_COUNT)
+            .filter(|s| terra_core::creatures::villagers::is_civilian(s.role))
             .count();
         let soldiers = settlement.residents.len() - civilians;
         if !matches!(scene, Scene::Outpost)
@@ -591,8 +700,95 @@ fn fir_views_at(
 }
 
 fn connected_hydrology_views(terrain: &TerraGenerator, scene: Scene) -> Option<Views> {
-    let anchor = std::env::var("TERRA_HYDRO_ANCHOR").ok()?;
-    let [x, z] = serde_json::from_str::<[f64; 2]>(&anchor).ok()?;
+    let explicit = match std::env::var("TERRA_HYDRO_ANCHOR") {
+        Ok(anchor) => Some(serde_json::from_str::<[f64; 2]>(&anchor).ok()?),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(_) => return None,
+    };
+    let automatic = explicit.is_none();
+    let [x, z] = if let Some(anchor) = explicit {
+        anchor
+    } else {
+        if !matches!(scene, Scene::ConnectedRiver) || terrain.config().landscape_revision < 3 {
+            return None;
+        }
+        let started = Instant::now();
+        let mut selected: Option<(f64, [f64; 2])> = None;
+        // Search real immutable courses, never carve a convenient photo river.
+        // One catchment already supplies many candidates and is cached by the
+        // production generator; stop early once a visibly sculpted reach exists.
+        'regions: for ring in 0_i64..=2 {
+            for rz in -ring..=ring {
+                for rx in -ring..=ring {
+                    if rx.abs().max(rz.abs()) != ring {
+                        continue;
+                    }
+                    if started.elapsed() >= Duration::from_secs(35) {
+                        break 'regions;
+                    }
+                    let Some(region) = terrain.hydrology_region_at(
+                        rx as f64 * 2048.0 + 1024.0,
+                        rz as f64 * 2048.0 + 1024.0,
+                    ) else {
+                        continue;
+                    };
+                    for index in (3..region.course.len() - 3).step_by(2) {
+                        if started.elapsed() >= Duration::from_secs(35) {
+                            break 'regions;
+                        }
+                        let p = region.course[index];
+                        let Some(water) = terrain.water_column(p[0], p[2]) else {
+                            continue;
+                        };
+                        let Some(river) = terrain.river_at(p[0], p[2]) else {
+                            continue;
+                        };
+                        if river.covered
+                            || river.distance > river.width
+                            || water.level <= terrain.config().sea_level + 2.0
+                            || water.depth < 1.0
+                        {
+                            continue;
+                        }
+                        let heights = [[-48.0, 0.0], [48.0, 0.0], [0.0, -48.0], [0.0, 48.0]]
+                            .map(|[dx, dz]| terrain.terrain_base_height(p[0] + dx, p[2] + dz));
+                        let relief = heights.into_iter().fold(f64::NEG_INFINITY, f64::max)
+                            - heights.into_iter().fold(f64::INFINITY, f64::min);
+                        let fall = region.course[index - 1][1] - region.course[index + 1][1];
+                        let score = relief + fall.min(35.0) * 1.5;
+                        if selected.is_some_and(|(old, _)| score <= old) {
+                            continue;
+                        }
+                        let generator = SectionGenerator::new(terrain.clone());
+                        let bed = [
+                            p[0].floor() as i64,
+                            water.bed.floor() as i64 - 1,
+                            p[2].floor() as i64,
+                        ];
+                        let air = [bed[0], water.level.ceil() as i64, bed[2]];
+                        if generator.block_at(bed).ok().is_none_or(|m| m == 0)
+                            || generator.block_at(air).ok() != Some(0)
+                        {
+                            continue;
+                        }
+                        let target = Vec3::new(p[0] as f32, water.level as f32, p[2] as f32);
+                        let cameras = [Vec3::new(73.6, 87.6, 54.4), Vec3::new(23.0, 20.0, 27.0)]
+                            .map(|offset| surface_eye(terrain, target + offset));
+                        if cameras.iter().any(|eye| {
+                            generator.block_at(eye.floor().as_i64vec3().to_array()).ok() != Some(0)
+                        }) {
+                            continue;
+                        }
+                        selected = Some((score, [p[0], p[2]]));
+                    }
+                    if selected.is_some_and(|(score, _)| score >= 35.0) {
+                        break 'regions;
+                    }
+                }
+            }
+        }
+        selected?.1
+    };
     if !x.is_finite() || !z.is_finite() || terrain.config().landscape_revision < 3 {
         return None;
     }
@@ -644,6 +840,27 @@ fn connected_hydrology_views(terrain: &TerraGenerator, scene: Scene) -> Option<V
         depth = water.depth,
         "Connected hydrology fixture selected actual generated water and solid bed"
     );
+    if let Some(directory) = std::env::var_os("TERRA_CAPTURE_DIR") {
+        let report = serde_json::json!({
+            "status": "passed",
+            "scene": scene.name(),
+            "automatic_anchor": automatic,
+            "landscape_revision": terrain.config().landscape_revision,
+            "river_terrain_revision": terrain.config().river_terrain_revision,
+            "ecology_revision": terrain.config().ecology_revision,
+            "anchor": [x, z],
+            "level": water.level,
+            "depth": water.depth,
+            "generator_probes": [[bed, material], [air, 0]],
+            "fixture_edits": 0,
+        });
+        let data = serde_json::to_vec_pretty(&report).ok()?;
+        std::fs::write(
+            PathBuf::from(directory).join(format!("{}-source.json", scene.name())),
+            data,
+        )
+        .ok()?;
+    }
     Some(Views {
         overview: Transform::from_translation(overview).looking_at(point, Vec3::Y),
         close: Transform::from_translation(close).looking_at(point, Vec3::Y),
@@ -732,6 +949,19 @@ fn landscape_views_selected(
     let generator = SectionGenerator::new(terrain.clone());
     let material = generator.block_at(floor).ok()?;
     if material == 0 || generator.block_at(air).ok()? != 0 {
+        // Newly generated flora may occupy the best-scored surface cell. Keep
+        // the same genuine landform and choose a clear nearby probe instead.
+        if explicit.is_none() {
+            for radius in [4.0, 8.0, 16.0, 24.0] {
+                for [dx, dz] in [[radius, 0.0], [-radius, 0.0], [0.0, radius], [0.0, -radius]] {
+                    if let Some(views) =
+                        landscape_views_selected(terrain, kind, Some([x + dx, z + dz]))
+                    {
+                        return Some(views);
+                    }
+                }
+            }
+        }
         return None;
     }
     info!(
@@ -767,135 +997,6 @@ fn landscape_camera(terrain: &TerraGenerator, point: Vec3, radius: f32, height: 
     // An enclosed depression has no guaranteed lateral sightline. Keep its
     // real surface in the loaded vertical span and inspect it from overhead.
     Transform::from_translation(point + Vec3::Y * height).looking_at(target, Vec3::Z)
-}
-
-/// Static chooser photography: bounded deterministic selection from the real
-/// generator. No terrain edits, forced flat biome or fabricated backdrop.
-fn picker_views(terrain: &TerraGenerator, kind: terra_core::BiomeKind) -> Option<Views> {
-    use terra_core::BiomeKind;
-    let index = BiomeKind::ALL.into_iter().position(|k| k == kind)?;
-    let generator = SectionGenerator::new(terrain.clone());
-    let mut selected = None;
-    'search: for ring in 0_i64..=64 {
-        for n in -ring..=ring {
-            for [gx, gz] in [[n, -ring], [n, ring], [-ring, n], [ring, n]] {
-                let [x, z] = [gx as f64 * 128.0 + 0.5, gz as f64 * 128.0 + 0.5];
-                let biome = terrain.biome_at(x, z);
-                if biome.weights.values()[index] < 0.72 {
-                    continue;
-                }
-                let column = terrain.surface_column(x, z);
-                if column.biome_kind(terrain.config().sea_level) != kind {
-                    continue;
-                }
-                if kind != BiomeKind::Ocean
-                    && (column.water_level.is_some()
-                        || column.height < terrain.config().sea_level + 2.0)
-                {
-                    continue;
-                }
-                // Prefer a coherent panorama, not a narrow biome transition.
-                if [[-48.0, 0.0], [48.0, 0.0], [0.0, -48.0], [0.0, 48.0]]
-                    .into_iter()
-                    .any(|[dx, dz]| terrain.biome_at(x + dx, z + dz).weights.values()[index] < 0.50)
-                {
-                    continue;
-                }
-                if matches!(kind, BiomeKind::Highland | BiomeKind::ClifftedDesert) {
-                    let heights = [[-48.0, 0.0], [48.0, 0.0], [0.0, -48.0], [0.0, 48.0]]
-                        .map(|[dx, dz]| terrain.surface_height(x + dx, z + dz));
-                    let low = heights.into_iter().fold(column.height, f64::min);
-                    let high = heights.into_iter().fold(column.height, f64::max);
-                    if high - low < 8.0 {
-                        continue;
-                    }
-                }
-                if kind == BiomeKind::Forest {
-                    let heights = [[-40.0, 0.0], [40.0, 0.0], [0.0, -40.0], [0.0, 40.0]]
-                        .map(|[dx, dz]| terrain.surface_height(x + dx, z + dz));
-                    let low = heights.into_iter().fold(column.height, f64::min);
-                    let high = heights.into_iter().fold(column.height, f64::max);
-                    if column.slope > 0.6 || high - low > 24.0 {
-                        continue;
-                    }
-                    let roots = terrain.tree_appearance([
-                        (x.floor() as i64).div_euclid(16) * 16,
-                        0,
-                        (z.floor() as i64).div_euclid(16) * 16,
-                    ]);
-                    let woodland = roots
-                        .tree_roots()
-                        .filter(|(root, appearance)| {
-                            !matches!(appearance, TreeAppearance::Mushroom | TreeAppearance::Palm)
-                                && (root[0] as f64 - x).abs() <= 24.0
-                                && (root[2] as f64 - z).abs() <= 24.0
-                        })
-                        .take(4)
-                        .count();
-                    if woodland < 4 {
-                        continue;
-                    }
-                }
-                let visible = column
-                    .water_level
-                    .unwrap_or(column.height)
-                    .max(column.height);
-                // Fluids live separately from solid blocks. An ocean's surface
-                // is Air in block_at; validate its real bed and open surface.
-                let floor = if kind == BiomeKind::Ocean {
-                    let Some(water) = terrain.water_column(x, z) else {
-                        continue;
-                    };
-                    if water.depth < 3.0
-                        || (water.level - terrain.config().sea_level).abs() > 0.01
-                        || column.ocean.ice_depth > 0
-                    {
-                        continue;
-                    }
-                    water.bed as i64 - 1
-                } else {
-                    (visible - 0.5).floor() as i64
-                };
-                let probe = [x.floor() as i64, floor, z.floor() as i64];
-                let air = [probe[0], visible.ceil() as i64, probe[2]];
-                let Ok(material) = generator.block_at(probe) else {
-                    continue;
-                };
-                if material == 0 || generator.block_at(air).ok() != Some(0) {
-                    continue;
-                }
-                selected = Some(([x, z], visible, vec![(probe, material), (air, 0)]));
-                break 'search;
-            }
-        }
-    }
-    let ([x, z], visible, probes) = selected?;
-    let point = Vec3::new(x as f32, visible as f32, z as f32);
-    let (radius, height) = match kind {
-        BiomeKind::Highland | BiomeKind::ClifftedDesert => (80.0, 42.0),
-        BiomeKind::Forest | BiomeKind::CherryForest | BiomeKind::MushroomPark => (62.0, 30.0),
-        BiomeKind::Ocean => (72.0, 24.0),
-        _ => (74.0, 28.0),
-    };
-    let photo_target = if kind == BiomeKind::Forest {
-        point + Vec3::Y * 8.0
-    } else {
-        point
-    };
-    let overview = landscape_camera(terrain, photo_target, radius, height);
-    info!(
-        ?kind,
-        seed = terrain.config().seed.0,
-        ?probes,
-        ?overview,
-        "Native biome chooser photo uses actual generated terrain"
-    );
-    Some(Views {
-        overview,
-        close: overview,
-        anchor: point,
-        probes,
-    })
 }
 
 fn cave_views(terrain: &TerraGenerator) -> Option<Views> {
@@ -1445,12 +1546,11 @@ fn select_water_view(
     }
 }
 
-fn capture(world: &mut World, scene: Scene, close: bool) -> Result<(), String> {
+fn capture(world: &mut World, scene: Scene, view: &str) -> Result<(), String> {
     let directory = std::env::var_os("TERRA_CAPTURE_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| std::env::temp_dir().join("terra-biomes"));
     std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
-    let view = if close { "close" } else { "overview" };
     world
         .spawn(Screenshot::primary_window())
         .observe(save_to_disk(
@@ -1462,37 +1562,97 @@ fn capture(world: &mut World, scene: Scene, close: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// Optional paired native captures inspect the real renderer status, without
+/// placing lamps, overriding the biome mask or mutating generated terrain.
+fn inspect_atmosphere(world: &World, state: &mut BiomeSmoke) -> Result<bool, String> {
+    let expected = match state.scene {
+        Scene::Picker(terra_core::BiomeKind::SpiritBlossom) => true,
+        Scene::Picker(terra_core::BiomeKind::CherryForest) => false,
+        _ => return Err("Atmosphere inspection requires a Spirit/Cherry picker scene".into()),
+    };
+    let mist = world
+        .get_resource::<terra_render::SpiritMistStatus>()
+        .ok_or("Spirit mist status missing")?;
+    if expected && mist.banks == 0 {
+        return Ok(false);
+    }
+    // The mist field extends 80 m beyond the camera. A cherry panorama may
+    // legitimately include its neighboring Spirit biome; verify cached terrain
+    // rather than requiring the entire surrounding field to be cherry-only.
+    let nearby_spirit_columns = state.camera_pose().map_or(0, |camera| {
+        let center = [camera.translation.x, camera.translation.z]
+            .map(|value| (value.floor() as i64).div_euclid(16) * 16 + 8);
+        (-5..=5)
+            .flat_map(|z| (-5..=5).map(move |x| [x, z]))
+            .filter(|offset| {
+                world
+                    .resource::<ChunkStore>()
+                    .surface_column_at(center[0] + offset[0] * 16, center[1] + offset[1] * 16)
+                    .is_some_and(|column| column.biome.weights.spirit_blossom > 0.05)
+            })
+            .count()
+    });
+    if !expected && mist.banks != 0 && nearby_spirit_columns == 0 {
+        return Err(format!(
+            "Cherry panorama has {} Spirit mist banks without neighboring Spirit terrain",
+            mist.banks
+        ));
+    }
+    if !mist.drift.into_iter().all(f32::is_finite) {
+        return Err("Non-finite mist animation".into());
+    }
+    if state.stage == 0 {
+        state.first_mist = Some((mist.banks, mist.drift));
+    } else {
+        let (first_banks, first_drift) = state.first_mist.ok_or("Initial mist sample missing")?;
+        if expected && first_drift == mist.drift {
+            return Err("Spirit mist drift did not change between native captures".into());
+        }
+        let directory = std::env::var_os("TERRA_CAPTURE_DIR")
+            .map(PathBuf::from)
+            .ok_or("Atmosphere inspection requires TERRA_CAPTURE_DIR")?;
+        let report = serde_json::json!({
+            "scene": state.scene.name(),
+            "status": "passed",
+            "mist_expected": expected,
+            "first_banks": first_banks,
+            "later_banks": mist.banks,
+            "nearby_spirit_columns": nearby_spirit_columns,
+            "volumes": mist.volumes,
+            "ray_steps": mist.ray_steps,
+            "terrain_texture_bytes": mist.terrain_texture_bytes,
+            "first_drift": first_drift,
+            "later_drift": mist.drift,
+            "terrain": "Actual generated terrain; no placed lamps or fixture blocks",
+        });
+        std::fs::write(
+            directory.join(format!("{}-atmosphere.json", state.scene.name())),
+            serde_json::to_vec_pretty(&report).map_err(|error| error.to_string())?,
+        )
+        .map_err(|error| error.to_string())?;
+    }
+    info!(scene=state.scene.name(), stage=state.stage, banks=mist.banks, drift=?mist.drift,
+        "Native atmosphere sample verified");
+    Ok(true)
+}
+
 fn run(world: &mut World) {
     world.resource_scope(|world, mut state: Mut<BiomeSmoke>| {
         if state.stage == 3 { return; }
-        if matches!(state.scene,Scene::Picker(_)) {
-            if let Some(mut hud)=world.get_resource_mut::<terra_ui::HudVisibility>() {hud.visible=false;}
-            // UI source photography uses the actual renderer, with no editor
-            // gizmos or HUD layered over its pixels. This is an opt-in fixture.
-            for mut projection in world.query_filtered::<&mut Projection,With<TerraCamera>>().iter_mut(world) {
-                if let Projection::Perspective(p)=&mut *projection {p.far=p.far.max(512.0);}
-            }
-        }
-        if matches!(
-            state.scene,
-            Scene::KingdomTemperate | Scene::KingdomWinter | Scene::Outpost
-        ) {
-            // The overview sits outside the streaming focus. Keep its complete
-            // real settlement inside the camera frustum without loading sky chunks.
-            for mut projection in world
-                .query_filtered::<&mut Projection, With<TerraCamera>>()
-                .iter_mut(world)
-            {
-                if let Projection::Perspective(p) = &mut *projection {
-                    p.far = p.far.max(512.0);
-                }
-            }
+        if matches!(state.scene, Scene::Picker(_) | Scene::BloodForest | Scene::Ecology(_) | Scene::Reference(_) | Scene::KingdomTemperate | Scene::KingdomWinter | Scene::Outpost | Scene::Grave(_)) {
+            // The real feature remains in the frustum without repeatedly
+            // invalidating the camera after its settled projection is correct.
+            ensure_preview_range(world);
         }
         let render = world.resource::<RenderStatus>();
         let generation = world.resource::<WorldGeneration>();
         if state.last_progress.elapsed() >= Duration::from_secs(10) {
             let water = world.resource::<WaterStatus>();
             let props = world.resource::<terra_render::PropRenderStatus>();
+            let chunks = world.resource::<ChunkStore>();
+            let visibility = world.get_resource::<terra_render::TerrainVisibility>();
+            let unconsumed = chunks.loaded.iter().filter(|(position, section)| !render.section_ready(**position, Some(section), visibility));
+            let first_unconsumed = unconsumed.clone().next().map(|(position, section)| (*position, section.mesh_epoch, world.resource::<terra_world::edits::EditJournal>().mesh_epoch(*position)));
             info!(
                 scene = state.scene.name(), stage = state.stage,
                 focus = ?world.resource::<ChunkFocus>().0,
@@ -1501,6 +1661,7 @@ fn run(world: &mut World) {
                 generation_jobs = generation.pending_jobs,
                 terrain_ready = render.ready, terrain_jobs = render.pending_jobs,
                 terrain_columns = render.pending_columns.len(), terrain_error = ?render.error,
+                terrain_unconsumed = unconsumed.count(), ?first_unconsumed,
                 water_ready = water.ready, water_initial_ready = water.initial_ready,
                 props_ready = props.ready, prop_jobs = props.pending_jobs,
                 prop_error = ?props.error,
@@ -1513,7 +1674,7 @@ fn run(world: &mut World) {
                 > Duration::from_secs(
                     if matches!(
                         state.scene,
-                        Scene::KingdomTemperate | Scene::KingdomWinter | Scene::Outpost
+                        Scene::KingdomTemperate | Scene::KingdomWinter | Scene::Outpost | Scene::Grave(_)
                     ) {
                         240
                     } else {
@@ -1538,6 +1699,9 @@ fn run(world: &mut World) {
                 state.scene,
                 Scene::Cherry
                     | Scene::CherryBrook
+                    | Scene::BloodForest
+                    | Scene::Ecology(_)
+                    | Scene::Reference(_)
                     | Scene::Landscape(_)
                     | Scene::LandscapeLandmark
                     | Scene::ConnectedLake
@@ -1547,6 +1711,7 @@ fn run(world: &mut World) {
                     | Scene::KingdomWinter
                     | Scene::Outpost
                     | Scene::Picker(_)
+                    | Scene::Grave(_)
             ) && !world.resource::<terra_render::PropRenderStatus>().ready
             || generation.status != GenerationStatus::Ready
         {
@@ -1587,7 +1752,84 @@ fn run(world: &mut World) {
             return;
         }
         if !state.requested {
-            if let Err(error) = capture(world, state.scene, state.stage == 1) {
+            if matches!(state.scene, Scene::Picker(_))
+                && std::env::var_os("TERRA_REFERENCE_BIOMES").is_some()
+                && let Err(error) = reference_scene::inspect_picker(world, state.scene.name(), views)
+            {
+                error!(%error, "Native reference biome inspection failed");
+                state.failed = true;
+                return;
+            }
+            if matches!(state.scene, Scene::Reference(_))
+                && let Err(error) = reference_scene::inspect(world, state.stage)
+            {
+                error!(%error, "Native reference flora inspection failed");
+                state.failed = true;
+                return;
+            }
+            if matches!(state.scene, Scene::Picker(terra_core::BiomeKind::BloodForest))
+                && let Err(error) = blood::inspect_picker(world)
+            {
+                error!(%error, "Native Blood Forest picker inspection failed");
+                state.failed = true;
+                return;
+            }
+            if matches!(state.scene, Scene::BloodForest) {
+                match blood::inspect(world, state.stage) {
+                    Ok(true) => {}
+                    Ok(false) => return,
+                    Err(error) => {
+                        error!(%error, "Native Blood Forest inspection failed");
+                        state.failed = true;
+                        return;
+                    }
+                }
+            }
+            if matches!(state.scene, Scene::Grave(_))
+                && let Err(error) = graves::inspect(world, state.stage)
+            {
+                error!(%error, "Native grave inspection failed");
+                state.failed = true;
+                return;
+            }
+            if state.atmosphere && state.stage < 2 {
+                match inspect_atmosphere(world, &mut state) {
+                    Ok(true) => {}
+                    Ok(false) => return,
+                    Err(error) => {
+                        error!(%error, "Biome atmosphere inspection failed");
+                        state.failed = true;
+                        return;
+                    }
+                }
+            }
+            let view = if state.stage == 0 { "overview" } else if state.atmosphere && state.stage == 1 { "animated" } else { "close" };
+            if std::env::var_os("TERRA_BIOME_MOTES").is_some()
+                && let Some(foliage) = world.get_resource::<terra_render::FoliageStatus>()
+            {
+                let report = serde_json::json!({
+                    "scene": state.scene.name(),
+                    "view": view,
+                    "motes": foliage.magical_motes,
+                    "batches": foliage.magical_batches,
+                    "terrain": "Actual generated terrain; no fixture particles",
+                });
+                info!(%report, "Native biome mote sample");
+                if let Some(directory) = std::env::var_os("TERRA_CAPTURE_DIR") {
+                    let result = serde_json::to_vec_pretty(&report)
+                        .map_err(|error| error.to_string())
+                        .and_then(|data| std::fs::write(
+                            PathBuf::from(directory).join(format!("{}-{view}-motes.json", state.scene.name())),
+                            data,
+                        ).map_err(|error| error.to_string()));
+                    if let Err(error) = result {
+                        error!(%error, "Cannot save native biome mote sample");
+                        state.failed = true;
+                        return;
+                    }
+                }
+            }
+            if let Err(error) = capture(world, state.scene, view) {
                 error!(%error, "Biome capture failed");
                 state.failed = true;
                 return;
@@ -1599,6 +1841,22 @@ fn run(world: &mut World) {
             return;
         }
         if matches!(state.scene,Scene::Picker(_)) {
+            if state.atmosphere && state.stage == 0 {
+                // Keep the camera fixed while the actual density field advects.
+                state.stage = 1;
+                state.requested = false;
+                state.since = Instant::now();
+                return;
+            }
+            if state.atmosphere && state.stage == 1 {
+                if let Some(close) = state.views.as_ref().map(|views| views.close) {
+                    set_camera(world, close);
+                }
+                state.stage = 2;
+                state.requested = false;
+                state.since = Instant::now();
+                return;
+            }
             info!(scene=state.scene.name(),"Native biome preview passed: genuine generated biome, no HUD, full-resolution capture");
             world.write_message(AppExit::Success);state.stage=3;return;
         }
@@ -1624,6 +1882,109 @@ fn run(world: &mut World) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn photo_stages_restore_their_camera_after_player_movement_and_hide_every_hud() {
+        let mut world = World::new();
+        world.insert_resource(ChunkFocus([0.0; 3]));
+        world.insert_resource(terra_ui::HudVisibility::default());
+        let overview = Transform::from_xyz(8.0, 32.0, 24.0).looking_at(Vec3::ZERO, Vec3::Y);
+        let close = Transform::from_xyz(3.0, 4.0, 8.0).looking_at(Vec3::ONE, Vec3::Y);
+        let camera = world.spawn((TerraCamera, Transform::default())).id();
+        for (scene, atmosphere, stages) in [
+            (Scene::CherryBrook, false, [overview, close, close]),
+            (
+                Scene::Grave(graves::Kind::Knight),
+                false,
+                [overview, close, close],
+            ),
+            (
+                Scene::Picker(terra_core::BiomeKind::SpiritBlossom),
+                true,
+                [overview, overview, close],
+            ),
+        ] {
+            let now = Instant::now();
+            world.insert_resource(BiomeSmoke {
+                scene,
+                atmosphere,
+                views: Some(Views {
+                    overview,
+                    close,
+                    anchor: Vec3::ZERO,
+                    probes: Vec::new(),
+                }),
+                started: now,
+                since: now,
+                last_progress: now,
+                stage: 0,
+                captures: 0,
+                requested: false,
+                failed: false,
+                first_mist: None,
+            });
+            for (stage, expected) in stages.into_iter().enumerate() {
+                world.resource_mut::<BiomeSmoke>().stage = stage;
+                // Reproduce body presentation replacing the startup viewpoint.
+                *world.get_mut::<Transform>(camera).unwrap() = Transform::IDENTITY;
+                world.resource_mut::<ChunkFocus>().0 = [0.0; 3];
+                world.resource_mut::<terra_ui::HudVisibility>().visible = true;
+                hold_camera(&mut world);
+                assert_eq!(*world.get::<Transform>(camera).unwrap(), expected);
+                assert_eq!(
+                    world.resource::<ChunkFocus>().0,
+                    expected.translation.to_array().map(f64::from)
+                );
+                assert!(!world.resource::<terra_ui::HudVisibility>().visible);
+            }
+            world.resource_mut::<BiomeSmoke>().stage = 3;
+            assert!(world.resource::<BiomeSmoke>().camera_pose().is_none());
+        }
+    }
+
+    #[test]
+    fn settled_preview_camera_does_not_mark_projection_or_focus_changed_again() {
+        let mut world = World::new();
+        world.insert_resource(ChunkFocus([0.0; 3]));
+        let pose = Transform::from_xyz(8.0, 32.0, 24.0);
+        let camera = world
+            .spawn((
+                TerraCamera,
+                Transform::default(),
+                Projection::Perspective(PerspectiveProjection {
+                    far: 100.0,
+                    ..default()
+                }),
+            ))
+            .id();
+        set_camera(&mut world, pose);
+        ensure_preview_range(&mut world);
+        assert!(
+            world
+                .entity(camera)
+                .get_ref::<Projection>()
+                .unwrap()
+                .is_changed()
+        );
+        world.clear_trackers();
+        set_camera(&mut world, pose);
+        ensure_preview_range(&mut world);
+        assert!(
+            !world
+                .entity(camera)
+                .get_ref::<Projection>()
+                .unwrap()
+                .is_changed()
+        );
+        assert!(
+            !world
+                .entity(camera)
+                .get_ref::<Transform>()
+                .unwrap()
+                .is_changed()
+        );
+        assert!(!world.get_resource_ref::<ChunkFocus>().unwrap().is_changed());
+    }
 
     fn modern_world() -> terra_core::WorldConfig {
         terra_core::WorldConfig {
@@ -1722,6 +2083,40 @@ mod tests {
         assert_eq!(f64::from(views.anchor.y), water.level);
         assert_eq!(water.level, terrain.config().sea_level);
         assert!(views.probes[0].1 != 0 && views.probes[1].1 == 0);
+        assert_eq!(
+            views.probes.len(),
+            4,
+            "marine bed, surface and real dry shore"
+        );
+        let shore = views.probes[2].0;
+        let column = terrain.surface_column(shore[0] as f64 + 0.5, shore[2] as f64 + 0.5);
+        assert!(column.water_level.is_none());
+        assert!(column.height > water.level);
+        assert!(
+            (shore[0] as f32 + 0.5 - views.anchor.x).hypot(shore[2] as f32 + 0.5 - views.anchor.z)
+                <= 65.0
+        );
+        let generator = SectionGenerator::new(terrain);
+        for (position, material) in views.probes {
+            assert_eq!(generator.block_at(position).unwrap(), material);
+        }
+    }
+
+    #[test]
+    fn highland_picker_photographs_existing_snowfield_without_terrain_edits() {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig::default()).unwrap();
+        let views = picker_views(&terrain, terra_core::BiomeKind::Highland)
+            .expect("fresh world has a genuine snowy mountain photo candidate");
+        assert_eq!(views.probes[0].1, MaterialId::Snow as u16);
+        assert!(
+            views
+                .probes
+                .iter()
+                .filter(|(_, m)| *m == MaterialId::Snow as u16)
+                .count()
+                >= 3,
+            "snow must occupy the anchor and multiple neighbouring columns"
+        );
         let generator = SectionGenerator::new(terrain);
         for (position, material) in views.probes {
             assert_eq!(generator.block_at(position).unwrap(), material);

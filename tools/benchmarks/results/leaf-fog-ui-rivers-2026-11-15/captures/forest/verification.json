@@ -1,0 +1,30 @@
+{
+  "status": "passed",
+  "scope": "Native model/pose fixtures; not authoritative AI, navigation or swimming tests.",
+  "client_sha256": "eaced7338506d054eebb2f071b6da42718037d9e889c22d52b3b63359d61404c",
+  "scenes": {
+    "forest": {
+      "count": 4,
+      "marker": "Forest gallery rendered three Skeleton loadouts",
+      "captures": [
+        {
+          "file": "forest-creatures-0.png",
+          "sha256": "a0c2a0e64b522c5dc8fb200d8855191b52eb172c0e4fa16d5fe47a0329fa7a23"
+        },
+        {
+          "file": "forest-creatures-1.png",
+          "sha256": "ad117cf3334bb98bc422257476f8382e08bc0a0dd3fc15609bc397e58aaf42d8"
+        },
+        {
+          "file": "forest-creatures-2.png",
+          "sha256": "5ce0038c64301b3cf0d4bd50636ed72e15d10f718060d1a864020f99b7c436af"
+        },
+        {
+          "file": "forest-creatures-3.png",
+          "sha256": "036869c0dfdbb7df2928a0ba20b1d2c32f0f9b41a48e926dd6948fa26db3019b"
+        }
+      ]
+    }
+  },
+  "total_captures": 4
+}

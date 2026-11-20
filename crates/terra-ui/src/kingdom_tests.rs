@@ -31,6 +31,53 @@ fn requests(app: &mut App) -> Vec<KingdomAction> {
         .collect()
 }
 
+#[test]
+fn kingdom_hotkey_opens_the_remote_keep_only_while_in_member_territory() {
+    use terra_core::kingdom::{ClaimActor, ClaimKind};
+    let mut app = app();
+    let owner = app.world().resource::<ClientSession>().uuid.unwrap();
+    let keep = [104, 4, 8];
+    {
+        let mut session = app.world_mut().resource_mut::<ClientSession>();
+        let id = session.kingdoms.found(owner, keep, "Home realm").unwrap();
+        for x in (0..6).rev() {
+            session
+                .kingdoms
+                .claim(
+                    id,
+                    [x, 0],
+                    ClaimKind::RealmTerritory,
+                    ClaimActor::Player(owner),
+                )
+                .unwrap();
+        }
+        session.spawn = Vec3::new(8.5, 3.0, 8.5);
+    }
+    app.add_systems(Update, opening_frame);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyK);
+    app.update();
+    let actions = app
+        .world_mut()
+        .resource_mut::<Messages<KingdomMenuAction>>()
+        .drain()
+        .collect::<Vec<_>>();
+    assert!(matches!(actions.as_slice(), [KingdomMenuAction::Open(p)] if *p == keep));
+    for action in actions {
+        app.world_mut().write_message(action);
+    }
+    update(app.world_mut());
+    assert!(app.world().resource::<KingdomView>().visible);
+    assert_eq!(
+        requests(&mut app),
+        vec![KingdomAction::Inspect { position: keep }]
+    );
+    app.world_mut().resource_mut::<ClientSession>().spawn = Vec3::new(-100.0, 3.0, -100.0);
+    update(app.world_mut());
+    assert!(!app.world().resource::<KingdomView>().visible);
+}
+
 fn act(app: &mut App, action: KingdomMenuAction) {
     app.world_mut().write_message(action);
     update(app.world_mut());
@@ -355,17 +402,45 @@ fn disconnect_clears_only_owned_focus_and_closes_the_panel() {
 
 #[test]
 fn kingdom_template_styles_use_registered_components_and_parse() {
-    tilt_ui::tilt_ui_css::parse_stylesheet(include_str!(
-        "../../../src-ui/components/kingdom-menu/kingdom-menu.component.css"
-    ))
-    .unwrap();
-    assert!(
-        crate::TILT_UI_COMPONENTS
-            .iter()
-            .any(|component| component.name == "kingdom-menu")
-    );
-    let template =
-        include_str!("../../../src-ui/components/kingdom-menu/kingdom-menu.component.html");
+    let shell = include_str!("../../../src-ui/components/kingdom-menu/kingdom-menu.component.html");
+    let templates = [
+        shell,
+        include_str!("../../../src-ui/components/kingdom-general/kingdom-general.component.html"),
+        include_str!("../../../src-ui/components/kingdom-members/kingdom-members.component.html"),
+        include_str!(
+            "../../../src-ui/components/kingdom-diplomacy/kingdom-diplomacy.component.html"
+        ),
+        include_str!("../../../src-ui/components/kingdom-workers/kingdom-workers.component.html"),
+        include_str!("../../../src-ui/components/kingdom-army/kingdom-army.component.html"),
+    ];
+    for css in [
+        include_str!("../../../src-ui/components/kingdom-menu/kingdom-menu.component.css"),
+        include_str!("../../../src-ui/components/kingdom-general/kingdom-general.component.css"),
+        include_str!("../../../src-ui/components/kingdom-members/kingdom-members.component.css"),
+        include_str!(
+            "../../../src-ui/components/kingdom-diplomacy/kingdom-diplomacy.component.css"
+        ),
+        include_str!("../../../src-ui/components/kingdom-workers/kingdom-workers.component.css"),
+        include_str!("../../../src-ui/components/kingdom-army/kingdom-army.component.css"),
+        include_str!("../../../src-ui/styles/kingdom-sections.css"),
+    ] {
+        tilt_ui::tilt_ui_css::parse_stylesheet(css).unwrap();
+    }
+    for name in [
+        "kingdom-menu",
+        "kingdom-general",
+        "kingdom-members",
+        "kingdom-diplomacy",
+        "kingdom-workers",
+        "kingdom-army",
+    ] {
+        assert!(
+            crate::TILT_UI_COMPONENTS
+                .iter()
+                .any(|component| component.name == name),
+            "{name} is not registered"
+        );
+    }
     for id in [
         "kingdom-dialog",
         "kingdom-name",
@@ -382,9 +457,34 @@ fn kingdom_template_styles_use_registered_components_and_parse() {
         "kingdom-claim-protected",
         "kingdom-claim-territory",
         "kingdom-release",
+        "kingdom-select-member",
+        "kingdom-select-realm",
+        "kingdom-edit-role",
+        "kingdom-set-role",
+        "kingdom-relation-allied",
     ] {
-        assert!(template.contains(&format!("id=\"{id}\"")));
+        assert!(
+            templates
+                .iter()
+                .any(|template| template.contains(&format!("id=\"{id}\""))),
+            "missing real control {id}"
+        );
     }
+    for (tab, component) in [
+        ("overview", "kingdom-general"),
+        ("members", "kingdom-members"),
+        ("diplomacy", "kingdom-diplomacy"),
+        ("building", "building-local"),
+        ("work", "kingdom-workers"),
+        ("army", "kingdom-army"),
+    ] {
+        assert!(shell.contains(&format!("id=\"kingdom-tab-{tab}\"")));
+        assert!(shell.contains(&format!("<{component}>")));
+    }
+    let shared = include_str!("../../../src-ui/styles/kingdom-sections.css");
+    assert!(shared.contains(".keep-section .keep-action { display: flex; flex-direction: row;"));
+    assert!(shared.contains("width: auto;"));
+    assert!(shared.contains(".keep-section .keep-action::value"));
 }
 
 #[path = "kingdom_claim_tests.rs"]
@@ -691,4 +791,72 @@ fn diplomacy_distinguishes_offers_from_effective_relations_and_explains_npc_cond
         .unwrap();
     assert_eq!(row.relation_key, "allied");
     assert!(!row.pending_alliance);
+}
+
+#[test]
+fn member_and_realm_selection_are_local_and_only_accept_current_registry_rows() {
+    let mut app = app();
+    let id = founded(&mut app);
+    let member = PlayerUuid::from_u128(765);
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .kingdoms
+        .join(member, id)
+        .unwrap();
+    act(&mut app, KingdomMenuAction::Tab("members".into()));
+    act(&mut app, KingdomMenuAction::SelectMember(member));
+    assert!(requests(&mut app).is_empty());
+    assert!(
+        app.world()
+            .resource::<KingdomView>()
+            .members
+            .iter()
+            .find(|row| row.id == member.to_string())
+            .unwrap()
+            .selected
+    );
+    act(
+        &mut app,
+        KingdomMenuAction::SelectMember(PlayerUuid::from_u128(999)),
+    );
+    assert_eq!(
+        app.world().resource::<KingdomMenuState>().selected_member,
+        Some(member)
+    );
+    act(&mut app, KingdomMenuAction::Tab("diplomacy".into()));
+    act(
+        &mut app,
+        KingdomMenuAction::SelectRealm("bot:lutera".into()),
+    );
+    assert!(
+        app.world()
+            .resource::<KingdomView>()
+            .diplomacy
+            .iter()
+            .find(|row| row.key == "bot:lutera")
+            .unwrap()
+            .selected
+    );
+    act(
+        &mut app,
+        KingdomMenuAction::SelectRealm("player:999999".into()),
+    );
+    assert_eq!(
+        app.world()
+            .resource::<KingdomMenuState>()
+            .selected_realm
+            .as_deref(),
+        Some("bot:lutera")
+    );
+    act(&mut app, KingdomMenuAction::Tab("army".into()));
+    let view = app.world().resource::<KingdomView>();
+    assert!(
+        view.army_tab
+            && !view.overview_tab
+            && !view.members_tab
+            && !view.diplomacy_tab
+            && !view.work_tab
+            && !view.building_tab
+    );
+    assert!(requests(&mut app).is_empty());
 }

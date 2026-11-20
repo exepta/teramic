@@ -49,6 +49,7 @@ fn fixture(piece: Piece) -> (ChunkStore, EditJournal, BTreeMap<SectionPos, Vec<[
                     secondary: cell != piece.anchor,
                     wood: WoodSpecies::Spruce,
                     rail_curve: piece.curve,
+                    liquid: None,
                 }),
             )
             .unwrap();

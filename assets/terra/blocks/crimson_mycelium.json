@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": 407,
+  "name": "Crimson Mycelium",
+  "description": "Crimson Mycelium from the crimson woodland.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "crimson_mycelium": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "crimson_mycelium_side": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "crimson_mycelium_bottom": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "crimson_mycelium": "textures/crimson_mycelium.png",
+    "crimson_mycelium_side": "textures/crimson_mycelium_side.png",
+    "crimson_mycelium_bottom": "textures/crimson_mycelium_bottom.png"
+  },
+  "face_materials": [
+    "crimson_mycelium_side",
+    "crimson_mycelium_side",
+    "crimson_mycelium_bottom",
+    "crimson_mycelium",
+    "crimson_mycelium_side",
+    "crimson_mycelium_side"
+  ],
+  "surface": "turf"
+}

@@ -1,3 +1,4 @@
+pub mod building_jobs;
 pub mod chat;
 pub mod chunk_messages;
 pub mod commands;

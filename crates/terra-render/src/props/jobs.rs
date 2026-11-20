@@ -645,10 +645,11 @@ fn dispatch(
         Option<ResMut<PropAppearanceState>>,
         ResMut<Assets<Mesh>>,
     ),
-    (mut status, mut queue, mut growth_status): (
+    (mut status, mut queue, mut growth_status, mut readiness_trace): (
         ResMut<PropRenderStatus>,
         Local<PropQueue>,
         ResMut<PropGrowthStatus>,
+        Local<Option<std::time::Instant>>,
     ),
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("props.dispatch");
@@ -669,6 +670,18 @@ fn dispatch(
         queue.record_prop_edits(&world.chunks, &world.journal);
     }
     let untracked_change = world.chunks.is_changed() && !changes.any();
+    let invalidation_flags = [
+        world.chunks.is_changed(),
+        world.journal.is_changed(),
+        world.config.is_changed(),
+        world.terrain.is_changed(),
+        assets.is_changed(),
+    ]
+    .into_iter()
+    .enumerate()
+    .fold(0, |flags, (bit, changed)| {
+        flags | (u8::from(changed) << bit)
+    });
     // Empty sky/rock sections never acquire a vegetation LOD merely because
     // the camera moved. Publications maintain the small live selection domain.
     if untracked_change || world.terrain.is_changed() {
@@ -1117,6 +1130,14 @@ fn dispatch(
         && !queue.dirty
         && jobs.0.is_empty()
         && jobs.1.is_empty();
+    static TRACE_READY: std::sync::LazyLock<bool> =
+        std::sync::LazyLock::new(|| std::env::var_os("TERRA_READINESS_DIAGNOSTICS").is_some());
+    if *TRACE_READY
+        && readiness_trace.is_none_or(|last| last.elapsed() >= std::time::Duration::from_secs(5))
+    {
+        tracing::info!(focus=?world.focus.0, invalidations=invalidation_flags, jobs=jobs.0.len(), retries=jobs.1.len(), queued=queue.positions.len(), changed=queue.changed.len(), selection=queue.selection.len(), dirty=queue.dirty, waiting_support=queue.waiting_support.len(), "Prop readiness trace");
+        *readiness_trace = Some(std::time::Instant::now());
+    }
     status.pending_jobs = jobs.0.len();
 }
 
@@ -1722,6 +1743,7 @@ fn prepare_prop_batch(batch: &mut MeshBatch, meshes: &mut Assets<Mesh>) {
         opaque_shadow: false,
         bounds: wind::padded_bounds(&mesh),
         handle: meshes.add(mesh),
+        liquid: None,
         rooted: false,
         damp: false,
         coastal_quads: 0,

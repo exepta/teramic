@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 319,
+  "name": "Lotus Flower",
+  "description": "A pink lotus resting on a broad green water lily leaf.",
+  "creative_category": "nature",
+  "hardness": 0.3,
+  "resistance": 3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/lotus_flower.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

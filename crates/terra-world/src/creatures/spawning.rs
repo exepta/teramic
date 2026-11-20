@@ -24,14 +24,20 @@ pub fn near(
         velocity: [0.0; 3],
         yaw: yaw.rem_euclid(std::f32::consts::TAU),
         health: mob.kind.health(),
-        behavior: if mob.kind.is_aquatic() {
+        behavior: if mob.kind == Kind::SandWorm {
+            Behavior::Attack
+        } else if mob.kind.is_aquatic() {
             Behavior::Swim
-        } else if mob.kind == Kind::Bee {
+        } else if mob.kind.is_flying() {
             Behavior::Fly
         } else {
             Behavior::Rest
         },
-        timer: 1.0,
+        timer: if mob.kind == Kind::SandWorm {
+            terra_core::creatures::sandworm::EXPOSED_SECONDS
+        } else {
+            1.0
+        },
         age: 0.0,
         variant: mob.variant,
         needs: CreatureNeeds::full(mob.kind),
@@ -52,12 +58,17 @@ pub fn near(
         }
         for dy in [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, -6, -7, -8] {
             let candidate = [x, origin[1].floor() + f64::from(dy) + 0.1, z];
-            let position = if mob.kind.is_aquatic() {
+            let position = if mob.kind == Kind::SandWorm {
+                let Some(position) = super::sandworm::command_surface(habitat, candidate) else {
+                    continue;
+                };
+                position
+            } else if mob.kind.is_aquatic() {
                 if !habitat.clear(candidate, size, true) {
                     continue;
                 }
                 candidate
-            } else if mob.kind == Kind::Bee {
+            } else if mob.kind.is_flying() {
                 let candidate = [x, candidate[1] + 1.0, z];
                 if !habitat.clear(candidate, size, false) {
                     continue;
@@ -83,6 +94,9 @@ pub fn near(
                 continue;
             }
             animal.position = position;
+            if mob.kind == Kind::SandWorm {
+                animal.yaw = ((position[0] - origin[0]).atan2(position[2] - origin[2])) as f32;
+            }
             animal.home = [
                 (position[0].floor() as i64).div_euclid(32),
                 (position[2].floor() as i64).div_euclid(32),
@@ -90,7 +104,9 @@ pub fn near(
             return Ok(animal);
         }
     }
-    Err(if mob.kind.is_aquatic() {
+    Err(if mob.kind == Kind::SandWorm {
+        "No dry loaded ground with enough room nearby. Move to open ground."
+    } else if mob.kind.is_aquatic() {
         "No loaded water with enough room nearby. Move closer to deeper water."
     } else {
         "No safe loaded space nearby. Move to open ground."

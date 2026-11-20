@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "client_sha256": "887e5291c1f8e53817af2744a358d92c9a755a11c9e78d1a6eb4d36536541442",
+  "decoded_clips": 118,
+  "scope": "Actual game decoder/device sink and 27 injected material-contact messages. Biome mixing is independently exercised through the same decoder in the waveform test; this is not a recording of natural biome traversal."
+}

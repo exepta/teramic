@@ -1,0 +1,14 @@
+   Compiling terra-voxel v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-voxel)
+   Compiling terra-core v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-core)
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Finished `test` profile [optimized + debuginfo] target(s) in 2m 31s
+     Running unittests src/lib.rs (target/debug/deps/terra_world-8abe7dd93f93dccd)
+
+running 3 tests
+test generation::natural_features::mist::tests::actual_negative_spirit_sources_match_sections_queries_and_reload_without_changing_height ... natural_mist_sources seed=42042 sources=[[-2968, 27, -4049], [-2932, 28, -4042], [-2771, 50, -4042], [-2927, 33, -4024], [-2833, 44, -4012], [-2767, 45, -4019], [-2730, 50, -4020], [-2989, 45, -3989], [-2968, 39, -3953], [-2902, 27, -3946], [-2867, 39, -3955], [-2806, 45, -3946], [-2989, 33, -3920], [-2897, 21, -3927], [-2859, 45, -3914], [-2807, 45, -3922], [-2765, 34, -3919]]
+ok
+test generation::natural_features::mist::tests::old_ecology_and_unsuitable_or_occupied_ground_never_receive_fog_stones ... ok
+test generation::natural_features::mist::tests::sparse_spirit_sources_are_buried_or_exposed_and_keep_separation_across_negative_tiles ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1486 filtered out; finished in 0.21s
+

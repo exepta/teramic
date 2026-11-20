@@ -1,0 +1,162 @@
+[
+  {
+    "source": "Coal Tar Binder",
+    "en": "Coal Tar Binder",
+    "de": "Kohlenteer-Bindemittel"
+  },
+  {
+    "source": "Road Aggregate",
+    "en": "Road Aggregate",
+    "de": "Strassenzuschlag"
+  },
+  {
+    "source": "Mix asphalt",
+    "en": "Mix asphalt",
+    "de": "Asphalt mischen"
+  },
+  {
+    "source": "Heat coal tar binder",
+    "en": "Heat coal tar binder",
+    "de": "Kohlenteer erhitzen"
+  },
+  {
+    "source": "Crush road aggregate",
+    "en": "Crush road aggregate",
+    "de": "Strassenzuschlag mahlen"
+  },
+  {
+    "source": "Asphalt",
+    "en": "Asphalt",
+    "de": "Asphalt"
+  },
+  {
+    "source": "Recover Asphalt",
+    "en": "Recover Asphalt",
+    "de": "Asphalt zurueckverarbeiten"
+  },
+  {
+    "source": "Asphalt Road Cover",
+    "en": "Asphalt Road Cover",
+    "de": "Asphalt-Strassendecke"
+  },
+  {
+    "source": "Recover Asphalt Road Cover",
+    "en": "Recover Asphalt Road Cover",
+    "de": "Asphalt-Strassendecke zurueckverarbeiten"
+  },
+  {
+    "source": "Asphalt Road Slope",
+    "en": "Asphalt Road Slope",
+    "de": "Asphalt-Steigung"
+  },
+  {
+    "source": "Recover Asphalt Road Slope",
+    "en": "Recover Asphalt Road Slope",
+    "de": "Asphalt-Steigung zurueckverarbeiten"
+  },
+  {
+    "source": "Asphalt Lower Transition",
+    "en": "Asphalt Lower Transition",
+    "de": "Unterer Asphalt-Uebergang"
+  },
+  {
+    "source": "Recover Asphalt Lower Transition",
+    "en": "Recover Asphalt Lower Transition",
+    "de": "Unterer Asphalt-Uebergang zurueckverarbeiten"
+  },
+  {
+    "source": "Asphalt Upper Transition",
+    "en": "Asphalt Upper Transition",
+    "de": "Oberer Asphalt-Uebergang"
+  },
+  {
+    "source": "Recover Asphalt Upper Transition",
+    "en": "Recover Asphalt Upper Transition",
+    "de": "Oberer Asphalt-Uebergang zurueckverarbeiten"
+  },
+  {
+    "source": "Stone Road Curb",
+    "en": "Stone Road Curb",
+    "de": "Stein-Randstein"
+  },
+  {
+    "source": "Recover Stone Road Curb",
+    "en": "Recover Stone Road Curb",
+    "de": "Stein-Randstein zurueckverarbeiten"
+  },
+  {
+    "source": "Liquid Tar",
+    "en": "Liquid Tar",
+    "de": "Flüssiger Teer"
+  },
+  {
+    "source": "Dried Tar Road",
+    "en": "Dried Tar Road",
+    "de": "Getrockneter Teerbelag"
+  },
+  {
+    "source": "Tar Bucket",
+    "en": "Tar Bucket",
+    "de": "Teereimer"
+  },
+  {
+    "source": "Fill Tar Bucket",
+    "en": "Fill Tar Bucket",
+    "de": "Teereimer füllen"
+  },
+  {
+    "source": "Dense matte asphalt made from road aggregate, sand and coal tar.",
+    "en": "Dense matte asphalt made from road aggregate, sand and coal tar.",
+    "de": "Dichter, matter Asphalt aus Strassenzuschlag, Sand und Kohlenteer."
+  },
+  {
+    "source": "An eighth-block road surface. Eight covers recover one asphalt block.",
+    "en": "An eighth-block road surface. Eight covers recover one asphalt block.",
+    "de": "Eine achtelblockhohe Strassendecke. Acht Decken ergeben wieder einen Asphaltblock."
+  },
+  {
+    "source": "A continuous full-height road grade, rising in its facing direction.",
+    "en": "A continuous full-height road grade, rising in its facing direction.",
+    "de": "Eine durchgehende, volle Blockhoehe ueberwindende Strassensteigung in Blickrichtung."
+  },
+  {
+    "source": "A road transition from the thin cover to half-block height.",
+    "en": "A road transition from the thin cover to half-block height.",
+    "de": "Ein Strassenuebergang von der duennen Decke auf eine halbe Blockhoehe."
+  },
+  {
+    "source": "A road transition from half-block height to a full-height surface.",
+    "en": "A road transition from half-block height to a full-height surface.",
+    "de": "Ein Strassenuebergang von einer halben auf eine ganze Blockhoehe."
+  },
+  {
+    "source": "A quarter-height stone edging strip. Rotate it to follow the road.",
+    "en": "A quarter-height stone edging strip. Rotate it to follow the road.",
+    "de": "Ein viertelblockhoher Randstein. Durch Drehen an den Strassenverlauf anpassen."
+  },
+  {
+    "source": "A heated coal-tar binder used with road aggregate and sand to make asphalt.",
+    "en": "A heated coal-tar binder used with road aggregate and sand to make asphalt.",
+    "de": "Ein erhitztes Bindemittel aus Kohlenteer fuer Asphalt aus Zuschlag und Sand."
+  },
+  {
+    "source": "Crushed stone aggregate for durable asphalt roads.",
+    "en": "Crushed stone aggregate for durable asphalt roads.",
+    "de": "Gebrochener Steinzuschlag fuer haltbare Asphaltstrassen."
+  },
+  {
+    "source": "Viscous, glossy tar on a prepared path. Flows slowly onto adjacent paths, then dries into a firm road.",
+    "en": "Viscous, glossy tar on a prepared path. Flows slowly onto adjacent paths, then dries into a firm road.",
+    "de": "Zähflüssiger, glänzender Teer auf einem vorbereiteten Weg. Fließt langsam auf benachbarte Wege und trocknet zu festem Straßenbelag."
+  },
+  {
+    "source": "A cured tar film bonded to its compacted path. Its thickness preserves the amount poured.",
+    "en": "A cured tar film bonded to its compacted path. Its thickness preserves the amount poured.",
+    "de": "Ein getrockneter Teerfilm auf einem verdichteten Weg. Seine Dicke entspricht der ausgegossenen Menge."
+  },
+  {
+    "source": "Eight finite units of viscous tar. Pour onto a clear Path Block; it spreads only along prepared paths and dries into road surfacing.",
+    "en": "Eight finite units of viscous tar. Pour onto a clear Path Block; it spreads only along prepared paths and dries into road surfacing.",
+    "de": "Acht begrenzte Einheiten zähflüssiger Teer. Auf einen freien Wegblock gießen; fließt nur entlang vorbereiteter Wege und trocknet zu Straßenbelag."
+  }
+]

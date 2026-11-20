@@ -50,6 +50,7 @@ pub(crate) fn prepare_intent(
     palette: Res<BlockPalette>,
     capture: Res<crate::CameraInputState>,
     blocked: Res<crate::PlayerInputBlock>,
+    edit_blocked: Option<Res<crate::WorldInteractionBlock>>,
     session: Option<Res<terra_network::client::ClientSession>>,
 ) {
     let item = active.as_ref().and_then(|active| active.0).or_else(|| {
@@ -61,6 +62,7 @@ pub(crate) fn prepare_intent(
     });
     let blocked = !capture.capture_ready()
         || blocked.0
+        || edit_blocked.as_ref().is_some_and(|block| block.0)
         || session.as_ref().is_some_and(|session| {
             !session.ready
                 || !session.allow_build

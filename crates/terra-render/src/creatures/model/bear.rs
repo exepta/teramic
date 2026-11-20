@@ -1,6 +1,6 @@
 //! Layered coat is baked into eight shared rigid meshes, never individual fur entities.
-use super::{Part, shape};
-use crate::players::model::Builder;
+use super::{Part, eyes, shape};
+use crate::creatures::model::voxel::Builder;
 use bevy::prelude::*;
 
 const COAT: [f32; 3] = [0.53, 0.275, 0.105];
@@ -98,25 +98,10 @@ pub(super) fn parts() -> Result<Vec<(Part, Vec3, Mesh)>, String> {
         )?;
         shape::rounded(
             &mut head,
-            [side * 0.18, 0.035, -0.252],
-            [0.14, 0.105, 0.025],
+            [side * 0.18, 0.11, -0.265],
+            [0.14, 0.12, 0.08],
             0.014,
             DARK,
-        )?;
-        head.voxel(
-            [side * 0.178, 0.036, -0.269],
-            [0.059, 0.058, 0.012],
-            [0.89, 0.80, 0.59],
-        )?;
-        head.voxel(
-            [side * 0.162, 0.031, -0.278],
-            [0.035, 0.048, 0.009],
-            [0.045, 0.033, 0.024],
-        )?;
-        head.voxel(
-            [side * 0.156, 0.045, -0.284],
-            [0.012, 0.014, 0.006],
-            [0.98, 0.95, 0.84],
         )?;
         head.rotated(
             [side * 0.18, 0.104, -0.245],
@@ -175,21 +160,17 @@ pub(super) fn parts() -> Result<Vec<(Part, Vec3, Mesh)>, String> {
             Quat::from_rotation_z(side * 0.18),
         )?;
     }
-    let mut lids = Builder::default();
-    for side in [-1.0, 1.0] {
-        shape::rounded(
-            &mut lids,
-            [side * 0.18, 0.035, -0.286],
-            [0.15, 0.11, 0.016],
-            0.015,
-            COAT,
-        )?;
-        lids.voxel([side * 0.18, 0.015, -0.297], [0.10, 0.01, 0.01], DARK)?;
-    }
+    let eye_specs = [-1.0, 1.0].map(|side| eyes::Eye {
+        center: Vec3::new(side * 0.18, 0.11, -0.311),
+        width: 0.10,
+        side: 0.0,
+        skin: COAT,
+    });
+    let (head, lids) = eyes::attach(head.finish()?, &eye_specs)?;
     let mut output = vec![
         (Part::Body, Vec3::ZERO, body.finish()?),
-        (Part::Head, HEAD, head.finish()?),
-        (Part::Eyelids, HEAD, lids.finish()?),
+        (Part::Head, HEAD, head),
+        (Part::Eyelids, HEAD, lids),
     ];
     for x in [-1.0, 1.0] {
         for z in [-1.0, 1.0] {

@@ -1,0 +1,81 @@
+{
+  "client_sha256": "d1f87dfa195948b8400bd92c1ef78c7cc2d2a41a1318ac96906d32e32ba75938",
+  "runs": [
+    {
+      "name": "foliage",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-foliage-creatures.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 35.26,
+      "source_directory": "target/foliage-creatures/run.iyGVz7",
+      "captures": [
+        {
+          "file": "captures/foliage/eyes/eyes-0-open.png",
+          "sha256": "93b1a15e6a34494a13d84a57b2aeee1db5cc5ab59a8719579b43ba21e18c2bd3",
+          "bytes": 1973967
+        },
+        {
+          "file": "captures/foliage/eyes/eyes-1-half-blink.png",
+          "sha256": "55d3625abaa5052cb0807080f2f11fb7cecf6333d108ec75ebbf97e8ee99233f",
+          "bytes": 1976602
+        },
+        {
+          "file": "captures/foliage/eyes/eyes-2-closed.png",
+          "sha256": "0d7a4a9b719392f824a14554276f3932310a37090d3bb2faf15214fcd3b00005",
+          "bytes": 1979912
+        },
+        {
+          "file": "captures/foliage/eyes/eyes-3-after-blink.png",
+          "sha256": "19141dd00e08fb9d3475ed63e0cacf135b871597d141ab2f905aa56ef69aa9ed",
+          "bytes": 1976590
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-0.png",
+          "sha256": "f4324bf6576ad3e93fdc0c3ca5d2b1340c7ffd284341564362df706c87a8044c",
+          "bytes": 2187757
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-1.png",
+          "sha256": "5ec7ffdc6cc59928941db959d81ab58cef4c50778b5d981af3f7272018305191",
+          "bytes": 2176091
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-2.png",
+          "sha256": "9c66149b759462f9adc4383cd2fe97c8e9a8c7bff01ca724becb4c76a3dd8496",
+          "bytes": 2382448
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-3.png",
+          "sha256": "b26f4e6dc7b12d429f672280672520d90e41847d5e5e08c234d9bf199f1b0ec7",
+          "bytes": 2398398
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-4.png",
+          "sha256": "ddfcabd9b6ef74730e63e59aa20966f69a021db3cf59156e1e4b810b47cf0342",
+          "bytes": 2318952
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-5.png",
+          "sha256": "727e2696316d47b41b500ed8c2d23cd3acf0d8c3c48c087a25d097d027703373",
+          "bytes": 2496593
+        },
+        {
+          "file": "captures/foliage/foliage/foliage-6.png",
+          "sha256": "e6df2dde1005dbba735f9afb0d856f2f2eeed79356aa43476c61f852a1d8aa8f",
+          "bytes": 2448604
+        }
+      ]
+    },
+    {
+      "name": "menu",
+      "command": [
+        "bash",
+        "tools/benchmarks/run-menu-layout.sh"
+      ],
+      "exit_code": 1,
+      "seconds": 33.76
+    }
+  ]
+}

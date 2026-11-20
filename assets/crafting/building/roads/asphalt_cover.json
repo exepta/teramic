@@ -1,0 +1,22 @@
+{
+  "id": "teramic::asphalt_cover",
+  "name": "Asphalt Road Cover",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 432
+    },
+    "count": 8
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 431
+        },
+        "count": 1
+      }
+    ]
+  }
+}

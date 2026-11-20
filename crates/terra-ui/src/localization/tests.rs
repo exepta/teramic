@@ -10,6 +10,71 @@ const GERMAN: &str = include_str!("../../../../src-ui/locales/de-DE.ftl");
 const ENGLISH: &str = include_str!("../../../../src-ui/locales/en-US.ftl");
 
 #[test]
+fn construction_resource_labels_translate_without_renaming_the_players_kingdom() {
+    let catalog = Catalog::embedded().unwrap();
+    for (language, labels) in [
+        ("de-DE", ["Holz", "Stein", "Eisen", "Kohle"]),
+        ("en-US", ["Wood", "Stone", "Iron", "Coal"]),
+    ] {
+        let mut view = json!({"name":"Stein", "rows": [
+            {"label":"Holz", "amount":"100"}, {"label":"Stein", "amount":"50"},
+            {"label":"Eisen", "amount":"20"}, {"label":"Kohle", "amount":"10"}
+        ]});
+        projection::localize(
+            &mut view,
+            "KingdomResourcesView",
+            "",
+            &catalog,
+            &localization(language),
+        );
+        assert_eq!(view["name"], "Stein");
+        for (row, label) in view["rows"].as_array().unwrap().iter().zip(labels) {
+            assert_eq!(row["label"], label);
+        }
+        let mut camera = json!({"title":"Stein"});
+        projection::localize(
+            &mut camera,
+            "BuildModeView",
+            "",
+            &catalog,
+            &localization(language),
+        );
+        assert_eq!(camera["title"], "Stein");
+    }
+}
+
+#[test]
+fn private_worker_inventory_translates_vanilla_labels_and_preserves_foreign_item_names() {
+    let catalog = Catalog::embedded().unwrap();
+    let mut view = json!({"name":"Save", "private_inventory": [
+        {"identifier":"teramic::oak_planks", "label":"Oak Planks"},
+        {"identifier":"other::oak_planks", "label":"Oak Planks"}
+    ]});
+    projection::localize(
+        &mut view,
+        "NpcWorkView",
+        "",
+        &catalog,
+        &localization("de-DE"),
+    );
+    assert_eq!(view["name"], "Save");
+    assert_eq!(view["private_inventory"][0]["label"], "Eichenbretter");
+    assert_eq!(view["private_inventory"][1]["label"], "Oak Planks");
+}
+
+#[test]
+fn founding_requires_safe_loaded_starter_ground_in_both_languages() {
+    let catalog = Catalog::embedded().unwrap();
+    let source = terra_core::kingdom::KingdomError::StarterAreaUnavailable.to_string();
+    assert!(
+        catalog
+            .text(&localization("de-DE"), &source)
+            .contains("18 Bewohner")
+    );
+    assert_eq!(catalog.text(&localization("en-US"), &source), source);
+}
+
+#[test]
 fn multiline_tooltip_statistics_translate_each_line_without_swallowing_following_fields() {
     let catalog = Catalog::embedded().unwrap();
     let source = "\nMaximum health: +2\nMaximum stamina: +3";

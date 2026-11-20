@@ -1,0 +1,226 @@
+//! Animated ground-level atmosphere sampled from the loaded Spirit biome.
+//! Light sources never create fog; no terrain is generated for this renderer.
+use super::{Cache, MistMaterial, geometry::Geometry, ground, material};
+use bevy::{camera::visibility::NoFrustumCulling, light::NotShadowCaster, prelude::*};
+use terra_player::TerraCamera;
+use terra_world::{
+    edits::EditJournal,
+    streaming::{ChunkStore, WorldAccess},
+};
+
+const CELL_SIZE: i64 = 16;
+const CELL_RADIUS: i64 = 5;
+const MAX_SAMPLES: usize = 121;
+const RANGE: f32 = 80.0;
+const FADE_START: f32 = 56.0;
+const REFRESH_SECONDS: f32 = 0.5;
+const HALF_WIDTH: f32 = 20.0;
+const HALF_HEIGHT: f32 = 4.0;
+const OPTICAL_DENSITY: f32 = 0.045;
+
+#[derive(Resource, Default, Debug)]
+pub struct SpiritMistStatus {
+    pub banks: usize,
+    /// Bounded nearby column probes, independent of total loaded sections.
+    pub sampled_columns: usize,
+    pub generation: u64,
+    pub drift: [f32; 2],
+}
+
+#[derive(Component)]
+struct AmbientMist;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Bank {
+    center: Vec3,
+    strength: f32,
+}
+
+#[derive(Resource, Default)]
+struct Banks {
+    selected: Vec<Bank>,
+    draft: Vec<Bank>,
+    next_selection: f32,
+    mesh: Handle<Mesh>,
+    material: Handle<MistMaterial>,
+}
+
+pub(super) fn install(app: &mut App) {
+    app.init_resource::<Banks>()
+        .init_resource::<SpiritMistStatus>()
+        .add_systems(Startup, setup.after(super::setup))
+        .add_systems(
+            PostUpdate,
+            update.before(bevy::camera::visibility::VisibilitySystems::VisibilityPropagate),
+        );
+}
+
+fn setup(
+    mut commands: Commands,
+    contours: Res<Cache>,
+    mut banks: ResMut<Banks>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<MistMaterial>>,
+) {
+    let Some(source) = materials.get(&contours.materials[0]) else {
+        return;
+    };
+    let noise = source.noise.clone();
+    banks.material = materials.add(MistMaterial {
+        color: Color::srgba(0.69, 0.88, 0.91, 0.60).to_linear(),
+        flow: material::flow(0.0).with_w(OPTICAL_DENSITY),
+        noise,
+    });
+    banks.mesh = meshes.add(Geometry::placeholder_mesh());
+    commands.spawn((
+        Name::new("Spirit Blossom drifting biome atmosphere"),
+        AmbientMist,
+        Mesh3d(banks.mesh.clone()),
+        MeshMaterial3d(banks.material.clone()),
+        Transform::default(),
+        Visibility::Hidden,
+        NoFrustumCulling,
+        NotShadowCaster,
+    ));
+}
+
+fn smoothstep(low: f32, high: f32, value: f32) -> f32 {
+    let t = ((value - low) / (high - low)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
+/// Cached generator metadata provides the biome blend; confirmed voxels provide
+/// its current ground height. Clearing a lantern cannot remove this atmosphere.
+fn surface_sample(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    x: i64,
+    z: i64,
+) -> Option<(f32, f32)> {
+    let column = chunks.surface_column_at(x, z)?;
+    let weight = column.biome.weights.spirit_blossom as f32;
+    if weight <= 0.05 {
+        return None;
+    }
+    let height = ground::height(chunks, journal, x, z, column.height.ceil() as i64)?;
+    Some((height, weight))
+}
+
+/// World-fixed overlapping domains avoid camera-attached fog and visible tile
+/// edges. Work and geometry remain bounded even in an enormous loaded world.
+fn collect_banks(
+    out: &mut Vec<Bank>,
+    eye: Vec3,
+    mut sample: impl FnMut(i64, i64) -> Option<(f32, f32)>,
+) -> usize {
+    out.clear();
+    if !eye.is_finite() {
+        return 0;
+    }
+    let cell = [
+        (f64::from(eye.x).floor() as i64).div_euclid(CELL_SIZE),
+        (f64::from(eye.z).floor() as i64).div_euclid(CELL_SIZE),
+    ];
+    let mut sampled = 0;
+    for dz in -CELL_RADIUS..=CELL_RADIUS {
+        for dx in -CELL_RADIUS..=CELL_RADIUS {
+            let point = |axis: i64, delta: i64| {
+                axis.checked_add(delta)?
+                    .checked_mul(CELL_SIZE)?
+                    .checked_add(CELL_SIZE / 2)
+            };
+            let (Some(x), Some(z)) = (point(cell[0], dx), point(cell[1], dz)) else {
+                continue;
+            };
+            let distance = Vec2::new(x as f32 - eye.x, z as f32 - eye.z).length();
+            if distance >= RANGE {
+                continue;
+            }
+            sampled += 1;
+            let Some((height, weight)) = sample(x, z) else {
+                continue;
+            };
+            if !height.is_finite() || !weight.is_finite() {
+                continue;
+            }
+            let strength =
+                smoothstep(0.05, 0.8, weight) * (1.0 - smoothstep(FADE_START, RANGE, distance));
+            if strength > 0.002 {
+                out.push(Bank {
+                    center: Vec3::new(x as f32, height + HALF_HEIGHT, z as f32),
+                    strength,
+                });
+            }
+        }
+    }
+    debug_assert!(sampled <= MAX_SAMPLES);
+    sampled
+}
+
+#[allow(clippy::too_many_arguments)] // Read-only world snapshots and independent rendering assets.
+fn update(
+    time: Res<Time<Real>>,
+    access: Option<Res<WorldAccess>>,
+    chunks: Option<Res<ChunkStore>>,
+    journal: Option<Res<EditJournal>>,
+    camera: Query<&GlobalTransform, With<TerraCamera>>,
+    mut banks: ResMut<Banks>,
+    mut status: ResMut<SpiritMistStatus>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<MistMaterial>>,
+    mut visibility: Query<&mut Visibility, With<AmbientMist>>,
+) {
+    // Local previews/editor worlds have no network session. The streaming
+    // world's readiness also hides stale replica fog during a new handshake.
+    let ready = access.is_some_and(|access| access.ready());
+    let eye = camera.iter().next().map(GlobalTransform::translation);
+    if time.elapsed_secs() >= banks.next_selection || !ready {
+        banks.next_selection = time.elapsed_secs() + REFRESH_SECONDS;
+        status.sampled_columns = 0;
+        banks.draft.clear();
+        if ready && let (Some(eye), Some(chunks), Some(journal)) = (eye, chunks, journal) {
+            status.sampled_columns = collect_banks(&mut banks.draft, eye, |x, z| {
+                surface_sample(&chunks, &journal, x, z)
+            });
+        }
+        if banks.draft != banks.selected {
+            let banks = &mut *banks;
+            std::mem::swap(&mut banks.draft, &mut banks.selected);
+            if !banks.selected.is_empty() {
+                let mut geometry = Geometry::default();
+                for bank in &banks.selected {
+                    geometry.weighted_bank(
+                        bank.center,
+                        Vec3::new(HALF_WIDTH, HALF_HEIGHT, HALF_WIDTH),
+                        [0.0; 2],
+                        HALF_HEIGHT,
+                        bank.strength,
+                    );
+                }
+                if let Some(mut mesh) = meshes.get_mut(&banks.mesh) {
+                    *mesh = geometry.mesh();
+                }
+            }
+            status.generation = status.generation.wrapping_add(1);
+        }
+    }
+    let visible = ready && eye.is_some() && !banks.selected.is_empty();
+    for mut visibility in &mut visibility {
+        let next = if visible {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        };
+        if *visibility != next {
+            *visibility = next;
+        }
+    }
+    status.banks = if visible { banks.selected.len() } else { 0 };
+    if visible && let Some(mut material) = materials.get_mut(&banks.material) {
+        material.flow = material::flow(time.elapsed_secs_f64()).with_w(OPTICAL_DENSITY);
+        status.drift = [material.flow.x, material.flow.y];
+    }
+}
+
+#[cfg(test)]
+mod tests;

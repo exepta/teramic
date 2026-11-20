@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": 334,
+  "name": "Lime Clay",
+  "description": "Lime Clay for colorful walls, floors and ornamental patterns.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "lime_clay": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "textures": {
+    "lime_clay": "textures/lime_clay.png"
+  },
+  "face_materials": [
+    "lime_clay",
+    "lime_clay",
+    "lime_clay",
+    "lime_clay",
+    "lime_clay",
+    "lime_clay"
+  ]
+}

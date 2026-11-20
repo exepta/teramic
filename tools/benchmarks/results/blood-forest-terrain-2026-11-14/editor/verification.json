@@ -1,0 +1,66 @@
+{
+  "status": "passed",
+  "screens": {
+    "editor-empty-platform": {
+      "width": 2160,
+      "height": 1350,
+      "bytes": 3136593
+    },
+    "editor-placed-block": {
+      "width": 2160,
+      "height": 1350,
+      "bytes": 3231891
+    },
+    "editor-removed-block": {
+      "width": 2160,
+      "height": 1350,
+      "bytes": 3310617
+    },
+    "editor-real-inventory-catalog": {
+      "width": 2160,
+      "height": 1350,
+      "bytes": 1240717
+    },
+    "editor-loaded-house": {
+      "width": 2160,
+      "height": 1350,
+      "bytes": 2885935
+    },
+    "editor-save-browser": {
+      "width": 2160,
+      "height": 1350,
+      "bytes": 993302
+    },
+    "editor-overwrite-confirmation": {
+      "width": 2160,
+      "height": 1350,
+      "bytes": 1346778
+    },
+    "editor-options-english": {
+      "width": 2160,
+      "height": 1350,
+      "bytes": 1168140
+    },
+    "editor-expanded-platform-options": {
+      "width": 2160,
+      "height": 1350,
+      "bytes": 1339438
+    },
+    "editor-expanded-platform": {
+      "width": 2160,
+      "height": 1350,
+      "bytes": 3148226
+    }
+  },
+  "application": "standalone terra-building-editor",
+  "input": "actual right/left MouseButtonInput and production HTML component handlers",
+  "catalog": "real shared inventory preview assets",
+  "file": "editor-acceptance.json",
+  "schema_version": 1,
+  "steps": 390,
+  "physical_cells": 392,
+  "materials": 17,
+  "save": "actual default JSON import, exact save/reload and explicit overwrite confirmation",
+  "options": "live English language selection and actual 9x9 to 17x17 support resize",
+  "support": "protected StructureStone plane at Y -3; exact template and materials remain unchanged after resize and save"
+}

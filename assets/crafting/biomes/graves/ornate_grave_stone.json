@@ -1,0 +1,28 @@
+{
+  "id": "teramic::ornate_grave_stone",
+  "name": "Ornate Stone",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 340
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 337
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "mineral": "gold_ingot"
+        },
+        "count": 1
+      }
+    ]
+  }
+}

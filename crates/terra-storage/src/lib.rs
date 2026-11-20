@@ -10,3 +10,6 @@ pub use library::{WorldEntry, WorldLibrary, world_directory};
 pub use manifest::{SAVE_FORMAT_VERSION, WorldManifest};
 pub use regions::{load_edits, lock_world, save_edits};
 pub use terra_core::GameMode;
+
+#[cfg(test)]
+mod spirit_revision_tests;

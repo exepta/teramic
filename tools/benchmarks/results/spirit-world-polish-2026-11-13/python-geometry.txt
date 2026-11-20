@@ -1,0 +1,12 @@
+test_already_beveled_and_thin_surfaces_are_preserved (test_assets.GeometryTests.test_already_beveled_and_thin_surfaces_are_preserved) ... ok
+test_cemetery_ids_models_textures_and_collision_fit_voxel (test_assets.GeometryTests.test_cemetery_ids_models_textures_and_collision_fit_voxel) ... ok
+test_closed_box_bevel_preserves_bounds_and_face_uv (test_assets.GeometryTests.test_closed_box_bevel_preserves_bounds_and_face_uv) ... ok
+test_collapsed_face_repair_preserves_vertices_uvs_and_materials (test_assets.GeometryTests.test_collapsed_face_repair_preserves_vertices_uvs_and_materials) ... ok
+test_exact_mechanical_profiles_and_authored_tangents_are_not_reshaped (test_assets.GeometryTests.test_exact_mechanical_profiles_and_authored_tangents_are_not_reshaped) ... ok
+test_ornate_chest_lid_collision_matches_the_visible_stepped_top (test_assets.GeometryTests.test_ornate_chest_lid_collision_matches_the_visible_stepped_top) ... ok
+test_polished_props_reference_all_vertices_and_keep_resolvable_bevel_faces (test_assets.GeometryTests.test_polished_props_reference_all_vertices_and_keep_resolvable_bevel_faces) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.332s
+
+OK

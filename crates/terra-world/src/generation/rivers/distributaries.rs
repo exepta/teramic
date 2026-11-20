@@ -241,7 +241,12 @@ impl TerraGenerator {
                 let b = (a + 1).min(POINTS - 1);
                 let cross = points[a][0] + (points[b][0] - points[a][0]) * at.fract();
                 for side in [-1.0, -0.5, 0.0, 0.5, 1.0] {
-                    let [x, z] = frame.world(cross + side * (width * 1.4 + 2.0), at * step);
+                    let reach = if self.config().river_terrain_revision >= 5 {
+                        12.0
+                    } else {
+                        width * 1.4 + 2.0
+                    };
+                    let [x, z] = frame.world(cross + side * reach, at * step);
                     support =
                         support.min(self.base_height_with_biome(x, z, self.climate_biome_at(x, z)));
                 }

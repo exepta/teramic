@@ -32,7 +32,13 @@ impl FoodIndex {
             a.health > 0.0
                 && matches!(
                     a.kind,
-                    Kind::Bee | Kind::Fish | Kind::Cow | Kind::Sheep | Kind::Pig | Kind::Horse
+                    Kind::Bee
+                        | Kind::Butterfly
+                        | Kind::Fish
+                        | Kind::Cow
+                        | Kind::Sheep
+                        | Kind::Pig
+                        | Kind::Horse
                 )
         }) {
             let mut position = animal.position;
@@ -40,7 +46,7 @@ impl FoodIndex {
             index.0.entry(bin(position)).or_default().push(Target {
                 meal: Meal::Creature(animal.id),
                 position,
-                insect: animal.kind == Kind::Bee,
+                insect: matches!(animal.kind, Kind::Bee | Kind::Butterfly),
             });
         }
         for drop in drops.filter(|drop| food_gain(Kind::MediumSpider, drop.stack.item).is_some()) {
@@ -261,9 +267,16 @@ pub fn eat(
             if target.health <= 0.0
                 || !matches!(
                     target.kind,
-                    Kind::Bee | Kind::Fish | Kind::Cow | Kind::Sheep | Kind::Pig | Kind::Horse
+                    Kind::Bee
+                        | Kind::Butterfly
+                        | Kind::Fish
+                        | Kind::Cow
+                        | Kind::Sheep
+                        | Kind::Pig
+                        | Kind::Horse
                 )
-                || spider.kind == Kind::SmallSpider && target.kind != Kind::Bee
+                || spider.kind == Kind::SmallSpider
+                    && !matches!(target.kind, Kind::Bee | Kind::Butterfly)
                 || distance(center, point) > reach.powi(2)
                 || !super::bears::visible(habitat, center, point)
             {

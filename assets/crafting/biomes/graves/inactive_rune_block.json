@@ -1,0 +1,28 @@
+{
+  "id": "teramic::inactive_rune_block",
+  "name": "Inactive Rune Block",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 398
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 337
+        },
+        "count": 4
+      },
+      {
+        "item": {
+          "block": 308
+        },
+        "count": 1
+      }
+    ]
+  }
+}

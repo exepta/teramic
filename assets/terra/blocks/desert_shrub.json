@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": 428,
+  "name": "Desert Shrub",
+  "description": "Desert Shrub, shaped for the regional biome flora.",
+  "creative_category": "nature",
+  "hardness": 0.15,
+  "resistance": 0.4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/desert_shrub.glb",
+  "textures": {
+    "wood": "textures/desert_shrub.png",
+    "sand_leaf": "textures/desert_shrub.png"
+  },
+  "struct_block": true,
+  "collision_boxes": []
+}

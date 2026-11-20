@@ -311,6 +311,7 @@ struct Context<'w, 's> {
     chat: Option<Res<'w, crate::chat::ChatState>>,
     pets: Option<Res<'w, crate::pets::PetMenuState>>,
     kingdom: Option<Res<'w, crate::kingdom::KingdomMenuState>>,
+    npc_work: Option<Res<'w, crate::npc_work::WorkUiState>>,
     settings: Res<'w, GameplayConfig>,
     atlas: Res<'w, Atlas>,
     config: Option<Res<'w, terra_core::GameConfig>>,
@@ -360,7 +361,8 @@ fn update(
         .session
         .as_ref()
         .is_some_and(|s| s.ready && !s.teleporting && !s.dead());
-    let occupied = context.inventory.as_ref().is_some_and(|s| s.blocks_input())
+    let occupied = context.npc_work.as_ref().is_some_and(|s| s.blocks_input())
+        || context.inventory.as_ref().is_some_and(|s| s.blocks_input())
         || context.kingdom.as_ref().is_some_and(|k| k.blocks_input())
         || context.chat.as_ref().is_some_and(|s| s.blocks_input())
         || context.pets.as_ref().is_some_and(|p| p.blocks_input());

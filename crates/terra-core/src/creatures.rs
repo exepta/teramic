@@ -5,10 +5,13 @@ pub mod breeding;
 pub mod sex;
 pub use sex::CreatureSex;
 pub mod definitions;
+pub mod drops;
 pub mod ecology;
+pub mod gloom;
 pub mod hitboxes;
 pub mod horses;
 pub mod intentions;
+pub mod sandworm;
 pub mod soldiers;
 pub mod spawning;
 pub mod spiders;
@@ -43,9 +46,20 @@ pub enum CreatureKind {
     LargeSpider,
     Stalker,
     Villager,
+    // Append-only: serde/postcard discriminants are saved in worlds and sent over the wire.
+    Butterfly,
+    SpiritGloom,
+    SpiritFox,
+    Skeleton,
+    Raven,
+    BloodSlime,
+    BloodStalker,
+    BloodWisp,
+    ThornBrute,
+    SandWorm,
 }
 impl CreatureKind {
-    pub const ALL: [Self; 21] = [
+    pub const ALL: [Self; 31] = [
         Self::Sheep,
         Self::Cow,
         Self::Pig,
@@ -67,7 +81,40 @@ impl CreatureKind {
         Self::LargeSpider,
         Self::Stalker,
         Self::Villager,
+        Self::Butterfly,
+        Self::SpiritGloom,
+        Self::SpiritFox,
+        Self::Skeleton,
+        Self::Raven,
+        Self::BloodSlime,
+        Self::BloodStalker,
+        Self::BloodWisp,
+        Self::ThornBrute,
+        Self::SandWorm,
     ];
+    pub const fn is_flying(self) -> bool {
+        matches!(
+            self,
+            Self::Bee | Self::Butterfly | Self::SpiritGloom | Self::Raven | Self::BloodWisp
+        )
+    }
+    pub const fn variant_count(self) -> u8 {
+        match self {
+            Self::Villager => villagers::ROLE_COUNT,
+            Self::Horse => 16,
+            Self::Butterfly => 7,
+            Self::SpiritGloom => gloom::COUNT,
+            Self::SpiritFox
+            | Self::Raven
+            | Self::BloodSlime
+            | Self::BloodStalker
+            | Self::BloodWisp
+            | Self::ThornBrute
+            | Self::SandWorm => 1,
+            Self::Skeleton => 3,
+            _ => 4,
+        }
+    }
     pub fn is_spider(self) -> bool {
         matches!(
             self,
@@ -102,6 +149,11 @@ impl CreatureKind {
                 | Self::MediumSpider
                 | Self::LargeSpider
                 | Self::Stalker
+                | Self::Skeleton
+                | Self::BloodStalker
+                | Self::BloodWisp
+                | Self::ThornBrute
+                | Self::SandWorm
         )
     }
     pub fn health(self) -> f32 {
@@ -225,6 +277,12 @@ pub enum CreatureBehavior {
     Ink,
     Ceiling,
     Descend,
+    Burrowed,
+    Tremor,
+    Emerge,
+    Retreat,
+    /// A locked, aimed sandworm projectile; the existing need goal carries its aim.
+    Spit,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -233,6 +291,8 @@ pub enum NeedKind {
     Water,
     Tree,
     Shelter,
+    /// An explicit combat aim, never a food/water/pathfinding intention.
+    AttackAim,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -268,6 +328,7 @@ impl CreatureNeeds {
                 !kind.is_aquatic()
                     && (goal.kind != NeedKind::Tree || kind == CreatureKind::Bear)
                     && (goal.kind != NeedKind::Shelter || kind.is_spider())
+                    && (goal.kind != NeedKind::AttackAim || kind == CreatureKind::SandWorm)
                     && goal.position.iter().all(|v| v.unsigned_abs() <= 999_000)
             })
     }
@@ -366,7 +427,13 @@ impl Creature {
                 .position
                 .iter()
                 .all(|v| v.is_finite() && v.abs() <= 999_000.0)
-            && self.home.iter().all(|v| v.unsigned_abs() <= 31_250)
+            // Starters store their 16 m kingdom claim as home; natural resident
+            // identities retain the historical 32 m habitat bounds unchanged.
+            && if crate::kingdom::is_starter_id(self.id) {
+                self.kind == CreatureKind::Villager && crate::kingdom::valid_claim_chunk(self.home)
+            } else {
+                self.home.iter().all(|v| v.unsigned_abs() <= 31_250)
+            }
             && if breeding::is_birth_id(self.id) {
                 breeding::species(self.kind)
             } else if spawning::is_command_id(self.id) {
@@ -377,8 +444,13 @@ impl Creature {
                 (0..4).any(|slot| spider_id(self.home, slot) == Some(self.id))
             } else if self.kind == CreatureKind::Stalker {
                 stalker_id(self.home) == Some(self.id)
+            } else if self.kind == CreatureKind::Skeleton && is_skeleton_id(self.id) {
+                (0..2).any(|slot| skeleton_id(self.home,slot)==Some(self.id))
+            } else if self.kind == CreatureKind::SpiritGloom && is_gloom_id(self.id) {
+                gloom_id(self.home) == Some(self.id)
             } else if self.kind == CreatureKind::Villager {
                 villagers::slot(self.id, self.home).is_some()
+                    || crate::kingdom::is_starter_id(self.id)
             } else {
                 (0..4).any(|slot| creature_id(self.home, slot) == Some(self.id))
             }
@@ -394,14 +466,7 @@ impl Creature {
             && (0.0..=60.0).contains(&self.timer)
             && self.age.is_finite()
             && self.age >= 0.0
-            && self.variant
-                < if self.kind == CreatureKind::Villager {
-                    villagers::ROLE_COUNT
-                } else if self.kind == CreatureKind::Horse {
-                    16
-                } else {
-                    4
-                }
+            && self.variant < self.kind.variant_count()
             && self.needs.valid(self.kind)
             && (self.health > 0.0 || self.behavior == CreatureBehavior::Dead)
     }
@@ -453,6 +518,8 @@ impl CreaturePopulation {
                         || a.kind.is_spider()
                         || a.kind == CreatureKind::Stalker
                         || a.kind == CreatureKind::Villager
+                        || a.kind == CreatureKind::Skeleton && is_skeleton_id(a.id)
+                        || a.kind == CreatureKind::SpiritGloom && is_gloom_id(a.id)
                         || self.explored.contains(&a.home))
             })
     }
@@ -484,9 +551,124 @@ pub fn stalker_id(cell: [i64; 2]) -> Option<u64> {
     creature_id(cell, 0).map(|id| id | (1 << 59))
 }
 
+/// Crypt guardians use a separate namespace below kingdoms/residents.
+pub fn skeleton_id(cell: [i64; 2], slot: u8) -> Option<u64> {
+    (slot < 2)
+        .then(|| creature_id(cell, slot))
+        .flatten()
+        .map(|id| id | (1 << 56))
+}
+pub fn is_skeleton_id(id: u64) -> bool {
+    id >> 56 == 1
+}
+
+/// Independent cave spirits do not consume or invalidate surface habitat slots.
+pub fn gloom_id(cell: [i64; 2]) -> Option<u64> {
+    creature_id(cell, 0).map(|id| id | (1 << 55))
+}
+pub fn is_gloom_id(id: u64) -> bool {
+    id >> 55 == 1
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn appended_forest_species_and_crypt_identities_preserve_all_existing_numbers() {
+        assert_eq!(CreatureKind::SpiritFox as u8, 23);
+        assert_eq!(CreatureKind::Skeleton as u8, 24);
+        assert_eq!(CreatureKind::ThornBrute as u8, 29);
+        assert_eq!(CreatureKind::Skeleton.variant_count(), 3);
+        let mut ids = BTreeSet::new();
+        for x in -3..=3 {
+            for z in -3..=3 {
+                for slot in 0..2 {
+                    let home = [x, z];
+                    let id = skeleton_id(home, slot).unwrap();
+                    assert!(ids.insert(id));
+                    assert!(is_skeleton_id(id));
+                    assert_ne!(Some(id), creature_id(home, slot));
+                    assert_ne!(Some(id), bee_id(home, slot));
+                    assert_ne!(Some(id), spider_id(home, slot));
+                    assert_ne!(Some(id), stalker_id(home));
+                    assert!(!crate::kingdom::is_starter_id(id));
+                    assert!(!spawning::is_command_id(id));
+                }
+            }
+        }
+    }
+    #[test]
+    fn seven_gloom_variants_and_cave_identity_roundtrip_without_surface_slots() {
+        let home = [-1, -2];
+        let id = gloom_id(home).unwrap();
+        assert!(is_gloom_id(id));
+        assert!(!is_skeleton_id(id) && !spawning::is_command_id(id));
+        assert!(!crate::kingdom::is_starter_id(id));
+        for peer in [
+            creature_id(home, 0),
+            bee_id(home, 0),
+            spider_id(home, 0),
+            stalker_id(home),
+            skeleton_id(home, 0),
+        ] {
+            assert_ne!(Some(id), peer);
+        }
+        for variant in 0..gloom::COUNT {
+            let mut population = CreaturePopulation::default();
+            population.animals.insert(
+                id,
+                Creature {
+                    id,
+                    kind: CreatureKind::SpiritGloom,
+                    home,
+                    position: [-4.5, 2.0, -5.5],
+                    velocity: [0.0; 3],
+                    yaw: 0.0,
+                    health: 0.0,
+                    behavior: CreatureBehavior::Dead,
+                    timer: 2.0,
+                    age: 18.0,
+                    variant,
+                    needs: CreatureNeeds::full(CreatureKind::SpiritGloom),
+                },
+            );
+            assert!(population.valid());
+            assert!(population.explored.is_empty());
+            let restored: CreaturePopulation =
+                serde_json::from_str(&serde_json::to_string(&population).unwrap()).unwrap();
+            assert_eq!(restored, population);
+            assert!(restored.valid());
+        }
+    }
+    #[test]
+    fn saved_crypt_guard_is_valid_without_consuming_a_surface_spawn_slot() {
+        let id = skeleton_id([-1, -2], 1).unwrap();
+        let mut population = CreaturePopulation::default();
+        population.animals.insert(
+            id,
+            Creature {
+                id,
+                kind: CreatureKind::Skeleton,
+                home: [-1, -2],
+                position: [-4.5, 2.0, -5.5],
+                velocity: [0.0; 3],
+                yaw: 0.0,
+                health: 0.0,
+                behavior: CreatureBehavior::Dead,
+                timer: 2.0,
+                age: 18.0,
+                variant: 2,
+                needs: CreatureNeeds::full(CreatureKind::Skeleton),
+            },
+        );
+        assert!(population.valid());
+        assert!(population.explored.is_empty());
+        let restored: CreaturePopulation =
+            serde_json::from_str(&serde_json::to_string(&population).unwrap()).unwrap();
+        assert_eq!(restored, population);
+        assert!(restored.animals.contains_key(&id));
+        assert!(restored.valid());
+    }
     #[test]
     fn aquatic_kind_ids_append_to_existing_species_and_individual_dimensions_are_stable() {
         assert_eq!(CreatureKind::Sheep as usize, 0);

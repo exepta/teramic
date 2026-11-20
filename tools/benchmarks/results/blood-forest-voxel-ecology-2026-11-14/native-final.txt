@@ -1,0 +1,2 @@
+Isolated surface ecology run: /run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/target/surface-ecology/run.gip0zI
+Natural voxel props, Blood palette and multi-block rock formations passed: nine native captures

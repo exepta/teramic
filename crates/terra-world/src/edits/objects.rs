@@ -75,6 +75,44 @@ mod train_attachment_pose_tests {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LiquidState {
+    pub origin: [i64; 3],
+    pub volume: u8,
+    pub age: u8,
+    pub source: bool,
+}
+
+impl LiquidState {
+    pub fn valid(self, position: [i64; 3], material: u16) -> bool {
+        let horizontal = position[0]
+            .abs_diff(self.origin[0])
+            .saturating_add(position[2].abs_diff(self.origin[2]));
+        position
+            .iter()
+            .chain(self.origin.iter())
+            .all(|p| p.unsigned_abs() <= 1_000_000)
+            && horizontal <= 4
+            && if material == terra_core::bile::FLUID {
+                (if self.age & terra_core::bile::FINE != 0 {
+                    (1..=64).contains(&self.volume)
+                        && self.age & terra_core::bile::LIFETIME_MASK
+                            <= terra_core::bile::SPIT_STEPS
+                        && (self.source || self.age & terra_core::bile::LIFETIME_MASK == 0)
+                } else {
+                    self.age <= 31 && (1..=8).contains(&self.volume)
+                }) && position[1].abs_diff(self.origin[1]) <= 512
+                    && (!self.source || position == self.origin)
+            } else {
+                self.age <= 31
+                    && terra_core::roads::is_tar(material)
+                    && position[1] == self.origin[1]
+                    && (1..=64).contains(&self.volume)
+                    && (material == terra_core::roads::WET_TAR || self.age == 0)
+            }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BlockObjectState {
     pub facing: u8,
     pub peer: Option<[i64; 3]>,
@@ -83,9 +121,22 @@ pub struct BlockObjectState {
     pub wood: terra_core::WoodSpecies,
     #[serde(default)]
     pub rail_curve: Option<terra_core::rails::CurveSpec>,
+    #[serde(default)]
+    pub liquid: Option<LiquidState>,
 }
 
 impl BlockObjectState {
+    /// Naturally frozen surface-source height. Player-built ice has no marker.
+    /// The source and zero flow are intentional: only still natural reservoirs freeze.
+    pub fn frozen_water(self) -> Option<crate::water::FluidCell> {
+        ((1..=8).contains(&self.facing) && self.peer.is_none() && !self.secondary).then_some(
+            crate::water::FluidCell {
+                amount: self.facing,
+                source: true,
+                flow: [0, 0],
+            },
+        )
+    }
     pub fn from_yaw(yaw: f32) -> Self {
         Self {
             facing: ((yaw / std::f32::consts::FRAC_PI_2).round() as i32).rem_euclid(4) as u8,
@@ -107,11 +158,34 @@ impl BlockObjectState {
             })
     }
     pub fn valid_for(self, position: [i64; 3], material: u16) -> bool {
+        if let Some(liquid) = self.liquid {
+            return self.peer.is_none()
+                && !self.secondary
+                && self.rail_curve.is_none()
+                && self.wood == Default::default()
+                && liquid.valid(position, material)
+                && self.facing
+                    == if material == terra_core::bile::FLUID {
+                        terra_core::bile::facing(liquid.volume, liquid.age)
+                    } else {
+                        terra_core::roads::tar_state(liquid.volume.div_ceil(8), liquid.age)
+                    };
+        }
         if terra_core::rails::is_rail(material) {
             return crate::rails::valid_state(position, material, self);
         }
         if self.rail_curve.is_some() {
             return false;
+        }
+        // Tar packs its finite coating amount and drying stage into this byte;
+        // it has no directional or attachment metadata. Validate before the
+        // ordinary object-facing bound, which intentionally excludes byte 255.
+        if terra_core::roads::is_tar(material) {
+            return (material == terra_core::roads::WET_TAR || self.facing < 8)
+                && self.peer.is_none()
+                && !self.secondary
+                && self.wood == Default::default()
+                && position.iter().all(|p| p.unsigned_abs() <= 1_000_000);
         }
         if material == terra_core::kinetic::CONVEYOR {
             return self.facing < terra_core::kinetic::BELT_FACING_COUNT
@@ -160,7 +234,11 @@ impl BlockObjectState {
         }
         self.valid_at(position)
             && match material {
-                id if terra_core::profession_stations::is_station(id) => {
+                id if terra_core::profession_stations::is_station(id)
+                    || (terra_core::grave_blocks::is_prop(id)
+                        || terra_core::blood_blocks::is_prop(id)
+                        || terra_core::biome_flora::is_prop(id)) =>
+                {
                     self.facing < 4 && self.peer.is_none() && !self.secondary
                 }
                 id if terra_core::castle::is_castle(id) => {
@@ -208,6 +286,7 @@ impl BlockObjectState {
                         && !self.secondary
                 }
                 5 => self.facing == 8 && self.peer.is_none() && !self.secondary,
+                49 => self.frozen_water().is_some(),
                 id if terra_core::construction::is_shape(id) => {
                     terra_core::construction::valid_facing(material, self.facing)
                         && self.peer.is_none()

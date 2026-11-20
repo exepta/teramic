@@ -81,7 +81,7 @@ impl FilterConfig {
 }
 
 pub const fn inventory(material: u16) -> bool {
-    matches!(material, 29 | 59 | 99 | 156 | 161 | 162)
+    crate::containers::is_chest(material) || matches!(material, 59 | 99 | 156 | 161 | 162)
 }
 
 pub const fn extracts(material: u16, facing: u8) -> bool {
@@ -99,7 +99,7 @@ pub fn flow(facing: u8) -> [i64; 3] {
 
 pub const fn default_facing(material: u16, orientation: u8, target: u16) -> u8 {
     orientation % 4
-        + if extracts(material, 0) == (target != 29) {
+        + if extracts(material, 0) != crate::containers::is_chest(target) {
             0
         } else {
             4
@@ -174,10 +174,13 @@ mod tests {
                 assert_eq!(extracts(material, facing), material == HOPPER);
                 assert_ne!(extracts(material, facing), extracts(material, facing + 4));
                 assert_eq!(flow(facing + 4), flow(facing).map(|v| -v));
-                for target in [29, 59, 99] {
+                for target in [29, crate::grave_blocks::ORNATE_CHEST, 59, 99] {
                     let raw = default_facing(material, facing, target);
                     assert_eq!(raw % 4, facing);
-                    assert_eq!(extracts(material, raw), target != 29);
+                    assert_eq!(
+                        extracts(material, raw),
+                        !crate::containers::is_chest(target)
+                    );
                 }
             }
         }

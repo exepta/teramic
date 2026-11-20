@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["apps/client", "apps/server", "crates/*"]
+members = ["apps/client", "apps/server", "apps/building-editor", "crates/*"]
 default-members = ["apps/client", "apps/server"]
 
 [workspace.package]
@@ -44,9 +44,14 @@ terra-ui = { path = "crates/terra-ui" }
 [profile.dev]
 opt-level = 1
 debug = 1
+# Avoid retaining hundreds of GiB of incremental snapshots for this workspace.
+# Test builds inherit this setting. Recompilation trades CPU time for disk space.
+incremental = false
 
 [profile.dev.package."*"]
 opt-level = 3
+# Keep line tables for our code; third-party debug symbols dwarf the game itself.
+debug = 0
 
 # Cargo's wildcard excludes workspace crates. Keep the render/meshing hot paths
 # optimized for normal `cargo run` too; debug information and checks stay enabled.

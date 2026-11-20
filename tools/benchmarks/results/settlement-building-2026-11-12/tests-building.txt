@@ -1,0 +1,24 @@
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Finished `test` profile [optimized + debuginfo] target(s) in 26.81s
+     Running unittests src/lib.rs (target/debug/deps/terra_world-241b0ee1f61de9ef)
+
+running 12 tests
+test building_jobs::tests::all_rotations_preserve_ordinary_block_states_and_paired_furniture ... ok
+test building_jobs::tests::default_house_is_captured_from_the_authored_village_without_free_supplies ... ok
+test building_jobs::tests::crews_top_up_to_four_without_stealing_paused_workers_or_double_assignment ... ok
+test building_jobs::tests::blocked_target_and_player_body_pause_work_before_earning_time_and_control_revision_stays_stable ... ok
+test building_jobs::tests::missing_materials_unloaded_targets_and_outside_claims_never_spend_or_build ... ok
+test building_jobs::tests::cancelled_craftsman_with_full_bag_returns_actual_stock_after_storage_has_room ... ok
+test building_jobs::tests::paired_town_chest_requires_both_halves_inside_the_authorized_storage_area ... ok
+test building_jobs::tests::partial_ledge_contact_recenters_by_physical_sweeps_but_never_crosses_missing_or_foreign_ground ... ok
+test building_jobs::tests::round_robin_does_not_let_four_jobs_without_workers_starve_another_kingdom ... ok
+test building_jobs::tests::far_loaded_storage_is_walked_to_the_site_and_back_for_the_next_real_ingredient ... ok
+test building_jobs::tests::one_to_four_onsite_craftsmen_have_exact_real_clock_rates_and_pause_never_spends_or_advances ... ok
+canonical facing0: Complete, 832 steps, highest walking support20.5
+canonical facing1: Complete, 832 steps, highest walking support20.5
+canonical facing2: Complete, 832 steps, highest walking support20.5
+canonical facing3: Complete, 832 steps, highest walking support20.5
+test building_jobs::tests::full_authored_house_is_walked_built_roofed_furnished_and_scaffold_is_recovered_without_free_materials ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 1330 filtered out; finished in 15.68s
+

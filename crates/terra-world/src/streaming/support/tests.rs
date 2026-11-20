@@ -36,6 +36,39 @@ fn put(chunks: &mut ChunkStore, p: [i64; 3], m: u16) {
 }
 
 #[test]
+fn saved_floating_seagrass_waits_for_the_floor_then_reconciles_the_whole_chain() {
+    for floor in [0, 4] {
+        let (mut chunks, mut journal, properties) = fixture();
+        for y in -16..=-12 {
+            put(&mut chunks, [-1, y, -1], 50);
+        }
+        put(&mut chunks, [-1, -17, -1], floor);
+        let bottom = SectionPos::new(-1, -2, -1);
+        let bottom_data = chunks.loaded.remove(&bottom).unwrap();
+        loaded(&mut chunks, &journal, SectionPos::new(-1, -1, -1));
+        assert!(
+            chunks.support_queue.is_empty(),
+            "an unloaded floor is unknown"
+        );
+        chunks.loaded.insert(bottom, bottom_data);
+        loaded(&mut chunks, &journal, bottom);
+        while let Some(p) = chunks.support_queue.pop_front() {
+            prune(&mut chunks, &mut journal, p, &properties).unwrap();
+        }
+        for y in -16..=-12 {
+            assert_eq!(
+                chunks.block_at([-1, y, -1]),
+                Some(if floor == 0 { 0 } else { 50 })
+            );
+        }
+        assert_eq!(
+            journal.gameplay().drops.len(),
+            if floor == 0 { 5 } else { 0 }
+        );
+    }
+}
+
+#[test]
 fn saved_floating_vines_are_reconciled_only_after_their_real_ceiling_becomes_known() {
     for ceiling in [0, 3] {
         let (mut chunks, mut journal, properties) = fixture();
@@ -110,7 +143,24 @@ fn crystal_and_seagrass_picking_hits_authored_geometry_but_not_empty_cell_corner
     for material in [50, 51, 52, 53] {
         put(&mut chunks, [-1, -2, -1], 3);
         put(&mut chunks, [-1, -1, -1], material);
-        let origin = [-0.5, -0.5, 1.5];
+        let mut origin = [-0.5, -0.5, 1.5];
+        if material == 50 {
+            // Rooted stalks share a deterministic column phase; that phase
+            // need not put a stalk on the voxel's exact centre line.
+            let position = [-1, -1, -1];
+            let profile = crate::segments::profile(position, material, |p| chunks.block_at(p));
+            let mut face = None;
+            crate::segments::visit(material, position, profile, false, |triangle, _| {
+                if face.is_none() && crate::ore_shapes::normal(triangle)[2] > 0.9 {
+                    face = Some(std::array::from_fn::<_, 3, _>(|axis| {
+                        position[axis] as f64
+                            + triangle.iter().map(|p| f64::from(p[axis])).sum::<f64>() / 3.0
+                    }));
+                }
+            });
+            let target = face.expect("a seagrass stalk has a visible front face");
+            origin = [target[0], target[1], origin[2]];
+        }
         let hit = crate::segments::raycast(
             &chunks,
             [-1, -1, -1],

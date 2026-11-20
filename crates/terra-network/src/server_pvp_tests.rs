@@ -109,6 +109,29 @@ fn pvp_rule_and_shared_cooldown_gate_damage_and_stamina() {
 }
 
 #[test]
+fn server_toml_override_gates_real_damage_and_advertised_client_rules_for_old_and_new_worlds() {
+    for saved in [false, true] {
+        for policy in [None, Some(false), Some(true)] {
+            let mut arena = Arena::new();
+            arena.config.world.game_rules.pvp = saved;
+            arena.config.server.pvp = policy;
+            let (mut attacker, mut victim) = players();
+            let expected = policy.unwrap_or(saved);
+            assert_eq!(
+                arena.config.effective_world_rules().game_rules.pvp,
+                expected
+            );
+            assert_eq!(
+                strike(&mut attacker, &mut victim, [0.0; 2], arena.environment()),
+                expected
+            );
+            assert_eq!(victim.vitals.health, if expected { 49.0 } else { 50.0 });
+            assert_eq!(victim.survival.damage_epoch, u64::from(expected));
+        }
+    }
+}
+
+#[test]
 fn melee_requires_range_aim_clear_solid_line_of_sight_and_loaded_cells() {
     for invalid in 0..4 {
         let mut arena = Arena::new();

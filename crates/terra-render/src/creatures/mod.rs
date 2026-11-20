@@ -1,9 +1,18 @@
+mod appearance;
+mod blink;
 mod character_gallery;
 mod debug;
+mod eye_gallery;
+mod forest_animation;
+mod gloom_effects;
 pub(crate) mod horse_pose;
+mod materials;
 mod military;
 mod model;
 mod pet_preview;
+mod sandworm;
+mod spirit_animation;
+use appearance::Appearance;
 use bevy::prelude::*;
 pub use pet_preview::RenderPetPortrait;
 use std::collections::BTreeMap;
@@ -63,6 +72,8 @@ struct Motion {
     speed: f32,
     sleep: f32,
     attack: f32,
+    worm_progress: f32,
+    worm_spit: Option<[f32; 3]>,
     silk_length: f32,
     youth: f32,
     jump: horse_pose::JumpPose,
@@ -74,12 +85,26 @@ struct Models {
     parts: BTreeMap<(Kind, u8), ModelParts>,
     material: Handle<StandardMaterial>,
     bell_material: Handle<StandardMaterial>,
+    spirit_material: Handle<StandardMaterial>,
+    glow_material: Handle<StandardMaterial>,
+    violet_spirit_material: Handle<StandardMaterial>,
+    violet_glow_material: Handle<StandardMaterial>,
+    blood_spirit_material: Handle<StandardMaterial>,
+    blood_glow_material: Handle<StandardMaterial>,
     eye_material: Handle<StandardMaterial>,
     stalker_eye_material: Handle<StandardMaterial>,
+    slime_material: Handle<StandardMaterial>,
+    skeleton_eye_material: Handle<StandardMaterial>,
+    gloom_shell: [Handle<StandardMaterial>; 7],
+    gloom_wings: [Handle<StandardMaterial>; 7],
+    gloom_glow: [Handle<StandardMaterial>; 7],
 }
 type ModelParts = Vec<(model::Part, Vec3, Handle<Mesh>)>;
 pub(crate) fn install(app: &mut App) {
+    sandworm::install(app);
+    gloom_effects::install(app);
     character_gallery::install(app);
+    eye_gallery::install(app);
     pet_preview::install(app);
     debug::install(app);
     app.init_resource::<military::Uniforms>();
@@ -101,8 +126,40 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let mut models = Models {
+        slime_material: materials.add(materials::slime_body()),
+        skeleton_eye_material: materials.add(materials::skeleton_eyes()),
         material: materials.add(StandardMaterial {
             perceptual_roughness: 0.85,
+            ..default()
+        }),
+        spirit_material: materials.add(StandardMaterial {
+            emissive: LinearRgba::rgb(0.10, 0.14, 0.21),
+            perceptual_roughness: 0.6,
+            ..default()
+        }),
+        glow_material: materials.add(StandardMaterial {
+            emissive: LinearRgba::rgb(0.7, 1.8, 2.6),
+            perceptual_roughness: 0.5,
+            ..default()
+        }),
+        violet_spirit_material: materials.add(StandardMaterial {
+            emissive: LinearRgba::rgb(0.10, 0.015, 0.16),
+            perceptual_roughness: 0.6,
+            ..default()
+        }),
+        violet_glow_material: materials.add(StandardMaterial {
+            emissive: LinearRgba::rgb(0.75, 0.12, 1.2),
+            perceptual_roughness: 0.5,
+            ..default()
+        }),
+        blood_spirit_material: materials.add(StandardMaterial {
+            emissive: LinearRgba::rgb(0.15, 0.008, 0.02),
+            perceptual_roughness: 0.6,
+            ..default()
+        }),
+        blood_glow_material: materials.add(StandardMaterial {
+            emissive: LinearRgba::rgb(1.2, 0.08, 0.13),
+            perceptual_roughness: 0.5,
             ..default()
         }),
         bell_material: materials.add(StandardMaterial {
@@ -114,27 +171,61 @@ fn setup(
             ..default()
         }),
         eye_material: materials.add(StandardMaterial {
-            emissive: LinearRgba::rgb(0.9, 0.025, 0.006),
+            emissive: LinearRgba::rgb(0.16, 0.016, 0.006),
             perceptual_roughness: 0.65,
             ..default()
         }),
         stalker_eye_material: materials.add(StandardMaterial {
-            emissive: LinearRgba::rgb(2.0, 0.85, 0.045),
+            emissive: LinearRgba::rgb(0.26, 0.12, 0.025),
             perceptual_roughness: 0.75,
             ..default()
         }),
         ..default()
     };
+    for variant in 0..terra_core::creatures::gloom::COUNT {
+        let palette = terra_core::creatures::gloom::palette(variant);
+        let [r, g, b] = palette.glow;
+        let index = usize::from(variant);
+        models.gloom_shell[index] = materials.add(StandardMaterial {
+            emissive: LinearRgba::rgb(r * 0.018, g * 0.018, b * 0.018),
+            perceptual_roughness: 0.68,
+            ..default()
+        });
+        models.gloom_wings[index] = materials.add(StandardMaterial {
+            base_color: Color::srgba(1.0, 1.0, 1.0, 0.64),
+            alpha_mode: AlphaMode::Blend,
+            emissive: LinearRgba::rgb(r * 0.035, g * 0.035, b * 0.035),
+            perceptual_roughness: 0.42,
+            reflectance: 0.12,
+            cull_mode: None,
+            ..default()
+        });
+        models.gloom_glow[index] = materials.add(StandardMaterial {
+            emissive: LinearRgba::rgb(r * 1.6, g * 1.6, b * 1.6),
+            perceptual_roughness: 0.55,
+            ..default()
+        });
+    }
     for kind in Kind::ALL {
         for variant in 0..if kind == Kind::Horse {
             16
         } else if kind == Kind::Fish {
             2
         } else if kind == Kind::Villager {
-            terra_core::creatures::villagers::ROLE_COUNT
+            terra_core::creatures::villagers::ROLE_COUNT * 2
+        } else if matches!(kind, Kind::Butterfly | Kind::SpiritGloom | Kind::Skeleton) {
+            kind.variant_count()
         } else {
             1
         } {
+            if kind == Kind::Villager
+                && variant >= terra_core::creatures::villagers::ROLE_COUNT
+                && !terra_core::creatures::villagers::is_civilian(
+                    variant % terra_core::creatures::villagers::ROLE_COUNT,
+                )
+            {
+                continue;
+            }
             match if variant == 0 {
                 model::parts(kind)
             } else {
@@ -168,16 +259,30 @@ fn render(
     animals: Option<Res<ReplicatedCreatures>>,
     models: Res<Models>,
     mounts: Option<Res<crate::players::MountedPresentation>>,
-    mut roots: Query<(Entity, &CreatureAvatar, &mut Transform, &mut Motion)>,
+    mut roots: Query<(
+        Entity,
+        &CreatureAvatar,
+        &mut Transform,
+        &mut Motion,
+        Option<&Appearance>,
+    )>,
 ) {
     let mut present = std::collections::HashSet::new();
-    for (entity, avatar, mut transform, mut motion) in &mut roots {
+    for (entity, avatar, mut transform, mut motion, appearance) in &mut roots {
         let Some((animal, position, mounted)) =
             presented_creature(avatar.0, animals.as_deref(), mounts.as_deref())
         else {
             commands.entity(entity).despawn();
             continue;
         };
+        if appearance.is_some_and(|old| *old != Appearance::of(animal))
+            && models.parts.contains_key(&Appearance::of(animal).0)
+        {
+            // Children, held tools and the new uniform are rebuilt together.
+            // The same replicated NPC ID is spawned below in this frame.
+            commands.entity(entity).despawn();
+            continue;
+        }
         present.insert(avatar.0);
         let previous_position = transform.translation;
         let sleeping = animal.behavior == Behavior::Sleep;
@@ -229,14 +334,71 @@ fn render(
         let reported = Vec3::from_array(animal.velocity).length();
         let speed = if mounted {
             reported
+        } else if animal.kind == Kind::SandWorm {
+            // A throttled authority tick may report zero velocity while the
+            // replicated endpoints still show real burrow travel. Its sand
+            // crest follows that presented displacement, never the camera.
+            let delta = transform.translation - previous_position;
+            (delta.x.hypot(delta.z) / time.delta_secs().max(0.001))
+                .min((animal.kind.speed() as f32).max(reported) * 1.25)
         } else {
             (transform.translation.distance(previous_position) / time.delta_secs().max(0.001))
                 .min(reported * 1.2)
         };
         motion.speed += (speed - motion.speed) * (1.0 - (-time.delta_secs() * 10.0).exp());
-        let strike = if animal.kind == Kind::Stalker && animal.behavior == Behavior::Hold {
+        // Extrapolate at most one snapshot interval, rather than visibly
+        // stepping the breach at network tick rate. Frozen gallery poses have
+        // their receive time refreshed and remain fixed.
+        let since = animals
+            .as_ref()
+            .and_then(|r| r.creatures.get(&animal.id))
+            .map_or(0.0, |track| {
+                track
+                    .received
+                    .elapsed()
+                    .as_secs_f32()
+                    .min(track.interval.clamp(0.0, 0.25))
+            });
+        if animal.kind == Kind::SandWorm {
+            motion.worm_spit = if animal.behavior == Behavior::Spit {
+                terra_core::creatures::sandworm::aimed_spit_launch(animal).map(|(_, v)| {
+                    let (sin, cos) = animal.yaw.sin_cos();
+                    [
+                        (v[0] as f32) * cos - (v[2] as f32) * sin,
+                        v[1] as f32,
+                        (v[0] as f32) * sin + (v[2] as f32) * cos,
+                    ]
+                })
+            } else {
+                None
+            };
+            motion.worm_progress = terra_core::creatures::sandworm::phase_progress(
+                animal.behavior,
+                animal.timer - since,
+            );
+        }
+        let forest_melee = matches!(
+            animal.kind,
+            Kind::Skeleton | Kind::BloodStalker | Kind::BloodWisp | Kind::ThornBrute
+        );
+        let strike = if forest_melee {
+            if animal.behavior == Behavior::Attack {
+                terra_core::creatures::definitions::get(animal.kind)
+                    .combat
+                    .map_or(0.0, |combat| combat.melee_phase(animal.timer - since))
+            } else {
+                0.0
+            }
+        } else if animal.kind == Kind::SandWorm {
+            terra_core::creatures::sandworm::emergence(animal)
+        } else if animal.kind == Kind::Stalker && animal.behavior == Behavior::Hold {
             1.0
-        } else if (animal.kind == Kind::Bear || animal.kind.is_spider())
+        } else if (animal.kind == Kind::Bear
+            || animal.kind.is_spider()
+            || matches!(
+                animal.kind,
+                Kind::Skeleton | Kind::BloodStalker | Kind::BloodWisp | Kind::ThornBrute
+            ))
             && matches!(animal.behavior, Behavior::Attack | Behavior::Hunt)
             && speed < 0.45
         {
@@ -244,9 +406,17 @@ fn render(
         } else {
             0.0
         };
-        motion.attack += (strike - motion.attack) * (1.0 - (-time.delta_secs() * 16.0).exp());
+        if forest_melee && strike < motion.attack - 0.5 {
+            // The recovery endpoint and next cycle's neutral pose coincide.
+            motion.attack = strike;
+        } else {
+            motion.attack += (strike - motion.attack) * (1.0 - (-time.delta_secs() * 16.0).exp());
+        }
         motion.phase +=
             time.delta_secs() * (motion.speed * 5.0 + 0.5) * (1.0 + motion.youth * 0.35);
+        if animal.kind == Kind::SandWorm {
+            motion.phase = animal.age as f32 + since;
+        }
         motion.clock += time.delta_secs() * (1.0 + motion.youth * 0.20);
     }
     let ids = animals
@@ -263,16 +433,8 @@ fn render(
         else {
             continue;
         };
-        let Some(parts) = models.parts.get(&(
-            animal.kind,
-            if animal.kind == Kind::Horse {
-                animal.variant
-            } else if animal.kind == Kind::Villager {
-                animal.variant % terra_core::creatures::villagers::ROLE_COUNT
-            } else {
-                u8::from(animal.kind == Kind::Fish && animal.variant >= 2)
-            },
-        )) else {
+        let appearance = Appearance::of(animal);
+        let Some(parts) = models.parts.get(&appearance.0) else {
             continue;
         };
         present.insert(id);
@@ -306,6 +468,7 @@ fn render(
         let root = commands
             .spawn((
                 CreatureAvatar(id),
+                appearance,
                 Motion {
                     kind: animal.kind,
                     behavior: animal.behavior,
@@ -313,6 +476,22 @@ fn render(
                     clock: (id % 29) as f32 * 0.43,
                     speed: 0.0,
                     attack: 0.0,
+                    worm_progress: terra_core::creatures::sandworm::phase_progress(
+                        animal.behavior,
+                        animal.timer,
+                    ),
+                    worm_spit: if animal.behavior == Behavior::Spit {
+                        terra_core::creatures::sandworm::aimed_spit_launch(animal).map(|(_, v)| {
+                            let (sin, cos) = animal.yaw.sin_cos();
+                            [
+                                (v[0] as f32) * cos - (v[2] as f32) * sin,
+                                v[1] as f32,
+                                (v[0] as f32) * sin + (v[2] as f32) * cos,
+                            ]
+                        })
+                    } else {
+                        None
+                    },
                     silk_length: silk_length(animal),
                     youth: 1.0 - animal.growth(),
                     jump,
@@ -343,22 +522,23 @@ fn render(
                     Visibility::Inherited
                 },
                 Mesh3d(mesh.clone()),
-                MeshMaterial3d(if matches!(part, model::Part::Bell) {
-                    models.bell_material.clone()
-                } else if matches!(part, model::Part::SpiderEyes) {
-                    models.eye_material.clone()
-                } else if matches!(part, model::Part::StalkerEyes) {
-                    models.stalker_eye_material.clone()
-                } else {
-                    models.material.clone()
-                }),
+                MeshMaterial3d(models.material_for(animal.kind, animal.variant, *part)),
                 Transform::from_translation(*offset),
                 ChildOf(root),
             ));
+            if matches!(part, model::Part::WormRipple(_) | model::Part::WormMound) {
+                child.insert(sandworm::WaveGround::default());
+            }
             if matches!(part, model::Part::MilitaryTabard) {
                 child.insert(military::Heraldry(id));
             }
-            if animal.kind.is_jelly() {
+            if animal.kind.is_jelly()
+                || animal.kind == Kind::BloodSlime && matches!(part, model::Part::Body)
+                || matches!(
+                    part,
+                    model::Part::WormRipple(_) | model::Part::WormDust | model::Part::WormSpit(_)
+                )
+            {
                 child.insert(bevy::light::NotShadowCaster);
             }
             if animal.kind == Kind::Villager
@@ -435,7 +615,7 @@ fn animate(
             transform.scale *= 1.0 + motion.youth * 0.12;
         }
         if matches!(part.0, model::Part::Eyelids) {
-            *visibility = if motion.sleep > 0.5 || motion.clock.rem_euclid(6.7) < 0.14 {
+            *visibility = if blink::closure(motion.clock, motion.sleep) > 0.001 {
                 Visibility::Inherited
             } else {
                 Visibility::Hidden
@@ -454,8 +634,32 @@ fn animate(
         if matches!(part.0, model::Part::Body) && !matches!(motion.kind, Kind::Fish | Kind::Bee) {
             transform.scale.y = 1.0 + (motion.clock * 2.1).sin() * (0.004 + motion.youth * 0.003);
         }
+        if motion.kind == Kind::SandWorm {
+            sandworm::animate(motion, part, &mut transform, &mut visibility);
+            continue;
+        }
+        if matches!(
+            motion.kind,
+            Kind::Butterfly | Kind::SpiritGloom | Kind::SpiritFox
+        ) {
+            spirit_animation::animate(motion, part, &mut transform);
+            continue;
+        }
+        if matches!(
+            motion.kind,
+            Kind::Skeleton
+                | Kind::Raven
+                | Kind::BloodSlime
+                | Kind::BloodStalker
+                | Kind::BloodWisp
+                | Kind::ThornBrute
+        ) {
+            forest_animation::animate(motion, part, &mut transform);
+            continue;
+        }
         if motion.kind == Kind::Bear {
             animate_bear(motion, part, &mut transform);
+            blink::apply(motion, part, &mut transform);
             continue;
         }
         if motion.kind == Kind::Stalker {
@@ -550,6 +754,7 @@ fn animate(
             model::Part::Wing(sign) => Quat::from_rotation_z(sign * 0.12),
             _ => Quat::IDENTITY,
         };
+        blink::apply(motion, part, &mut transform);
     }
 }
 
@@ -829,7 +1034,7 @@ fn animate_bear(motion: &Motion, part: &Limb, transform: &mut Transform) {
 fn animate_spider(motion: &Motion, part: &Limb, transform: &mut Transform) {
     let body_height = match motion.kind {
         Kind::SmallSpider => 0.1,
-        Kind::MediumSpider => 0.5,
+        Kind::MediumSpider | Kind::BloodStalker => 0.5,
         _ => 1.25,
     };
     match part.0 {
@@ -962,6 +1167,102 @@ mod tests {
     use super::*;
 
     #[test]
+    fn all_butterfly_variants_render_at_half_the_original_dimensions() {
+        assert_eq!(model_scale(Kind::Butterfly), Vec3::splat(0.5));
+        for variant in 0..Kind::Butterfly.variant_count() {
+            let animal = terra_core::creatures::Creature {
+                id: 1,
+                kind: Kind::Butterfly,
+                home: [0; 2],
+                position: [0.0; 3],
+                velocity: [0.0; 3],
+                yaw: 0.0,
+                health: 2.0,
+                behavior: Behavior::Fly,
+                timer: 1.0,
+                age: 0.0,
+                variant,
+                needs: terra_core::creatures::CreatureNeeds::full(Kind::Butterfly),
+            };
+            assert_eq!(instance_scale(&animal), Vec3::splat(0.5));
+        }
+    }
+
+    #[test]
+    fn blinking_lids_follow_the_exact_head_transform_and_reopen_after_a_blink() {
+        for kind in [Kind::Sheep, Kind::Cow, Kind::Pig, Kind::Bear, Kind::Horse] {
+            let mut app = App::new();
+            app.add_systems(Update, animate);
+            let root = app
+                .world_mut()
+                .spawn(Motion {
+                    kind,
+                    behavior: Behavior::Rest,
+                    phase: 0.7,
+                    clock: 1.0,
+                    speed: 0.0,
+                    sleep: 0.0,
+                    attack: 0.0,
+                    worm_progress: 0.0,
+                    worm_spit: None,
+                    silk_length: 0.0,
+                    youth: 0.8,
+                    jump: Default::default(),
+                })
+                .id();
+            let pivot = Vec3::new(0.0, 1.2, -0.5);
+            let head = app
+                .world_mut()
+                .spawn((
+                    ChildOf(root),
+                    Limb(model::Part::Head, pivot),
+                    Transform::default(),
+                    Visibility::Inherited,
+                ))
+                .id();
+            let lids = app
+                .world_mut()
+                .spawn((
+                    ChildOf(root),
+                    Limb(model::Part::Eyelids, pivot),
+                    Transform::default(),
+                    Visibility::Hidden,
+                ))
+                .id();
+            for (clock, behavior, sleep, closed) in [
+                (1.0, Behavior::Rest, 0.0, false),
+                (6.77, Behavior::Graze, 0.0, true),
+                (6.9, Behavior::Drink, 0.0, false),
+                (7.5, Behavior::Sleep, 1.0, true),
+                (8.0, Behavior::Rest, 0.0, false),
+            ] {
+                {
+                    let mut motion = app.world_mut().get_mut::<Motion>(root).unwrap();
+                    motion.clock = clock;
+                    motion.behavior = behavior;
+                    motion.sleep = sleep;
+                }
+                app.update();
+                if closed {
+                    assert_eq!(
+                        app.world().get::<Transform>(head),
+                        app.world().get::<Transform>(lids),
+                        "{kind:?}/{behavior:?}: lid drift"
+                    );
+                }
+                assert_eq!(
+                    *app.world().get::<Visibility>(lids).unwrap(),
+                    if closed {
+                        Visibility::Inherited
+                    } else {
+                        Visibility::Hidden
+                    }
+                );
+            }
+        }
+    }
+
+    #[test]
     fn villager_right_hand_tracks_walk_and_action_but_hides_held_tools_during_sleep() {
         let mut app = App::new();
         app.add_plugins(TransformPlugin)
@@ -977,6 +1278,8 @@ mod tests {
                     speed: 0.0,
                     sleep: 0.0,
                     attack: 0.0,
+                    worm_progress: 0.0,
+                    worm_spit: None,
                     silk_length: 0.0,
                     youth: 0.0,
                     jump: Default::default(),
@@ -1064,6 +1367,8 @@ mod tests {
             speed: 1.35,
             sleep: 0.0,
             attack: 0.0,
+            worm_progress: 0.0,
+            worm_spit: None,
             silk_length: 0.0,
             youth: 0.0,
             jump: Default::default(),
@@ -1252,6 +1557,8 @@ mod tests {
             speed: 0.9,
             sleep: 0.0,
             attack: 0.0,
+            worm_progress: 0.0,
+            worm_spit: None,
             silk_length: 2.5,
             youth: 0.0,
             jump: Default::default(),
@@ -1320,6 +1627,8 @@ mod tests {
             speed: 0.7,
             sleep: 0.0,
             attack: 0.0,
+            worm_progress: 0.0,
+            worm_spit: None,
             silk_length: 0.0,
             youth: 0.0,
             jump: Default::default(),
@@ -1376,6 +1685,8 @@ mod tests {
             speed: 0.0,
             sleep: 0.0,
             attack: 0.0,
+            worm_progress: 0.0,
+            worm_spit: None,
             silk_length: 0.0,
             youth: 0.0,
             jump: Default::default(),
@@ -1423,6 +1734,8 @@ mod tests {
                 speed: 1.0,
                 sleep: 0.0,
                 attack: 0.0,
+                worm_progress: 0.0,
+                worm_spit: None,
                 silk_length: 0.0,
                 youth: 0.0,
                 jump: Default::default(),

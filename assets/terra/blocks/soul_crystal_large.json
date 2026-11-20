@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "id": 396,
+  "name": "Large Soul Crystal",
+  "description": "A cluster of soul crystals glowing with violet light.",
+  "creative_category": "decoration",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/soul_crystal_large.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.35,
+        0,
+        0.35
+      ],
+      "maximum": [
+        0.65,
+        0.92,
+        0.65
+      ]
+    },
+    {
+      "minimum": [
+        0.18000000000000002,
+        0,
+        0.28
+      ],
+      "maximum": [
+        0.38,
+        0.5,
+        0.48
+      ]
+    },
+    {
+      "minimum": [
+        0.59,
+        0,
+        0.32
+      ],
+      "maximum": [
+        0.8099999999999999,
+        0.6,
+        0.54
+      ]
+    },
+    {
+      "minimum": [
+        0.26999999999999996,
+        0,
+        0.62
+      ],
+      "maximum": [
+        0.43,
+        0.4,
+        0.7799999999999999
+      ]
+    },
+    {
+      "minimum": [
+        0.61,
+        0,
+        0.61
+      ],
+      "maximum": [
+        0.7699999999999999,
+        0.35,
+        0.7699999999999999
+      ]
+    }
+  ],
+  "light": {
+    "color": [
+      0.65,
+      0.3,
+      1
+    ],
+    "intensity": 240,
+    "range": 8,
+    "falloff": "soft_core",
+    "flicker": 0.025,
+    "cave_intensity": 0.65,
+    "shadows": false,
+    "offset": [
+      0.495,
+      0.46,
+      0.53134
+    ]
+  }
+}

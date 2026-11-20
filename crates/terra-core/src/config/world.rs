@@ -99,9 +99,19 @@ impl StructureSettings {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct WorldConfig {
-    /// Saved surface ecology/drainage contract. Absent in old saves retains their terrain.
+    /// Saved ecology: 6 regional flora/cacti, 7 rooted birches, 8 buried Spirit fog stones,
+    /// 9 fantasy arches/leaning spires and curled botanical clumps,
+    /// 10 monumental sweeping arches, 11 rare widely separated landmarks.
+    /// Absent in old saves retains their terrain; revisions 0–10 are unchanged.
     #[serde(default)]
     pub ecology_revision: u8,
+    /// Spirit terrain contract: 1 blossom groves, 2 wetlands and grave sites.
+    /// Absent in saved worlds means no retrogen.
+    #[serde(default)]
+    pub spirit_blossom_revision: u8,
+    /// Saved Blood Forest contract; absent in old saves disables retrogen.
+    #[serde(default)]
+    pub blood_forest_revision: u8,
     /// Natural population cap within 150 m of each player; owned animals are excluded.
     pub natural_mob_limit: u16,
     /// New saved terrain contract; absent in existing worlds means no retrogen.
@@ -113,6 +123,9 @@ pub struct WorldConfig {
     /// Saved hydrology: 1 eroded banks, 2 connected rivers with distinct outlets,
     /// 3 tributaries and broader temperate brook habitats on the main terrain.
     /// 4 adds more compact temperate brook catchments without changing regional rivers.
+    /// 5 bounds voxelized channels to 6–22 blocks across the current.
+    /// 6 adds sweeping courses, deeper plunge pools and open sculpted gorges.
+    /// 7 adds variable long catchments, distant tributaries and lake forks.
     /// Missing in existing worlds preserves their terrain.
     #[serde(default)]
     pub river_terrain_revision: u8,
@@ -135,7 +148,9 @@ pub struct WorldConfig {
     #[serde(default)]
     pub geology_revision: u8,
     /// Saved terrain: 0 legacy, 1 drainage, 2 varied relief, 3 connected hydrology,
-    /// 4 JSON biome bands, 5 landscape profiles and erosion.
+    /// 4 JSON biome bands, 5 landscape profiles and erosion, 6 fantasy macro-relief,
+    /// 7 regional mountain ranges, 8 broader thermal regions and varied lowland districts.
+    /// 9 gives land biomes a regional interior and blends their borders.
     /// Missing in existing worlds preserves the legacy heightfield.
     #[serde(default)]
     pub landscape_revision: u8,
@@ -178,11 +193,16 @@ pub struct WorldConfig {
     pub ores: crate::OreGeneration,
 }
 impl WorldConfig {
+    pub const CURRENT_LANDSCAPE_REVISION: u8 = 9;
+    pub const CURRENT_RIVER_TERRAIN_REVISION: u8 = 7;
+
     /// Prepared terrain is independent of live calendar, population and game rules.
     pub fn same_terrain(&self, other: &Self) -> bool {
         // Exhaustive destructuring makes new settings an explicit cache-identity decision.
         let Self {
             ecology_revision,
+            spirit_blossom_revision,
+            blood_forest_revision,
             natural_mob_limit: _,
             time: _,
             seasons: _,
@@ -221,7 +241,9 @@ impl WorldConfig {
             terrace_strength,
             ores,
         } = self;
-        ecology_revision == &other.ecology_revision
+        blood_forest_revision == &other.blood_forest_revision
+            && spirit_blossom_revision == &other.spirit_blossom_revision
+            && ecology_revision == &other.ecology_revision
             && id == &other.id
             && seed == &other.seed
             && generator_version == &other.generator_version
@@ -258,11 +280,13 @@ impl WorldConfig {
 impl Default for WorldConfig {
     fn default() -> Self {
         Self {
-            ecology_revision: 4,
+            ecology_revision: 11,
+            spirit_blossom_revision: 2,
+            blood_forest_revision: 1,
             natural_mob_limit: 256,
             bounded_world: true,
             ravine_revision: 1,
-            river_terrain_revision: 4,
+            river_terrain_revision: Self::CURRENT_RIVER_TERRAIN_REVISION,
             time: crate::WorldTimeConfig::default(),
             seasons: crate::SeasonConfig::default(),
             game_rules: crate::GameRules::default(),
@@ -277,11 +301,11 @@ impl Default for WorldConfig {
             snow_height: 112.0,
             caves: true,
             geology_revision: 4,
-            landscape_revision: 1,
+            landscape_revision: Self::CURRENT_LANDSCAPE_REVISION,
             biome_definitions: None,
             ocean_revision: 1,
             cave_structure_revision: 8,
-            structures_revision: 9,
+            structures_revision: 10,
             structure_border_gap: default_structure_border_gap(),
             structures: StructureSettings::default(),
             preferred_spawn_biome: None,
@@ -302,11 +326,15 @@ impl Default for WorldConfig {
 impl Config for WorldConfig {
     fn validate(&self) -> Result<(), ConfigError> {
         ensure(
-            self.ecology_revision <= 4,
+            self.ecology_revision <= 11,
             "Unsupported world.ecology_revision",
         )?;
         ensure(
-            self.structures_revision <= 9,
+            self.blood_forest_revision <= 1,
+            "Unsupported world.blood_forest_revision",
+        )?;
+        ensure(
+            self.structures_revision <= 10,
             "Unsupported world.structures_revision",
         )?;
         ensure(self.game_rules.valid(), "Invalid world.game_rules")?;
@@ -319,6 +347,10 @@ impl Config for WorldConfig {
             self.cave_structure_revision <= 8,
             "Unsupported world.cave_structure_revision",
         )?;
+        ensure(
+            self.spirit_blossom_revision <= 2,
+            "Unsupported world.spirit_blossom_revision",
+        )?;
         self.cave_biomes.validate()?;
         ensure(self.ocean_revision <= 1, "Unsupported world.ocean_revision")?;
         ensure(
@@ -326,7 +358,7 @@ impl Config for WorldConfig {
             "Unsupported world.ravine_revision",
         )?;
         ensure(
-            self.river_terrain_revision <= 4,
+            self.river_terrain_revision <= Self::CURRENT_RIVER_TERRAIN_REVISION,
             "Unsupported world.river_terrain_revision",
         )?;
         ensure(
@@ -334,7 +366,7 @@ impl Config for WorldConfig {
             "world.natural_mob_limit must be 0..=4096",
         )?;
         ensure(
-            self.landscape_revision <= 5,
+            self.landscape_revision <= Self::CURRENT_LANDSCAPE_REVISION,
             "Unsupported world.landscape_revision",
         )?;
         if let Some(definitions) = &self.biome_definitions {

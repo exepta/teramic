@@ -1,5 +1,5 @@
 //! Surface-meshed reference citizens: garments, faces and tools are real voxel geometry.
-use super::{Builder, Part};
+use super::Part;
 use bevy::prelude::*;
 #[path = "villager/gear.rs"]
 mod gear;
@@ -31,13 +31,14 @@ fn cloth(role: u8) -> [f32; 3] {
         4 => [0.20, 0.29, 0.48],
         5 | 18 | 22 => PURPLE,
         9 | 20 => RED,
+        23 => [0.44, 0.31, 0.19],
         7 | 17 => [0.31, 0.27, 0.34],
         14 => [0.30, 0.28, 0.33],
         0 | 15 | 19 => [0.50, 0.36, 0.23],
         _ => GREEN,
     }
 }
-fn female(role: u8) -> bool {
+pub(super) fn female(role: u8) -> bool {
     matches!(role, 1 | 3 | 7 | 17 | 20 | 21 | 22)
 }
 fn armored(role: u8) -> bool {
@@ -46,12 +47,16 @@ fn armored(role: u8) -> bool {
 
 pub(super) fn parts(role: u8) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
     let role = role % terra_core::creatures::villagers::ROLE_COUNT;
+    parts_for_sex(role, female(role))
+}
+
+pub(super) fn parts_for_sex(role: u8, female: bool) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
     let mut parts = vec![
-        (Part::Body, Vec3::ZERO, body(role).finish()?),
+        (Part::Body, Vec3::ZERO, body(role, female).finish()?),
         (
             Part::Head,
             Vec3::new(0.0, 1.435, -0.015),
-            head::build(role)
+            head::build(role, female)
                 .finish()?
                 .scaled_by(Vec3::new(1.08, 1.04, 1.04)),
         ),
@@ -137,10 +142,10 @@ fn cape(b: &mut Sculpt, role: u8, color: [f32; 3], length: f32) {
         reference_gear::fur(b, [0.0, 1.16, 0.02], 0.50);
     }
 }
-fn body(role: u8) -> Sculpt {
+fn body(role: u8, female: bool) -> Sculpt {
     let mut b = Sculpt::default();
     let fabric = cloth(role);
-    let width = if female(role) {
+    let width = if female {
         0.40
     } else if role == 8 {
         0.48
@@ -204,7 +209,7 @@ fn body(role: u8) -> Sculpt {
             );
         }
     }
-    if matches!(role, 1 | 8 | 14 | 16 | 17) {
+    if matches!(role, 1 | 8 | 14 | 16 | 17 | 23) {
         let apron = if matches!(role, 1 | 16 | 17) {
             CREAM
         } else {
@@ -453,6 +458,11 @@ fn arm(role: u8, side: f32) -> Sculpt {
             b.block([side * 0.1125, -0.56, -0.025], [0.025, 0.115, 0.13], EDGE);
         }
         b.block([0.0, -0.50, -0.025], [0.07, 0.035, 0.07], GOLD);
+    }
+    if side > 0.0 && role == terra_core::creatures::villagers::CRAFTSMAN {
+        // A compact builder's mallet; the ordinary voxel placement remains authoritative.
+        b.block([0.0, -0.42, -0.025], [0.045, 0.23, 0.045], LEATHER);
+        b.block([0.0, -0.49, -0.025], [0.20, 0.10, 0.11], [0.52, 0.36, 0.19]);
     }
     reference_gear::hand(&mut b, role, side);
     b

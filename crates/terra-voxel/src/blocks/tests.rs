@@ -1,6 +1,29 @@
 use super::*;
 use crate::MaterialId;
 #[test]
+fn material_membership_remains_conservative_after_collisions_and_replacements() {
+    let mut section = BlockSection::empty(SectionPos::default()).unwrap();
+    for (index, material) in [3, 259, 369, 65535].into_iter().enumerate() {
+        section.set_block([index, 0, 0], material).unwrap();
+        assert!(section.may_contain(material));
+    }
+    assert!(!section.may_contain(193));
+    section.set_block([0, 0, 0], 0).unwrap();
+    assert!(section.may_contain(3), "259 shares the conservative bucket");
+    section.set_block([1, 0, 0], 0).unwrap();
+    assert!(!section.may_contain(3));
+    let restored = BlockSection::from_blocks(
+        section.position(),
+        section.revision(),
+        section.blocks().to_vec(),
+    )
+    .unwrap();
+    assert_eq!(section, restored, "index must also agree after save/load");
+    for &material in section.blocks() {
+        assert!(section.may_contain(material));
+    }
+}
+#[test]
 fn section_coordinates_cover_negative_blocks_and_columns() {
     for (global, section, local) in [
         (0, 0, 0),

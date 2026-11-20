@@ -1,0 +1,30 @@
+.build-mode-hud { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 170; color: #f3dfb8; }
+.build-mode-toolbar { position: absolute; top: 116px; left: 20px; min-width: 0; max-width: 90%; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 13px; background-color: #241a14ef; border: 1px solid #ad8950; border-radius: 4px; pointer-events: auto; }
+.build-mode-toolbar > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-right: 10px; }
+.build-mode-hud h2 { margin: 0; min-width: 0; font-family: serif; font-size: 19px; line-height: 24px; color: #eed29b; text-wrap: wrap; }
+.build-mode-hud h3 { margin: 0; min-width: 0; font-family: serif; font-size: 15px; line-height: 20px; color: #f1dcb4; text-wrap: wrap; }
+.build-mode-hud p { margin: 0; min-width: 0; font-size: 12px; line-height: 17px; text-wrap: wrap; }
+.build-mode-hud icon { flex-shrink: 0; color: #d9ba7c; }
+.build-mode-hud button { width: auto; min-width: 0; max-width: 100%; min-height: 34px; height: auto; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 7px; padding: 8px 11px; flex-shrink: 0; background-color: #483221; border: 1px solid #9a7748; border-radius: 3px; color: #f2dfbc; font-size: 12px; line-height: 17px; text-wrap: nowrap; pointer-events: auto; box-sizing: border-box; }
+.build-mode-hud button::value { font-size: 12px; line-height: 17px; text-wrap: nowrap; flex-shrink: 0; }
+.build-mode-hud button:hover { background-color: #674b2b; border-color: #d9b46b; }
+.build-mode-hud button.selected { background-color: #4b5430; border-color: #d9b46b; }
+.build-mode-hud button:disabled { opacity: 0.45; }
+.build-mode-panel { position: absolute; left: 20px; top: 196px; width: 350px; max-height: 50%; display: flex; flex-direction: column; gap: 10px; padding: 13px; border: 1px solid #ad8950; border-radius: 4px; background-color: #241a14f2; pointer-events: auto; box-sizing: border-box; }
+.build-mode-categories { min-width: 0; display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; }
+.build-mode-template-list { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 6px; }
+.build-mode-hud .build-mode-template { width: 100%; justify-content: flex-start; padding: 10px; }
+.build-mode-template > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex-grow: 1; }
+.build-mode-preview { width: 70px; height: 70px; min-width: 70px; }
+.build-mode-costs { position: absolute; right: 20px; top: 380px; width: 310px; max-height: 44%; display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid #a17d49; border-radius: 4px; background-color: #241a14eb; pointer-events: auto; box-sizing: border-box; }
+.build-mode-materials { width: 100%; box-sizing: border-box; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; padding-right: 22px; }
+.build-mode-material { display: grid; width: 100%; box-sizing: border-box; grid-template-columns: 24px minmax(0, 1fr) auto; min-width: 0; gap: 6px; align-items: center; }
+.build-mode-material img { width: 24px; height: 24px; }
+.build-mode-hud .build-mode-enough { color: #c5d79a; }
+.build-mode-hud .build-mode-missing { color: #f0b098; }
+.build-mode-hint { color: #bda789; }
+.build-mode-help { position: absolute; left: 50%; bottom: 98px; transform: translate(-50%, 0); width: 620px; max-width: 90%; display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; background-color: #241a14e6; border: 1px solid #80633d; border-radius: 4px; pointer-events: auto; }
+.build-mode-help p { text-align: center; }
+.build-mode-help #build-mode-place { align-self: center; pointer-events: auto; }
+.build-mode-notice { position: absolute; top: 110px; left: 50%; transform: translate(-50%, 0); max-width: 80%; padding: 10px 14px; border: 1px solid #a17d49; background-color: #302018f0; color: #f0c2a0; font-size: 13px; z-index: 175; }
+@media (max-width: 1100px) { .build-mode-toolbar { top: 144px; } .build-mode-panel { top: 220px; width: 310px; max-height: calc(100% - 400px); } .build-mode-costs { top: 380px; width: 270px; max-height: 30%; } .build-mode-help { left: 20px; transform: translate(0, 0); width: 58%; max-width: 58%; bottom: 90px; } }

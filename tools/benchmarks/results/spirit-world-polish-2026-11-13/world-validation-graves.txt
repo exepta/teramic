@@ -1,0 +1,13 @@
+   Compiling terra-world v0.1.0 (/run/media/exepta/Data/Jetbrains/projects/rust/hobby/teramic/crates/terra-world)
+    Finished `test` profile [optimized + debuginfo] target(s) in 2m 11s
+     Running unittests src/lib.rs (target/world-validation/debug/deps/terra_world-241b0ee1f61de9ef)
+
+running 5 tests
+test generation::structures::build::graves::tests::old_revisions_and_non_spirit_regions_cannot_spawn_graves ... ok
+test generation::structures::build::graves::tests::rising_approach_terrain_replaces_last_treads_with_a_flush_landing ... ok
+test generation::structures::build::graves::tests::actual_stair_collision_has_third_block_steps_and_flush_landings_in_both_directions ... ok
+test generation::structures::build::graves::tests::all_three_tombs_have_connected_clear_supported_routes_and_real_treasure ... ok
+test generation::structures::build::graves::tests::natural_spirit_sites_reach_all_levels_through_the_public_voxel_generator ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 1424 filtered out; finished in 0.06s
+

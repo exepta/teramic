@@ -8,6 +8,7 @@ use terra_world::streaming::ChunkFocus;
 
 #[derive(bevy::ecs::system::SystemParam)]
 pub(crate) struct CameraControl<'w> {
+    construction: Option<Res<'w, super::ConstructionCamera>>,
     session: Option<Res<'w, terra_network::client::ClientSession>>,
     config: Res<'w, GameConfig>,
     mode: Res<'w, ControllerMode>,
@@ -23,6 +24,16 @@ pub(crate) fn move_camera(
     mut input: ResMut<CameraInputState>,
     control: CameraControl,
 ) {
+    if control
+        .construction
+        .as_ref()
+        .is_some_and(|camera| camera.active)
+    {
+        for (_, mut motion, _) in &mut cameras {
+            motion.velocity = Vec3::ZERO;
+        }
+        return;
+    }
     if !input.captured || control.blocked.0 {
         for (transform, mut motion, mut look) in &mut cameras {
             look.sync_external(transform.rotation);

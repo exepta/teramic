@@ -3,7 +3,22 @@ use crate::{INVENTORY_SLOTS, Inventory, ItemStack, STACK_LIMIT};
 use serde::{Deserialize, Serialize};
 
 pub const CHEST_SLOTS: usize = 18;
+
+/// Ordinary storage chests; only material 29 supports a paired second half.
+pub const fn is_chest(material: u16) -> bool {
+    matches!(material, 29 | crate::grave_blocks::ORNATE_CHEST)
+}
+
 pub const CONTAINER_VIEW_SLOTS: usize = INVENTORY_SLOTS + 2 * CHEST_SLOTS;
+
+/// Placement intent only. Each physical chest retains its own inventory.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ChestMerge {
+    #[default]
+    Auto,
+    Separate,
+    Target([i64; 3]),
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ContainerGesture {

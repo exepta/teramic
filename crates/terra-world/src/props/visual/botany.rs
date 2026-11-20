@@ -1,4 +1,4 @@
-use super::geometry::{add_blade, add_box, add_ribbon, add_stalk};
+use super::geometry::{add_box, add_ribbon, add_stalk};
 use super::{PropDetail, PropMesh, PropPalette};
 use bevy_math::{Quat, Vec2, Vec3};
 use std::collections::BTreeMap;
@@ -21,7 +21,8 @@ pub(super) fn grass(
     let variant = variant % 8;
     let silhouette = variant % 3;
     // Corners stay open for other plants sharing this soil cell.
-    // Thick, upright square shoots; gaps remain real geometry, including for picking.
+    // The prominent broad blades survive every LOD. Near-field bent leaves
+    // are added around these simpler silhouettes, never over companion corners.
     let blades = [
         (-0.23, 0.0, 0.46),
         (0.23, 0.0, 0.52),
@@ -55,7 +56,7 @@ pub(super) fn grass(
         let height =
             height * [0.80, 1.0, 0.89][silhouette] + ((i * 5 + variant) % 3) as f32 * 0.009;
         let width =
-            (0.040 + ((i * 3 + variant) % 4) as f32 * 0.004) * if i >= 8 { 0.82 } else { 1.0 };
+            (0.070 + ((i * 3 + variant) % 4) as f32 * 0.005) * if i >= 8 { 0.82 } else { 1.0 };
         let bend = Vec3::ZERO;
         let material = foliage[(i + variant) % 3];
         let start = batches.get(&material).map_or(0, |b| b.positions.len());
@@ -73,7 +74,7 @@ pub(super) fn grass(
                 batches,
                 material,
                 root,
-                Vec2::splat(width),
+                Vec2::new(width, width * 0.22),
                 &[Vec3::ZERO, Vec3::Y * height + bend],
                 phase,
             )?;
@@ -97,56 +98,6 @@ pub(super) fn grass(
                     1.0,
                 ];
             }
-        }
-    }
-    if level == PropDetail::Near {
-        for (i, [x, z]) in [
-            [-1.0, 0.0],
-            [1.0, 0.0],
-            [0.0, -1.0],
-            [0.0, 1.0],
-            [-1.0, 0.0],
-            [1.0, 0.0],
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            let direction = Vec3::new(x, 0.0, z);
-            let offset = if i >= 4 {
-                Vec3::Z * (-x * 0.055)
-            } else {
-                Vec3::ZERO
-            };
-            add_box(
-                batches,
-                foliage[(i + variant) % 3],
-                direction * 0.267 + offset + Vec3::Y * (0.07 + (i % 3) as f32 * 0.065),
-                Vec3::new(0.10, 0.11, 0.15),
-                Quat::from_rotation_y(x.atan2(z)),
-            )?;
-        }
-        if !dry && variant % 3 == 2 {
-            let root = Vec3::new(-0.13, 0.0, 0.07);
-            add_blade(batches, palette.stem, root, 0.22, 0.035, Vec3::ZERO, 0.0)?;
-            for size in [
-                Vec3::new(0.095, 0.026, 0.032),
-                Vec3::new(0.032, 0.026, 0.095),
-            ] {
-                add_box(
-                    batches,
-                    palette.flowers[2],
-                    root + Vec3::Y * 0.23,
-                    size,
-                    Quat::IDENTITY,
-                )?;
-            }
-            add_box(
-                batches,
-                palette.flowers[1],
-                root + Vec3::Y * 0.249,
-                Vec3::new(0.027, 0.015, 0.027),
-                Quat::IDENTITY,
-            )?;
         }
     }
     Ok(())
@@ -228,32 +179,109 @@ fn dead_bush(
     level: PropDetail,
     palette: &PropPalette,
 ) -> Result<(), String> {
-    let mut branch = |root: Vec3, tip: Vec3, width: f32| {
-        let delta = tip - root;
-        add_box(
-            batches,
-            palette.twig,
-            (root + tip) * 0.5,
-            Vec3::new(width, delta.length(), width),
-            Quat::from_rotation_arc(Vec3::Y, delta.normalize()),
-        )
+    // Neutral vertex color preserves bleached wood through all biome seasons.
+    let mesh = batches.entry(palette.crop).or_insert_with(|| PropMesh {
+        material: palette.crop,
+        ..Default::default()
+    });
+    let yaw = Quat::from_rotation_y(variant as f32 * 0.61);
+    let stretch = [0.82, 1.04, 0.92, 1.12][variant % 4];
+    let warp = |p: Vec3| yaw * Vec3::new(p.x, p.y * stretch, p.z);
+    let profile: &[[f32; 2]] = if level == PropDetail::Far {
+        &[[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]]
+    } else {
+        &[
+            [-0.65, -1.],
+            [0.65, -1.],
+            [1., -0.65],
+            [1., 0.65],
+            [0.65, 1.],
+            [-0.65, 1.],
+            [-1., 0.65],
+            [-1., -0.65],
+        ]
     };
-    branch(Vec3::ZERO, Vec3::new(0.0, 0.54, 0.0), 0.05)?;
-    let count = match level {
-        PropDetail::Near => 5,
-        PropDetail::Middle => 4,
-        PropDetail::Far => 3,
+    let mut branch = |points: &[(Vec3, f32)]| -> Result<(), String> {
+        let ring = |point: Vec3, radius: f32| -> Vec<Vec3> {
+            profile
+                .iter()
+                .map(|[x, z]| warp(point + Vec3::new(x * radius, 0., z * radius)))
+                .collect()
+        };
+        let mut face = |vertices: &[Vec3], tone: f32| -> Result<(), String> {
+            let normal = (vertices[1] - vertices[0])
+                .cross(vertices[2] - vertices[0])
+                .normalize_or_zero();
+            let start =
+                u32::try_from(mesh.positions.len()).map_err(|_| "Dead bush mesh overflow")?;
+            mesh.positions.extend(vertices.iter().map(|p| p.to_array()));
+            mesh.normals
+                .extend(std::iter::repeat_n(normal.to_array(), vertices.len()));
+            mesh.uvs
+                .extend(std::iter::repeat_n([0., 0.], vertices.len()));
+            mesh.colors.resize(start as usize, [1.; 4]);
+            mesh.colors.extend(std::iter::repeat_n(
+                [tone * 0.64, tone * 0.39, tone * 0.17, 1.],
+                vertices.len(),
+            ));
+            for i in 1..vertices.len() - 1 {
+                mesh.indices
+                    .extend([start, start + i as u32, start + i as u32 + 1]);
+            }
+            Ok(())
+        };
+        for (index, segment) in points.windows(2).enumerate() {
+            let a = ring(segment[0].0, segment[0].1);
+            let b = ring(segment[1].0, segment[1].1);
+            for edge in 0..a.len() {
+                let next = (edge + 1) % a.len();
+                face(
+                    &[a[edge], b[edge], b[next], a[next]],
+                    [0.92, 1.02, 1.08, 0.97, 0.87, 0.96, 1.05, 1.0][edge]
+                        * (0.97 + index as f32 * 0.015),
+                )?;
+            }
+        }
+        let &(tip, radius) = points.last().expect("Dry branch has points");
+        let mut cap = ring(tip, radius);
+        cap.reverse();
+        face(&cap, 1.18)
     };
+    let trunk = [
+        (Vec3::new(0., 0., 0.), 0.075),
+        (Vec3::new(-0.04, 0.10, 0.02), 0.056),
+        (Vec3::new(-0.015, 0.23, 0.025), 0.046),
+        (Vec3::new(0.055, 0.34, 0.005), 0.036),
+        (Vec3::new(0.09, 0.47, -0.02), 0.026),
+        (Vec3::new(0.055, 0.61, -0.04), 0.016),
+    ];
+    branch(&trunk)?;
+    if level != PropDetail::Far {
+        for root in [
+            Vec3::new(-0.15, 0., 0.055),
+            Vec3::new(0.14, 0., -0.035),
+            Vec3::new(0.035, 0., 0.14),
+        ] {
+            branch(&[(root, 0.028), (Vec3::new(-0.03, 0.10, 0.02), 0.042)])?;
+        }
+    }
+    let count = if level == PropDetail::Far { 3 } else { 5 };
     for i in 0..count {
-        let angle = i as f32 * 2.399_963 + variant as f32 * 0.53;
-        let direction = Vec3::new(angle.sin(), 0.0, angle.cos());
-        let root = Vec3::Y * (0.12 + (i % 3) as f32 * 0.08);
-        let elbow = direction * (0.16 + (i % 2) as f32 * 0.03) + Vec3::Y * 0.35;
-        let tip = direction * 0.24 + Vec3::Y * (0.52 + (i % 3) as f32 * 0.05);
-        branch(root, elbow, 0.032)?;
-        branch(elbow, tip, 0.023)?;
-        if level == PropDetail::Near && i % 2 == 0 {
-            branch(elbow, elbow + direction * 0.09 + Vec3::Y * 0.05, 0.018)?;
+        let angle = i as f32 * 2.399_963 + variant as f32 * 0.17;
+        let direction = Vec3::new(angle.sin(), 0., angle.cos());
+        let root = trunk[1 + i % 4].0;
+        let elbow = root + direction * (0.11 + (i % 2) as f32 * 0.025) + Vec3::Y * 0.035;
+        let wrist = elbow + direction * 0.055 + Vec3::Y * 0.075;
+        let tip = wrist + direction * 0.055 + Vec3::Y * 0.045;
+        branch(&[(root, 0.028), (elbow, 0.023), (wrist, 0.016), (tip, 0.010)])?;
+        if level == PropDetail::Near {
+            let side = Vec3::new(direction.z, 0., -direction.x) * if i % 2 == 0 { 1. } else { -1. };
+            let fork = elbow + direction * 0.055 + side * 0.045 + Vec3::Y * 0.015;
+            branch(&[
+                (elbow, 0.017),
+                (fork, 0.013),
+                (fork + side * 0.035 + Vec3::Y * 0.07, 0.009),
+            ])?;
         }
     }
     Ok(())

@@ -1,0 +1,6 @@
+.building-selection { position: absolute; top: 12%; left: 15%; width: 65%; max-width: 100%; min-width: 0; padding: 16px 20px; display: flex; flex-direction: column; gap: 7px; background-color: #261a12ee; color: #f3dfb8; border: 2px solid #b88a4d; border-radius: 5px; pointer-events: none; box-sizing: border-box; z-index: 220; }
+.building-selection-heading { display: flex; flex-direction: row; align-items: center; min-width: 0; gap: 9px; }
+.building-selection h2 { margin: 0; min-width: 0; font-size: 18px; line-height: 24px; text-wrap: wrap; }
+.building-selection p { margin: 0; min-width: 0; font-size: 13px; line-height: 19px; text-wrap: wrap; }
+.building-selection .building-selection-error { color: #efae94; }
+@media (max-width: 780px) { .building-selection { left: 4%; width: 92%; top: 8%; padding: 12px; } }

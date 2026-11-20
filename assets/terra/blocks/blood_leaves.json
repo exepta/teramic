@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": 406,
+  "name": "Blood Leaves",
+  "description": "Blood Leaves from the crimson woodland.",
+  "creative_category": "terrain",
+  "hardness": 0.35,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "blood_leaves": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "blood_leaves_top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    },
+    "leaf_cluster": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.08
+    }
+  },
+  "textures": {
+    "blood_leaves": "textures/foliage/blood_side.png",
+    "blood_leaves_top": "textures/foliage/blood_top.png",
+    "leaf_cluster": "textures/foliage/blood_cluster.png"
+  },
+  "face_materials": [
+    "blood_leaves",
+    "blood_leaves",
+    "blood_leaves",
+    "blood_leaves_top",
+    "blood_leaves",
+    "blood_leaves"
+  ],
+  "foliage_cluster": {
+    "material": "leaf_cluster"
+  }
+}

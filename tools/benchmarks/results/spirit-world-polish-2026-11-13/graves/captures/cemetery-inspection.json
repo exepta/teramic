@@ -1,0 +1,364 @@
+{
+  "bounds": [
+    [
+      -2909,
+      21,
+      -3674
+    ],
+    [
+      -2857,
+      52,
+      -3621
+    ]
+  ],
+  "center": [
+    -2883,
+    34,
+    -3647
+  ],
+  "close_eye": [
+    -2886.0,
+    37.20000076293945,
+    -3660.0
+  ],
+  "entrance": null,
+  "fixture_edits": 0,
+  "levels": null,
+  "lighting": {
+    "close": {
+      "camera": [
+        -2886.0,
+        37.20000076293945,
+        -3660.0
+      ],
+      "cave_blend": 0.0,
+      "exposure_ev100": 13.699999809265137,
+      "local_lights": [
+        {
+          "distance_to_camera_m": 9.547551155090332,
+          "intensity_lumens": 833336.9375,
+          "position": [
+            -2894.4833984375,
+            34.51681900024414,
+            -3663.46240234375
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 9.990239143371582,
+          "intensity_lumens": 830024.5,
+          "position": [
+            -2894.515625,
+            34.48332214355469,
+            -3655.5380859375
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 12.342184066772461,
+          "intensity_lumens": 830338.875,
+          "position": [
+            -2874.4658203125,
+            34.51787185668945,
+            -3663.478271484375
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 12.555148124694824,
+          "intensity_lumens": 3998846.5,
+          "position": [
+            -2887.481689453125,
+            37.51706314086914,
+            -3672.46337890625
+          ],
+          "range_m": 28.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 12.60623836517334,
+          "intensity_lumens": 833022.3125,
+          "position": [
+            -2874.533447265625,
+            34.482086181640625,
+            -3655.5224609375
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 14.599452018737793,
+          "intensity_lumens": 3963134.5,
+          "position": [
+            -2893.470947265625,
+            37.49769592285156,
+            -3672.53955078125
+          ],
+          "range_m": 28.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 15.314716339111328,
+          "intensity_lumens": 826936.1875,
+          "position": [
+            -2894.4892578125,
+            34.49000930786133,
+            -3647.544921875
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 16.279617309570312,
+          "intensity_lumens": 4022225.25,
+          "position": [
+            -2875.539306640625,
+            37.49584197998047,
+            -3672.470458984375
+          ],
+          "range_m": 28.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 17.03957176208496,
+          "intensity_lumens": 829617.25,
+          "position": [
+            -2902.462646484375,
+            34.517486572265625,
+            -3663.483154296875
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 17.234657287597656,
+          "intensity_lumens": 830602.375,
+          "position": [
+            -2874.46728515625,
+            34.517948150634766,
+            -3647.4765625
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 17.34770965576172,
+          "intensity_lumens": 833748.3125,
+          "position": [
+            -2902.536865234375,
+            34.482425689697266,
+            -3655.517822265625
+          ],
+          "range_m": 10.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 18.385236740112305,
+          "intensity_lumens": 3963712.0,
+          "position": [
+            -2899.457275390625,
+            37.50725173950195,
+            -3672.52294921875
+          ],
+          "range_m": 28.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        }
+      ],
+      "pool_budget": 12
+    },
+    "overview": {
+      "camera": [
+        -2843.0,
+        69.0,
+        -3700.0
+      ],
+      "cave_blend": 0.0,
+      "exposure_ev100": 13.699999809265137,
+      "local_lights": [
+        {
+          "distance_to_camera_m": 37.059661865234375,
+          "intensity_lumens": 114965.0625,
+          "position": [
+            -2850.45751953125,
+            33.48815155029297,
+            -3692.46923828125
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 37.25181579589844,
+          "intensity_lumens": 117490.09375,
+          "position": [
+            -2849.531005859375,
+            34.51677703857422,
+            -3687.511962890625
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 37.591495513916016,
+          "intensity_lumens": 117646.171875,
+          "position": [
+            -2854.53271484375,
+            34.49361038208008,
+            -3690.54345703125
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 37.59523010253906,
+          "intensity_lumens": 114899.4296875,
+          "position": [
+            -2852.455810546875,
+            34.49015808105469,
+            -3688.46484375
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 38.06156921386719,
+          "intensity_lumens": 118027.5625,
+          "position": [
+            -2854.544921875,
+            33.50728988647461,
+            -3692.5390625
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 38.15346908569336,
+          "intensity_lumens": 117570.8125,
+          "position": [
+            -2850.533203125,
+            34.51628112792969,
+            -3685.51513671875
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 38.387020111083984,
+          "intensity_lumens": 117686.8125,
+          "position": [
+            -2846.536376953125,
+            31.515338897705078,
+            -3692.51953125
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 38.754737854003906,
+          "intensity_lumens": 116070.9765625,
+          "position": [
+            -2858.4912109375,
+            34.51499557495117,
+            -3691.471435546875
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 39.54096984863281,
+          "intensity_lumens": 1496719.0,
+          "position": [
+            -2844.5009765625,
+            29.51678466796875,
+            -3698.479736328125
+          ],
+          "range_m": 13.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 40.133785247802734,
+          "intensity_lumens": 117513.34375,
+          "position": [
+            -2837.52880859375,
+            29.491640090942383,
+            -3695.541748046875
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 40.1654167175293,
+          "intensity_lumens": 116432.359375,
+          "position": [
+            -2836.50146484375,
+            29.516868591308594,
+            -3703.480224609375
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        },
+        {
+          "distance_to_camera_m": 40.200679779052734,
+          "intensity_lumens": 117959.46875,
+          "position": [
+            -2835.54248046875,
+            29.50084114074707,
+            -3700.54443359375
+          ],
+          "range_m": 5.0,
+          "shadow_maps_enabled": false,
+          "volumetric": false
+        }
+      ],
+      "pool_budget": 12
+    }
+  },
+  "loot": [],
+  "name": null,
+  "native_views": [
+    "overview",
+    "close"
+  ],
+  "overview_eye": [
+    -2843.0,
+    69.0,
+    -3700.0
+  ],
+  "region": [
+    -8,
+    -10
+  ],
+  "route_points": 0,
+  "scenario": "cemetery",
+  "seed": 42042,
+  "spirit_blossom_revision": 2,
+  "status": "passed",
+  "structures_revision": 9,
+  "variant": null,
+  "verified_voxel_probes": 4
+}

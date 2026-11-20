@@ -9,11 +9,15 @@ const SESSION_WARMUP: Duration = Duration::from_secs(10);
 /// Unsmoothed frame-rate extrema for the current world session, independent of F1.
 #[derive(Resource, Default)]
 pub(crate) struct SessionFps {
+    /// Frames divided by elapsed real time over the last half-second window.
+    pub current: Option<f64>,
     pub minimum: Option<f64>,
     pub maximum: Option<f64>,
     session: Option<Instant>,
     joined: Option<Instant>,
     active: bool,
+    current_seconds: f64,
+    current_frames: u32,
 }
 
 impl SessionFps {
@@ -41,6 +45,15 @@ impl SessionFps {
                 .is_some_and(|(joined, frame_started)| {
                     frame_started.saturating_duration_since(joined) >= SESSION_WARMUP
                 });
+        if self.active && active && seconds.is_finite() && seconds > 0.0 {
+            self.current_seconds += seconds;
+            self.current_frames = self.current_frames.saturating_add(1);
+            if self.current_seconds >= 0.5 {
+                self.current = Some(f64::from(self.current_frames) / self.current_seconds);
+                self.current_seconds = 0.0;
+                self.current_frames = 0;
+            }
+        }
         self.active = active;
         if record && seconds.is_finite() && seconds > 0.0 {
             let fps = seconds.recip();
@@ -75,6 +88,47 @@ fn sample(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn current_rate_uses_rendered_frames_before_the_extrema_warmup() {
+        let mut fps = SessionFps::default();
+        let joined = Instant::now();
+        fps.sample(Some(joined), true, joined, 5.0);
+        for frame in 1..=25 {
+            fps.sample(
+                Some(joined),
+                true,
+                joined + Duration::from_millis(frame * 20),
+                0.02,
+            );
+        }
+        assert!((fps.current.unwrap() - 50.0).abs() < 1e-9);
+        assert_eq!((fps.minimum, fps.maximum), (None, None));
+    }
+
+    #[test]
+    fn current_rate_accounts_for_long_real_frames_and_resets_between_worlds() {
+        let mut fps = SessionFps::default();
+        let joined = Instant::now();
+        fps.sample(Some(joined), true, joined, 5.0);
+        for frame in 1..=10 {
+            fps.sample(
+                Some(joined),
+                true,
+                joined + Duration::from_millis(frame * 10),
+                0.01,
+            );
+        }
+        fps.sample(Some(joined), true, joined + Duration::from_millis(500), 0.4);
+        // Ten quick frames and one stall are eleven frames over half a second,
+        // rather than the misleading mean of their reciprocal frame times.
+        assert!((fps.current.unwrap() - 22.0).abs() < 1e-9);
+        let next_world = joined + Duration::from_secs(30);
+        fps.sample(Some(next_world), true, next_world, 0.01);
+        assert_eq!(fps.current, None);
+        fps.sample(None, false, next_world, 0.01);
+        assert_eq!(fps.current, None);
+    }
 
     #[test]
     fn waits_ten_real_seconds_after_joining_before_recording() {
