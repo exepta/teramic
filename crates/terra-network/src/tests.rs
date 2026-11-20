@@ -1383,42 +1383,77 @@ fn reliable_authority_recovers_from_latency_jitter_loss_and_client_pause() {
 
 #[test]
 fn invalid_movement_is_disconnected_without_affecting_the_other_player() {
-    use lightyear::prelude::MessageSender;
+    use lightyear::prelude::{Connected, MessageSender, client::Client, server::ClientOf};
     use protocol::session::*;
+
     let (mut host, mut a, mut b) = pair();
-    let world = a.world_mut();
-    let confirmed = world
-        .resource::<client::ClientSession>()
-        .confirmed_state()
-        .unwrap();
-    world.query_filtered::<&mut MessageSender<MovementInput>,With<lightyear::prelude::client::Client>>()
-        .single_mut(world).unwrap().send::<InputChannel>(MovementInput {
-            generation: confirmed.generation, sequence: confirmed.ack + 1,
-            direction:[f32::NAN,0.0,0.0],look:[0.0;2],jump:false,sprint:false,auto_climb:false,flight_speed:None,
-        });
-    let deadline = Instant::now() + Duration::from_secs(5);
-    while a
-        .world()
-        .resource::<client::ClientSession>()
-        .error
-        .is_none()
-    {
-        host.update();
-        a.update();
-        b.update();
-        assert!(
-            Instant::now() < deadline,
-            "invalid input must disconnect promptly"
-        );
-        std::thread::sleep(Duration::from_millis(1));
+    for (app, x) in [(&mut a, f32::NAN), (&mut b, 1.0)] {
+        let world = app.world_mut();
+        let state = world
+            .resource::<client::ClientSession>()
+            .confirmed_state()
+            .unwrap();
+        world
+            .query_filtered::<&mut MessageSender<MovementInput>, With<Client>>()
+            .single_mut(world)
+            .unwrap()
+            .send::<InputChannel>(MovementInput {
+                generation: state.generation,
+                sequence: state.ack + 1,
+                direction: [x, 0.0, 0.0],
+                look: [0.0; 2],
+                jump: false,
+                sprint: false,
+                auto_climb: false,
+                flight_speed: None,
+            });
+        app.update();
     }
-    wait(&mut host, &mut [&mut b], |host, _| {
+
+    // Leave the rejected client paused. Removing its player cannot depend on cooperation.
+    wait(&mut host, &mut [&mut b], |host, clients| {
         host.world()
             .resource::<server::ServerRuntime>()
             .connected_players
             == 1
+            && clients[0]
+                .world()
+                .resource::<client::ClientSession>()
+                .confirmed_state()
+                .is_some_and(|state| state.ack == 1)
     });
-    assert!(b.world().resource::<client::ClientSession>().ready);
+
+    // Even if the peer never acknowledges the rejection, its transport is bounded.
+    host.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_secs(3)));
+    host.update();
+    let world = host.world_mut();
+    assert_eq!(
+        world
+            .query_filtered::<Entity, (With<ClientOf>, With<Connected>)>()
+            .iter(world)
+            .count(),
+        1
+    );
+
+    // The queued reason must be visible promptly, before the 10-second netcode timeout.
+    for _ in 0..60 {
+        a.update();
+        if a.world()
+            .resource::<client::ClientSession>()
+            .error
+            .is_some()
+        {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(
+        a.world()
+            .resource::<client::ClientSession>()
+            .error
+            .as_deref(),
+        Some("Invalid movement input")
+    );
 }
 
 #[test]

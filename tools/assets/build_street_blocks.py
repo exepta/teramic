@@ -149,7 +149,8 @@ def recipes(entries):
   count = sum(cell is not None for cell in cells)
   pattern = dict(kind='shaped', width=len(rows[0]), height=len(rows), cells=cells)
   write(dest/(slug+'.json'),dict(id='teramic::'+slug, name=name, station='workbench', output=dict(item={'block':material},count=max(2,count)), pattern=pattern))
- write(dest/'straw_block.json',dict(id='teramic::straw_block',name='Tie Straw Bale',station='workbench',output=dict(item={'block':448},count=1),pattern=dict(kind='shapeless',ingredients=[dict(item={'crop':'wheat'},count=9)])))
+ bale = dict(kind='shaped', width=3, height=3, cells=[dict(item={'crop':'wheat'}, count=1) for _ in range(9)])
+ write(dest/'straw_block.json',dict(id='teramic::straw_block',name='Tie Straw Bale',station='workbench',output=dict(item={'block':448},count=1),pattern=bale))
  write(dest/'untie_straw.json',dict(id='teramic::untie_straw',name='Untie Straw Bale',station='workbench',output=dict(item={'crop':'wheat'},count=9),pattern=dict(kind='shapeless',ingredients=[dict(item={'block':448},count=1)])))
  write(dest/'bile_block.json',dict(id='teramic::bile_block',name='Coat Stone with Galle',station='workbench',output=dict(item={'block':440},count=1),pattern=dict(kind='shapeless',ingredients=[dict(item={'block':3},count=1),dict(item={'tool':'bile_bucket'},count=1)])))
 

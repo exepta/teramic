@@ -123,6 +123,13 @@ struct ServerCharacter {
     link: Entity,
 }
 
+/// Only the transport survives a rejected input, so it can deliver the reason and receive
+/// the client's disconnect. An unresponsive client cannot hold the link open indefinitely.
+#[derive(Component)]
+struct RejectedMovement {
+    close_at: Duration,
+}
+
 #[derive(Component)]
 struct Peer {
     farming: farm_tools::FarmPeer,
@@ -484,7 +491,9 @@ fn connected(
 
 fn cleanup(
     mut commands: Commands,
+    time: Res<Time<Real>>,
     links: Query<(), With<Connected>>,
+    rejected: Query<(Entity, &RejectedMovement)>,
     peers: Query<(Entity, &Peer)>,
     bodies: Query<(Entity, &ServerCharacter)>,
     mut identities: ResMut<ConnectedProfiles>,
@@ -501,6 +510,11 @@ fn cleanup(
     }
     for (entity, peer) in &peers {
         if !peer.accepted && peer.joined.elapsed() > Duration::from_secs(10) {
+            commands.entity(entity).insert(Disconnecting);
+        }
+    }
+    for (entity, rejection) in &rejected {
+        if time.elapsed() >= rejection.close_at {
             commands.entity(entity).insert(Disconnecting);
         }
     }
@@ -917,9 +931,18 @@ fn receive_controls(
 fn receive_inputs(
     mut commands: Commands,
     config: Res<GameConfig>,
-    mut peers: Query<(Entity, &mut Peer, &mut MessageReceiver<MovementInput>), With<Connected>>,
+    time: Res<Time<Real>>,
+    mut peers: Query<
+        (
+            Entity,
+            &mut Peer,
+            &mut MessageReceiver<MovementInput>,
+            &mut MessageSender<ServerControl>,
+        ),
+        With<Connected>,
+    >,
 ) {
-    for (entity, mut peer, mut receiver) in &mut peers {
+    for (entity, mut peer, mut receiver, mut sender) in &mut peers {
         for (count, input) in receiver.receive().enumerate() {
             if !peer.synced {
                 continue;
@@ -934,23 +957,27 @@ fn receive_inputs(
                 || !input.valid()
                 || (input.flight_speed.is_some() && !peer.can_fly(&config))
                 || peer.inputs.len() >= MAX_INPUT_BACKLOG
-                || input.sequence > peer.received.saturating_add(MAX_INPUT_BACKLOG as u64)
+                // The reliable ordered input channel permits duplicates, but never gaps.
+                || input.sequence > peer.received.saturating_add(1)
             {
                 tracing::warn!(
                     player = peer.id.0,
                     sequence = input.sequence,
                     "Invalid movement input; disconnecting peer"
                 );
-                commands.entity(entity).insert(Disconnecting);
+                sender
+                    .send::<ControlChannel>(ServerControl::Reject("Invalid movement input".into()));
+                commands.entity(peer.body).despawn();
+                commands
+                    .entity(entity)
+                    .remove::<Peer>()
+                    .insert(RejectedMovement {
+                        close_at: time.elapsed() + Duration::from_secs(2),
+                    });
                 break;
             }
             if input.sequence <= peer.received {
                 continue;
-            }
-            // Reliable ordered input channel: gaps are invalid, never extra simulation ticks.
-            if input.sequence != peer.received + 1 {
-                commands.entity(entity).insert(Disconnecting);
-                break;
             }
             peer.received = input.sequence;
             peer.last_input = Instant::now();

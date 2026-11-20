@@ -9,13 +9,63 @@
     "count": 1
   },
   "pattern": {
-    "kind": "shapeless",
-    "ingredients": [
+    "kind": "shaped",
+    "width": 3,
+    "height": 3,
+    "cells": [
       {
         "item": {
           "crop": "wheat"
         },
-        "count": 9
+        "count": 1
+      },
+      {
+        "item": {
+          "crop": "wheat"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "crop": "wheat"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "crop": "wheat"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "crop": "wheat"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "crop": "wheat"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "crop": "wheat"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "crop": "wheat"
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "crop": "wheat"
+        },
+        "count": 1
       }
     ]
   }
