@@ -107,7 +107,15 @@ fn botanical_detail_is_deterministic_with_bounded_lod_cost() {
             (
                 PropKind::Bush,
                 if variant >= 128 {
-                    [336, 216, 168]
+                    // Each joint joins two rings with quads. Each branch has
+                    // a capped tip; the far model drops roots and fine forks.
+                    let rings =
+                        |sides: usize, spans: usize, tips: usize| sides * (4 * spans + tips);
+                    [
+                        rings(8usize, 5 + 3 + 5 * 3 + 5 * 2, 1 + 3 + 5 + 5),
+                        rings(8, 5 + 3 + 5 * 3, 1 + 3 + 5),
+                        rings(4, 5 + 3 * 3, 1 + 3),
+                    ]
                 } else {
                     [
                         match variant % 8 {
@@ -1136,10 +1144,11 @@ fn prop_lod_replacement_retains_the_old_batch_until_an_atomic_swap() {
     ] {
         use bevy::camera::visibility::VisibilityRange;
         let mut app = app();
-        app.world_mut()
-            .resource_mut::<terra_core::GameConfig>()
-            .client
-            .chunk_animation = mode;
+        {
+            let mut config = app.world_mut().resource_mut::<terra_core::GameConfig>();
+            config.client.chunk_animation = mode;
+            config.client.view_distance = 20;
+        }
         if mode != terra_core::ChunkAnimation::None {
             app.world_mut().spawn((
                 terra_player::TerraCamera,
@@ -1172,7 +1181,7 @@ fn prop_lod_replacement_retains_the_old_batch_until_an_atomic_swap() {
                     world
                         .query::<&VisibilityRange>()
                         .iter(world)
-                        .all(|range| { range.is_abrupt() && range.end_margin == (192.0..192.0) })
+                        .all(|range| { range.is_abrupt() && range.end_margin == (320.0..320.0) })
                 );
                 assert!(world.resource::<PropRenderStatus>().error.is_none());
                 if world.resource::<PropRenderStatus>().ready {
@@ -2113,6 +2122,7 @@ fn fine_bushes_have_connected_cubic_crowns_and_bounded_berry_details() {
 #[test]
 fn desert_variants_use_dry_grass_and_bare_connected_twigs() {
     let palette = PropMaterials {
+        crop: 8,
         foliage: [0, 1, 2],
         stem: 3,
         dry_grass: [4, 5, 6],
@@ -2129,8 +2139,18 @@ fn desert_variants_use_dry_grass_and_bare_connected_twigs() {
             );
             let bush = shapes::template(PropKind::Bush, variant, level, &palette).unwrap();
             assert_eq!(bush.len(), 1);
-            assert_eq!(bush[0].material, palette.twig);
-            assert!(bush[0].positions.len() >= 7 * 24);
+            let wood = &bush[0];
+            // The dead bush uses the neutral material for its authored wood
+            // vertex colors. The desert plant must never inherit leaf tint.
+            assert_eq!(wood.material, palette.crop);
+            assert_eq!(wood.positions.len(), wood.colors.len());
+            assert!(
+                wood.colors
+                    .iter()
+                    .all(|c| c[0] > c[1] && c[1] > c[2] && c[3] == 1.0)
+            );
+            assert!(wood.positions.iter().any(|p| p[1] == 0.));
+            assert!(wood.positions.iter().any(|p| p[1] > 0.45));
             assert!(
                 wind::parameters(PropKind::Bush, variant, 0.5, 1.0)[1]
                     < wind::parameters(PropKind::Bush, 0, 0.5, 1.0)[1]

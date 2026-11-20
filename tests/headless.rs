@@ -33,7 +33,18 @@ fn dedicated_server_initializes_generates_and_exits_without_a_renderer() {
         ConnectionStatus::Unconfigured
     );
     let chunks = app.world().resource::<ChunkStore>();
-    assert_eq!(chunks.loaded.len(), 27);
+    let generation = app.world().resource::<WorldGeneration>();
+    let settings = app
+        .world()
+        .resource::<terra_world::streaming::StreamingSettings>();
+    let columns = chunks
+        .loaded
+        .keys()
+        .map(|p| (p.x, p.z))
+        .collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(columns.len(), (2 * settings.radius + 1).pow(2) as usize);
+    assert_eq!(chunks.loaded.len(), generation.wanted_sections);
+    assert!(chunks.loaded.len() >= columns.len() * (2 * settings.vertical_radius + 1) as usize);
     assert!(chunks.loaded.values().all(|section| section.mesh.is_none()));
     assert!(
         chunks

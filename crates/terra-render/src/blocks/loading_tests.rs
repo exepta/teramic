@@ -466,6 +466,27 @@ fn shipped_cube_materials_share_soil_but_keep_whole_snow_distinct_from_rock() {
         .unwrap();
     assert_eq!(sand.perceptual_roughness, 0.94);
     assert_eq!(sand.reflectance, 0.12);
+    // Each surface has its own shading/texture identity. Every paver shares
+    // the same side material, while each painted deck owns a single extra slot.
+    let mut new_slots = std::collections::BTreeSet::from([
+        slots[&(terra_core::bile::FLUID, "Bile")],
+        slots[&(terra_core::bile::BLOCK, "Surface")],
+        slots[&(terra_core::street::BLOCK, "Surface")],
+        slots[&(terra_core::street::STRAW, "Surface")],
+    ]);
+    for id in terra_core::street::NORMAL..=terra_core::street::LOWERED {
+        assert_eq!(
+            slots[&(id, "Surface")],
+            slots[&(terra_core::street::BLOCK, "Surface")]
+        );
+        assert!(new_slots.insert(slots[&(id, "Deck")]));
+    }
+    assert_eq!(new_slots.len(), 10);
+    assert!(
+        slots
+            .iter()
+            .all(|((id, _), s)| *id >= terra_core::bile::FLUID || !new_slots.contains(s))
+    );
     assert_eq!(
         materials.len(),
         72 + terra_core::OreKind::ALL.len() + terra_core::beds::DyeColor::ALL.len()
@@ -481,6 +502,7 @@ fn shipped_cube_materials_share_soil_but_keep_whole_snow_distinct_from_rock() {
             + 2 // Shared asphalt aggregate and contrasting stone curb textures.
             + 2 // New independent oak and birch end grain.
             + 2 // Wet and cured tar surface materials.
+            + new_slots.len()
     );
     let spirit_slots: std::collections::BTreeSet<_> = slots
         .iter()
@@ -1858,8 +1880,14 @@ fn br52_metadata_and_the_complete_recipe_catalog_fit_the_transport_budgets() {
     let recipes = terra_core::crafting::RecipeBook::builtins();
     // The complete preexisting catalog plus the 76 BR52 additions must remain
     // available while leaving room inside the network's catalog limits.
-    assert!((415..=512).contains(&recipes.iter().count()));
-    assert!(recipes.to_json().expect("bounded recipe payload").len() <= 1024 * 1024);
+    let count = recipes.iter().count();
+    assert!((415..=terra_core::crafting::MAX_RECIPES).contains(&count));
+    let json = recipes.to_json().expect("bounded recipe payload");
+    let received = terra_core::crafting::RecipeBook::from_json(&json).unwrap();
+    assert!(
+        received.iter().eq(recipes.iter()),
+        "recipe transport changed the catalog"
+    );
 }
 
 #[test]

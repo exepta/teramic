@@ -1387,9 +1387,14 @@ fn invalid_movement_is_disconnected_without_affecting_the_other_player() {
     use protocol::session::*;
     let (mut host, mut a, mut b) = pair();
     let world = a.world_mut();
+    let confirmed = world
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap();
     world.query_filtered::<&mut MessageSender<MovementInput>,With<lightyear::prelude::client::Client>>()
         .single_mut(world).unwrap().send::<InputChannel>(MovementInput {
-            generation:0,sequence:1,direction:[f32::NAN,0.0,0.0],look:[0.0;2],jump:false,sprint:false,auto_climb:false,flight_speed:None,
+            generation: confirmed.generation, sequence: confirmed.ack + 1,
+            direction:[f32::NAN,0.0,0.0],look:[0.0;2],jump:false,sprint:false,auto_climb:false,flight_speed:None,
         });
     let deadline = Instant::now() + Duration::from_secs(5);
     while a

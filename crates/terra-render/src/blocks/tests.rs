@@ -44,9 +44,21 @@ fn shipped_blocks_have_square_edges_without_changing_material_identity() {
             assert!(block.coarse_faces.is_some());
             continue;
         }
-        if [6, 10, 16, 17, 18, 36, 134, 135, 313, 314, 404, 405].contains(&block.id) {
-            assert_eq!(block.bevel_width, 0.025);
-            assert!(block.surface.is_none());
+        let bevel = match block.id {
+            6 | 10 | 16 | 17 | 18 | 36 | 134 | 135 | 313 | 314 | 404 | 405 => Some(0.025),
+            terra_core::bile::BLOCK | terra_core::street::STRAW => Some(0.022),
+            id if terra_core::street::is_shape(id) => Some(0.015),
+            _ => None,
+        };
+        if let Some(width) = bevel {
+            assert_eq!(block.bevel_width, width);
+            assert_eq!(
+                block.surface.is_some(),
+                matches!(
+                    block.id,
+                    terra_core::bile::BLOCK | terra_core::street::STRAW
+                )
+            );
             assert!(block.materials.values().all(|m| m.normal_texture.is_some()));
             for face in super::cube_faces(block.bevel_width, [0; 6], None) {
                 for mesh in face {
@@ -318,6 +330,7 @@ fn shipped_ids_and_face_materials_stay_explicit_without_cube_models() {
         assert_eq!(
             block.render_kind,
             if terra_core::construction::is_shape(block.id)
+                || block.id == terra_core::bile::FLUID
                 || matches!(block.id, 98 | 102)
                 || terra_core::textiles::is_carpet(block.id)
                 || block.id == terra_core::flower_pot::MATERIAL
@@ -669,6 +682,8 @@ fn shipped_cubes_have_standalone_textures_without_runtime_glb_dependencies() {
                 "textures/stone-strata-hd.png",
                 "textures/reference_base/snow.png",
                 "textures/asphalt.png",
+                "textures/street/bile.png",
+                "textures/street/straw.png",
             ])
             .filter(|path| !matches!(
                 *path,

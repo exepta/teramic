@@ -358,6 +358,7 @@ impl Surface {
             | Some(terra_voxel::MaterialId::SaltStone | terra_voxel::MaterialId::PinkSaltStone)
             | None => Self::Stone,
             Some(material) => terra_core::construction::base_material(material as u16)
+                .filter(|base| *base != raw)
                 .map_or(Self::Stone, Self::material),
         }
     }

@@ -106,6 +106,8 @@ Asphalt oder Weg aus. Rendering, Auswahl und Kollision teilen dieselben Profile.
 Die Kanten und Bögen liegen bündig auf der Gehfläche; ihre etwas dunkleren
 Steine markieren den Straßenrand ohne zusätzliche erhöhte Leiste. Die abgesenkte
 Form verbindet die Asphaltdecke mit der einen Viertelblock hohen Gehfläche.
+An der Werkbank lassen sich die sechs Straßenprofile aus Bürgersteigblöcken legen.
+Die Form im 3×3-Raster bestimmt das Ergebnis.
 Der massive Bürgersteigblock ist einen halben Block hoch. Beide Bögen besitzen
 eine echte Viertelkreisfläche. Durch die freie Ecke lässt sich der Boden mit der
 Schaufel zum Weg formen. Teer erreicht diesen Weg über die beiden offenen Seiten

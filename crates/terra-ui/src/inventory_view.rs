@@ -571,6 +571,7 @@ impl CatalogViewCache {
         page: usize,
         selected: Option<ItemKind>,
     ) -> (Vec<InventoryItemView>, usize, usize) {
+        let query = crate::localization::normalize_search(query);
         let matches = |entry: &&(ItemKind, InventoryItemView, String, String)| {
             (category == "all" || entry.1.category == category)
                 && query
@@ -821,7 +822,6 @@ pub(super) fn update_view(
         .iter()
         .find(|category| category.id == state.category)
         .map_or("all", |category| category.id.as_str());
-    let query = crate::localization::normalize_search(&state.search);
     if !catalog.ready
         || palette.is_changed()
         || language.changed()
@@ -838,7 +838,7 @@ pub(super) fn update_view(
         state.page_capacity
     };
     let (browser_items, pages, page) =
-        catalog.page(category, &query, page_size, state.page, selected);
+        catalog.page(category, &state.search, page_size, state.page, selected);
     if state.page != page {
         state.page = page;
     }

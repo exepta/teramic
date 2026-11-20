@@ -9,13 +9,21 @@
     "count": 2
   },
   "pattern": {
-    "kind": "shapeless",
-    "ingredients": [
+    "kind": "shaped",
+    "width": 1,
+    "height": 2,
+    "cells": [
       {
         "item": {
           "block": 441
         },
-        "count": 2
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 441
+        },
+        "count": 1
       }
     ]
   }

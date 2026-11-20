@@ -401,7 +401,15 @@ mod spirit_wire_tests {
         let restored: CreatureStates =
             postcard::from_bytes(&postcard::to_allocvec(&snapshot).unwrap()).unwrap();
         assert_eq!(restored.creatures, snapshot.creatures);
-        assert_eq!(snapshot_ids(&restored).unwrap().len(), 19);
+        let gloom_variants: Vec<_> = restored
+            .creatures
+            .iter()
+            .filter(|animal| animal.kind == CreatureKind::SpiritGloom)
+            .map(|animal| animal.variant)
+            .collect();
+        assert_eq!(gloom_variants, [0, 1, 2, 3, 4, 5, 6]);
+        let expected_ids = snapshot.creatures.iter().map(|animal| animal.id).collect();
+        assert_eq!(snapshot_ids(&restored).unwrap(), expected_ids);
         let worm = restored.creatures.last().unwrap();
         assert_eq!(worm.kind, CreatureKind::SandWorm);
         assert_eq!(worm.behavior, CreatureBehavior::Tremor);

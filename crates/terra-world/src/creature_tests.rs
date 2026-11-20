@@ -1728,6 +1728,10 @@ fn herd_occupancy_does_not_exclude_any_land_species() {
             assert!(spawn_cell(&mut population, &habitat, home));
         }
         for animal in population.animals.values() {
+            if animal.kind == CreatureKind::SpiritGloom {
+                // With climate generation disabled the fixture uses forest terrain.
+                assert_eq!(animal.variant, gloom::FOREST);
+            }
             kinds.insert(animal.kind);
         }
         assert!(population.valid());
@@ -1739,6 +1743,7 @@ fn herd_occupancy_does_not_exclude_any_land_species() {
             CreatureKind::Cow,
             CreatureKind::Pig,
             CreatureKind::Butterfly,
+            CreatureKind::SpiritGloom,
         ])
     );
 }

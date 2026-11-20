@@ -115,6 +115,6 @@ F68 mit Asphalt-Herstellung, Straßenformen und Rückbau steht in
 
 ## 7. Release-Pipelines
 
-- [ ] **F83 Pull-Request-Prüfung einrichten.** Den für Teramic benötigten Stand von `preview-020` im TiltUI-Repository veröffentlichen und den Commit festlegen. Auf einem frischen GitHub-Actions-Runner diesen Commit und die Toolchain aus `rust-toolchain.toml` verwenden. Formatierung, Clippy und Workspace-Tests mit `Cargo.lock` ausführen.
+- [ ] **F83 Pull-Request-Prüfung einrichten.** Auf einem frischen GitHub-Actions-Runner die in der README festgelegte TiltUI-Revision am von Cargo erwarteten Pfad auschecken und die Toolchain aus `rust-toolchain.toml` verwenden. Formatierung, Clippy und Workspace-Tests mit `Cargo.lock` ausführen.
 - [ ] **F84 Release-Pakete aus einem Versionstag bauen.** Client, Dedicated Server und Gebäudeeditor für die unterstützten Zielplattformen im Release-Profil bauen. Die jeweils benötigten Assets, Standardkonfigurationen und Lizenzen beilegen. Pakete versionieren und SHA-256-Prüfsummen erzeugen.
 - [ ] **A08 Release-Kandidaten abnehmen und veröffentlichen.** Pakete in einem leeren Verzeichnis entpacken und starten. Eine Welt laden, einen Client mit dem paketierten Server verbinden und im Editor ein Gebäude öffnen. Nach erfolgreicher Abnahme die geprüften Pakete samt Prüfsummen und Versionshinweisen als GitHub Release veröffentlichen.

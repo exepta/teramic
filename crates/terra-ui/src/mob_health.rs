@@ -615,7 +615,7 @@ mod tests {
     }
 
     #[test]
-    fn sandworm_health_label_follows_the_visible_buried_back_and_exposed_body() {
+    fn sandworm_health_label_rises_from_the_moving_sand_to_the_exposed_body() {
         use terra_core::creatures::{CreatureBehavior, CreatureKind, CreatureNeeds};
         let mut app = scene();
         app.world_mut()
@@ -626,7 +626,10 @@ mod tests {
             creatures.creatures.remove(&2);
             let track = creatures.creatures.get_mut(&1).unwrap();
             track.current.kind = CreatureKind::SandWorm;
-            track.current.health = 21.0;
+            // Keep the full height of the reared worm in the camera frustum.
+            track.current.position[2] = -12.5;
+            track.current.velocity = [0.0, 0.0, 1.5];
+            track.current.health = 60.0;
             track.current.needs = CreatureNeeds::full(CreatureKind::SandWorm);
             track.current.behavior = CreatureBehavior::Burrowed;
             track.previous = track.current.clone();
@@ -634,18 +637,30 @@ mod tests {
         app.update();
         let buried = app.world().resource::<MobHealthHud>().bars.clone();
         assert_eq!(buried.len(), 1);
-        assert_eq!(buried[0].label, "21 / 42");
+        assert_eq!(buried[0].label, "60 / 120");
         {
             let mut creatures = app.world_mut().resource_mut::<ReplicatedCreatures>();
             let track = creatures.creatures.get_mut(&1).unwrap();
             track.current.behavior = CreatureBehavior::Attack;
+            track.current.velocity = [0.0; 3];
             track.previous = track.current.clone();
         }
         app.update();
         let exposed = &app.world().resource::<MobHealthHud>().bars;
         assert_eq!(exposed.len(), 1);
-        assert_ne!(
-            buried[0].position, exposed[0].position,
+        assert_eq!(exposed[0].label, "60 / 120");
+        let top = |bar: &MobHealthBar| -> f32 {
+            bar.position
+                .split_once("top: ")
+                .unwrap()
+                .1
+                .strip_suffix("px;")
+                .unwrap()
+                .parse()
+                .unwrap()
+        };
+        assert!(
+            top(&buried[0]) - top(&exposed[0]) > 100.0,
             "the bar must rise with the actual emerging creature"
         );
     }

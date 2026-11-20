@@ -131,7 +131,15 @@ fn actual_negative_spirit_sources_match_sections_queries_and_reload_without_chan
     let t = TerraGenerator::new(config.clone()).unwrap();
     let a = SectionGenerator::new(t.clone());
     let mut sources = Vec::new();
-    let anchor = [-2872_i64, -4045_i64].map(|v| v.div_euclid(32));
+    // A Spirit Forest interior on the shipped seed's regional biome map.
+    let anchor = [-2816_i64, -256_i64];
+    assert!(
+        t.biome_at(anchor[0] as f64, anchor[1] as f64)
+            .weights
+            .spirit_blossom
+            > 0.85
+    );
+    let anchor = anchor.map(|v| v.div_euclid(32));
     for z in -4..=4 {
         for x in -4..=4 {
             let tile = [anchor[0] + x, anchor[1] + z];

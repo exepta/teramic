@@ -96,8 +96,8 @@ fn exact_materials(
         .enumerate()
         .filter_map(|(slot, handle)| {
             let material = standard.get(handle)?;
-            // Both selected extensions retain stock shadow vertices and force
-            // two-sided depth culling, matching OpaqueShadowMaterial exactly.
+            // Static surfaces use two-sided depth culling. Interpolated liquids
+            // need their own vertex shader in the shadow pass as well.
             (material.alpha_mode == AlphaMode::Opaque
                 && !material.unlit
                 && material.depth_bias == 0.0
@@ -107,7 +107,7 @@ fn exact_materials(
                 && !templates.glass_material(slot)
                 && !templates.torch_material(slot)
                 && !templates.fog_material(slot)
-                && !templates.bile_material(slot)
+                && crate::liquid_motion::Kind::material(templates, slot).is_none()
                 && !templates.torch_palette.contains_key(&slot)
                 && !templates.ore_materials.values().any(|&ore| ore == slot)
                 && !foliage.materials.contains_key(&slot)

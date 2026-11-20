@@ -176,11 +176,11 @@ fn simulate_sampled_step(
         return Ok(result);
     }
     let budget = budget.min(4096);
-    let mut work: VecDeque<_> = journal.take_fluid_work(budget).into();
     let mut visited = HashSet::new();
     let mut resting = pools::Resting::default();
     let mut sources = std::mem::take(&mut journal.fluid_sources);
     sources.begin_step(&mut sampler, journal);
+    let mut work: VecDeque<_> = journal.take_fluid_work(budget).into();
     while result.visited < budget {
         let Some(p) = work.pop_front() else { break };
         if !visited.insert(p) {

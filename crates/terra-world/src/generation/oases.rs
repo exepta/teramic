@@ -144,24 +144,29 @@ mod tests {
 
     #[test]
     fn disabled_water_has_no_oasis_carving_or_sources() {
-        for config in [
-            WorldConfig {
-                water: false,
-                rivers: false,
-                ..Default::default()
-            },
-            WorldConfig {
-                biomes: false,
-                rivers: false,
-                ..Default::default()
-            },
-        ] {
-            let terrain = TerraGenerator::new(config).unwrap();
+        // These three basins belong to the original isolated-oasis terrain.
+        let config = WorldConfig {
+            landscape_revision: 1,
+            ecology_revision: 0,
+            spirit_blossom_revision: 0,
+            rivers: false,
+            ..Default::default()
+        };
+        let wet = TerraGenerator::new(config.clone()).unwrap();
+        for (water, biomes) in [(false, true), (true, false)] {
+            let terrain = TerraGenerator::new(WorldConfig {
+                water,
+                biomes,
+                ..config.clone()
+            })
+            .unwrap();
             for [x, z] in CENTERS {
+                assert!(wet.oasis_at(x, z).is_some());
+                assert!(wet.water_column(x, z).is_some());
                 assert!(terrain.oasis_at(x, z).is_none());
                 assert_eq!(
                     terrain.surface_height(x, z),
-                    terrain.base_height_with_biome(x, z, terrain.climate_biome_at(x, z))
+                    terrain.terrain_base_height(x, z)
                 );
             }
         }

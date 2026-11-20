@@ -9,13 +9,40 @@
     "count": 5
   },
   "pattern": {
-    "kind": "shapeless",
-    "ingredients": [
+    "kind": "shaped",
+    "width": 2,
+    "height": 3,
+    "cells": [
+      null,
       {
         "item": {
           "block": 441
         },
-        "count": 5
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 441
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 441
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 441
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 441
+        },
+        "count": 1
       }
     ]
   }

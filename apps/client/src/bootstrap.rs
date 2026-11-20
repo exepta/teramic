@@ -286,6 +286,8 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
         } else if scene.starts_with("landscape-") || scene.starts_with("connected-") {
             // Keep the requested seed and saved terrain revision for paired views.
             client.vertical_view_distance = client.vertical_view_distance.max(4);
+        } else if scene.starts_with("water-") {
+            world = crate::biome_smoke::water_palette_world();
         } else {
             world = WorldConfig::default();
             world.landscape_revision = 2;
@@ -294,7 +296,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
                 world.landscape_revision = 0;
                 world.ecology_revision = 0;
             }
-            world.rivers = scene.starts_with("water-");
+            world.rivers = false;
         }
     }
     if std::env::args().any(|arg| {

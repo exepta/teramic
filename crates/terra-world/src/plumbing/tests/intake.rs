@@ -250,7 +250,7 @@ fn an_upward_mouth_below_a_small_pool_drains_all_its_finite_water() {
 }
 
 #[test]
-fn newly_formed_two_by_two_sources_do_not_regrow_after_finite_pump_withdrawal_or_replica_reload() {
+fn filled_two_by_two_pool_drains_after_finite_pump_withdrawal_across_replica_reload() {
     let (mut chunks, mut journal, _) = fixture();
     let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
         base_height: -100.,
@@ -281,17 +281,14 @@ fn newly_formed_two_by_two_sources_do_not_regrow_after_finite_pump_withdrawal_or
     for _ in 0..32 {
         crate::water::simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
     }
-    assert!(
-        positions
-            .into_iter()
-            .all(|p| journal.fluid(p).unwrap().source)
-    );
+    for (index, &p) in positions.iter().enumerate() {
+        let cell = journal.fluid(p).unwrap();
+        assert_eq!(cell.amount, 8);
+        assert_eq!(cell.source, index == 0 || index == 3);
+    }
     let withdrawn =
         super::super::intake::take(&chunks, &mut journal, &terrain, positions[0], 8).unwrap();
     assert_eq!(withdrawn, 8);
-    for _ in 0..32 {
-        crate::water::simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
-    }
     for p in positions {
         assert_eq!(
             journal.fluid(p),
@@ -308,17 +305,15 @@ fn newly_formed_two_by_two_sources_do_not_regrow_after_finite_pump_withdrawal_or
             .import_delta(journal.section_delta(section))
             .unwrap();
     }
+    let mut drained = 0;
     for _ in 0..32 {
-        crate::water::simulate_fluid_step(&terrain, &chunks, &mut replica, 256).unwrap();
+        let step = crate::water::simulate_fluid_step(&terrain, &chunks, &mut replica, 256).unwrap();
+        assert_eq!(step.sourced + step.replenished, 0);
+        drained += step.drained;
     }
-    let remaining: u16 = positions
-        .into_iter()
-        .map(|p| {
-            let cell = replica.fluid(p).unwrap();
-            assert!(!cell.source);
-            u16::from(cell.amount)
-        })
-        .sum();
-    assert_eq!(remaining + u16::from(withdrawn), 32);
+    for p in positions {
+        assert_eq!(replica.fluid(p).unwrap_or_default(), FluidCell::default());
+    }
+    assert_eq!(drained + u64::from(withdrawn), 32);
     assert_eq!(replica.fluid_work_counts().queued, 0);
 }

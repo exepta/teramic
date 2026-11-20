@@ -51,7 +51,7 @@ fn natural_ice_provenance_survives_real_region_save_and_restores_exact_source_he
 }
 
 #[test]
-fn formed_pool_sources_and_depleted_finite_pool_quantities_survive_real_cross_region_save_reload() {
+fn placed_sources_and_receding_pool_water_survive_real_cross_region_save_reload() {
     let root = std::env::temp_dir().join(format!("terra-pool-sources-{}", PlayerUuid::new_v4()));
     let world = WorldId(17229);
     let terrain = TerraGenerator::new(terra_core::WorldConfig {
@@ -108,52 +108,63 @@ fn formed_pool_sources_and_depleted_finite_pool_quantities_survive_real_cross_re
     for _ in 0..32 {
         simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
     }
-    for phase in 0..2 {
-        if phase == 1 {
-            for p in positions {
-                journal
-                    .set_fluid(
-                        p,
-                        FluidCell {
-                            amount: 6,
-                            flow: [0; 2],
-                            source: false,
-                        },
-                    )
-                    .unwrap();
-            }
-        }
-        save_edits(&root, world, &journal).unwrap();
-        journal = load_edits(&root, world).unwrap();
-        let before: Vec<_> = positions.map(|p| (p, journal.fluid(p).unwrap())).into();
-        let epochs: Vec<_> = journal
-            .changed_sections()
-            .map(|p| (p, journal.fluid_epoch(p)))
-            .collect();
-        for _ in 0..32 {
-            let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
-            assert!(!step.changed);
-        }
-        for (p, cell) in before {
-            assert_eq!(journal.fluid(p), Some(cell));
-            assert_eq!(
-                cell,
-                FluidCell {
-                    amount: if phase == 0 { 8 } else { 6 },
-                    flow: [0; 2],
-                    source: phase == 0
-                }
-            );
-        }
-        for (section, epoch) in epochs {
-            assert_eq!(journal.fluid_epoch(section), epoch);
-        }
+    save_edits(&root, world, &journal).unwrap();
+    journal = load_edits(&root, world).unwrap();
+    for (index, &p) in positions.iter().enumerate() {
+        assert_eq!(
+            journal.fluid(p),
+            Some(FluidCell {
+                amount: 8,
+                flow: [0; 2],
+                source: index == 0 || index == 3,
+            })
+        );
     }
+    for _ in 0..32 {
+        assert!(
+            !simulate_fluid_step(&terrain, &chunks, &mut journal, 256)
+                .unwrap()
+                .changed
+        );
+    }
+    for p in [positions[0], positions[3]] {
+        let (section, local) = global_to_section(p);
+        chunks
+            .loaded
+            .get_mut(&section)
+            .unwrap()
+            .data
+            .set_block(local, 0)
+            .unwrap();
+        journal.record(p, 0).unwrap();
+    }
+    let first = simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+    let snapshot = positions.map(|p| journal.fluid(p).unwrap_or_default());
+    let remaining: u64 = snapshot.iter().map(|c| u64::from(c.amount)).sum();
+    assert!(remaining > 0 && first.drained > 0);
+    assert_eq!(remaining + first.drained, 16);
+    save_edits(&root, world, &journal).unwrap();
+    journal = load_edits(&root, world).unwrap();
+    assert_eq!(
+        positions.map(|p| journal.fluid(p).unwrap_or_default()),
+        snapshot
+    );
+    let mut drained = 0;
+    for _ in 0..32 {
+        let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+        assert_eq!(step.sourced + step.replenished, 0);
+        drained += step.drained;
+    }
+    assert_eq!(drained, remaining);
+    assert_eq!(
+        positions.map(|p| journal.fluid(p).unwrap_or_default()),
+        [FluidCell::default(); 4]
+    );
     std::fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
-fn finite_supported_basins_of_other_sizes_stay_quiet_across_real_save_reload() {
+fn source_free_pools_of_other_sizes_finish_draining_and_stay_quiet_after_real_save_reload() {
     for (size, total) in [([1_i64, 1], 5_u16), ([3, 3], 21), ([4, 3], 37)] {
         let root = std::env::temp_dir().join(format!("terra-finite-rest-{}", PlayerUuid::new_v4()));
         let world = WorldId(17230);
@@ -219,11 +230,24 @@ fn finite_supported_basins_of_other_sizes_stay_quiet_across_real_save_reload() {
                 }
             }
         }
-        for _ in 0..32 {
-            simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
-        }
+        let initial = simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+        let snapshot: Vec<_> = positions.iter().map(|&p| journal.fluid(p)).collect();
         save_edits(&root, world, &journal).unwrap();
         journal = load_edits(&root, world).unwrap();
+        assert_eq!(
+            positions
+                .iter()
+                .map(|&p| journal.fluid(p))
+                .collect::<Vec<_>>(),
+            snapshot
+        );
+        let mut drained = initial.drained;
+        for _ in 0..32 {
+            let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+            assert_eq!(step.sourced + step.replenished, 0);
+            drained += step.drained;
+        }
+        assert_eq!(drained, u64::from(total));
         let epochs: Vec<_> = journal
             .changed_sections()
             .map(|section| {
@@ -239,18 +263,9 @@ fn finite_supported_basins_of_other_sizes_stay_quiet_across_real_save_reload() {
             assert!(!step.changed);
             assert_eq!(step.sourced + step.replenished + step.drained, 0);
         }
-        assert_eq!(
-            positions
-                .iter()
-                .map(|&p| {
-                    let cell = journal.fluid(p).unwrap_or_default();
-                    assert!(!cell.source);
-                    assert_eq!(cell.flow, [0; 2]);
-                    u16::from(cell.amount)
-                })
-                .sum::<u16>(),
-            total
-        );
+        for p in positions {
+            assert_eq!(journal.fluid(p).unwrap_or_default(), FluidCell::default());
+        }
         for (section, fluid, mesh) in epochs {
             assert_eq!(journal.fluid_epoch(section), fluid);
             assert_eq!(journal.water_mesh_epoch(section), mesh);

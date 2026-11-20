@@ -137,8 +137,18 @@ def deck_textures(entries):
 def recipes(entries):
  dest=ROOT/'assets/crafting/building/street'
  write(dest/'sidewalk_block.json',dict(id='teramic::sidewalk_block',name='Carve Sidewalk Pavers',station='workbench',output=dict(item={'block':441},count=4),pattern=dict(kind='shapeless',ingredients=[dict(item={'block':3},count=3),dict(item={'block':42},count=1)])))
- for n,(id,slug,name) in enumerate(entries[1:-1],1):
-  write(dest/(slug+'.json'),dict(id='teramic::'+slug,name=name,station='workbench',output=dict(item={'block':id},count=2 if n==1 else n),pattern=dict(kind='shapeless',ingredients=[dict(item={'block':441},count=n)])))
+ # Each outline occupies distinct grid slots, so a stack for a curve never
+ # matches the recipe for a straight paver first.
+ outlines = {
+  442: ("#",), 443: ("#", "#"), 444: ("###",),
+  445: ("#  ", "###"), 446: (" #", "##", "##"), 447: ("###", "###"),
+ }
+ for material, slug, name in entries[1:-1]:
+  rows = outlines[material]
+  cells = [dict(item={'block':441}, count=1) if mark == '#' else None for row in rows for mark in row]
+  count = sum(cell is not None for cell in cells)
+  pattern = dict(kind='shaped', width=len(rows[0]), height=len(rows), cells=cells)
+  write(dest/(slug+'.json'),dict(id='teramic::'+slug, name=name, station='workbench', output=dict(item={'block':material},count=max(2,count)), pattern=pattern))
  write(dest/'straw_block.json',dict(id='teramic::straw_block',name='Tie Straw Bale',station='workbench',output=dict(item={'block':448},count=1),pattern=dict(kind='shapeless',ingredients=[dict(item={'crop':'wheat'},count=9)])))
  write(dest/'untie_straw.json',dict(id='teramic::untie_straw',name='Untie Straw Bale',station='workbench',output=dict(item={'crop':'wheat'},count=9),pattern=dict(kind='shapeless',ingredients=[dict(item={'block':448},count=1)])))
  write(dest/'bile_block.json',dict(id='teramic::bile_block',name='Coat Stone with Galle',station='workbench',output=dict(item={'block':440},count=1),pattern=dict(kind='shapeless',ingredients=[dict(item={'block':3},count=1),dict(item={'tool':'bile_bucket'},count=1)])))

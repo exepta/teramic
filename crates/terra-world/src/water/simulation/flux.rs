@@ -39,7 +39,7 @@ fn advance_with_supply(
         step.wetted.push(p);
     }
     // Keep existing structure/river probes and their unloaded-section contract.
-    let (_, waiting, _) = supply::incoming(sampler, journal, p);
+    let (incoming, waiting, _) = supply::incoming(sampler, journal, p);
     if supply::advance_construction(sampler, journal, p, &mut cell, step)? {
         return Ok(());
     }
@@ -48,10 +48,19 @@ fn advance_with_supply(
         return Ok(());
     }
     if cell.amount == 0 {
-        for d in super::super::fluid::NEIGHBORS {
-            if let Some(q) = adjacent(p, d)
-                && sampler.cell(journal, q).is_some_and(|f| f.amount > 0)
-            {
+        // Only wake the donor of a reachable downward or lateral transfer.
+        // Air above a pool and the dry lip of a path cannot pull water up.
+        if incoming.amount > 0 {
+            let direction = if incoming.flow == [0; 2] {
+                [0, 1, 0]
+            } else {
+                [
+                    -i64::from(incoming.flow[0]),
+                    0,
+                    -i64::from(incoming.flow[1]),
+                ]
+            };
+            if let Some(q) = adjacent(p, direction) {
                 journal.wake_fluid(q);
             }
         }

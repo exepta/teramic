@@ -1407,6 +1407,18 @@ fn oasis_views(terrain: &TerraGenerator) -> Option<Views> {
     })
 }
 
+pub(crate) fn water_palette_world() -> terra_core::WorldConfig {
+    // The four recorded palette views use the original, pre-connected river
+    // channels, including the elevated Highland pool for seed 42042.
+    terra_core::WorldConfig {
+        landscape_revision: 0,
+        ecology_revision: 0,
+        river_terrain_revision: 0,
+        rivers: true,
+        ..Default::default()
+    }
+}
+
 fn water_biome_views(terrain: &TerraGenerator, scene: Scene) -> Option<Views> {
     let anchors: &[[f64; 2]] = match scene {
         Scene::WaterMushroom => &[[-1504.0, -672.0], [-6496.0, -7296.0]],
@@ -2125,14 +2137,7 @@ mod tests {
 
     #[test]
     fn water_palette_scenes_find_real_generated_water() {
-        let terrain = TerraGenerator::new(terra_core::WorldConfig {
-            // Match bootstrap's fixed pre-landscape water-palette captures.
-            landscape_revision: 0,
-            ecology_revision: 0,
-            rivers: true,
-            ..default()
-        })
-        .unwrap();
+        let terrain = TerraGenerator::new(water_palette_world()).unwrap();
         for scene in [
             Scene::WaterMushroom,
             Scene::WaterDesert,

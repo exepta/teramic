@@ -174,7 +174,8 @@ Anvil-Dateiformat.
 
 Rust Edition 2024 / mindestens Rust 1.97.1, Bevy 0.20.0, Avian3D 0.8.0,
 Lightyear 0.31.0, TiltUI aus dem separaten lokalen Repository
-`../../tilt-us/tilt-ui` auf `preview-020`,
+`../../tilt-us/tilt-ui` auf `preview-020` (Commit
+`09b107ea96e4c8aeff225d0aad38b3ea0e93d8af`),
 Serde 1.x, TOML 0.9.x, serde_json 1.x und Tracing 0.1.x.
 Noise: noise 0.9.0. Block-Meshing:
 [block-mesh 0.2.0](https://docs.rs/block-mesh/0.2.0/block_mesh/).
@@ -186,9 +187,17 @@ Dorf-Performance-Regression ist im damaligen
 [Migrationsbericht](tools/benchmarks/results/bevy-020-2026-10-26/README.md) dokumentiert.
 Seit Phase 134 gibt es kein `vendor/` und keine lokalen Bevy-Quellpatches mehr:
 Bevy kommt unveraendert aus der Registry. TiltUI-Korrekturen erfolgen direkt
-im separaten TiltUI-Repository; Teramic verwendet voruebergehend lokale
-Pfadabhaengigkeiten statt eines Git-Pins, bis der Push freigegeben ist.
-Cargo.lock fixiert die Registry-Versionen, nicht den lokalen TiltUI-Quellstand.
+im separaten TiltUI-Repository. Cargo verwendet diese lokale Pfadabhaengigkeit.
+Fuer einen neuen Checkout die folgenden Befehle im Teramic-Verzeichnis ausfuehren:
+
+```sh
+git clone --branch preview-020 https://github.com/exepta/tilt-ui.git ../../tilt-us/tilt-ui
+git -C ../../tilt-us/tilt-ui checkout --detach 09b107ea96e4c8aeff225d0aad38b3ea0e93d8af
+cargo build --workspace --locked
+```
+
+Cargo.lock fixiert die Registry-Versionen. Der angegebene TiltUI-Commit
+enthaelt die vom Inventar benoetigten Typen `ParkedUi` und `ParkedUiBindings`.
 Bevy/Avian/Lightyear haben gezielte Features; externe Crates werden im Dev-Profil
 optimiert. Release verwendet Thin LTO. Aktueller Arbeits-/Validierungsstand:
 [Phase 134](tools/benchmarks/results/cave-fps-no-vendor-2026-10-26/README.md).
@@ -1746,11 +1755,9 @@ Es gibt keinen Ersatz durch ein anderes UI-Framework.
 
 ## Tests
 
-Aktuelle Abnahme: 4800 Library-/Binary-Tests und vier Integrationstests bestanden.
-Zehn bestehende Tests bleiben ignoriert. Der Original-GLB-Test benoetigt die
-externe Datei `FIVERR/VoxelGrassBlock glb file.glb`, die im Repository fehlt;
-fuer diesen Checkout dokumentiert der [Phase-238-Pruefbericht](tools/benchmarks/results/settlement-building-2026-11-12/README.md)
-den genauen Testaufruf mit diesem einzelnen Filter und die nativen Abnahmen.
+Der Clienttest für das originale Grasmodell lädt die mitgelieferte Datei
+`FIVERR/VoxelGrassBlock glb file.glb`. Die nativen Abnahmen aus Phase 238
+sind im [Prüfbericht](tools/benchmarks/results/settlement-building-2026-11-12/README.md) dokumentiert.
 
 ```bash
 cargo fmt --all --check

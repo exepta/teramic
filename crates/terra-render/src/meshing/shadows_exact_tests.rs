@@ -39,7 +39,7 @@ fn triangles<'a>(batches: impl IntoIterator<Item = &'a MeshBatch>) -> Vec<[[u32;
 }
 
 #[test]
-fn exact_fusion_defaults_on_with_smoke_only_references_and_stock_shadow_vertices() {
+fn exact_fusion_defaults_on_and_wet_surfaces_use_matching_depth_vertices() {
     use crate::weather::surfaces::{TerrainDepthExtension, WetExtension};
     use bevy::{pbr::MaterialExtension, shader::ShaderRef};
     for value in [None, Some("0"), Some("1"), Some("true")] {
@@ -59,11 +59,15 @@ fn exact_fusion_defaults_on_with_smoke_only_references_and_stock_shadow_vertices
         TerrainDepthExtension::prepass_vertex_shader(),
         ShaderRef::Default
     ));
-    assert!(matches!(WetExtension::vertex_shader(), ShaderRef::Default));
-    assert!(matches!(
+    for shader in [
+        WetExtension::vertex_shader(),
         WetExtension::prepass_vertex_shader(),
-        ShaderRef::Default
-    ));
+        WetExtension::deferred_vertex_shader(),
+    ] {
+        assert!(
+            matches!(shader, ShaderRef::Path(path) if path.path() == std::path::Path::new("shaders/terra_liquid_vertex.wesl"))
+        );
+    }
 }
 
 #[test]
@@ -74,7 +78,7 @@ fn material_proof_requires_opaque_zero_bias_two_sided_depth_and_no_special_shade
     let mut foliage = crate::foliage::FoliageAssets::default();
     let mut wet = crate::weather::surfaces::WetMaterials::default();
     let mut depth = crate::weather::surfaces::TerrainDepthMaterials::default();
-    for slot in 0..19 {
+    for slot in 0..21 {
         let mut material = StandardMaterial::default();
         match slot {
             2 | 16 => material.alpha_mode = AlphaMode::Blend,
@@ -120,10 +124,18 @@ fn material_proof_requires_opaque_zero_bias_two_sided_depth_and_no_special_shade
     let mut mystic = templates.blocks[&14].clone();
     mystic.face_materials = [18; 6];
     templates.blocks.insert(399, mystic);
+    for (material, slot) in [
+        (terra_core::roads::WET_TAR, 19),
+        (terra_core::roads::DRIED_TAR, 20),
+    ] {
+        let mut tar = templates.blocks[&14].clone();
+        tar.face_materials[3] = slot;
+        templates.blocks.insert(material, tar);
+    }
     blocks.templates = Some(Arc::new(templates));
     assert_eq!(
         exact_materials(&blocks, &standard, &foliage, &wet, &depth),
-        BTreeSet::from([0, 1])
+        BTreeSet::from([0, 1, 20])
     );
 }
 
