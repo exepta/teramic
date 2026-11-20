@@ -928,19 +928,23 @@ fn receive_controls(
     }
 }
 
+type MovementPeers<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static mut Peer,
+        &'static mut MessageReceiver<MovementInput>,
+        &'static mut MessageSender<ServerControl>,
+    ),
+    With<Connected>,
+>;
+
 fn receive_inputs(
     mut commands: Commands,
     config: Res<GameConfig>,
     time: Res<Time<Real>>,
-    mut peers: Query<
-        (
-            Entity,
-            &mut Peer,
-            &mut MessageReceiver<MovementInput>,
-            &mut MessageSender<ServerControl>,
-        ),
-        With<Connected>,
-    >,
+    mut peers: MovementPeers,
 ) {
     for (entity, mut peer, mut receiver, mut sender) in &mut peers {
         for (count, input) in receiver.receive().enumerate() {
