@@ -43,9 +43,15 @@ jobs:
           python-version: '3.13'
       - name: Build and package the three programs
         run: |
+          jobs_args=()
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            jobs=$(nproc)
+            if (( jobs > 4 )); then jobs=4; fi
+            jobs_args=(--jobs "$jobs")
+          fi
           target_args=()
           if [[ "$PLATFORM" == windows-x86_64 ]]; then target_args=(--target x86_64-pc-windows-gnu); fi
-          cargo build --release --locked --timings "${target_args[@]}" -p terra-client -p terra-server -p terra-building-editor
+          cargo build --release --locked --timings "${jobs_args[@]}" "${target_args[@]}" -p terra-client -p terra-server -p terra-building-editor
           args=(--out dist "${target_args[@]}")
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then args+=(--tag "$GITHUB_REF_NAME"); fi
           python tools/release/package.py "${args[@]}"

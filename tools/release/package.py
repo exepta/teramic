@@ -93,9 +93,9 @@ def package(binary_dir, destination, tag, target=None):
         licenses(root, metadata)
         if target == "x86_64-pc-windows-gnu" and host.endswith("linux-gnu"):
             # These Debian packages supply the runtime and startup objects linked into the EXEs.
-            for name in ("mingw-w64-common", "gcc-mingw-w64-x86-64-posix-runtime"):
-                shutil.copyfile(Path("/usr/share/doc") / name / "copyright",
-                                root / "licenses" / f"{name}-copyright.txt")
+            for runtime_package in ("mingw-w64-common", "gcc-mingw-w64-x86-64-posix-runtime"):
+                shutil.copyfile(Path("/usr/share/doc") / runtime_package / "copyright",
+                                root / "licenses" / f"{runtime_package}-copyright.txt")
         if windows:
             archive = destination / f"{name}.zip"
             with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as out:
