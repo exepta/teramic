@@ -3,7 +3,7 @@ import argparse
 import contextlib
 import os
 from pathlib import Path
-import socket
+import re
 import subprocess
 import tarfile
 import tempfile
@@ -23,24 +23,28 @@ def run(args, cwd, env, marker, timeout=180):
 
 @contextlib.contextmanager
 def server(binary, cwd, env, saved):
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        port = probe.getsockname()[1]
-    address = f"127.0.0.1:{port}"
-    with tempfile.TemporaryFile() as log:
-        proc = subprocess.Popen([binary, "--bind", address, "--save-dir", saved],
-                                stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=env, cwd=cwd)
+    # Separate reader and writer handles keep their offsets independent on Windows and Unix.
+    with (tempfile.TemporaryDirectory() as logs,
+          (Path(logs) / "server.log").open("wb") as output,
+          (Path(logs) / "server.log").open("rb") as log):
+        proc = subprocess.Popen([binary, "--bind", "127.0.0.1:0", "--save-dir", saved],
+                                stdin=subprocess.PIPE, stdout=output, stderr=subprocess.STDOUT,
+                                env=dict(env, RUST_LOG="info", NO_COLOR="1"), cwd=cwd)
         try:
             deadline = time.monotonic() + 120
+            tail = b""
             while time.monotonic() < deadline and proc.poll() is None:
-                try:
-                    with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-                        break
-                except OSError:
-                    time.sleep(0.25)
+                batch = tail + log.read(65536)
+                # Some Windows tracing subscribers color field names even in redirected output.
+                plain = re.sub(rb"\x1b\[[0-9;:]*m", b"", batch)
+                ready = re.search(rb"Authoritative Terra server listening\s+address=Some\((127\.0\.0\.1:[1-9][0-9]{0,4})\)", plain)
+                if ready:
+                    break
+                tail = batch[-512:]
+                time.sleep(0.1)
             else:
-                raise RuntimeError("Packaged server did not listen on loopback")
-            yield address
+                raise RuntimeError("Packaged server did not report a bound TCP/UDP loopback endpoint")
+            yield ready[1].decode("ascii")
         finally:
             if proc.poll() is None:
                 try:
@@ -89,7 +93,6 @@ def verify(archive, desktop=False):
             if desktop:
                 # Limit the smoke camera, preserving the distributed world and binary.
                 settings = root / "configs/client.toml"
-                import re
                 settings.write_text(re.sub(r"(?m)^view_distance\s*=.*$", "view_distance = 2",
                                             settings.read_text(encoding="utf-8")), encoding="utf-8")
                 run([game, "--connect", address, "--smoke-test-network"], work,

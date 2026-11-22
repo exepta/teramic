@@ -303,12 +303,17 @@ fn reserve_endpoints(
     for attempt in 0..8 {
         let tcp = std::net::TcpListener::bind(bind)
             .map_err(|e| format!("Cannot bind server status/join TCP endpoint {bind}: {e}"))?;
-        let bound = tcp.local_addr().map_err(|e| e.to_string())?;
+        let bound = tcp
+            .local_addr()
+            .map_err(|e| format!("Cannot read bound server TCP address: {e}"))?;
         match std::net::UdpSocket::bind(bound) {
             Ok(udp) => return Ok((tcp, udp)),
+            // Winsock also reports an exclusive UDP reservation as WSAEACCES.
+            // Another TCP-assigned port may still be available for both protocols.
             Err(error)
                 if bind.port() == 0
-                    && error.kind() == std::io::ErrorKind::AddrInUse
+                    && (error.kind() == std::io::ErrorKind::AddrInUse
+                        || cfg!(windows) && error.raw_os_error() == Some(10013))
                     && attempt < 7 =>
             {
                 continue;
@@ -331,6 +336,25 @@ mod endpoint_tests {
         assert!(std::net::UdpSocket::bind(address).is_err());
         assert!(super::reserve_endpoints(address).is_err());
     }
+
+    #[test]
+    fn occupied_gameplay_port_reports_udp_and_the_requested_address() {
+        let (tcp, udp) = super::reserve_endpoints("127.0.0.1:0".parse().unwrap()).unwrap();
+        let address = tcp.local_addr().unwrap();
+        drop(tcp);
+        let error = super::reserve_endpoints(address).unwrap_err();
+        assert!(
+            error.contains(&format!("UDP endpoint {address}")),
+            "{error}"
+        );
+        drop(udp);
+    }
+}
+
+fn fail_listener(world: &mut World, error: String) {
+    tracing::error!(%error, "Authoritative server listener failed to start");
+    world.resource_mut::<ServerRuntime>().error = Some(error);
+    world.write_message(bevy::app::AppExit::error());
 }
 
 fn start_listener(world: &mut World) {
@@ -339,8 +363,10 @@ fn start_listener(world: &mut World) {
         .0
         .is_empty()
     {
-        world.resource_mut::<ServerRuntime>().error =
-            Some("Block mechanics could not be loaded; check assets/terra/blocks".into());
+        fail_listener(
+            world,
+            "Block mechanics could not be loaded; check assets/terra/blocks".into(),
+        );
         return;
     }
     if world.resource::<ServerRuntime>().error.is_some() {
@@ -352,15 +378,17 @@ fn start_listener(world: &mut World) {
     let (tcp, udp) = match reserve_endpoints(endpoint.bind) {
         Ok(pair) => pair,
         Err(error) => {
-            world.resource_mut::<ServerRuntime>().error = Some(error);
-            world.write_message(bevy::app::AppExit::error());
+            fail_listener(world, error);
             return;
         }
     };
     let bind = match tcp.local_addr() {
         Ok(bind) => bind,
         Err(error) => {
-            world.resource_mut::<ServerRuntime>().error = Some(error.to_string());
+            fail_listener(
+                world,
+                format!("Cannot read bound server TCP address: {error}"),
+            );
             return;
         }
     };
@@ -385,9 +413,10 @@ fn start_listener(world: &mut World) {
     world.flush();
     let address = world.get::<LocalAddr>(entity).map(|a| a.0);
     if world.get::<Linked>(entity).is_none() || address.is_none_or(|a| a.port() == 0) {
-        world.resource_mut::<ServerRuntime>().error =
-            Some(format!("Cannot bind server to {}", endpoint.bind));
-        world.write_message(bevy::app::AppExit::error());
+        fail_listener(
+            world,
+            format!("Gameplay transport did not start on UDP endpoint {bind}"),
+        );
         return;
     }
     match crate::gateway::Gateway::start(&config, tcp, key) {
@@ -395,8 +424,10 @@ fn start_listener(world: &mut World) {
             world.insert_resource(gateway);
         }
         Err(error) => {
-            world.resource_mut::<ServerRuntime>().error = Some(error);
-            world.write_message(bevy::app::AppExit::error());
+            fail_listener(
+                world,
+                format!("Cannot start status/join gateway at {bind}: {error}"),
+            );
             return;
         }
     }
