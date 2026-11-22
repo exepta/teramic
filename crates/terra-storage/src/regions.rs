@@ -1428,19 +1428,67 @@ fn directory(path: &Path) -> Result<(), String> {
     }
     Ok(())
 }
-fn sync(path: &Path) -> Result<(), String> {
+#[cfg(not(windows))]
+fn sync_directory(path: &Path) -> Result<(), String> {
     fs::File::open(path)
         .and_then(|f| f.sync_all())
-        .map_err(|e| e.to_string())
+        .map_err(|e| format!("Cannot sync save directory {}: {e}", path.display()))
+}
+
+fn install_file(from: &Path, to: &Path) -> Result<(), String> {
+    #[cfg(not(windows))]
+    let result = fs::rename(from, to);
+    #[cfg(windows)]
+    let result = move_write_through(from, to);
+    result.map_err(|e| format!("Cannot install {} at {}: {e}", from.display(), to.display()))?;
+    #[cfg(not(windows))]
+    sync_directory(to.parent().ok_or("Save destination needs a parent")?)?;
+    Ok(())
+}
+
+// Win32 does not offer a portable directory fsync. Request a write-through move
+// for each replacement, including publication of the transaction's commit record.
+#[cfg(windows)]
+fn move_write_through(from: &Path, to: &Path) -> std::io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{
+        MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH, MoveFileExW,
+    };
+
+    // Canonical parent paths provide the extended-length Win32 prefix even when
+    // a caller supplies a relative save directory and the destination is new.
+    fn wide_path(path: &Path) -> std::io::Result<Vec<u16>> {
+        let invalid = || std::io::Error::other("Save path needs a parent and file name");
+        let parent = fs::canonicalize(path.parent().ok_or_else(invalid)?)?;
+        let full = parent.join(path.file_name().ok_or_else(invalid)?);
+        Ok(full.as_os_str().encode_wide().chain(Some(0)).collect())
+    }
+    let from = wide_path(from)?;
+    let to = wide_path(to)?;
+    // SAFETY: Both paths are NUL-terminated UTF-16 buffers valid for this call.
+    if unsafe {
+        MoveFileExW(
+            from.as_ptr(),
+            to.as_ptr(),
+            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+        )
+    } == 0
+    {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(())
 }
 fn write(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let parent = path.parent().ok_or("Save path needs a parent")?;
     directory(parent)?;
-    let mut file = fs::OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(path)
-        .map_err(|e| e.to_string())?;
+    let mut options = fs::OpenOptions::new();
+    options.create_new(true).write(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        options.custom_flags(windows_sys::Win32::Storage::FileSystem::FILE_FLAG_WRITE_THROUGH);
+    }
+    let mut file = options.open(path).map_err(|e| e.to_string())?;
     file.write_all(bytes)
         .and_then(|()| file.sync_all())
         .map_err(|e| e.to_string())
@@ -1502,13 +1550,15 @@ fn recover(root: &Path) -> Result<(), String> {
             let destination = root.join(name);
             let parent = destination.parent().ok_or("Invalid save destination")?;
             directory(parent)?;
-            fs::rename(staged, &destination).map_err(|e| e.to_string())?;
-            sync(parent)?;
+            install_file(&staged, &destination)?;
         }
     }
-    sync(root)?;
+    #[cfg(not(windows))]
+    sync_directory(root)?;
     fs::remove_dir_all(pending).map_err(|e| e.to_string())?;
-    sync(root)
+    #[cfg(not(windows))]
+    sync_directory(root)?;
+    Ok(())
 }
 fn region_name([x, z]: [i64; 2]) -> String {
     format!("regions/r.{x}.{z}.region")
@@ -2401,15 +2451,20 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
     // The small index is installed last, even when its contents are unchanged.
     write(&pending.join(INDEX), &bytes)?;
     plan.files.push((INDEX.into(), checksum(&bytes)));
-    sync(&pending)?;
-    for child in ["regions", "players"] {
-        if pending.join(child).exists() {
-            sync(&pending.join(child))?;
+    #[cfg(not(windows))]
+    {
+        sync_directory(&pending)?;
+        for child in ["regions", "players"] {
+            if pending.join(child).exists() {
+                sync_directory(&pending.join(child))?;
+            }
         }
     }
-    write(&pending.join("commit.data"), &encode(b"CMIT", &plan)?)?;
-    sync(&pending)?;
-    sync(root)?;
+    let marker = pending.join("commit.tmp");
+    write(&marker, &encode(b"CMIT", &plan)?)?;
+    install_file(&marker, &pending.join("commit.data"))?;
+    #[cfg(not(windows))]
+    sync_directory(root)?;
     recover(root)
 }
 
@@ -3230,8 +3285,7 @@ pub fn load_edits(path: &Path, world: WorldId) -> Result<EditJournal, String> {
         commit(root, world, &journal)?;
         let backup = root.join("edits.toml.legacy-backup");
         if !backup.exists() {
-            fs::rename(legacy, backup).map_err(|e| e.to_string())?;
-            sync(root)?;
+            install_file(&legacy, &backup)?;
         }
         return Ok(journal);
     }
