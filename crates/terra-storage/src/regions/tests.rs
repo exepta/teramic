@@ -3649,8 +3649,11 @@ fn interrupted_committed_batch_is_replayed_and_uncommitted_batch_is_discarded() 
     save_edits(&root, WorldId(1), &journal).unwrap();
     let pending = root.join(TRANSACTION);
     directory(&pending).unwrap();
-    write(&pending.join("incomplete.tmp"), b"partial").unwrap();
-    assert!(load_edits(&root, WorldId(1)).is_ok());
+    // An interrupted write of the commit record must leave the old index usable.
+    write(&pending.join(INDEX), b"uncommitted replacement").unwrap();
+    write(&pending.join("commit.tmp"), b"partial").unwrap();
+    let unchanged = load_edits(&root, WorldId(1)).unwrap();
+    assert_eq!(unchanged.gameplay().revision, journal.gameplay().revision);
     assert!(!pending.exists());
     directory(&pending).unwrap();
     let index = Index {
