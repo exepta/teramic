@@ -58,8 +58,7 @@ pub(crate) fn run() -> Result<(), Box<dyn std::error::Error>> {
             app.update();
             println!(
                 "Package client verified ({address}, player {}, {} loaded sections)",
-                state.player.0,
-                section_count
+                state.player.0, section_count
             );
             return Ok(());
         }

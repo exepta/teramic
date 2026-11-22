@@ -8,7 +8,7 @@ runs:
       working-directory: projects/hobby/teramic
       shell: bash
       run: |
-        revision=$(sed -nE 's/^git -C .*tilt-ui checkout --detach ([0-9a-f]{40})$/\1/p' README.md)
+        revision=$(tr -d '\r' < README.md | sed -nE 's/^git -C .*tilt-ui checkout --detach ([0-9a-f]{40})$/\1/p')
         [[ "$revision" =~ ^[0-9a-f]{40}$ ]]
         echo "revision=$revision" >> "$GITHUB_OUTPUT"
     - name: Check out TiltUI next to the hobby projects

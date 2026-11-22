@@ -329,7 +329,8 @@ fn exposure(
             // The outdoor aerial LUT assumes every metre sees the sun. Limit
             // its integration in enclosed rooms, retaining the actual sky at
             // entrances and the shadow-aware cavern volume on Ultra.
-            let distance = 0.01 + (32_000.0 - 0.01) * (1.0 - cave.blend).powi(8);
+            let outdoor_air = (1.0 - cave.blend) * cave.gallery_air();
+            let distance = 0.01 + (32_000.0 - 0.01) * outdoor_air.powi(8);
             if atmosphere.aerial_view_lut_max_distance != distance {
                 atmosphere.aerial_view_lut_max_distance = distance;
             }
@@ -551,8 +552,9 @@ mod tests {
             .spawn((super::super::daylight::Sun, DirectionalLight::default()))
             .id();
         app.update();
-        for blend in [1.0, 0.5, 0.0] {
+        for (blend, lair) in [(1.0, 0.0), (0.5, 0.0), (0.25, 1.0), (0.0, 0.0)] {
             app.world_mut().resource_mut::<CaveState>().blend = blend;
+            app.world_mut().resource_mut::<CaveState>().lair_blend = lair;
             app.update();
             let day = app
                 .world()
@@ -582,7 +584,7 @@ mod tests {
                     .get::<bevy::pbr::AtmosphereSettings>(camera)
                     .unwrap()
                     .aerial_view_lut_max_distance,
-                0.01 + (32_000.0 - 0.01) * (1.0 - blend).powi(8)
+                0.01 + (32_000.0 - 0.01) * ((1.0 - blend) * (1.0 - lair)).powi(8)
             );
             assert_eq!(
                 app.world()
