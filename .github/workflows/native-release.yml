@@ -5,6 +5,7 @@ on:
       platform: {type: string, required: true}
       builder: {type: string, required: true}
       runner: {type: string, required: true}
+      acceptance_ref: {type: string, required: false, default: ''}
       candidate_run: {type: string, required: false, default: ''}
       candidate_artifact: {type: string, required: false, default: ''}
 
@@ -73,6 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.acceptance_ref }}
           persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:

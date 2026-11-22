@@ -24,12 +24,12 @@ def require(condition, reason):
         raise ValueError(reason)
 
 
-def git(*args):
-    return subprocess.check_output(["git", *args], cwd=ROOT, text=True, timeout=15).strip()
+def git(*args, checkout=ROOT):
+    return subprocess.check_output(["git", *args], cwd=checkout, text=True, timeout=15).strip()
 
 
-def version():
-    with (ROOT / "Cargo.toml").open("rb") as manifest:
+def version(checkout=ROOT):
+    with (checkout / "Cargo.toml").open("rb") as manifest:
         return tomllib.load(manifest)["workspace"]["package"]["version"]
 
 
@@ -95,7 +95,7 @@ def read_record(repo, item):
         return json.loads(archive.read("candidate.json"))
 
 
-def matching_run(repo, pr, workflow, record_name, tree, expected_version, expected_jobs):
+def matching_run(repo, pr, workflow, record_name, tree, tag_base, expected_version, expected_jobs):
     repo_id = pr["base"]["repo"]["id"]
     head = pr["head"]
     query = urlencode({"head_sha": head["sha"], "event": "pull_request", "status": "success", "per_page": 100})
@@ -111,7 +111,9 @@ def matching_run(repo, pr, workflow, record_name, tree, expected_version, expect
                             and link["head"]["sha"] == head["sha"]
                             and link["head"]["ref"] == head["ref"]
                             and link["base"]["ref"] == pr["base"]["ref"]), None)
-        if not association:
+        # GitHub can clear the run's PR links after merge. The immutable
+        # record and the merged PR still have to identify the same checkout.
+        if run["pull_requests"] and not association:
             continue
         run_id = run["id"]
         items = artifacts(repo, run_id)
@@ -120,7 +122,7 @@ def matching_run(repo, pr, workflow, record_name, tree, expected_version, expect
         info = read_record(repo, items[record_name])
         # The recorded first parent identifies the base at checkout, even if
         # the PR association moved forward when GitHub merged it.
-        expected = {"repository_id": repo_id, "pr": pr["number"], "head": head["sha"],
+        expected = {"repository_id": repo_id, "pr": pr["number"], "head": head["sha"], "base": tag_base,
                     "tree": tree, "version": expected_version,
                     "run_id": run_id, "attempt": run["run_attempt"]}
         if any(info.get(key) != value for key, value in expected.items()):
@@ -142,19 +144,23 @@ def matching_run(repo, pr, workflow, record_name, tree, expected_version, expect
     return None
 
 
-def find(repo, tag):
+def find(repo, tag, checkout=ROOT):
     require(re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo)
             and os.environ.get("GITHUB_REPOSITORY", repo) == repo, "Repository mismatch")
-    expected_version = version()
+    expected_version = version(checkout)
     require(tag == "v" + expected_version, "Tag differs from the workspace version")
-    target = git("rev-parse", "HEAD")
-    tree = git("rev-parse", "HEAD^{tree}")
+    target = git("rev-parse", "HEAD", checkout=checkout)
+    tree = git("rev-parse", "HEAD^{tree}", checkout=checkout)
     remote = api(repo)
     # Resolve the tag explicitly, including annotated tags, instead of treating a branch as a tag.
     ref = api(repo, f"/git/ref/tags/{tag}")["object"]
     while ref["type"] == "tag":
         ref = api(repo, f"/git/tags/{ref['sha']}")["object"]
     require(ref["type"] == "commit" and ref["sha"] == target, "Checkout differs from the release tag")
+    tagged = api(repo, f"/git/commits/{target}")
+    require(tagged["sha"] == target and tagged["tree"]["sha"] == tree and tagged["parents"],
+            "The tagged tree or merge base cannot be verified")
+    tag_base = tagged["parents"][0]["sha"]
     candidates = api(repo, f"/commits/{target}/pulls?per_page=100")
     for brief in candidates:
         pr = api(repo, f"/pulls/{int(brief['number'])}")
@@ -164,8 +170,8 @@ def find(repo, tag):
                 and pr["base"]["ref"] == remote["default_branch"]):
             continue
         jobs = {f"{platform} / acceptance" for platform in PLATFORMS.values()}
-        packages = matching_run(repo, pr, RELEASE, "release-candidate", tree, expected_version, jobs)
-        if packages and matching_run(repo, pr, CHECKS, "workspace-check-candidate", tree, expected_version, {"check"}):
+        packages = matching_run(repo, pr, RELEASE, "release-candidate", tree, tag_base, expected_version, jobs)
+        if packages and matching_run(repo, pr, CHECKS, "workspace-check-candidate", tree, tag_base, expected_version, {"check"}):
             return packages
     return None
 
@@ -179,12 +185,13 @@ def main():
     read = sub.add_parser("find", help="Emit GitHub step outputs; empty outputs select a native tag build")
     read.add_argument("--repo", required=True)
     read.add_argument("--tag", required=True)
+    read.add_argument("--checkout", type=Path, default=ROOT, help="Checkout of the release tag to verify")
     args = parser.parse_args()
     if args.command == "record":
         record(args.out, args.packages)
         return
     try:
-        candidate = find(args.repo, args.tag)
+        candidate = find(args.repo, args.tag, args.checkout)
     except (ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError, zipfile.BadZipFile) as error:
         print(f"Candidate verification unavailable; building the tag: {error}", file=sys.stderr)
         candidate = None
