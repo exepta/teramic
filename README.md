@@ -4,7 +4,9 @@
 
 Die [GitHub-Releases](https://github.com/exepta/teramic/releases) enthalten Client, Dedicated Server und Gebäudeeditor für Linux x86-64, macOS auf Apple Silicon und Windows x86-64. Jedes Archiv enthält die Spielinhalte und eine Startanleitung. Die SHA-256-Prüfsummen stehen beim jeweiligen Release.
 
-Für eine neue Ausgabe die Workspace-Version und Cargo.lock aktualisieren und Versionshinweise unter `docs/releases/v<VERSION>.md` einchecken. Ein Pull Request von `release/<VERSION>` baut und erprobt die drei Plattformpakete. Ein Git-Tag `v<VERSION>` auf dem abgenommenen Stand startet den Veröffentlichungsworkflow. Dieser prüft den Workspace und verbindet auf jedem Zielsystem den entpackten Client mit einer wieder geöffneten Serverwelt. Der entpackte Editor öffnet ebenfalls eine mitgelieferte Gebäudevorlage. Danach veröffentlicht der Workflow die geprüften Archive und Prüfsummen.
+Für eine neue Ausgabe die Workspace-Version und Cargo.lock aktualisieren und Versionshinweise unter `docs/releases/v<VERSION>.md` einchecken. Ein Pull Request von `release/<VERSION>` baut und erprobt die drei Plattformpakete. Der Linux-Runner baut auch die Windows-x64-Programme mit MinGW-w64. Jedes Archiv durchläuft seinen Starttest auf dem Zielbetriebssystem, sobald sein Build fertig ist. Dabei verbindet sich der entpackte Client mit einer wieder geöffneten Serverwelt, und der entpackte Editor öffnet eine mitgelieferte Gebäudevorlage.
+
+Für die Veröffentlichung einen Tag `v<VERSION>` auf dem abgenommenen Merge setzen. Der Tag-Workflow prüft den Git-Baum, die Workspace-Prüfung und die Herkunft der Paketdateien. Bei Übereinstimmung verwendet er genau die abgenommenen Archive erneut. Bei einem neuen Stand oder abgelaufenen Artefakten baut und prüft er frisch. Vor der Veröffentlichung laufen die drei Starttests erneut. Die Release-Seite enthält die geprüften Archive und ihre SHA-256-Prüfsummen.
 
 
 Flüssiger Teer wird mit einem **Teereimer** auf vorbereitete **Wegblöcke (Path)**
@@ -181,8 +183,7 @@ Anvil-Dateiformat.
 
 Rust Edition 2024 / mindestens Rust 1.97.1, Bevy 0.20.0, Avian3D 0.8.0,
 Lightyear 0.31.0, TiltUI aus dem separaten lokalen Repository
-`../../tilt-us/tilt-ui` auf `preview-020` (Commit
-`09b107ea96e4c8aeff225d0aad38b3ea0e93d8af`),
+`../../tilt-us/tilt-ui` auf `preview-020` mit der [festgelegten Git-Revision](.github/tilt-ui-revision),
 Serde 1.x, TOML 0.9.x, serde_json 1.x und Tracing 0.1.x.
 Noise: noise 0.9.0. Block-Meshing:
 [block-mesh 0.2.0](https://docs.rs/block-mesh/0.2.0/block_mesh/).
@@ -199,7 +200,7 @@ Fuer einen neuen Checkout die folgenden Befehle im Teramic-Verzeichnis ausfuehre
 
 ```sh
 git clone --branch preview-020 https://github.com/exepta/tilt-ui.git ../../tilt-us/tilt-ui
-git -C ../../tilt-us/tilt-ui checkout --detach 09b107ea96e4c8aeff225d0aad38b3ea0e93d8af
+git -C ../../tilt-us/tilt-ui checkout --detach "$(tr -d '\r' < .github/tilt-ui-revision)"
 cargo build --workspace --locked
 ```
 

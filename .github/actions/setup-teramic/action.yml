@@ -1,14 +1,19 @@
 name: Set up Teramic
 description: Install the locked Rust toolchain, native libraries and matching TiltUI source
+inputs:
+  cache-profile:
+    description: Share Cargo dependencies across builds of this profile
+    required: false
+    default: ''
 runs:
   using: composite
   steps:
-    - name: Read TiltUI revision from the source checkout instructions
+    - name: Read pinned TiltUI revision
       id: tilt
       working-directory: projects/hobby/teramic
       shell: bash
       run: |
-        revision=$(tr -d '\r' < README.md | sed -nE 's/^git -C .*tilt-ui checkout --detach ([0-9a-f]{40})$/\1/p')
+        revision=$(tr -d '\r' < .github/tilt-ui-revision)
         [[ "$revision" =~ ^[0-9a-f]{40}$ ]]
         echo "revision=$revision" >> "$GITHUB_OUTPUT"
     - name: Check out TiltUI next to the hobby projects
@@ -25,8 +30,20 @@ runs:
         sudo apt-get update -qq
         sudo apt-get install -y libasound2-dev libudev-dev pkg-config libwayland-dev libxkbcommon-dev libx11-dev libxi-dev libxcursor-dev libxrandr-dev libfontconfig1-dev
     - name: Activate rust-toolchain.toml
+      id: rust
       working-directory: projects/hobby/teramic
       shell: bash
       run: |
-        rustup show active-toolchain
+        toolchain=$(rustup show active-toolchain)
+        echo "$toolchain"
+        echo "toolchain=${toolchain%% *}" >> "$GITHUB_OUTPUT"
         cargo --version
+    - name: Cache Cargo registry and compiled dependencies
+      if: inputs.cache-profile != ''
+      uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      env:
+        RUSTUP_TOOLCHAIN: ${{ steps.rust.outputs.toolchain }}
+      with:
+        shared-key: ${{ inputs.cache-profile }}-${{ steps.tilt.outputs.revision }}
+        workspaces: projects/hobby/teramic -> target
+        cache-bin: false

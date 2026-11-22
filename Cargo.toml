@@ -61,6 +61,21 @@ opt-level = 3
 [profile.dev.package.terra-voxel]
 opt-level = 3
 
+# Keep simulation tests responsive while avoiding full game optimizations
+# and debug symbols for every dependency on hosted CI runners.
+[profile.ci]
+inherits = "test"
+debug = 0
+
+[profile.ci.package."*"]
+opt-level = 1
+
+[profile.ci.package.terra-render]
+opt-level = 1
+
+[profile.ci.package.terra-voxel]
+opt-level = 1
+
 [profile.release]
 lto = "thin"
 codegen-units = 1

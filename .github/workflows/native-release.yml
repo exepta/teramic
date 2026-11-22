@@ -1,0 +1,90 @@
+name: Build and verify one platform
+on:
+  workflow_call:
+    inputs:
+      platform: {type: string, required: true}
+      builder: {type: string, required: true}
+      runner: {type: string, required: true}
+      candidate_run: {type: string, required: false, default: ''}
+      candidate_artifact: {type: string, required: false, default: ''}
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  package:
+    if: inputs.candidate_run == ''
+    runs-on: ${{ inputs.builder }}
+    timeout-minutes: 150
+    env:
+      CARGO_PROFILE_RELEASE_LTO: 'false'
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '8'
+      PLATFORM: ${{ inputs.platform }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: projects/hobby/teramic
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: projects/hobby/teramic
+          persist-credentials: false
+      - uses: ./projects/hobby/teramic/.github/actions/setup-teramic
+        with:
+          cache-profile: release-${{ inputs.platform }}
+      - if: inputs.platform == 'windows-x86_64'
+        name: Install Windows target and MinGW linker
+        run: |
+          sudo apt-get install -y g++-mingw-w64-x86-64-posix
+          rustup target add x86_64-pc-windows-gnu
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - name: Build and package the three programs
+        run: |
+          target_args=()
+          if [[ "$PLATFORM" == windows-x86_64 ]]; then target_args=(--target x86_64-pc-windows-gnu); fi
+          cargo build --release --locked --timings "${target_args[@]}" -p terra-client -p terra-server -p terra-building-editor
+          args=(--out dist "${target_args[@]}")
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then args+=(--tag "$GITHUB_REF_NAME"); fi
+          python tools/release/package.py "${args[@]}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-${{ inputs.platform }}
+          path: projects/hobby/teramic/dist/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  acceptance:
+    needs: package
+    if: >-
+      !cancelled() && (needs.package.result == 'success' ||
+      (needs.package.result == 'skipped' && inputs.candidate_run != ''))
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.candidate_run || github.run_id }}
+          name: ${{ !inputs.candidate_run && format('package-{0}', inputs.platform) || '' }}
+          artifact-ids: ${{ inputs.candidate_artifact }}
+          merge-multiple: true
+          path: dist
+      - name: Start extracted client, server and editor
+        shell: bash
+        env:
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          shopt -s nullglob
+          archives=(dist/*-"$PLATFORM".tar.gz dist/*-"$PLATFORM".zip)
+          [[ ${#archives[@]} == 1 ]]
+          python tools/release/verify.py "${archives[0]}"
