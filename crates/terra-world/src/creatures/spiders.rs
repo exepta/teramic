@@ -4,6 +4,7 @@ use terra_core::creatures::intentions::IntentReason;
 use terra_core::creatures::{CreatureNeeds, NeedGoal, NeedKind, spider_id};
 pub mod cycle;
 mod surfaces;
+mod web_shot;
 pub(super) use surfaces::Route as SurfaceRoute;
 
 pub fn pursuit_speed(kind: Kind) -> f64 {
@@ -52,7 +53,19 @@ impl WebRequest {
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Outcome {
     pub bite: Option<Bite>,
+    /// Index into the same vulnerable-player snapshot used for bite resolution.
+    pub web_hit: Option<usize>,
     pub web: Option<WebRequest>,
+}
+
+pub fn sees_threat(a: &Creature, h: &Habitat, players: &[[f64; 3]]) -> bool {
+    let center = terra_core::creatures::spiders::visual_center(a);
+    terra_core::creatures::definitions::get(a.kind)
+        .combat
+        .is_some_and(|c| {
+            super::perception::nearest_visible(h, center, center, players, c.aggro_radius, |_| true)
+                .is_some()
+        })
 }
 
 pub fn in_cave(a: &Creature, h: &Habitat) -> bool {
@@ -1067,16 +1080,21 @@ fn move_surface_step(
             let mut probe = std::array::from_fn::<_, 3, _>(|i| center[i] + step[i] * reach);
             probe[old_axis] += size[old_axis] * level;
             if let Some(anchor) = shape_contains(h, probe) {
-                let axis = tangent_axes(normal)
-                    .into_iter()
-                    .max_by(|a, b| step[*a].abs().total_cmp(&step[*b].abs()))
-                    .unwrap_or(0);
-                let mut face = [0; 3];
-                face[axis] = if step[axis] > 0.0 { -1 } else { 1 };
-                if let Some(mut turned) = turn_surface(h, a, anchor, face, false, owned) {
-                    turned.velocity = step.map(|v| (v * travel / f64::from(dt)) as f32);
-                    *a = turned;
-                    return true;
+                // A diagonal approach can strike the side wall before the
+                // dominant axis reaches its own wall. Try both actual faces.
+                let mut axes = tangent_axes(normal);
+                axes.sort_by(|a, b| step[*b].abs().total_cmp(&step[*a].abs()));
+                for axis in axes {
+                    if step[axis].abs() < 0.1 {
+                        continue;
+                    }
+                    let mut face = [0; 3];
+                    face[axis] = if step[axis] > 0.0 { -1 } else { 1 };
+                    if let Some(mut turned) = turn_surface(h, a, anchor, face, false, owned) {
+                        turned.velocity = step.map(|v| (v * travel / f64::from(dt)) as f32);
+                        *a = turned;
+                        return true;
+                    }
                 }
             }
         }
@@ -1268,7 +1286,9 @@ fn step_with_targets(
     a.needs.search_in = (a.needs.search_in - dt).max(0.0);
     let retreating = !owned && a.kind == Kind::MediumSpider && !night;
     if a.needs.goal.is_some_and(|goal| {
-        retreating && goal.kind != NeedKind::Shelter && a.behavior != Behavior::Descend
+        retreating
+            && !matches!(goal.kind, NeedKind::Shelter | NeedKind::AttackAim)
+            && a.behavior != Behavior::Descend
             || !retreating && goal.kind == NeedKind::Shelter
     }) {
         a.needs.goal = None;
@@ -1279,6 +1299,14 @@ fn step_with_targets(
     }
     if submersion_damage(a, h, dt) {
         return outcome;
+    }
+    if a.needs.goal.is_some_and(|g| g.kind == NeedKind::AttackAim) {
+        if !owned && contact(h, a).is_some() {
+            a.velocity = [0.; 3];
+            outcome.web_hit = web_shot::advance(a, h, players, dt);
+            return outcome;
+        }
+        a.needs.goal = None;
     }
     if a.behavior == Behavior::Descend {
         if let Some(nav) = navigation.as_deref_mut() {
@@ -1345,18 +1373,15 @@ fn step_with_targets(
     let active = a.kind != Kind::SmallSpider || a.health < a.kind.health();
     let target = if active {
         combat.and_then(|combat| {
-            players
-                .iter()
-                .enumerate()
-                .filter(|(_, player)| {
-                    super::navigation::valid_point(**player)
-                        && distance(**player, center) < combat.aggro_radius.powi(2)
-                })
-                .min_by(|(_, left), (_, right)| {
-                    distance(**left, center).total_cmp(&distance(**right, center))
-                })
-                .filter(|(_, player)| line_of_sight(h, center, **player))
-                .map(|(index, player)| (index, player, combat))
+            super::perception::nearest_visible(
+                h,
+                center,
+                center,
+                players,
+                combat.aggro_radius,
+                |_| true,
+            )
+            .map(|(index, point)| (index, point, combat))
         })
     } else {
         None
@@ -1369,22 +1394,22 @@ fn step_with_targets(
         }
         let reach = (combat.reach + a.kind.size()[2] * 0.3) * a.growth_scale();
         let stalking = night
-            && distance(*player, center) > 7.0_f64.powi(2)
+            && distance(player, center) > 7.0_f64.powi(2)
             && (a.age + (a.id % 11) as f64).rem_euclid(12.0) < 1.2;
         if let Some(nav) = navigation.as_deref_mut() {
             nav.intend(
                 a,
-                if distance(*player, center) <= reach.powi(2) {
+                if distance(player, center) <= reach.powi(2) {
                     IntentReason::Attack
                 } else if stalking {
                     IntentReason::Stalk
                 } else {
                     IntentReason::Hunt
                 },
-                Some(*player),
+                Some(player),
             );
         }
-        if distance(*player, center) <= reach.powi(2) {
+        if distance(player, center) <= reach.powi(2) {
             if a.timer <= 0.0 {
                 let (poison_level, poison_seconds) =
                     terra_core::creatures::spiders::venom(a.kind).unwrap_or((1, 1.0));
@@ -1418,10 +1443,20 @@ fn step_with_targets(
             falling(a, h, dt, true);
             return outcome;
         }
-        let mut destination = *player;
+        if !stalking && web_shot::begin(a, center, player) {
+            if let Some(nav) = navigation {
+                nav.intend(a, IntentReason::Attack, Some(player));
+            }
+            return outcome;
+        }
+        let mut destination = player;
         if a.behavior == Behavior::Climb {
             // Ascend first when a wall blocks a horizontal chase.
-            if (player[1] - center[1]).abs() < 0.6 {
+            let normal = terra_core::creatures::spiders::surface_normal(a);
+            let into_wall = (0..3)
+                .map(|i| (player[i] - center[i]) * f64::from(normal[i]))
+                .sum::<f64>();
+            if into_wall < -0.4 && (player[1] - center[1]).abs() < 0.6 {
                 destination[1] = center[1] + 3.0;
             }
         } else if a.behavior != Behavior::Ceiling {
@@ -1764,6 +1799,89 @@ mod tests {
             variant: 0,
             needs: CreatureNeeds::full(kind),
         }
+    }
+
+    #[test]
+    fn committed_web_shot_can_miss_hit_a_bystander_or_be_cut_off_by_new_cover() {
+        for scene in 0..4 {
+            let (terrain, chunks, mut journal) = fixture(37);
+            let mut a = spider(Kind::MediumSpider);
+            a.age = 29. - (a.id % 11) as f64;
+            let point = [19.5, 3.5, 7.5];
+            let habitat = Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: &journal,
+            };
+            let first = step(&mut a, &habitat, &[point], 0.1, true, true);
+            assert!(first.web_hit.is_none());
+            assert!(terra_core::creatures::spiders::WebShot::of(&a).is_some());
+            assert!(a.valid());
+            let positions = match scene {
+                1 => vec![[19.5, 3.5, 10.5]],
+                2 => vec![point, [14., 3.5, 7.5]],
+                _ => vec![point],
+            };
+            if scene == 3 {
+                for y in 3..6 {
+                    journal.record([11, y, 7], 3).unwrap();
+                }
+            }
+            let habitat = Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: &journal,
+            };
+            let mut hits = Vec::new();
+            for tick in 0..15 {
+                let output = step(&mut a, &habitat, &positions, 0.1, false, true);
+                if let Some(hit) = output.web_hit {
+                    assert!(tick >= 5);
+                    hits.push(hit);
+                }
+            }
+            assert_eq!(
+                hits,
+                match scene {
+                    0 => vec![0],
+                    2 => vec![1],
+                    _ => vec![],
+                }
+            );
+            assert!(a.needs.goal.is_none_or(|g| g.kind != NeedKind::AttackAim));
+        }
+    }
+
+    #[test]
+    fn prey_directly_above_draws_ground_spider_to_a_real_wall_and_upwards() {
+        let (terrain, chunks, mut journal) = fixture(67);
+        for z in 5..=10 {
+            for y in 3..=10 {
+                journal.record([11, y, z], 3).unwrap();
+            }
+        }
+        let h = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        let mut a = spider(Kind::MediumSpider);
+        let mut nav = super::super::navigation::Navigation::default();
+        let mut high: f64 = a.position[1];
+        for _ in 0..150 {
+            a.age += 0.1;
+            surfaces::advance(
+                &mut a,
+                &h,
+                [7.5, 9.2, 7.5],
+                (0.1, 2.8, false),
+                true,
+                Some(&mut nav),
+            );
+            assert!(clear(&h, &a) && contact(&h, &a).is_some());
+            high = high.max(a.position[1]);
+        }
+        assert!(high > 7.0, "Spider stalled at {high}: {:?}", a.position);
     }
 
     #[test]

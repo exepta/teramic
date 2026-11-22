@@ -1,4 +1,4 @@
-//! One bounded shared batch for Gloom trails, drifting petals and short reactions.
+//! One bounded shared glow batch for creature trails, cast particles and short reactions.
 //! No per-creature meshes/materials or accumulating particle entities.
 use super::{CreatureAvatar, Kind, Motion};
 use bevy::{
@@ -72,6 +72,16 @@ type GlowBatchFilter = (
     Without<CreatureAvatar>,
     Without<TerraCamera>,
 );
+type DragonCasts<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static GlobalTransform,
+        &'static Motion,
+        &'static super::dragon_animation::Presentation,
+    ),
+    With<CreatureAvatar>,
+>;
 #[derive(Resource, Default)]
 struct State {
     trails: BTreeMap<u64, Trail>,
@@ -146,6 +156,7 @@ fn update(
     session: Option<Res<terra_network::client::ClientSession>>,
     camera: Query<&GlobalTransform, With<TerraCamera>>,
     spirits: Query<(&CreatureAvatar, &GlobalTransform, &Motion)>,
+    dragons: DragonCasts,
     mut state: ResMut<State>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut batch: Query<(&mut Transform, &mut GlobalTransform, &mut Visibility), GlowBatchFilter>,
@@ -175,6 +186,17 @@ fn update(
         .trails
         .retain(|id, _| selected.iter().any(|s| s.0 == *id));
     let mut motes = Vec::with_capacity(MAX_QUADS);
+    for (root, motion, cast) in &dragons {
+        if root.translation().distance_squared(center) < 96. * 96. && motes.len() < MAX_QUADS / 2 {
+            cast.motes(motion.kind, root, |position, size, color| {
+                motes.push(Mote {
+                    position,
+                    size,
+                    color,
+                });
+            });
+        }
+    }
     for (id, position, speed) in selected {
         let animal = replicas
             .as_ref()

@@ -105,7 +105,7 @@ fn resolve_startup_world(
     world = if let Some(path) = save_path {
         terra_storage::DedicatedStore::resolve_world_config(path, &world)?
     } else {
-        world.structures_revision = 10;
+        world.structures_revision = terra_core::WorldConfig::CURRENT_STRUCTURES_REVISION;
         world
     };
     if let Some(rules) = server.kingdom_rules {
@@ -174,11 +174,17 @@ mod terrain_tests {
         );
         let fresh = root.join("fresh");
         let created = resolve_startup_world(template.clone(), &server, Some(&fresh)).unwrap();
-        assert_eq!(created.structures_revision, 10);
+        assert_eq!(
+            created.structures_revision,
+            WorldConfig::CURRENT_STRUCTURES_REVISION
+        );
         assert_eq!(created.structure_border_gap, 23);
         assert_eq!(created.kingdom_rules, rules);
         let temporary = resolve_startup_world(template, &server, None).unwrap();
-        assert_eq!(temporary.structures_revision, 10);
+        assert_eq!(
+            temporary.structures_revision,
+            WorldConfig::CURRENT_STRUCTURES_REVISION
+        );
         assert_eq!(temporary.structure_border_gap, 23);
         std::fs::remove_dir_all(root).unwrap();
     }

@@ -2241,6 +2241,7 @@ fn bear_climb_and_hunger_round_trip_without_changing_region_layout() {
             age: 139.0,
             variant: 2,
             needs: CreatureNeeds {
+                dragon: None,
                 food: 13.0,
                 water: 11.0,
                 search_in: 4.0,
@@ -3756,4 +3757,87 @@ fn partially_installed_transaction_finishes_player_and_index_together() {
     );
     assert!(!pending.exists());
     fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn dragon_eggs_resume_incubating_on_reload_and_retire_when_the_shell_is_removed() {
+    use terra_core::creatures::dragon_eggs::IncubatingEgg;
+    let root = root();
+    let world = WorldId(83496);
+    let mut journal = EditJournal::default();
+    let egg = IncubatingEgg {
+        position: [-511, 17, -3],
+        shell: terra_voxel::MaterialId::WaterDragonEgg as u16,
+        owner: terra_core::PlayerUuid::new_v4(),
+        elapsed_days: 2.375,
+    };
+    journal.record(egg.position, egg.shell).unwrap();
+    journal.gameplay_mut().dragon_eggs.push(egg);
+    save_edits(&root, world, &journal).unwrap();
+    let mut loaded = load_edits(&root, world).unwrap();
+    assert_eq!(loaded.gameplay().dragon_eggs, [egg]);
+    // Pre-calendar regions tracked up to 120 seconds per egg. At half incubation
+    // the default five-day cycle must resume with half the time still left.
+    let legacy = (world, vec![(egg.position, egg.shell, egg.owner, 60u16)]);
+    fs::write(root.join(DRAGON_EGGS), encode(b"EGG1", &legacy).unwrap()).unwrap();
+    loaded = load_edits(&root, world).unwrap();
+    assert_eq!(loaded.gameplay().dragon_eggs[0].elapsed_days, 2.5);
+    use terra_core::creatures::{
+        Creature, CreatureBehavior, CreatureNeeds, breeding, dragon_eggs, dragon_life::DragonLife,
+        taming::AnimalBond,
+    };
+    let state = loaded.gameplay_mut();
+    let id = breeding::next_birth_id(&state.creatures, state.next_animal_birth).unwrap();
+    let kind = dragon_eggs::kind(egg.shell).unwrap();
+    let life = DragonLife {
+        months: 4.75,
+        nest: Some(egg.position),
+        affection: 70.,
+        training: 28.,
+        sheltered: true,
+        last_contact_age: Some(115.),
+    };
+    let mut needs = CreatureNeeds::full(kind);
+    needs.dragon = Some(life);
+    state.creatures.animals.insert(
+        id,
+        Creature {
+            id,
+            kind,
+            home: [-16, -1],
+            position: [-510.5, 17., -2.5],
+            velocity: [0.; 3],
+            yaw: 0.,
+            health: kind.health(),
+            behavior: CreatureBehavior::Rest,
+            timer: 0.,
+            age: 1720.,
+            variant: 0,
+            needs,
+        },
+    );
+    state.creatures.owners.insert(id, egg.owner);
+    state.animal_families.insert(id, Default::default());
+    state.animal_bonds.insert(id, AnimalBond::owned(egg.owner));
+    state.next_animal_birth = breeding::birth_serial(id).unwrap();
+    loaded.record(egg.position, 0).unwrap();
+    save_edits(&root, world, &loaded).unwrap();
+    assert!(
+        load_edits(&root, world)
+            .unwrap()
+            .gameplay()
+            .dragon_eggs
+            .is_empty()
+    );
+    assert_eq!(
+        load_edits(&root, world)
+            .unwrap()
+            .gameplay()
+            .creatures
+            .animals[&id]
+            .needs
+            .dragon,
+        Some(life)
+    );
+    std::fs::remove_dir_all(root).unwrap();
 }

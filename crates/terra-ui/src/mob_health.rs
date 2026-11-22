@@ -20,10 +20,57 @@ pub struct MobHealthBar {
     pub font: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct BossBar {
+    pub id: String,
+    pub title: String,
+    pub frame_size: String,
+    pub title_size: String,
+    pub portrait: String,
+    pub fill_clip: String,
+    pub fill_size: String,
+}
+
+impl BossBar {
+    fn for_creature(a: &Creature, viewport: f32) -> Self {
+        use terra_core::creatures::{CreatureKind, definitions};
+        // The survival frame occupies the first 432 logical pixels. Preserve the
+        // central gap and use the next row on narrow viewports.
+        let gap = viewport - 2.0 * 438.0;
+        let (width, top) = if gap >= 288.0 {
+            (gap.min(610.0), 5)
+        } else {
+            ((viewport * 0.55).min(460.0), 123)
+        };
+        let height = width * 500.0 / 1616.0;
+        let fill_width = width * 1079.0 / 1616.0;
+        let fill_height = height * 101.0 / 500.0;
+        let health = (a.health / a.kind.health()).clamp(0.0, 1.0);
+        let face = match a.kind {
+            CreatureKind::DarkDragon => "dark",
+            CreatureKind::WaterDragon => "water",
+            _ => "earth",
+        };
+        Self {
+            id: a.id.to_string(),
+            title: definitions::get(a.kind).variant_title(a.variant).to_owned(),
+            portrait: format!("tilt-ui://assets/boss-face-{face}.png"),
+            frame_size: format!("width: {width:.1}px; height: {height:.1}px; top: {top}px;"),
+            title_size: format!("font-size: {:.1}px;", (width * 0.034).clamp(10.0, 16.0)),
+            fill_clip: format!(
+                "width: {:.2}px; height: {fill_height:.2}px;",
+                fill_width * health
+            ),
+            fill_size: format!("width: {fill_width:.2}px; height: {fill_height:.2}px;"),
+        }
+    }
+}
+
 #[html_shared]
 #[derive(Resource, Default, PartialEq, Serialize)]
 pub struct MobHealthHud {
     pub bars: Vec<MobHealthBar>,
+    pub boss: Vec<BossBar>,
 }
 
 struct Sight {
@@ -106,10 +153,28 @@ fn fill(health: f32, max: f32, color: [u8; 3]) -> String {
 
 fn update(scene: Scene, mut hud: ResMut<MobHealthHud>, mut cache: Local<SightCache>) {
     let mut bars = Vec::new();
-    let active = scene.config.mob_health_bars != MobHealthBars::None
-        && scene.session.as_ref().is_some_and(|s| s.ready && !s.dead())
+    let playing = scene.session.as_ref().is_some_and(|s| s.ready && !s.dead())
         && scene.menu.as_ref().is_none_or(|m| m.world_hud_active());
-    let Some((camera, transform)) = scene.cameras.iter().next().filter(|_| active) else {
+    let camera = scene.cameras.iter().next().filter(|_| playing);
+    let boss = scene
+        .creatures
+        .as_deref()
+        .and_then(|c| c.creatures.get(&c.boss?))
+        .zip(camera)
+        .filter(|(t, _)| t.current.kind.is_dragon() && t.current.health > 0.0)
+        .map(|(track, (cam, _))| {
+            BossBar::for_creature(
+                &track.current,
+                cam.logical_viewport_size().unwrap_or(Vec2::ZERO).x
+                    / scene.scale.as_ref().map_or(1.0, |s| s.0).max(0.1),
+            )
+        });
+    if hud.boss.first() != boss.as_ref() {
+        hud.boss = boss.into_iter().collect();
+    }
+    let Some((camera, transform)) =
+        camera.filter(|_| scene.config.mob_health_bars != MobHealthBars::None)
+    else {
         cache.0.clear();
         if !hud.bars.is_empty() {
             hud.bars.clear();
@@ -136,7 +201,8 @@ fn update(scene: Scene, mut hud: ResMut<MobHealthHud>, mut cache: Local<SightCac
         .and_then(|session| session.mounted)
         .map(|horse| horse.id);
     for track in creatures.creatures.values() {
-        if track.current.health <= 0.0
+        if Some(track.current.id) == creatures.boss
+            || track.current.health <= 0.0
             || track.current.behavior == terra_core::creatures::CreatureBehavior::InNest
             || ridden == Some(track.current.id)
         {
@@ -373,6 +439,43 @@ mod tests {
         }
         install(&mut app);
         app
+    }
+
+    #[test]
+    fn boss_health_tracks_only_the_local_encounter_even_with_overhead_bars_disabled() {
+        use terra_core::creatures::CreatureKind::*;
+        let mut app = scene();
+        app.world_mut()
+            .resource_mut::<GameplayConfig>()
+            .mob_health_bars = MobHealthBars::None;
+        for (kind, face) in [
+            (DarkDragon, "dark"),
+            (EarthDragon, "earth"),
+            (WaterDragon, "water"),
+        ] {
+            {
+                let mut r = app.world_mut().resource_mut::<ReplicatedCreatures>();
+                let a = &mut r.creatures.get_mut(&2).unwrap().current;
+                a.kind = kind;
+                a.health = kind.health() * 0.5;
+                r.boss = Some(2);
+            }
+            app.update();
+            let hud = app.world().resource::<MobHealthHud>();
+            let [bar] = hud.boss.as_slice() else {
+                panic!("expected exactly one boss")
+            };
+            assert!(hud.bars.is_empty());
+            assert_eq!(
+                bar.title,
+                terra_core::creatures::definitions::get(kind).title
+            );
+            assert!(bar.portrait.ends_with(&format!("face-{face}.png")));
+            assert!(bar.fill_clip.starts_with("width: 146.89px;"));
+            app.world_mut().resource_mut::<ReplicatedCreatures>().boss = None;
+            app.update();
+            assert!(app.world().resource::<MobHealthHud>().boss.is_empty());
+        }
     }
 
     #[test]

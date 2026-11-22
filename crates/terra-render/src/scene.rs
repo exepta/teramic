@@ -161,7 +161,8 @@ pub(crate) fn update_view_distance(
     config: Res<GameConfig>,
     construction: Option<Res<terra_player::ConstructionCamera>>,
     limit: Option<Res<terra_world::streaming::StreamingRadiusLimit>>,
-    mut previous_offset: Local<(f32, Option<u8>)>,
+    chunks: Option<Res<terra_world::streaming::ChunkStore>>,
+    mut previous_offset: Local<(f32, Option<u8>, f32)>,
     mut cameras: Query<
         (
             Entity,
@@ -174,8 +175,11 @@ pub(crate) fn update_view_distance(
 ) {
     let limit = limit.and_then(|limit| limit.0);
     let range = view_range::CameraRange::limited(&config.client, construction.as_deref(), limit);
-    let offset_changed = *previous_offset != (range.offset, limit);
-    *previous_offset = (range.offset, limit);
+    let far = range
+        .far
+        .max(chunks.map_or(0., |c| c.gallery_view_distance));
+    let offset_changed = *previous_offset != (range.offset, limit, far);
+    *previous_offset = (range.offset, limit, far);
     if !config.is_changed() && !offset_changed {
         return;
     }
@@ -189,7 +193,7 @@ pub(crate) fn update_view_distance(
             }
         }
         if let Projection::Perspective(p) = &mut *projection {
-            p.far = range.far;
+            p.far = far;
         }
         fog.falloff = FogFalloff::Linear {
             start: range.fog.0,

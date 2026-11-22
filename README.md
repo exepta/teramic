@@ -1,5 +1,12 @@
 # Project Terra
 
+## Teramic herunterladen und veröffentlichen
+
+Die [GitHub-Releases](https://github.com/exepta/teramic/releases) enthalten Client, Dedicated Server und Gebäudeeditor für Linux x86-64, macOS auf Apple Silicon und Windows x86-64. Jedes Archiv enthält die Spielinhalte und eine Startanleitung. Die SHA-256-Prüfsummen stehen beim jeweiligen Release.
+
+Für eine neue Ausgabe die Workspace-Version und Cargo.lock aktualisieren und Versionshinweise unter `docs/releases/v<VERSION>.md` einchecken. Ein Pull Request von `release/<VERSION>` baut und erprobt die drei Plattformpakete. Ein Git-Tag `v<VERSION>` auf dem abgenommenen Stand startet den Veröffentlichungsworkflow. Dieser prüft den Workspace und verbindet auf jedem Zielsystem den entpackten Client mit einer wieder geöffneten Serverwelt. Der entpackte Editor öffnet ebenfalls eine mitgelieferte Gebäudevorlage. Danach veröffentlicht der Workflow die geprüften Archive und Prüfsummen.
+
+
 Flüssiger Teer wird mit einem **Teereimer** auf vorbereitete **Wegblöcke (Path)**
 gegossen. Rechtsklick mit einer Holz- oder Steinschaufel macht aus Gras, Erde,
 Sand oder Kies einen Weg. An der Werkbank ergeben ein leerer Eimer und vier

@@ -23,6 +23,7 @@ struct OreSmoke {
     requested: bool,
     captured: usize,
     home: Vec3,
+    search: usize,
 }
 #[derive(Component)]
 struct InspectionLight;
@@ -41,6 +42,7 @@ pub(crate) fn install(app: &mut App) {
             requested: false,
             captured: 0,
             home: Vec3::ZERO,
+            search: 0,
         })
         .add_systems(PostStartup, setup)
         .add_systems(Update, run.after(terra_player::PlayerSet::Movement));
@@ -82,7 +84,7 @@ fn setup(world: &mut World) {
     world.spawn((
         InspectionLight,
         PointLight {
-            intensity: 160_000.0,
+            intensity: 16_000.0,
             range: 16.0,
             radius: 0.6,
             shadow_maps_enabled: false,
@@ -218,7 +220,17 @@ fn run(world: &mut World) {
             let center = Vec3::from_array(world.resource::<ChunkFocus>().0.map(|value| value as f32));
             let Some((position, view)) = view_of(world.resource::<ChunkStore>(), world.resource::<EditJournal>(),
                 world.resource::<BlockPropertiesCatalog>(), ore, center) else {
-                state.since = Instant::now();
+                // Rare ores can fall outside the streamed columns surrounding the
+                // previous camera. Survey another real underground volume.
+                if ore != OreKind::Salt && state.since.elapsed() >= Duration::from_secs(4) {
+                    state.search += 1;
+                    let depth = match ore { OreKind::Diamond => -44., OreKind::Ruby => -55., _ => -10. };
+                    let offsets = [[0.,0.],[60.,-30.],[-45.,-47.],[65.,68.],[-72.,57.],[12.,-85.]];
+                    let offset = offsets[(state.search - 1) % offsets.len()];
+                    let point = state.home + Vec3::new(offset[0], depth, offset[1]);
+                    set_camera(world,Transform::from_translation(point).looking_at(point + Vec3::NEG_Z,Vec3::Y));
+                    state.since = Instant::now();
+                }
                 return;
             };
             info!(?ore, ?position, "Native ore view uses a naturally generated exposed deposit");
@@ -244,6 +256,7 @@ fn run(world: &mut World) {
             state.requested = true;
         } else if state.captured > state.stage {
             state.stage += 1;
+            state.search = 0;
             if state.stage == 1 {
                 let home = state.home;
                 set_camera(world, Transform::from_translation(home).looking_at(home + Vec3::NEG_Z, Vec3::Y));

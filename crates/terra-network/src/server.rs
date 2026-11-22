@@ -206,11 +206,13 @@ pub(crate) fn install(app: &mut App) {
         .init_resource::<trains::SeatedPlayers>()
         .init_resource::<trees::TreeRuntime>()
         .init_resource::<creatures::InspectionTargets>()
+        .init_resource::<creatures::DragonChallengers>()
         .init_resource::<villager_defense::Defenses>()
         .init_resource::<pvp::Attacks>()
         .init_resource::<stalkers::Grips>()
         .init_resource::<riding::Mounts>()
         .init_resource::<beds::SleepRuntime>()
+        .init_resource::<crate::world_time::PlayedDays>()
         .init_resource::<chat::ChatRuntime>()
         .init_resource::<ServerConsole>()
         .init_resource::<terra_world::tree_felling::Queue>()
@@ -527,6 +529,7 @@ struct ControlWorld<'w, 's> {
     attacks: Option<ResMut<'w, pvp::Attacks>>,
     defenses: Option<ResMut<'w, villager_defense::Defenses>>,
     inspections: Option<ResMut<'w, creatures::InspectionTargets>>,
+    dragon_challengers: Option<ResMut<'w, creatures::DragonChallengers>>,
     sleep: Option<ResMut<'w, beds::SleepRuntime>>,
     block_properties: Res<'w, terra_core::block_properties::BlockPropertiesCatalog>,
     recipes: Res<'w, terra_core::crafting::RecipeBook>,

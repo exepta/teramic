@@ -11,7 +11,7 @@ pub const WIND: usize = 87;
 pub const CROWS: usize = 88;
 pub const OCEAN: usize = 89;
 pub const WOODLAND_BIRDS: usize = 90;
-pub const DERIVED: usize = 15;
+pub const DERIVED: usize = 14;
 const FIRST: usize = clips::PATHS.len() + 18;
 pub const BLOOD: usize = FIRST;
 pub const SPIRIT: usize = FIRST + 1;
@@ -20,13 +20,12 @@ pub const HIGHLAND: usize = FIRST + 3;
 pub const FOREST: usize = FIRST + 4;
 pub const CAVE_DETAIL: usize = FIRST + 5;
 const BIRD_DETAILS: [usize; 2] = [FIRST + 6, FIRST + 7];
-pub const WORM_RUMBLE: usize = FIRST + 8;
-pub const CHERRY: usize = FIRST + 9;
-pub const MUSHROOM: usize = FIRST + 10;
-const SPIRIT_RUSTLE: usize = FIRST + 11;
-const CHERRY_GLINT: usize = FIRST + 12;
-const MUSHROOM_DETAIL: usize = FIRST + 13;
-const BLOOD_DETAIL: usize = FIRST + 14;
+pub const CHERRY: usize = FIRST + 8;
+pub const MUSHROOM: usize = FIRST + 9;
+const SPIRIT_RUSTLE: usize = FIRST + 10;
+const CHERRY_GLINT: usize = FIRST + 11;
+const MUSHROOM_DETAIL: usize = FIRST + 12;
+const BLOOD_DETAIL: usize = FIRST + 13;
 pub const LOOP_CLIPS: [usize; LAYERS] = [
     11, 12, 13, BLOOD, SPIRIT, DESERT, OCEAN, HIGHLAND, FOREST, CHERRY, MUSHROOM,
 ];
@@ -253,7 +252,6 @@ pub fn append(bank: &mut Vec<Vec<f32>>, foliage: &[f32]) {
     let detail = filtered(&bank[13], 3.6, 0.78, 3900.0, 0.9, 477000);
     let bird_a = filtered(&bank[WOODLAND_BIRDS], 3.8, 1.0, 6700.0, 0.7, 96000);
     let bird_b = filtered(&bank[11], 3.2, 1.0, 6200.0, 0.7, 185000);
-    let rumble = filtered(&bank[clips::THUNDER_CLIP], 1.45, 0.82, 210.0, 1.6, 4800);
     let cherry = design::rustles(foliage, &soft_foliage, 35.0, 0x1a73_5f21);
     let mushroom = design::rustles(&soft_foliage, foliage, 41.0, 0x520b_7813);
     let spirit_rustle = filtered(
@@ -290,7 +288,6 @@ pub fn append(bank: &mut Vec<Vec<f32>>, foliage: &[f32]) {
         detail,
         bird_a,
         bird_b,
-        rumble,
         cherry,
         mushroom,
         spirit_rustle,

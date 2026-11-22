@@ -317,6 +317,7 @@ pub(super) fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, 
         | ItemKind::Bone
         | ItemKind::Bitumen
         | ItemKind::GloomEssence
+        | ItemKind::DragonLoot(_)
         | ItemKind::LightSplitter
         | ItemKind::RoadAggregate => {
             let (name, description) =

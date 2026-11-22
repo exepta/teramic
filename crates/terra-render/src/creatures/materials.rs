@@ -29,6 +29,33 @@ impl Models {
         variant: u8,
         part: Part,
     ) -> Handle<StandardMaterial> {
+        if let Part::Dragon(joint) | Part::DragonLight(joint) = part {
+            let fissure = joint == super::model::dragon::Joint::Rune
+                && matches!(
+                    terra_core::creatures::dragons::lineage(kind, variant),
+                    Some(
+                        terra_core::creatures::dragons::Lineage::Shadow
+                            | terra_core::creatures::dragons::Lineage::Stone
+                    )
+                );
+            let bright = matches!(part, Part::DragonLight(_))
+                || !fissure
+                    && joint != super::model::dragon::Joint::Breath
+                    && (matches!(
+                        joint,
+                        super::model::dragon::Joint::Eyes | super::model::dragon::Joint::Rune
+                    ) || joint.is_effect() && kind != Kind::EarthDragon);
+            let index = match kind {
+                Kind::DarkDragon => 0,
+                Kind::EarthDragon => 1,
+                _ => 2,
+            };
+            return if bright {
+                self.dragon_glow[index].clone()
+            } else {
+                self.dragon_shell[index].clone()
+            };
+        }
         if kind == Kind::SpiritGloom {
             let index = usize::from(variant.min(terra_core::creatures::gloom::COUNT - 1));
             let select = |handle: &Handle<StandardMaterial>,

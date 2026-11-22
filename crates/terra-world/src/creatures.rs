@@ -9,6 +9,8 @@ pub mod bee_lifecycle;
 pub mod bees;
 pub mod breeding;
 pub mod companions;
+pub mod dragon_nursery;
+pub mod dragons;
 pub mod ecology;
 pub mod forest;
 mod horses;
@@ -112,6 +114,27 @@ impl Habitat<'_> {
         } else {
             Some(cell[1] as f64 + 1.0)
         }
+    }
+    /// Find a paw's tread in the loaded collision world, including shaped stairs.
+    pub fn paw_surface(&self, point: [f64; 3], reach: f64) -> Option<f64> {
+        let [x, y, z] = point;
+        // The grounded body is supported by the highest tread. Only the
+        // downhill reach grows with leg size; searching that far *up* would
+        // plant a foot on a cave ceiling or an overhead bridge.
+        let upper = y + reach.min(1.05);
+        for h in ((y - reach - 1.).floor() as i64..=upper.floor() as i64).rev() {
+            let cell = [x.floor() as i64, h, z.floor() as i64];
+            let material = terra_voxel::MaterialId::from_raw(self.block(cell)?)?;
+            if material.is_solid()
+                && let Some(top) = self.support_at(cell, [x, upper, z])
+                && top <= upper
+                && top >= y - reach
+                && (top < (h + 1) as f64 || !self.solid([cell[0], h + 1, cell[2]]))
+            {
+                return Some(top);
+            }
+        }
+        None
     }
     pub fn block(&self, p: [i64; 3]) -> Option<u16> {
         // Loading is still required even when a journal override exists.
@@ -579,7 +602,21 @@ pub fn spawn_cell_away_from_players(
         return false;
     }
     let center = [home[0] as f64 * 32.0 + 16.0, home[1] as f64 * 32.0 + 16.0];
+    let lair = (!population.explored.contains(&home))
+        .then(|| habitat.terrain.dragon_nest(home))
+        .flatten();
+    let roost = lair.and_then(|(kind, point)| {
+        let id = creature_id(home, 0)?;
+        let (_, footprint, _) = nest_body(habitat, home, id, kind);
+        Some((footprint, point))
+    });
     if players.iter().take(128).any(|player| {
+        if let Some((size, point)) = roost {
+            return (player[0] - point[0] as f64 - 0.5).abs() < size[0] * 0.5 + 1.0
+                && (player[2] - point[2] as f64 - 0.5).abs() < size[2] * 0.5 + 1.0
+                && player[1] + 2.0 > point[1] as f64
+                && player[1] < point[1] as f64 + size[1];
+        }
         player.iter().all(|v| v.is_finite())
             && (player[0] - center[0]).hypot(player[2] - center[1]) < 40.0
     }) {
@@ -607,6 +644,29 @@ fn spawn_cell_using<'a>(
     spawn_cell_budgeted_using(population, habitat, home, definition, 4)
 }
 
+/// The laid-out guardian faces one of the four cardinal entrances. Use its
+/// world-axis bounds both for streaming the volume and avoiding nearby players.
+fn nest_body(habitat: &Habitat, home: [i64; 2], id: u64, kind: Kind) -> (u8, [f64; 3], f32) {
+    let variant =
+        (random(id, habitat.terrain.config().seed.0) % u64::from(kind.variant_count())) as u8;
+    let region =
+        home.map(|coord| coord.div_euclid(crate::generation::structures::REGION_SIZE / 32));
+    let entrance = habitat
+        .terrain
+        .structure_site(region)
+        .and_then(|site| site.dragon_entrance())
+        .unwrap_or([0, -1]);
+    let mut bounds = terra_core::creatures::dragons::occupied_size(kind, variant);
+    if entrance[0] != 0 {
+        bounds.swap(0, 2);
+    }
+    (
+        variant,
+        bounds,
+        (-(entrance[0] as f32)).atan2(-(entrance[1] as f32)),
+    )
+}
+
 fn spawn_cell_budgeted_using<'a>(
     population: &mut CreaturePopulation,
     habitat: &Habitat,
@@ -622,6 +682,36 @@ fn spawn_cell_budgeted_using<'a>(
         || creature_id(home, 0).is_none()
     {
         return false;
+    }
+    if let Some((kind, center)) = habitat.terrain.dragon_nest(home) {
+        let position = [
+            center[0] as f64 + 0.5,
+            center[1] as f64,
+            center[2] as f64 + 0.5,
+        ];
+        let id = creature_id(home, 0).expect("validated habitat");
+        let (variant, bounds, yaw) = nest_body(habitat, home, id, kind);
+        if !spawn_volume_loaded(habitat, position, bounds)
+            || !habitat.clear(position, bounds, false)
+        {
+            return false;
+        }
+        population.animals.entry(id).or_insert(Creature {
+            id,
+            kind,
+            home,
+            position,
+            velocity: [0.0; 3],
+            yaw,
+            health: kind.health(),
+            behavior: Behavior::Rest,
+            timer: 6.0,
+            age: 0.0,
+            variant,
+            needs: terra_core::creatures::CreatureNeeds::full(kind),
+        });
+        population.explored.insert(home);
+        return true;
     }
     let mut candidates = Vec::new();
     let mut bear_habitat = false;

@@ -210,6 +210,7 @@ pub fn step(
         return bears::Effect::None;
     }
     a.age += f64::from(dt);
+    let previous_timer = a.timer;
     a.timer = (a.timer - dt).max(0.0);
     a.needs.search_in = (a.needs.search_in - dt).max(0.0);
     a.needs.food = (a.needs.food - dt * 0.025).max(0.0);
@@ -223,11 +224,11 @@ pub fn step(
         return bears::Effect::None;
     }
     if a.kind == Kind::Squid {
-        let threat = players
-            .iter()
-            .filter(|p| h.wet(**p))
-            .filter(|p| distance(**p, center(a)) < 2.5_f64.powi(2))
-            .min_by(|x, y| distance(**x, a.position).total_cmp(&distance(**y, a.position)));
+        let threat =
+            super::perception::nearest_visible(h, center(a), center(a), players, 2.5, |point| {
+                h.wet(point)
+            })
+            .map(|(_, point)| point);
         if let Some(threat) = threat {
             if a.needs.search_in <= 0.0 && a.behavior != Behavior::Ink {
                 a.behavior = Behavior::Ink;
@@ -259,17 +260,22 @@ pub fn step(
             |p| h.wet(p),
         );
         if let Some((index, player)) = target {
-            let goal = [player[0], player[1], player[2]];
-            if a.behavior != Behavior::Attack {
-                a.timer = 0.6;
+            let entering = a.behavior != Behavior::Attack;
+            if distance(center(a), player) > combat.reach.powi(2) {
+                a.behavior = Behavior::Hunt;
+                let target = [player[0], player[1] - a.size()[1] * 0.5, player[2]];
+                travel(a, h, target, dt, a.kind.speed() * 1.25);
+                return bears::Effect::None;
             }
+            // Hold striking distance and face the swimmer during the bite.
+            // Sweeping the turn protects long bodies beside a reef or bank.
+            let yaw = heading_for(a, player, dt);
+            if sweep_pose(a, h, a.position, a.position, yaw) {
+                a.yaw = yaw;
+            }
+            a.velocity = [0.0; 3];
             a.behavior = Behavior::Attack;
-            travel(a, h, goal, dt, a.kind.speed() * 1.25);
-            if a.timer <= 0.0
-                && distance(center(a), player) <= combat.reach.powi(2)
-                && bears::visible(h, center(a), player)
-            {
-                a.timer = combat.cooldown;
+            if combat.melee_contact(entering, previous_timer, &mut a.timer) {
                 return bears::Effect::StrikePlayer {
                     index,
                     damage: combat.damage,

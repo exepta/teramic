@@ -348,14 +348,34 @@ pub(super) fn receive_jobs(
                         journal.bypass_change_detection().resume_fluids(position);
                     }
                     journal.apply_prop_removals(position, &mut section.props);
-                    if let Some([low, high]) = section.surface_sections {
-                        chunks
+                    // A remote guardian needs collision near its body. Only player
+                    // columns request every surface section below an airborne focus.
+                    if let Some([low, high]) = section.surface_sections
+                        && chunks.surface_views.as_ref().is_none_or(|(views, radius)| {
+                            let coordinate = [position.x, position.z];
+                            views.iter().any(|c| {
+                                (c.x - position.x).abs() <= *radius
+                                    && (c.z - position.z).abs() <= *radius
+                            }) || chunks.gallery_columns.contains(&coordinate)
+                                && chunks
+                                    .columns
+                                    .get(&coordinate)
+                                    .is_some_and(|c| c.gallery_skyline)
+                        })
+                        && chunks
                             .surface_ranges
-                            .insert([position.x, position.z], [low, high]);
+                            .insert([position.x, position.z], [low, high])
+                            != Some([low, high])
+                    {
+                        // A newly discovered floor under the player should reach the
+                        // workers before the far edge of a flight-sized view radius.
+                        let nearby = chunks.cave_views.iter().any(|(view, _)| {
+                            (position.x - view.x).abs().max((position.z - view.z).abs()) <= 2
+                        });
                         for y in low..=high {
                             let surface = SectionPos::new(position.x, y, position.z);
                             if chunks.wanted.insert(surface) && !pending.contains(&surface) {
-                                chunks.queue.push_back(surface);
+                                chunks.queue.insert(surface, nearby);
                             }
                         }
                     }

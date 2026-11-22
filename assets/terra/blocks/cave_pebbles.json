@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 467,
+  "name": "Cave Pebbles",
+  "description": "Rounded chips of cave limestone.",
+  "creative_category": "decoration",
+  "hardness": 0.65,
+  "resistance": 2,
+  "mining_level": 0,
+  "struct_block": true,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/cave_pebbles.glb",
+  "textures": {
+    "Pale edge": "textures/dripstone_cave/calcite_side.png",
+    "Wet stone": "textures/dripstone_cave/wet_side.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.1,
+        0,
+        0.1
+      ],
+      "maximum": [
+        0.9,
+        0.22,
+        0.9
+      ]
+    }
+  ]
+}

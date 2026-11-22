@@ -11,10 +11,18 @@ pub(super) struct SectionQueue {
 
 impl SectionQueue {
     pub fn push_back(&mut self, position: SectionPos) {
+        self.insert(position, false);
+    }
+
+    pub fn insert(&mut self, position: SectionPos, nearby: bool) {
         let column = self.columns.entry([position.x, position.z]).or_default();
         if !column.contains(&position) {
             column.push(position);
-            self.order.push_back(position);
+            if nearby {
+                self.order.push_front(position);
+            } else {
+                self.order.push_back(position);
+            }
         }
     }
 

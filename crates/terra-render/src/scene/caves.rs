@@ -2,6 +2,7 @@
 pub(crate) mod lights;
 pub(crate) mod quality;
 pub(crate) mod shader;
+mod skylight;
 use bevy::{
     camera::{CameraProjection, Exposure},
     prelude::*,
@@ -28,7 +29,77 @@ pub struct CaveState {
     target: f32,
     next_probe: f32,
     ceiling: f32,
+    target_ceiling: f32,
     entrance_mist: f32,
+    inside_lair: bool,
+    lair_blend: f32,
+    pub(crate) salt_skylight: f32,
+    salt_target: f32,
+    salt_window: Vec4,
+    beam_depths: Vec4,
+    beam_radii: Vec4,
+    beam_cross_radii: Vec4,
+}
+
+impl CaveState {
+    /// Gallery dust is an atmospheric effect. The clear air in a dragon lair
+    /// still admits physical sunlight and light from its crystals and torches.
+    fn gallery_air(&self) -> f32 {
+        1.0 - self.lair_blend
+    }
+
+    fn air_parameters(&self, haze: f32, sunlight: f32, submersion: f32) -> Vec4 {
+        let air = self.gallery_air() * (1.0 - submersion);
+        Vec4::new(
+            if haze > 0.0 { self.blend * air } else { 0.0 },
+            haze,
+            self.entrance_mist * self.blend * air,
+            self.salt_skylight * sunlight * (1.0 - submersion),
+        )
+    }
+
+    fn set_opening(&mut self, candidate: Option<skylight::Opening>) {
+        let Some(opening) = candidate else {
+            self.salt_target = 0.;
+            self.salt_skylight = 0.;
+            self.beam_depths = Vec4::ZERO;
+            self.beam_radii = Vec4::ZERO;
+            self.beam_cross_radii = Vec4::ZERO;
+            return;
+        };
+        // Keep eye adaptation continuous while measuring the same skylight
+        // from another cell or after one block along its rim changes.
+        let overlap = self.salt_window.w.min(opening.window.w);
+        if self
+            .salt_window
+            .truncate()
+            .distance_squared(opening.window.truncate())
+            > overlap * overlap
+        {
+            self.salt_skylight = 0.;
+        }
+        self.salt_window = opening.window;
+        self.salt_target = opening.transmission;
+        self.beam_depths = opening.depths;
+        self.beam_radii = opening.radii;
+        self.beam_cross_radii = opening.cross_radii;
+    }
+
+    /// World-space window and its effective radius. Occlusion, cloud cover,
+    /// twilight and the eye's transition all reduce the admitted solid angle.
+    pub(crate) fn gallery_aperture(&self, daylight: f32) -> Vec4 {
+        let factor = (self.salt_skylight * daylight).clamp(0., 1.);
+        self.salt_window.with_w(self.salt_window.w * factor.sqrt())
+    }
+}
+
+pub(crate) fn aperture_irradiance(aperture: Vec4, position: Vec3) -> f32 {
+    if aperture.w <= 0. || position.y > aperture.y {
+        return 0.;
+    }
+    let distance = (aperture.truncate() - position).length_squared();
+    let area = aperture.w * aperture.w;
+    area / (area + distance)
 }
 
 fn adapt(current: f32, target: f32, dt: f32) -> f32 {
@@ -64,22 +135,31 @@ pub(crate) fn install(app: &mut App) {
     lights::install(app);
 }
 
+type GalleryEnvironment<'w> = (
+    Res<'w, crate::water::UnderwaterState>,
+    Option<Res<'w, GraphicsConfig>>,
+    Res<'w, super::daylight::Daylight>,
+    Option<Res<'w, crate::weather::WeatherVisual>>,
+);
 fn probe(
     time: Res<Time>,
     terrain: Res<WorldTerrain>,
     chunks: Res<ChunkStore>,
     journal: Res<EditJournal>,
-    (underwater, graphics): (
-        Res<crate::water::UnderwaterState>,
-        Option<Res<GraphicsConfig>>,
-    ),
+    (underwater, graphics, day, weather): GalleryEnvironment,
     mut state: ResMut<CaveState>,
     mut cameras: Query<(&Transform, &Projection, &mut shader::CaveSettings), With<TerraCamera>>,
 ) {
     for (transform, projection, mut settings) in &mut cameras {
         if time.elapsed_secs() >= state.next_probe {
-            state.next_probe = time.elapsed_secs() + 0.10;
+            state.next_probe = time.elapsed_secs() + 0.18;
             let p = transform.translation.to_array().map(f64::from);
+            let cell = transform.translation.floor().as_i64vec3().to_array();
+            if let Some(column) =
+                chunks.prepared_column([cell[0].div_euclid(16), cell[2].div_euclid(16)])
+            {
+                state.inside_lair = column.in_dragon_lair(cell);
+            }
             let height = terrain.0.surface_height(p[0], p[2]);
             let enclosure = terra_world::enclosure::sample(p, height, |p| {
                 chunks.block_at(p).map(|b| journal.block(p).unwrap_or(b))
@@ -87,13 +167,36 @@ fn probe(
             // Missing roof chunks are not an opening to the sky.
             if enclosure.complete || enclosure.cave >= state.target {
                 state.target = enclosure.cave;
-                state.ceiling = enclosure.ceiling;
-                let spirit = chunks
-                    .surface_column_at(p[0].floor() as i64, p[2].floor() as i64)
-                    .map_or(0.0, |c| c.biome.weights.spirit_blossom as f32);
+                state.target_ceiling = enclosure.ceiling;
+                let column = chunks.surface_column_at(p[0].floor() as i64, p[2].floor() as i64);
+                let spirit = column.map_or(0.0, |c| c.biome.weights.spirit_blossom as f32);
+                let eye = transform.translation;
+                let opening = skylight::measure(&chunks, &journal, eye, state.salt_window, day.sun);
+                state.set_opening(opening);
+                if state.salt_target > 0. && eye.y < state.salt_window.y {
+                    let fraction = aperture_irradiance(state.salt_window, eye) * state.salt_target;
+                    let ev_range = (day.exposure - CAVE_EXPOSURE).max(1.);
+                    let adapted = (-fraction.max(0.012).log2() / ev_range).clamp(0., 1.);
+                    // A nearby roof or bridge only shades the eye locally. The
+                    // bright opening still occupies part of its field of view.
+                    let influence = (state.salt_target * day.daylight).clamp(0., 1.);
+                    state.target += (adapted - state.target) * influence;
+                }
                 state.entrance_mist =
                     entrance_density(spirit, (height - p[1]) as f32, enclosure.cave);
+            } else {
+                state.set_opening(None);
             }
+        }
+        state.ceiling = adapt(state.ceiling, state.target_ceiling, time.delta_secs());
+        state.lair_blend = adapt(
+            state.lair_blend,
+            f32::from(u8::from(state.inside_lair)),
+            time.delta_secs(),
+        );
+        let sky = adapt(state.salt_skylight, state.salt_target, time.delta_secs());
+        if sky != state.salt_skylight {
+            state.salt_skylight = sky;
         }
         let blend = adapt(state.blend, state.target, time.delta_secs());
         if blend != state.blend {
@@ -104,24 +207,28 @@ fn probe(
             Projection::Orthographic(p) => p.get_clip_from_view().inverse(),
             Projection::Custom(_) => Mat4::IDENTITY,
         };
-        let haze = if graphics
+        let low_quality = graphics
             .as_ref()
-            .is_some_and(|g| g.cave_quality == terra_core::CaveQuality::Low)
-        {
+            .is_some_and(|g| g.cave_quality == terra_core::CaveQuality::Low);
+        let haze = if low_quality {
             0.0
         } else {
             ((state.ceiling - 6.0) / 18.0).clamp(0.0, 1.0) * 0.004
         };
-        let parameters = Vec4::new(
-            if haze > 0.0 {
-                state.blend * (1.0 - underwater.blend)
-            } else {
-                0.0
-            },
-            haze,
-            state.entrance_mist * state.blend * (1.0 - underwater.blend),
-            0.0,
-        );
+        // The analytic beam only runs at a confirmed opening. Even the low
+        // preset can show direct shafts while volumetric room haze stays off.
+        let clouds = weather.as_ref().map_or(1., |w| 1. - w.clouds * 0.5);
+        let parameters = state.air_parameters(haze, day.daylight * clouds, underwater.blend);
+        if settings.gallery_dust != state.gallery_air() {
+            settings.gallery_dust = state.gallery_air();
+        }
+        if parameters.w > 0.0 {
+            settings.salt_window = state.salt_window;
+            settings.sun_direction = day.sun.extend(day.twilight);
+            settings.beam_depths = state.beam_depths;
+            settings.beam_radii = state.beam_radii;
+            settings.beam_cross_radii = state.beam_cross_radii;
+        }
         if settings.view_from_clip != matrix || settings.parameters != parameters {
             settings.view_from_clip = matrix;
             settings.parameters = parameters;
@@ -200,7 +307,9 @@ fn exposure(
         }
         // Compensate eye adaptation: otherwise lowering EV while linearly
         // fading the sky briefly makes the entrance brighter/bluer than outside.
-        let intensity = 1.05 * sky_visibility(cave.blend) * solar_compensation;
+        let sky = sky_visibility(cave.blend);
+        let reflected = cave.salt_skylight * (1.0 - sky) * 0.27;
+        let intensity = 1.05 * (sky + reflected) * solar_compensation;
         if environment.intensity != intensity {
             environment.intensity = intensity;
         }
@@ -253,6 +362,74 @@ pub(crate) fn apply(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn a_sunlit_dragon_lair_keeps_its_skylight_without_the_gallery_veil() {
+        let mut room = CaveState {
+            blend: 1.,
+            entrance_mist: 1.,
+            salt_skylight: 1.,
+            salt_window: Vec4::new(20., 42., 15., 12.),
+            ..default()
+        };
+        let natural = room.air_parameters(0.004, 1., 0.);
+        assert!(natural.x > 0. && natural.z > 0. && natural.w > 0.);
+        room.lair_blend = 1.;
+        let clear = room.air_parameters(0.004, 1., 0.);
+        assert_eq!([clear.x, clear.z, room.gallery_air()], [0.; 3]);
+        assert_eq!(clear.w, natural.w);
+        assert!(aperture_irradiance(room.gallery_aperture(1.), Vec3::new(20., 34., 15.)) > 0.);
+    }
+
+    #[test]
+    fn only_daylight_through_a_measured_gallery_window_reaches_rock_and_brine() {
+        let mut room = CaveState {
+            blend: 1.,
+            salt_skylight: 0.85,
+            salt_window: Vec4::new(50., 24., -8., 11.),
+            ..default()
+        };
+        let near = Vec3::new(50., 10., -8.);
+        let far = near - Vec3::X * 40.;
+        let day = room.gallery_aperture(1.);
+        assert!(aperture_irradiance(day, near) > 2. * aperture_irradiance(day, far));
+        assert!(
+            aperture_irradiance(room.gallery_aperture(0.4), near) < aperture_irradiance(day, near)
+        );
+        assert_eq!(aperture_irradiance(room.gallery_aperture(0.), near), 0.);
+        assert_eq!(aperture_irradiance(day, near + 22. * Vec3::Y), 0.);
+        // The view directly beneath a tall natural shaft can have an almost
+        // unobstructed vertical probe. The same water still sees the same sky.
+        room.blend = 0.05;
+        assert_eq!(room.gallery_aperture(1.), day);
+        room.salt_skylight = 0.;
+        assert_eq!(aperture_irradiance(room.gallery_aperture(1.), near), 0.);
+    }
+
+    #[test]
+    fn sealing_a_roof_cuts_the_beam_and_a_new_opening_adapts_from_darkness() {
+        let old = Vec4::new(-12., 35., 8., 7.);
+        let new = Vec4::new(48., 30., 40., 7.);
+        let mut room = CaveState {
+            salt_window: old,
+            salt_skylight: 1.,
+            ..default()
+        };
+        room.set_opening(None);
+        assert_eq!(room.salt_target, 0.);
+        assert_eq!(room.gallery_aperture(1.).w, 0.);
+        let window = || skylight::Opening {
+            window: new,
+            depths: Vec4::splat(8.),
+            radii: Vec4::ONE,
+            cross_radii: Vec4::ONE,
+            transmission: 0.8,
+        };
+        room.set_opening(Some(window()));
+        assert_eq!(room.salt_window, new);
+        assert_eq!(room.salt_target, 0.8);
+        assert!(room.gallery_aperture(1.).w < 0.3);
+    }
+
     #[test]
     fn eye_adaptation_is_continuous_and_recovers_daylight_faster() {
         for fps in [30, 60, 144] {

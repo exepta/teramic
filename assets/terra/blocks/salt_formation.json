@@ -6,19 +6,46 @@
   "creative_category": "decoration",
   "render_kind": "cube",
   "surface": "rock",
-  "bevel_width": 0.0,
+  "bevel_width": 0,
   "materials": {
     "Salt body": {
-      "texture_pattern": "mineral",
-      "base_color": [0.94, 0.92, 0.87, 1.0],
-      "roughness": 0.92,
-      "reflectance": 0.12
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.4,
+      "reflectance": 0.32,
+      "normal_texture": "textures/salt_cave/compact_side_normal.png"
+    },
+    "Bedding": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.4,
+      "reflectance": 0.32,
+      "normal_texture": "textures/salt_cave/compact_top_normal.png"
     }
   },
-  "face_materials": ["Salt body", "Salt body", "Salt body", "Salt body", "Salt body", "Salt body"],
+  "face_materials": [
+    "Salt body",
+    "Salt body",
+    "Salt body",
+    "Bedding",
+    "Salt body",
+    "Salt body"
+  ],
   "crystal_material": "Salt body",
   "hardness": 0.9,
   "resistance": 8,
   "required_tool": "pickaxe",
-  "mining_level": 1
+  "mining_level": 1,
+  "textures": {
+    "Salt body": "textures/salt_cave/compact_side.png",
+    "Bedding": "textures/salt_cave/compact_top.png"
+  }
 }

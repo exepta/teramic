@@ -2,6 +2,7 @@ mod appearance;
 mod blink;
 mod character_gallery;
 mod debug;
+mod dragon_animation;
 mod eye_gallery;
 mod forest_animation;
 mod gloom_effects;
@@ -12,12 +13,15 @@ mod model;
 mod pet_preview;
 mod sandworm;
 mod spirit_animation;
+mod villager_animation;
+mod web_shot;
 use appearance::Appearance;
 use bevy::prelude::*;
 pub use pet_preview::RenderPetPortrait;
 use std::collections::BTreeMap;
 use terra_core::creatures::{CreatureBehavior as Behavior, CreatureKind as Kind};
 use terra_network::client::ReplicatedCreatures;
+use villager_animation::{animate_villager, villager_action};
 
 #[derive(Component)]
 pub struct CreatureAvatar(pub u64);
@@ -96,6 +100,8 @@ struct Models {
     slime_material: Handle<StandardMaterial>,
     skeleton_eye_material: Handle<StandardMaterial>,
     gloom_shell: [Handle<StandardMaterial>; 7],
+    dragon_glow: [Handle<StandardMaterial>; 3],
+    dragon_shell: [Handle<StandardMaterial>; 3],
     gloom_wings: [Handle<StandardMaterial>; 7],
     gloom_glow: [Handle<StandardMaterial>; 7],
 }
@@ -113,6 +119,7 @@ pub(crate) fn install(app: &mut App) {
         (
             render,
             military::update,
+            dragon_animation::ground::fit,
             animate.in_set(CreatureAnimationSet),
         )
             .chain()
@@ -182,6 +189,30 @@ fn setup(
         }),
         ..default()
     };
+    models.dragon_shell = [
+        LinearRgba::rgb(0.016, 0.010, 0.023),
+        LinearRgba::rgb(0.012, 0.008, 0.004),
+        LinearRgba::rgb(0.009, 0.017, 0.030),
+    ]
+    .map(|emissive| {
+        materials.add(StandardMaterial {
+            emissive,
+            perceptual_roughness: 0.71,
+            ..default()
+        })
+    });
+    models.dragon_glow = [
+        LinearRgba::rgb(0.82, 0.06, 1.12),
+        LinearRgba::rgb(0.94, 0.28, 0.022),
+        LinearRgba::rgb(0.06, 0.75, 1.10),
+    ]
+    .map(|emissive| {
+        materials.add(StandardMaterial {
+            emissive,
+            perceptual_roughness: 0.42,
+            ..default()
+        })
+    });
     for variant in 0..terra_core::creatures::gloom::COUNT {
         let palette = terra_core::creatures::gloom::palette(variant);
         let [r, g, b] = palette.glow;
@@ -213,7 +244,9 @@ fn setup(
             2
         } else if kind == Kind::Villager {
             terra_core::creatures::villagers::ROLE_COUNT * 2
-        } else if matches!(kind, Kind::Butterfly | Kind::SpiritGloom | Kind::Skeleton) {
+        } else if kind.is_dragon()
+            || matches!(kind, Kind::Butterfly | Kind::SpiritGloom | Kind::Skeleton)
+        {
             kind.variant_count()
         } else {
             1
@@ -253,22 +286,30 @@ fn setup(
     }
     commands.insert_resource(models);
 }
+type AvatarRoots<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static CreatureAvatar,
+        &'static mut Transform,
+        &'static mut Motion,
+        Option<&'static Appearance>,
+        Option<&'static mut dragon_animation::Presentation>,
+        Option<&'static mut web_shot::Presentation>,
+    ),
+>;
+
 fn render(
     mut commands: Commands,
     time: Res<Time>,
     animals: Option<Res<ReplicatedCreatures>>,
     models: Res<Models>,
     mounts: Option<Res<crate::players::MountedPresentation>>,
-    mut roots: Query<(
-        Entity,
-        &CreatureAvatar,
-        &mut Transform,
-        &mut Motion,
-        Option<&Appearance>,
-    )>,
+    mut roots: AvatarRoots,
 ) {
     let mut present = std::collections::HashSet::new();
-    for (entity, avatar, mut transform, mut motion, appearance) in &mut roots {
+    for (entity, avatar, mut transform, mut motion, appearance, aim, web) in &mut roots {
         let Some((animal, position, mounted)) =
             presented_creature(avatar.0, animals.as_deref(), mounts.as_deref())
         else {
@@ -328,22 +369,37 @@ fn render(
             transform.translation =
                 horse_pose::seat_pivot_origin(animal, transform.translation, transform.rotation);
         }
+        let previous_behavior = motion.behavior;
         motion.behavior = animal.behavior;
         motion.youth = 1.0 - animal.growth();
         motion.silk_length = silk_length(animal);
         let reported = Vec3::from_array(animal.velocity).length();
+        let displacement = transform.translation - previous_position;
+        let land_stride = matches!(animal.kind, Kind::SandWorm | Kind::Villager)
+            || ((!animal.kind.is_flying() || animal.kind.is_dragon())
+                && !animal.kind.is_aquatic()
+                && matches!(
+                    animal.behavior,
+                    Behavior::Wander
+                        | Behavior::Hunt
+                        | Behavior::Flee
+                        | Behavior::SeekFood
+                        | Behavior::SeekWater
+                        | Behavior::Crawl
+                        | Behavior::Attack
+                ));
         let speed = if mounted {
             reported
-        } else if animal.kind == Kind::SandWorm {
-            // A throttled authority tick may report zero velocity while the
-            // replicated endpoints still show real burrow travel. Its sand
-            // crest follows that presented displacement, never the camera.
-            let delta = transform.translation - previous_position;
-            (delta.x.hypot(delta.z) / time.delta_secs().max(0.001))
-                .min((animal.kind.speed() as f32).max(reported) * 1.25)
         } else {
-            (transform.translation.distance(previous_position) / time.delta_secs().max(0.001))
-                .min(reported * 1.2)
+            // Stair height is not stride length. During braking, buffered
+            // travel still needs footfalls even if authority has stopped.
+            let distance = if land_stride {
+                displacement.x.hypot(displacement.z)
+            } else {
+                displacement.length()
+            };
+            (distance / time.delta_secs().max(0.001))
+                .min((animal.kind.speed() as f32).max(reported) * 1.25)
         };
         motion.speed += (speed - motion.speed) * (1.0 - (-time.delta_secs() * 10.0).exp());
         // Extrapolate at most one snapshot interval, rather than visibly
@@ -372,16 +428,36 @@ fn render(
             } else {
                 None
             };
-            motion.worm_progress = terra_core::creatures::sandworm::phase_progress(
+            motion.worm_progress = sandworm::presentation_progress(
+                previous_behavior,
+                motion.worm_progress,
                 animal.behavior,
                 animal.timer - since,
+                time.delta_secs(),
             );
         }
-        let forest_melee = matches!(
+        if let Some(mut web) = web {
+            *web = web_shot::Presentation::sample(animal, &transform, since);
+        }
+        if let Some(mut aim) = aim {
+            let travel = (transform.translation - previous_position)
+                .with_y(0.)
+                .length();
+            aim.advance(animal, since, time.delta_secs(), travel, &transform);
+        }
+        let timed_melee = matches!(
             animal.kind,
-            Kind::Skeleton | Kind::BloodStalker | Kind::BloodWisp | Kind::ThornBrute
+            Kind::Skeleton
+                | Kind::BloodStalker
+                | Kind::BloodWisp
+                | Kind::ThornBrute
+                | Kind::Bear
+                | Kind::ReefShark
+                | Kind::WhaleShark
         );
-        let strike = if forest_melee {
+        let strike = if animal.kind == Kind::Villager {
+            f32::from(animal.behavior == Behavior::Attack)
+        } else if timed_melee {
             if animal.behavior == Behavior::Attack {
                 terra_core::creatures::definitions::get(animal.kind)
                     .combat
@@ -389,16 +465,18 @@ fn render(
             } else {
                 0.0
             }
+        } else if animal.kind.is_spider()
+            && terra_core::creatures::spiders::WebShot::of(animal).is_some()
+        {
+            use terra_core::creatures::spiders::{WEB_CAST_TIME, WEB_WINDUP};
+            let elapsed = WEB_CAST_TIME - animal.timer + since;
+            (elapsed / WEB_WINDUP).clamp(0., 1.)
+                * (1. - (elapsed - WEB_WINDUP).max(0.) / 0.2).clamp(0., 1.)
         } else if animal.kind == Kind::SandWorm {
             terra_core::creatures::sandworm::emergence(animal)
         } else if animal.kind == Kind::Stalker && animal.behavior == Behavior::Hold {
             1.0
-        } else if (animal.kind == Kind::Bear
-            || animal.kind.is_spider()
-            || matches!(
-                animal.kind,
-                Kind::Skeleton | Kind::BloodStalker | Kind::BloodWisp | Kind::ThornBrute
-            ))
+        } else if animal.kind.is_spider()
             && matches!(animal.behavior, Behavior::Attack | Behavior::Hunt)
             && speed < 0.45
         {
@@ -406,16 +484,22 @@ fn render(
         } else {
             0.0
         };
-        if forest_melee && strike < motion.attack - 0.5 {
-            // The recovery endpoint and next cycle's neutral pose coincide.
+        if timed_melee {
+            // The interpolated combat timer already supplies a continuous phase.
+            // The impact pose must coincide with the authority hit.
             motion.attack = strike;
         } else {
             motion.attack += (strike - motion.attack) * (1.0 - (-time.delta_secs() * 16.0).exp());
         }
-        motion.phase +=
-            time.delta_secs() * (motion.speed * 5.0 + 0.5) * (1.0 + motion.youth * 0.35);
-        if animal.kind == Kind::SandWorm {
-            motion.phase = animal.age as f32 + since;
+        if animal.kind == Kind::Villager {
+            // About half a metre per planted step. Standing still stops the gait clock.
+            motion.phase += time.delta_secs() * motion.speed * 5.7;
+        } else if animal.kind == Kind::SandWorm {
+            motion.phase =
+                terra_core::creatures::sandworm::muscle_clock(animal.age + f64::from(since));
+        } else {
+            motion.phase +=
+                time.delta_secs() * (motion.speed * 5.0 + 0.5) * (1.0 + motion.youth * 0.35);
         }
         motion.clock += time.delta_secs() * (1.0 + motion.youth * 0.20);
     }
@@ -508,15 +592,27 @@ fn render(
                 Visibility::default(),
             ))
             .id();
+        if animal.kind.is_dragon() {
+            commands
+                .entity(root)
+                .insert(dragon_animation::Presentation::of(animal, 0.));
+        }
+        if animal.kind.is_spider() {
+            commands
+                .entity(root)
+                .insert(web_shot::Presentation::default());
+        }
         for (part, offset, mesh) in parts {
             let mut child = commands.spawn((
                 Limb(*part, *offset),
                 crate::miniature::creature_layers(),
                 terra_core::miniature::MiniatureMesh::Creature,
-                if matches!(
-                    part,
-                    model::Part::Eyelids | model::Part::Proboscis | model::Part::Silk
-                ) {
+                if matches!(part, model::Part::Dragon(joint) | model::Part::DragonLight(joint) if joint.is_effect())
+                    || matches!(
+                        part,
+                        model::Part::Eyelids | model::Part::Proboscis | model::Part::Silk | model::Part::WebShot
+                    )
+                {
                     Visibility::Hidden
                 } else {
                     Visibility::Inherited
@@ -532,11 +628,15 @@ fn render(
             if matches!(part, model::Part::MilitaryTabard) {
                 child.insert(military::Heraldry(id));
             }
-            if animal.kind.is_jelly()
+            if matches!(part, model::Part::Dragon(joint) | model::Part::DragonLight(joint) if joint.is_effect())
+                || animal.kind.is_jelly()
                 || animal.kind == Kind::BloodSlime && matches!(part, model::Part::Body)
                 || matches!(
                     part,
-                    model::Part::WormRipple(_) | model::Part::WormDust | model::Part::WormSpit(_)
+                    model::Part::WormRipple(_)
+                        | model::Part::WormDust
+                        | model::Part::WormSpit(_)
+                        | model::Part::WebShot
                 )
             {
                 child.insert(bevy::light::NotShadowCaster);
@@ -593,7 +693,11 @@ fn sleep_offset(kind: Kind) -> f32 {
     -leg * 0.90 * model_scale(kind).y
 }
 fn animate(
-    roots: Query<&Motion>,
+    roots: Query<(
+        &Motion,
+        Option<&dragon_animation::Presentation>,
+        Option<&web_shot::Presentation>,
+    )>,
     mut limbs: Query<(
         &ChildOf,
         &Limb,
@@ -603,9 +707,29 @@ fn animate(
     )>,
 ) {
     for (parent, part, mut transform, mut visibility, hand) in &mut limbs {
-        let Ok(motion) = roots.get(parent.parent()) else {
+        let Ok((motion, aim, web)) = roots.get(parent.parent()) else {
             continue;
         };
+        if matches!(part.0, model::Part::WebShot) {
+            if let Some(pose) = web.and_then(|p| p.0) {
+                *visibility = Visibility::Inherited;
+                *transform = pose;
+            } else {
+                *visibility = Visibility::Hidden;
+            }
+            continue;
+        }
+        if let model::Part::Dragon(joint) | model::Part::DragonLight(joint) = part.0 {
+            if let Some(presentation) = aim {
+                presentation.animate(
+                    joint,
+                    matches!(part.0, model::Part::DragonLight(_)),
+                    &mut transform,
+                    &mut visibility,
+                );
+            }
+            continue;
+        }
         transform.translation = part.1;
         transform.scale = Vec3::ONE;
         if matches!(
@@ -680,7 +804,7 @@ fn animate(
                     && motion.sleep < 0.5
                     && (!hand.work_only
                         || motion.behavior == Behavior::Attack
-                        || motion.attack > 0.0);
+                        || motion.attack > 0.06);
                 hand.swing = villager_action(motion);
             }
             continue;
@@ -755,67 +879,6 @@ fn animate(
             _ => Quat::IDENTITY,
         };
         blink::apply(motion, part, &mut transform);
-    }
-}
-
-fn animate_villager(motion: &Motion, part: &Limb, transform: &mut Transform) {
-    let awake = 1.0 - motion.sleep;
-    let movement = (motion.speed / 1.35).clamp(0.0, 1.0) * awake;
-    let stride = (motion.speed * 0.34).min(0.52) * awake;
-    let bob = (motion.phase * 2.0).sin().abs() * 0.012 * movement;
-    transform.translation = part.1 + Vec3::Y * bob;
-    transform.rotation = match part.0 {
-        model::Part::Leg(side) => {
-            let angle = motion.phase.sin() * side * stride;
-            let sin = angle.sin();
-            let sole_bottom = -(part.1.y - 0.0025) * angle.cos()
-                - if sin > 0.0 { 0.125 * sin } else { -0.225 * sin };
-            // Keep the planted boot on its support; the returning foot lifts.
-            transform.translation.y += (0.0025 - (part.1.y + sole_bottom)) * awake
-                + (motion.phase.cos() * side).max(0.0) * 0.035 * movement;
-            Quat::from_rotation_x(angle)
-        }
-        model::Part::VillagerArm(side) | model::Part::MilitaryWeapon(side) => Quat::from_euler(
-            EulerRot::XYZ,
-            -motion.phase.sin() * side * stride * 0.65
-                - 0.06 * awake
-                - 0.18 * motion.sleep
-                - if side > 0.0 {
-                    villager_action(motion) * 0.95
-                } else {
-                    0.0
-                },
-            0.0,
-            side * (0.045 * awake + 0.22 * motion.sleep),
-        ),
-        model::Part::Head => {
-            // The bed pillow is above its blanket; don't sink the head into it.
-            transform.translation.z -= 0.085 * motion.sleep;
-            Quat::from_euler(
-                EulerRot::XYZ,
-                (motion.clock * 1.7).sin() * 0.018 * awake - 0.04 * motion.sleep,
-                (motion.clock * 0.41).sin() * 0.10 * awake,
-                (motion.clock * 0.83).sin() * 0.008 * awake,
-            )
-        }
-        model::Part::Body | model::Part::MilitaryTabard => {
-            transform.scale.y = 1.0 + (motion.clock * 1.8).sin() * 0.003;
-            Quat::from_euler(
-                EulerRot::XYZ,
-                0.0,
-                -motion.phase.sin() * 0.025 * movement,
-                (motion.phase * 0.5).sin() * 0.01 * movement,
-            )
-        }
-        _ => Quat::IDENTITY,
-    };
-}
-
-fn villager_action(motion: &Motion) -> f32 {
-    if motion.behavior == Behavior::Attack {
-        (motion.clock * 5.0).sin().max(0.0) * (1.0 - motion.sleep)
-    } else {
-        0.0
     }
 }
 
@@ -968,7 +1031,10 @@ fn animate_aquatic(motion: &Motion, part: &Limb, transform: &mut Transform) {
         ),
         model::Part::Body => Quat::from_rotation_z(phase.sin() * 0.012),
         model::Part::Jaw => Quat::from_rotation_x(if motion.behavior == Behavior::Attack {
-            -0.18 - phase.sin().abs() * 0.18
+            let impact = terra_core::creatures::definitions::MobCombat::MELEE_IMPACT_PHASE;
+            let open = (motion.attack / (impact - 0.12)).clamp(0.0, 1.0);
+            let close = ((impact - motion.attack) / 0.12).clamp(0.0, 1.0);
+            -0.025 - 0.44 * open * close
         } else {
             -0.025 + phase.sin() * 0.012
         }),
@@ -986,7 +1052,10 @@ fn animate_bear(motion: &Motion, part: &Limb, transform: &mut Transform) {
         motion.phase.sin() * (motion.speed * 0.22).min(0.44)
     };
     // A raised paw rolls outward on the wind-up, then reaches forward during the strike.
-    let attack = motion.attack;
+    let impact = terra_core::creatures::definitions::MobCombat::MELEE_IMPACT_PHASE;
+    let extension = (motion.attack / impact).clamp(0.0, 1.0)
+        * (1.0 - (motion.attack - impact) / 0.4).clamp(0.0, 1.0);
+    let attack = extension * extension * (3.0 - 2.0 * extension);
     transform.rotation = match part.0 {
         model::Part::Leg(sign) => {
             let climb = if motion.behavior == Behavior::Climb {
@@ -1048,12 +1117,14 @@ fn animate_spider(motion: &Motion, part: &Limb, transform: &mut Transform) {
                     0.0
                 };
             let lift = phase.sin().max(0.0) * active;
-            transform.translation.y += lift * body_height * 0.12;
+            let brace = if index == 0 { motion.attack } else { 0. };
+            transform.translation.y += (lift * 0.12 + brace * 0.13) * body_height;
             transform.rotation = Quat::from_euler(
                 EulerRot::XYZ,
                 phase.cos() * active * 0.10,
                 phase.cos() * side * active * 0.18,
-                side * lift * 0.13 + (motion.clock * 0.7 + f32::from(index)).sin() * 0.008,
+                side * (lift * 0.13 + brace * 0.21)
+                    + (motion.clock * 0.7 + f32::from(index)).sin() * 0.008,
             );
         }
         model::Part::Head | model::Part::SpiderEyes => {
@@ -1114,6 +1185,9 @@ fn spider_origin(
 
 fn rotation(animal: &terra_core::creatures::Creature) -> Quat {
     let yaw = Quat::from_rotation_y(animal.yaw);
+    if animal.kind.is_dragon() {
+        return yaw;
+    }
     if animal.kind == Kind::Villager {
         return yaw
             * Quat::from_rotation_x(if animal.behavior == Behavior::Sleep {
@@ -1123,10 +1197,19 @@ fn rotation(animal: &terra_core::creatures::Creature) -> Quat {
             });
     }
     if animal.kind.is_spider() {
+        if animal.behavior == Behavior::Climb {
+            let normal = Vec3::from_array(
+                terra_core::creatures::spiders::surface_normal(animal).map(f32::from),
+            );
+            let velocity = Vec3::from_array(animal.velocity);
+            let tangent = velocity - normal * velocity.dot(normal);
+            let forward = tangent.try_normalize().unwrap_or(Vec3::Y);
+            return Quat::from_mat3(&Mat3::from_cols(forward.cross(normal), normal, -forward));
+        }
         return yaw
             * match animal.behavior {
                 Behavior::Ceiling => Quat::from_rotation_z(std::f32::consts::PI),
-                Behavior::Climb => Quat::from_rotation_x(std::f32::consts::FRAC_PI_2),
+
                 _ => Quat::IDENTITY,
             };
     }
@@ -1314,6 +1397,7 @@ mod tests {
                 let mut motion = app.world_mut().get_mut::<Motion>(root).unwrap();
                 motion.behavior = behavior;
                 motion.speed = speed;
+                motion.attack = f32::from(behavior == Behavior::Attack);
                 motion.phase = phase;
                 motion.sleep = sleep;
             }
@@ -1380,6 +1464,24 @@ mod tests {
                 let mut pose = Transform::from_translation(*offset);
                 animate_villager(&motion, &Limb(*part, *offset), &mut pose);
                 assert!(pose.translation.is_finite() && pose.rotation.is_finite());
+                let hinge = match part {
+                    model::Part::VillagerArm(side) => {
+                        Some((model::Part::VillagerSleeve(*side), Vec3::Y * -0.17))
+                    }
+                    model::Part::Leg(side) => {
+                        Some((model::Part::VillagerThigh(*side), Vec3::Y * -0.31))
+                    }
+                    _ => None,
+                };
+                if let Some((upper, hinge)) = hinge {
+                    let mut parent = Transform::IDENTITY;
+                    animate_villager(&motion, &Limb(upper, *offset), &mut parent);
+                    assert!(
+                        parent
+                            .transform_point(hinge)
+                            .abs_diff_eq(pose.transform_point(hinge), 1e-5)
+                    );
+                }
                 if let model::Part::Leg(_) = part {
                     let Some(VertexAttributeValues::Float32x3(positions)) =
                         mesh.attribute(Mesh::ATTRIBUTE_POSITION)
@@ -1652,9 +1754,14 @@ mod tests {
         let mut closed = Transform::default();
         animate_aquatic(&motion, &jaw, &mut closed);
         motion.behavior = Behavior::Attack;
+        let impact = terra_core::creatures::definitions::MobCombat::MELEE_IMPACT_PHASE;
+        motion.attack = impact - 0.12;
         let mut bite = Transform::default();
         animate_aquatic(&motion, &jaw, &mut bite);
-        assert!(bite.rotation.angle_between(closed.rotation) > 0.1);
+        assert!(bite.rotation.angle_between(closed.rotation) > 0.3);
+        motion.attack = impact;
+        animate_aquatic(&motion, &jaw, &mut bite);
+        assert!(bite.rotation.angle_between(closed.rotation) < 0.02);
         for kind in Kind::ALL.into_iter().filter(|kind| kind.is_aquatic()) {
             motion.kind = kind;
             for part in [
@@ -1695,7 +1802,7 @@ mod tests {
         let mut rest = Transform::from_translation(limb.1);
         animate_bear(&motion, &limb, &mut rest);
         motion.behavior = Behavior::Attack;
-        motion.attack = 1.0;
+        motion.attack = terra_core::creatures::definitions::MobCombat::MELEE_IMPACT_PHASE;
         let mut attack = rest;
         animate_bear(&motion, &limb, &mut attack);
         assert!(attack.rotation.angle_between(rest.rotation) > 0.8);

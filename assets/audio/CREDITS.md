@@ -1,24 +1,16 @@
 # TERAMIC Recorded Audio
 
-## Sandworm voice and movement (20 November 2026)
+## Sandworm voice and movement
 
-Eight original runtime-prepared clips add a low, breath-driven breach roar,
-granular digging, sand entry impact, chitin bite, viscous spit, hurt grunt,
-collapsing death call and quiet exposed breathing. The voice layers are original
-deterministic, filtered noise and irregular glottal synthesis by Project TERAMIC.
-The sand, stone, wood and water Foley layers reuse the existing CC0 recordings
-credited below; no animal voice or third-party monster recording is copied.
-
-`creature_audio/worm/synthesis.rs` prepares these once on the existing audio
-loading worker. The shared bank now contains 132 clips (the previous 124 indices
-are unchanged). World audio uses the shared body listener, stereo pan, distance
-falloff and voice limit. Breach calls require a newly visible mouth; late-join
-baselines and repeated snapshots do not replay them.
-
-`bash tools/benchmarks/run-worm-audio.sh` exports the eight mono 24000 Hz WAVs
-and observes actual replicated phase fixtures through the shared audio device.
-The clips can also be exported to `TERRA_CAPTURE_DIR` when both
-`--smoke-test-steps` and `TERRA_WORM_AUDIO_INSPECT=1` are set.
+Each of the nine sandworm actions has three mono 24 kHz takes. The warning
+starts with earth and gravel shifting over a low pass of surf. When the mouth
+breaks the sand, irregular tooth contacts accelerate across its jaw over a rush
+of air. The low pressure wave comes from filtered surf. A closing jaw, a gall
+discharge and a collapsing body have separate cues. Sand, rock, wood, glass,
+airflow and swimming Foley reuse the credits below.
+The game loads the finished edits from `audio/sandworm` and rotates takes at
+the observed action boundary. `tools/benchmarks/run-worm-audio.sh` exercises
+all 27 takes through the shared positional mixer and the actual output device.
 
 ## Nature-led biome ambience (18 November 2026)
 
@@ -444,3 +436,35 @@ sample-bank worker (mono 24000 Hz). It is synthesized, not a field recording,
 and contains no Minecraft, Hytale or mod samples. MIT OR Apache-2.0.
 Playback uses the listener body, distance delay, existing ambience gain and
 underwater filtering; no audio entity per lightning segment.
+
+## Dragon encounters
+
+The dark dragon's procession is a 34-bar lament in D with a Phrygian inflection,
+low choral octaves answered from across the hall and an exposed solo violin. The earth dragon has a 34-bar
+five-beat brass march with a clipped choral call, a heavy three-accent tread and a quiet cello interlude.
+The water dragon's 36 bars pair a twelve-eight harp current with a solo oboe
+and violin, two answering choirs, glockenspiel and a three-against-four string climax. All three
+scores are original Teramic compositions. String sections, natural soft and
+forte horns, alternating short string and brass takes, trumpet, tenor trombone,
+flute, oboe, harp, bass drum, snare, gong, suspended cymbal and timpani
+use their recorded articulations. The
+recordings come from the CC0 **VS Chamber Orchestra 2 Community Edition** by
+Versilian Studios, recorded by Sam Gossner and Simon Dalzell, cut by Elan
+Hickler. The choir sections use the GeneralUser GS 1.47 soundfont by
+S. Christian Collins. The delivered 44.1 kHz stereo mixes include the release
+of the preceding phrase across the loop boundary.
+[VSCO 2 CE](https://github.com/sgossner/VSCO-2-CE/tree/440300901dfe9275fd84e0b7763af1f8443ae62e) · [GeneralUser GS](https://schristiancollins.com/generaluser.php)
+
+Each dragon has six spatial one-shots. The vocal attacks use original
+irregular reed impulses, air separation and short treble edits from a CC0
+tiger recording. Creaking wood adds a tearing edge to the dark dragon, gravel
+and displaced air give the earth dragon weight, and spray and ice fragments
+break up the water dragon's exhalation. The source recordings for the wider
+Foley layers are credited above.
+
+- “Tiger Roar” by lauramellis. [Freesound](https://freesound.org/people/lauramellis/sounds/263115/)
+
+To reproduce the recordings, run `samples.py`, `scores.py` and
+`creature_foley.py` in `tools/assets/dragon_audio`. They use Python, NumPy,
+ffmpeg and FluidSynth. Pass the local GeneralUser 1.47 soundfont path to
+`scores.py`. Source recordings are verified and cached inside `target`.

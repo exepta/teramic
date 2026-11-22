@@ -30,7 +30,7 @@ pub fn app() -> Result<App, Box<dyn std::error::Error>> {
     // DefaultPlugins has initialized AssetServer and the Bevy UI resources.
     app.add_plugins(
         tilt_ui::TiltUiPlugin::new(crate::tilt_ui_component_catalog())
-            .with_source_root(concat!(env!("CARGO_MANIFEST_DIR"), "/ui"))
+            .with_source_root(terra_core::installation_root().join("apps/building-editor/ui"))
             .without_camera(),
     );
     app.add_plugins(

@@ -1,0 +1,1 @@
+{"id": 91, "key": "teramic::roast_dragon_meat", "name": "Roast Dragon Meat", "input": {"dragon_loot": "raw_meat"}, "output": {"item": {"dragon_loot": "cooked_meat"}, "count": 1}, "seconds": 11.0}

@@ -14,36 +14,56 @@ pub(crate) fn natural_outlets(
     let mut result = Vec::new();
     for (layer, water) in column.water_columns().intervals.into_iter().enumerate() {
         let Some(water) = water else { continue };
-        let y = water.level.ceil() as i64 - 1;
-        if y.div_euclid(16) != section_y
-            || !super::can_hold_fluid(block_at([global[0], y, global[1]]))
-        {
+        let bottom = water.bed.ceil() as i64;
+        let top = water.level.ceil() as i64 - 1;
+        let base = section_y * 16;
+        let lo = bottom.max(base);
+        let hi = top.min(base + 15);
+        if lo > hi {
             continue;
+        }
+        // A chamber or a terrain cut can expose the *underside* of a
+        // reservoir far below its visible surface. Wake a paid downward
+        // transfer from the last wet cell, even across a section boundary.
+        if bottom >= base && bottom <= hi {
+            let below = [global[0], bottom - 1, global[1]];
+            if column.water_columns().at(bottom - 1).is_none()
+                && super::can_hold_fluid(block_at(below))
+                && super::can_hold_fluid(block_at([global[0], bottom, global[1]]))
+            {
+                result.push(below);
+            }
         }
         for (offset, neighbor) in HORIZONTAL.into_iter().zip(neighbors) {
             let lower = neighbor.water_columns().intervals[layer];
+            // A completely wet shared face has no outlet.
+            if lower.is_some_and(|w| w.bed <= lo as f64 && w.level > hi as f64) {
+                continue;
+            }
             let floor = if layer == 0 {
                 neighbor.water_bed()
             } else {
                 neighbor.cave.floor
             };
-            if lower.is_some_and(|w| w.level > y as f64)
-                || water.level - lower.map_or(floor, |w| w.level) < MIN_LIP_DROP
-            {
-                continue;
-            }
-            // A generated river lip belongs to its channel, not to every low
-            // bank beside the fall. Dug/placed outlets are woken by block edits.
-            if layer == 0
-                && column.water_flow != [0.0; 2]
-                && neighbor.water_flow == [0.0; 2]
-                && lower.is_none()
-            {
-                continue;
-            }
-            let target = [global[0] + offset[0], y, global[1] + offset[1]];
-            if super::can_hold_fluid(block_at(target)) {
-                result.push(target);
+            let river_bank = layer == 0
+                && column.water_flow != [0.; 2]
+                && neighbor.water_flow == [0.; 2]
+                && lower.is_none();
+            let lip = !river_bank && water.level - lower.map_or(floor, |w| w.level) >= MIN_LIP_DROP;
+            for y in lo..=hi {
+                // Ordinary surface rivers stay within their channel; a real
+                // opening below the adjacent ground is a separate escape path.
+                if !(y == top && lip || layer == 0 && (y as f64 + 0.5) < neighbor.height)
+                    || neighbor.water_columns().at(y).is_some()
+                {
+                    continue;
+                }
+                let target = [global[0] + offset[0], y, global[1] + offset[1]];
+                if super::can_hold_fluid(block_at(target))
+                    && super::can_hold_fluid(block_at([global[0], y, global[1]]))
+                {
+                    result.push(target);
+                }
             }
         }
     }
@@ -54,6 +74,33 @@ pub(crate) fn natural_outlets(
 mod tests {
     use super::*;
     use crate::{TerraGenerator, water::WaterColumn};
+
+    #[test]
+    fn a_real_breach_in_the_bed_or_submerged_wall_drains_even_below_the_surface_section() {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig::default()).unwrap();
+        let mut wet = terrain.surface_column(0.5, 0.5);
+        wet.water_level = Some(18.);
+        wet.height = 13.;
+        wet.river_cavity = None;
+        wet.cave.water = None;
+        wet.water_flow = [0., 1.];
+        let mut bank = wet;
+        bank.height = 24.;
+        bank.water_flow = [0.; 2];
+        bank.water_level = None;
+        let adjacent = [wet, bank, wet, wet];
+        let result = natural_outlets([15, 15], 0, wet, adjacent, |p| match p {
+            [15, 12..=17, 15] | [16, 14, 15] => 0,
+            _ => 3,
+        });
+        assert_eq!(result, vec![[15, 12, 15], [16, 14, 15]]);
+        assert!(
+            natural_outlets([15, 15], 0, wet, adjacent, |p| {
+                if matches!(p, [15, 13..=17, 15]) { 0 } else { 3 }
+            })
+            .is_empty()
+        );
+    }
 
     #[test]
     fn generated_river_lips_wake_only_the_downstream_channel_and_accept_real_lakes() {
@@ -72,14 +119,14 @@ mod tests {
         let mut neighbors = [bank; 4];
         neighbors[3] = downstream;
         assert_eq!(
-            natural_outlets([15, 15], 1, upper, neighbors, |_| 0),
+            natural_outlets([15, 15], 1, upper, neighbors, |p| u16::from(p[1] < 18)),
             vec![[15, 22, 16]]
         );
         downstream.water_flow = [0.0; 2];
         downstream.water_level = Some(15.0);
         neighbors[3] = downstream;
         assert_eq!(
-            natural_outlets([15, 15], 1, upper, neighbors, |_| 0),
+            natural_outlets([15, 15], 1, upper, neighbors, |p| u16::from(p[1] < 18)),
             vec![[15, 22, 16]]
         );
     }
@@ -123,23 +170,28 @@ mod tests {
                     Vec::new()
                 };
                 assert_eq!(
-                    natural_outlets(base, y.div_euclid(16), upper, neighbors, |_| 0),
+                    natural_outlets(base, y.div_euclid(16), upper, neighbors, |p| u16::from(
+                        p[1] != y
+                    )),
                     expected,
                     "cave={underground} drop={drop}: only actual one-block-or-larger lips seed a fall"
                 );
                 assert!(
-                    natural_outlets(base, y.div_euclid(16) + 1, upper, neighbors, |_| 0).is_empty()
+                    natural_outlets(base, y.div_euclid(16) + 1, upper, neighbors, |p| u16::from(
+                        p[1] != y
+                    ))
+                    .is_empty()
                 );
                 assert!(
                     natural_outlets(base, y.div_euclid(16), upper, neighbors, |p| u16::from(
-                        p == target
+                        p[1] != y || p == target
                     ) * 3)
                     .is_empty(),
                     "a blocked lip cannot emit water through its wall"
                 );
                 assert!(
                     natural_outlets(base, y.div_euclid(16), upper, neighbors, |p| u16::from(
-                        p == [base[0], y, base[1]]
+                        p[1] != y || p == [base[0], y, base[1]]
                     ) * 3)
                     .is_empty(),
                     "an edited-away source cannot seed a fall"

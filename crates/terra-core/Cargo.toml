@@ -11,6 +11,7 @@ bevy = ["dep:bevy", "dep:indexmap"]
 controls = ["bevy", "bevy/keyboard", "bevy/mouse", "bevy/serialize"]
 
 [dependencies]
+bevy_math.workspace = true
 bevy = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true

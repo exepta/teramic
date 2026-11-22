@@ -502,3 +502,52 @@ fn jelly_can_rest_on_the_actual_floor_and_squid_can_hold_an_adjacent_wall() {
     assert_eq!(squid.position, before);
     assert_eq!(squid.velocity, [0.0; 3]);
 }
+
+#[test]
+fn a_shark_approaches_before_winding_up_and_a_hidden_swimmer_does_not_trigger_ink() {
+    let (terrain, chunks, mut journal) = fixture();
+    let prey = bears::PreyIndex::default();
+    {
+        let h = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        for kind in [Kind::ReefShark, Kind::WhaleShark] {
+            let mut a = animal(kind, 0);
+            let mut target = center(&a);
+            target[2] -= 5.0;
+            assert!(matches!(
+                step(&mut a, &h, &[target], &prey, 0.1),
+                bears::Effect::None
+            ));
+            assert_eq!(a.behavior, Behavior::Hunt);
+            a.timer = 0.0;
+            target = center(&a);
+            target[2] -= 0.5;
+            assert!(matches!(
+                step(&mut a, &h, &[target], &prey, 0.1),
+                bears::Effect::None
+            ));
+            assert_eq!(a.behavior, Behavior::Attack);
+            assert_eq!(
+                a.timer,
+                terra_core::creatures::definitions::get(kind)
+                    .combat
+                    .unwrap()
+                    .cooldown
+            );
+        }
+    }
+    let mut squid = animal(Kind::Squid, 0);
+    let mut threat = center(&squid);
+    threat[2] -= 2.2;
+    journal.record([8, threat[1].floor() as i64, 7], 3).unwrap();
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    step(&mut squid, &h, &[threat], &prey, 0.1);
+    assert_ne!(squid.behavior, Behavior::Ink);
+}

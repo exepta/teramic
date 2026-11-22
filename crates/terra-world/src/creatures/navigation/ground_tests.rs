@@ -368,3 +368,28 @@ fn f49_valid_long_detours_do_not_request_search_every_tick_after_their_soft_expi
     );
     assert_eq!(testing::path_calls(), 0);
 }
+
+#[test]
+fn hunting_follows_a_clear_approach_while_the_quarry_moves_within_one_stride() {
+    let (terrain, chunks, journal) = fixture();
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut a = animal([6.5, 1.0, 8.5]);
+    a.behavior = CreatureBehavior::Hunt;
+    let old = [10.5, 1.0, 8.5];
+    let next = [7.5, 1.0, 8.5];
+    let mut nav = cached(&a, old, [next]);
+    testing::reset_path_calls();
+    assert_eq!(
+        ground_waypoint(&a, &h, [10.5, 1.0, 9.3], false, Some(&mut nav)),
+        Some(next)
+    );
+    assert_eq!(
+        ground_waypoint(&a, &h, [10.5, 1.0, 11.0], false, Some(&mut nav)),
+        None
+    );
+    assert_eq!(testing::path_calls(), 0);
+}

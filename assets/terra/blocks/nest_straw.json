@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 464,
+  "name": "Loose Nest Straw",
+  "description": "Loose straw and seed heads lining a dragon nest.",
+  "creative_category": "nature",
+  "hardness": 0.4,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/nest_straw.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

@@ -41,6 +41,8 @@ pub struct BlockSegment {
     pub below: u8,
     pub above: u8,
     pub hanging: bool,
+    pub joined: bool,
+    pub fan: [u8; 2],
 }
 impl BlockMesh {
     pub fn is_empty(&self) -> bool {

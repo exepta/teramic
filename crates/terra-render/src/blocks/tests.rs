@@ -296,13 +296,21 @@ fn shipped_ids_and_face_materials_stay_explicit_without_cube_models() {
         if matches!(
             block.id,
             1 | 28..=29 | 40 | 59..=73 | 99..=100 | 139..=172 | 316..=323 | 344..=396 | 412..=421
-        ) || terra_core::castle::is_castle(block.id)
+        ) || (459..=463).contains(&block.id)
+            || matches!(block.id, 467 | 468 | 483..=487)
+            || terra_core::castle::is_castle(block.id)
+            || terra_core::creatures::dragon_eggs::kind(block.id).is_some()
+            || matches!(
+                terra_voxel::MaterialId::from_raw(block.id),
+                Some(terra_voxel::MaterialId::AmberGeode | terra_voxel::MaterialId::TideGeode)
+            )
             || terra_core::biome_flora::is_prop(block.id)
             || terra_core::lantern::is_part(block.id)
             || terra_core::rails::is_rail(block.id)
             || terra_core::train_parts::is_train(block.id)
             || matches!(block.id, terra_core::roads::SLOPE..=terra_core::roads::EXIT)
             || terra_core::profession_stations::is_station(block.id)
+            || block.id == terra_voxel::MaterialId::NestStraw as u16
             || block.id == terra_voxel::MaterialId::RailSwitchStand as u16
         {
             assert_eq!(block.render_kind, BlockRenderKind::CustomMesh);
@@ -648,6 +656,40 @@ fn shipped_cubes_have_standalone_textures_without_runtime_glb_dependencies() {
     .into_iter()
     .map(|name| format!("textures/{name}.png"))
     .collect();
+    let salt_textures: BTreeSet<String> = [
+        "base", "deep", "crust", "compact", "wet", "dust", "layer", "clear",
+    ]
+    .into_iter()
+    .flat_map(|swatch| {
+        ["top", "side"].map(move |face| format!("textures/salt_cave/{swatch}_{face}.png"))
+    })
+    .chain(["textures/salt_cave/accent_side.png".to_owned()])
+    .collect();
+    let karst_textures: BTreeSet<String> = ["wet", "calcite", "dripstone", "moss", "mud"]
+        .into_iter()
+        .flat_map(|tile| {
+            ["side", "top"].map(move |side| format!("textures/dripstone_cave/{tile}_{side}.png"))
+        })
+        .collect();
+    let living_textures = [
+        "rock",
+        "overgrown",
+        "roots",
+        "turf",
+        "moss",
+        "glow",
+        "clear",
+        "packed",
+        "rime",
+        "frozen",
+        "dust",
+        "azure",
+    ]
+    .into_iter()
+    .flat_map(|swatch| {
+        ["top", "side"].map(move |face| format!("textures/living_caves/{swatch}_{face}.png"))
+    })
+    .collect::<BTreeSet<_>>();
     let reference_textures: BTreeSet<String> =
         ["oak", "birch", "spruce", "blood", "ghost", "sakura"]
             .into_iter()
@@ -672,6 +714,9 @@ fn shipped_cubes_have_standalone_textures_without_runtime_glb_dependencies() {
             .chain(blood_textures.iter().map(String::as_str))
             .chain(foliage_textures.iter().map(String::as_str))
             .chain(reference_textures.iter().map(String::as_str))
+            .chain(salt_textures.iter().map(String::as_str))
+            .chain(karst_textures.iter().map(String::as_str))
+            .chain(living_textures.iter().map(String::as_str))
             .chain([
                 "textures/cactus_side.png",
                 "textures/cactus_top.png",
@@ -742,8 +787,16 @@ fn shipped_cubes_have_standalone_textures_without_runtime_glb_dependencies() {
         .filter(|block| (30..=35).contains(&block.id))
     {
         let host = &ore.face_materials.as_ref().unwrap()[0];
-        assert_eq!(ore.materials[host], stone.materials[stone_face]);
-        assert_eq!(ore.textures[host], stone.textures[stone_face]);
+        if ore.id == terra_voxel::MaterialId::SaltOre as u16 {
+            assert_eq!(ore.textures[host], "textures/salt_cave/accent_side.png");
+            assert_eq!(
+                ore.materials[host].normal_texture.as_deref(),
+                Some("textures/salt_cave/accent_side_normal.png")
+            );
+        } else {
+            assert_eq!(ore.materials[host], stone.materials[stone_face]);
+            assert_eq!(ore.textures[host], stone.textures[stone_face]);
+        }
     }
     for texture in textures {
         let png = std::fs::read(directory.join(texture)).expect("standalone PNG");
@@ -757,8 +810,15 @@ fn shipped_cubes_have_standalone_textures_without_runtime_glb_dependencies() {
             || blood_textures.contains(texture.as_str())
         {
             assert_eq!(width, 256, "authored biome texture resolution: {texture}");
-        } else if cemetery_textures.contains(texture.as_str()) {
-            assert_eq!(width, 128, "cemetery surface texture resolution: {texture}");
+        } else if cemetery_textures.contains(texture.as_str())
+            || salt_textures.contains(texture.as_str())
+            || karst_textures.contains(texture.as_str())
+            || living_textures.contains(texture.as_str())
+        {
+            assert_eq!(
+                width, 128,
+                "authored mineral / masonry texture resolution: {texture}"
+            );
         } else {
             assert!(
                 (256..=2048).contains(&width),

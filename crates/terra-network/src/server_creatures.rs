@@ -189,6 +189,12 @@ impl ResidentDoors {
     }
 }
 
+/// Real hits let several players participate in a boss fight without showing it to spectators.
+#[derive(Resource, Default)]
+pub(super) struct DragonChallengers(
+    std::collections::BTreeMap<(u64, terra_core::PlayerUuid), Instant>,
+);
+
 #[derive(Default)]
 pub(super) struct Schedule {
     elapsed: f32,
@@ -208,18 +214,30 @@ pub(super) struct Schedule {
     residents: terra_world::creatures::villagers::Residents,
     resident_elapsed: f32,
     resident_doors: ResidentDoors,
+    dragons: std::collections::BTreeMap<u64, terra_world::creatures::dragons::Encounter>,
     worm_spits: worm_spit::Projectiles,
     worm_encounters: worm_encounters::Encounters,
 }
 
 /// The long worm's visible rings can cross the interest boundary before its root.
 fn in_interest(a: &terra_core::creatures::Creature, player: [f64; 3]) -> bool {
+    if a.kind.is_dragon() {
+        return distance(player, a.position)
+            <= (terra_world::creatures::dragons::ROAM_RADIUS + 32.).powi(2);
+    }
     let extent = if a.kind == CreatureKind::SandWorm {
         24.0
     } else {
         a.size()[0].max(a.size()[2]) * 0.5
     };
     distance(player, a.position) <= (ACTIVE_RADIUS + extent).powi(2)
+}
+fn active_near(a: &terra_core::creatures::Creature, player: [f64; 3]) -> bool {
+    in_interest(a, player)
+        || a.kind.is_dragon()
+            && (player[0] - (a.home[0] * 32 + 16) as f64)
+                .hypot(player[2] - (a.home[1] * 32 + 16) as f64)
+                < ACTIVE_RADIUS
 }
 fn finish_phase(a: &terra_core::creatures::Creature) -> bool {
     a.kind == CreatureKind::SandWorm && terra_core::creatures::sandworm::committed(a.behavior)
@@ -484,6 +502,9 @@ fn search_due(a: &terra_core::creatures::Creature, dt: f32, pending_navigation: 
         // Air steering never performs an expensive ground/food path search.
         return false;
     }
+    if a.kind.is_dragon() {
+        return false;
+    }
     if a.kind == CreatureKind::Stalker || terra_world::creatures::forest::hostile(a.kind) {
         return pending_navigation || a.needs.search_in <= dt;
     }
@@ -580,7 +601,9 @@ fn grant_searches(mut eligible: Vec<u64>, cursor: &mut Option<u64>) -> Vec<u64> 
 pub(super) struct SimulationWorld<'w, 's> {
     defenses: Option<Res<'w, super::villager_defense::Defenses>>,
     mounts: Res<'w, riding::Mounts>,
+    played: ResMut<'w, crate::world_time::PlayedDays>,
     inspections: ResMut<'w, InspectionTargets>,
+    challengers: Option<ResMut<'w, DragonChallengers>>,
     chunks: ResMut<'w, ChunkStore>,
     terrain: Res<'w, terra_world::streaming::WorldTerrain>,
     journal: ResMut<'w, EditJournal>,
@@ -609,7 +632,9 @@ pub(super) fn tick(
     let SimulationWorld {
         defenses,
         mounts,
+        mut played,
         mut inspections,
+        mut challengers,
         mut chunks,
         terrain,
         mut journal,
@@ -623,7 +648,7 @@ pub(super) fn tick(
             .any(|(peer, _)| peer.uuid == *uuid && peer.synced)
     });
     schedule.elapsed += time.delta_secs().min(0.1);
-    if schedule.elapsed < 0.1 {
+    if schedule.elapsed < 0.1 && !played.slept {
         return;
     }
     let dt = schedule.elapsed.min(0.2);
@@ -641,15 +666,24 @@ pub(super) fn tick(
         .take(128)
         .collect();
     if players.is_empty() {
+        played.take();
         grips.retain(|_| false);
         schedule.worm_spits.clear();
+        schedule.dragons.clear();
+        chunks.track_dragon_flight([]);
+        if let Some(challengers) = challengers.as_deref_mut() {
+            challengers.0.clear();
+        }
         return;
     }
     schedule.worm_spits.advance(&mut chunks, &mut journal, dt);
-    let vulnerable: Vec<_> = peers
+    let mut vulnerable: Vec<_> = peers
         .iter()
         .filter(|(p, _)| {
-            p.synced && !p.vitals.dead() && p.game_mode(&config) == terra_core::GameMode::Survival
+            p.synced
+                && !p.vitals.dead()
+                && p.chat.teleport.is_none()
+                && p.game_mode(&config) == terra_core::GameMode::Survival
         })
         .filter_map(|(p, _)| {
             bodies
@@ -659,6 +693,7 @@ pub(super) fn tick(
         })
         .take(128)
         .collect();
+    vulnerable.sort_unstable_by_key(|(uuid, _)| *uuid);
     let targets: Vec<_> = vulnerable.iter().map(|(_, p)| *p).collect();
     let stalker_players: Vec<_> = peers
         .iter()
@@ -727,8 +762,9 @@ pub(super) fn tick(
             (player[0].floor() as i64).div_euclid(32) + offset[0],
             (player[2].floor() as i64).div_euclid(32) + offset[1],
         ];
-        if !natural_habitat_enabled(home, config.world.seed.0)
-            || natural >= limit
+        let lair = !population.explored.contains(&home) && terrain.0.dragon_nest(home).is_some();
+        if limit == 0
+            || (!lair && (!natural_habitat_enabled(home, config.world.seed.0) || natural >= limit))
             || (home[0] as f64 * 32.0 + 16.0 - player[0])
                 .hypot(home[1] as f64 * 32.0 + 16.0 - player[2])
                 > ACTIVE_RADIUS
@@ -744,7 +780,7 @@ pub(super) fn tick(
             },
             home,
             &players,
-            limit.saturating_sub(natural),
+            limit.saturating_sub(natural).max(usize::from(lair)),
         );
         natural = natural_near(&population, player);
         if schedule.bee_habitats.len() < terra_core::creatures::MAX_SPAWN_CELLS
@@ -834,16 +870,31 @@ pub(super) fn tick(
             );
         }
     }
+    for a in population
+        .animals
+        .values_mut()
+        .filter(|a| a.kind.is_dragon() && a.health <= 0.0 && a.timer > 0.0)
+    {
+        a.timer = (a.timer.min(terra_core::creatures::dragons::duration(
+            CreatureBehavior::Dead,
+        )) - dt)
+            .max(0.0);
+    }
     let ids: Vec<_> = population
         .animals
         .values()
         .filter(|a| {
             a.health > 0.0
                 && !mounts.contains(a.id)
-                && (finish_phase(a) || players.iter().any(|p| in_interest(a, *p)))
+                && (finish_phase(a) || players.iter().any(|p| active_near(a, *p)))
         })
         .map(|a| a.id)
         .collect();
+    chunks.track_dragon_flight(ids.iter().filter_map(|id| {
+        let a = population.animals.get(id)?;
+        (a.kind.is_dragon() && !a.juvenile() && !population.owners.contains_key(id))
+            .then_some(a.position)
+    }));
     let observation_players: Vec<_> = stalker_players
         .iter()
         .map(|p| (p.id, p.position, p.targetable))
@@ -852,6 +903,18 @@ pub(super) fn tick(
         schedule
             .worm_encounters
             .frame(time.elapsed_secs(), &observation_players, &population);
+    if let Some(challengers) = challengers.as_deref_mut() {
+        challengers
+            .0
+            .retain(|_, at| at.elapsed() < Duration::from_secs(12));
+    }
+    schedule.dragons.retain(|id, _| {
+        population
+            .animals
+            .get(id)
+            .is_some_and(|a| a.health > 0.0 && players.iter().any(|p| active_near(a, *p)))
+    });
+    let mut dragon_strikes = Vec::new();
     let mut worm_damage = Vec::new();
     let mut worm_launches = Vec::new();
     schedule.spirit_aura_elapsed += dt;
@@ -1054,7 +1117,37 @@ pub(super) fn tick(
                 || night
                     && (a.kind == CreatureKind::Bee
                         || terra_world::creatures::ecology::sleep_at(a.id, phase));
-            let effect = if a.kind == CreatureKind::Villager {
+            let effect = if a.kind.is_dragon() {
+                let encounter = schedule.dragons.entry(id).or_insert_with(|| {
+                    let nest = if terra_core::creatures::spawning::is_command_id(id) || owned {
+                        None
+                    } else {
+                        terrain
+                            .0
+                            .dragon_roost(a.home)
+                            .filter(|(kind, _, _)| *kind == a.kind)
+                            .map(|(_, center, direction)| (center, direction))
+                    };
+                    terra_world::creatures::dragons::Encounter::new(a, nest)
+                });
+                encounter.set_keeper(
+                    owner,
+                    order == terra_core::creatures::taming::CompanionMode::Follow,
+                );
+                dragon_strikes.extend(encounter.step(
+                    a,
+                    &Habitat {
+                        terrain: &terrain.0,
+                        chunks: &chunks,
+                        journal: &journal,
+                    },
+                    dt,
+                    &vulnerable,
+                    night,
+                    owned,
+                ));
+                terra_world::creatures::Forage::None
+            } else if a.kind == CreatureKind::Villager {
                 let Schedule {
                     residents,
                     navigation,
@@ -1159,7 +1252,26 @@ pub(super) fn tick(
                 let missing_den = den.is_none()
                     && !day_refuge
                     && !habitat.wet(terra_core::creatures::spiders::visual_center(a));
-                let effect = if missing_den {
+                // A territorial spider can defend itself while waiting at its
+                // den or seeking an anchor. Committed shots run to impact even
+                // after their original target has moved out of sight.
+                let defending = !owned
+                    && !day_refuge
+                    && (a.needs.goal.is_some_and(|goal| {
+                        goal.kind == terra_core::creatures::NeedKind::AttackAim
+                    }) || (a.kind != CreatureKind::SmallSpider || a.health < a.kind.health())
+                        && terra_world::creatures::spiders::sees_threat(a, &habitat, &targets));
+                let effect = if defending {
+                    terra_world::creatures::spiders::step_with_navigation(
+                        a,
+                        &habitat,
+                        &targets,
+                        dt,
+                        search,
+                        night,
+                        Some(&mut schedule.navigation),
+                    )
+                } else if missing_den {
                     schedule.spider_cycles.forget(id);
                     let prepare = if owned {
                         terra_world::creatures::spiders::prepare_owned_den
@@ -1197,38 +1309,16 @@ pub(super) fn tick(
                         }
                         terra_world::creatures::spiders::Outcome::default()
                     } else {
-                        let nearby_threat = phase == Phase::Hunt
-                            && !owned
-                            && (a.kind != CreatureKind::SmallSpider || a.health < a.kind.health())
-                            && terra_core::creatures::definitions::get(a.kind)
-                                .combat
-                                .is_some_and(|combat| {
-                                    targets.iter().any(|p| {
-                                        distance(*p, a.position) <= combat.aggro_radius.powi(2)
-                                    })
-                                });
-                        if nearby_threat {
-                            terra_world::creatures::spiders::step_with_navigation(
-                                a,
-                                &habitat,
-                                &targets,
-                                dt,
-                                search,
-                                night,
-                                Some(&mut schedule.navigation),
-                            )
-                        } else {
-                            terra_world::creatures::spiders::cycle::step_den(
-                                a,
-                                &habitat,
-                                den.anchor,
-                                phase,
-                                dt,
-                                search,
-                                (&mut schedule.navigation, owned),
-                            );
-                            terra_world::creatures::spiders::Outcome::default()
-                        }
+                        terra_world::creatures::spiders::cycle::step_den(
+                            a,
+                            &habitat,
+                            den.anchor,
+                            phase,
+                            dt,
+                            search,
+                            (&mut schedule.navigation, owned),
+                        );
+                        terra_world::creatures::spiders::Outcome::default()
                     }
                 } else if owned {
                     terra_world::creatures::spiders::step_owned(
@@ -1457,6 +1547,15 @@ pub(super) fn tick(
             let mode = peer.game_mode(&config);
             spider_bite(&mut peer, bite, mode);
         }
+        if let Some((uuid, _)) = effect.web_hit.and_then(|index| vulnerable.get(index))
+            && let Some((mut peer, _)) = peers.iter_mut().find(|(peer, _)| peer.uuid == *uuid)
+            && peer.survival.protection <= 0.
+            && !peer.vitals.dead()
+        {
+            peer.vitals
+                .effects
+                .apply(terra_core::EffectKind::Slow, 3.5, 2);
+        }
         if config.world.game_rules.mob_griefing
             && let Some(web) = effect.web
             && let Some(den) = spin_web(&mut chunks, &mut journal, &terrain.0, web)
@@ -1516,6 +1615,31 @@ pub(super) fn tick(
                 schedule.worm_spits.launch(origin, velocity);
             }
             terra_world::creatures::bears::Effect::None => {}
+        }
+    }
+    for strike in dragon_strikes {
+        let Some((mut peer, _)) = peers
+            .iter_mut()
+            .find(|(peer, _)| peer.uuid == strike.target)
+        else {
+            continue;
+        };
+        let mode = peer.game_mode(&config);
+        let before = peer.vitals.health;
+        survival::animal_attack(&mut peer, strike.damage, mode);
+        if peer.vitals.health < before && !peer.vitals.dead() {
+            if let Some(challengers) = challengers.as_deref_mut() {
+                challengers
+                    .0
+                    .insert((strike.dragon, peer.uuid), Instant::now());
+            }
+            if let Some(effect) = strike.effect {
+                peer.vitals.effects.apply(effect, 4.0, 1);
+            }
+            if let Ok((mut velocity, mut grounded)) = body_impulses.get_mut(peer.body) {
+                velocity.0 += Vec3::from_array(strike.impulse);
+                grounded.0 = false;
+            }
         }
     }
     for (index, damage, impulse) in worm_launches {
@@ -1581,8 +1705,27 @@ pub(super) fn tick(
         }
     }
     schedule.breeding_elapsed += dt;
-    if schedule.breeding_elapsed >= 1.0 {
+    let breeding_due = schedule.breeding_elapsed >= 1.;
+    if breeding_due || played.slept {
+        let days = played.take();
+        terra_world::creatures::dragon_nursery::step(
+            &mut population,
+            &terrain.0,
+            &mut chunks,
+            &mut journal,
+            &properties,
+            &ids,
+            days,
+        );
+    }
+    if breeding_due {
         schedule.breeding_elapsed %= 1.0;
+        terra_world::creatures::dragon_nursery::lay_eggs(
+            &population,
+            &chunks,
+            journal.gameplay_mut(),
+            &ids,
+        );
         let mut families = std::mem::take(&mut journal.gameplay_mut().animal_families);
         let mut bonds = std::mem::take(&mut journal.gameplay_mut().animal_bonds);
         let mut next_birth = journal.gameplay().next_animal_birth;
@@ -1706,11 +1849,29 @@ pub(super) fn tick(
             .creatures
             .animals
             .values()
-            .filter(|a| a.health > 0.0 && in_interest(a, position))
+            .filter(|a| {
+                (a.health > 0.0 || a.kind.is_dragon() && a.timer > 0.0) && in_interest(a, position)
+            })
             .collect();
+        let fighting = |a: &terra_core::creatures::Creature| {
+            a.kind.is_dragon()
+                && a.health > 0.0
+                && !peer.vitals.dead()
+                && peer.game_mode(&config) == terra_core::GameMode::Survival
+                && schedule.dragons.get(&a.id).is_some_and(|enc| {
+                    enc.target.is_some()
+                        && (enc.target == Some(peer.uuid)
+                            || challengers
+                                .as_deref()
+                                .is_some_and(|c| c.0.contains_key(&(a.id, peer.uuid))))
+                })
+        };
         creatures.sort_unstable_by(|a, b| {
-            distance(position, a.position)
-                .total_cmp(&distance(position, b.position))
+            fighting(b)
+                .cmp(&fighting(a))
+                .then_with(|| {
+                    distance(position, a.position).total_cmp(&distance(position, b.position))
+                })
                 .then(a.id.cmp(&b.id))
         });
         let visible: Vec<_> = creatures
@@ -1761,6 +1922,7 @@ pub(super) fn tick(
             })
             .collect();
         sender.send::<CreatureSnapshotChannel>(CreatureStates {
+            boss: visible.first().filter(|a| fighting(a)).map(|a| a.id),
             tick: runtime.tick,
             ecology: snapshot_ecology(&journal.gameplay().creatures, &visible, position),
             creatures: visible,
@@ -2021,6 +2183,18 @@ pub(super) fn interact(
             return;
         }
         let Some(food) = held else {
+            if animal.needs.dragon.is_some()
+                && world.journal.gameplay().creatures.owners.get(&id) == Some(&peer.uuid)
+            {
+                let state = world.journal.gameplay_mut();
+                if let Some(animal) = state.creatures.animals.get_mut(&id)
+                    && let Some(life) = &mut animal.needs.dragon
+                    && life.pet(animal.age)
+                {
+                    peer.creature_action_at = Instant::now();
+                    state.revision = state.revision.saturating_add(1);
+                }
+            }
             return;
         };
         let state = world.journal.gameplay();
@@ -2062,7 +2236,17 @@ pub(super) fn interact(
         if let Some(a) = world.journal.gameplay_mut().creatures.animals.get_mut(&id) {
             a.health = (a.health + 4.0).min(kind.health());
             a.needs.food = (a.needs.food + 6.0).min(kind.food());
-            companion_feeding_pose(a);
+            if let Some(life) = a.needs.dragon.as_mut() {
+                life.affection = (life.affection + 1.).min(100.);
+            }
+            if !a.kind.is_dragon()
+                || !matches!(
+                    a.behavior,
+                    CreatureBehavior::Leap | CreatureBehavior::Land | CreatureBehavior::Fly
+                )
+            {
+                companion_feeding_pose(a);
+            }
         }
         let state = world.journal.gameplay_mut();
         state.animal_bonds.insert(id, bond);
@@ -2091,6 +2275,7 @@ pub(super) fn interact(
             .and_then(terra_core::ItemKind::tool_kind)
             .map_or(1.0, terra_core::ToolKind::attack_damage)
             * peer.vitals.effects.attack_multiplier();
+        let damage = terra_core::creatures::dragons::incoming_damage(animal, damage);
         let dies = animal.health <= damage;
         let needed = forest_loot.iter().flatten().count()
             + if product.is_none() {
@@ -2116,7 +2301,17 @@ pub(super) fn interact(
         }
         if let Some(a) = world.journal.gameplay_mut().creatures.animals.get_mut(&id) {
             a.health = (a.health - damage).max(0.0);
-            if a.kind == CreatureKind::SandWorm && !dies {
+            if a.kind.is_dragon() {
+                if let Some(challengers) = world.dragon_challengers.as_deref_mut() {
+                    challengers.0.insert((id, peer.uuid), Instant::now());
+                }
+                if dies {
+                    a.behavior = CreatureBehavior::Dead;
+                    a.timer = terra_core::creatures::dragons::duration(a.behavior);
+                    a.velocity = [0.; 3];
+                    a.needs.goal = None;
+                }
+            } else if a.kind == CreatureKind::SandWorm && !dies {
                 terra_core::creatures::sandworm::hit_reaction(a, eye);
             } else {
                 a.behavior = if dies {

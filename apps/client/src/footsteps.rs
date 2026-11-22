@@ -197,7 +197,10 @@ fn update(
                 CreatureKind::Stalker => Walker::Stalker,
                 CreatureKind::Villager | CreatureKind::Skeleton => Walker::Player,
                 CreatureKind::ThornBrute => Walker::Bear,
-                CreatureKind::Fish
+                CreatureKind::DarkDragon
+                | CreatureKind::EarthDragon
+                | CreatureKind::WaterDragon
+                | CreatureKind::Fish
                 | CreatureKind::SandWorm
                 | CreatureKind::Bee
                 | CreatureKind::Butterfly

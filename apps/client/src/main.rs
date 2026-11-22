@@ -58,6 +58,7 @@ mod mob_health_smoke;
 mod network_smoke;
 mod npc_work_smoke;
 mod ore_smoke;
+mod package_verify;
 mod performance_edits;
 mod performance_route;
 mod performance_soak;
@@ -92,9 +93,12 @@ mod window_gallery_smoke;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::args().any(|argument| argument == "--help") {
         println!(
-            "terra-client [--connect IP:PORT] [--profile NAME] [--gender=f|m]\nDefault: TERAMIC main menu. Persistent local identity: configs/profile.toml.\n--profile NAME selects configs/profiles/NAME.toml with its own persistent UUID for local multi-client testing.\n--gender=f or --gender=m selects and remembers the female or male avatar for that profile.\nAlternatively override the identity file with TERRA_PROFILE_FILE. Duplicate UUID protection remains enabled."
+            "terra-client [--verify-package --connect IP:PORT] [--connect IP:PORT] [--profile NAME] [--gender=f|m]\nDefault: TERAMIC main menu. Persistent local identity: configs/profile.toml.\n--profile NAME selects configs/profiles/NAME.toml with its own persistent UUID for local multi-client testing.\n--gender=f or --gender=m selects and remembers the female or male avatar for that profile.\nAlternatively override the identity file with TERRA_PROFILE_FILE. Duplicate UUID protection remains enabled."
         );
         return Ok(());
+    }
+    if std::env::args().any(|argument| argument == "--verify-package") {
+        return package_verify::run();
     }
     let exit = bootstrap::build_app()?.run();
     if exit.is_error() {

@@ -7,8 +7,8 @@ use terra_core::{
 use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
-// Aimed block actions include the world-space surface point selected by the client.
-pub const PROTOCOL_VERSION: u32 = 152;
+// Dragon volleys, wards and surges are replicated combat behaviours.
+pub const PROTOCOL_VERSION: u32 = 155;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 pub const MAX_TREE_INTEREST: usize = 256;
@@ -726,6 +726,8 @@ pub struct CreatureStates {
     pub families: Vec<terra_core::creatures::breeding::FamilyView>,
     #[serde(default)]
     pub stalker_grip: Option<StalkerGrip>,
+    #[serde(default)]
+    pub boss: Option<u64>,
 }
 
 /// Only sent to the grabbed player. This grants no client-side movement authority.
@@ -972,6 +974,7 @@ mod layout_tests {
             intentions: Vec::new(),
             bonds: Vec::new(),
             families: Vec::new(),
+            boss: None,
             stalker_grip: None,
         };
         let source = serde_json::to_vec(&snapshot).unwrap();
@@ -990,7 +993,7 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 152);
+        assert_eq!(PROTOCOL_VERSION, 155);
     }
     #[test]
     fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {

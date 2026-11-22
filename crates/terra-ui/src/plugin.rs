@@ -74,7 +74,7 @@ impl Plugin for TerraUiPlugin {
                     let plugin = TiltUiPlugin::new(tilt_ui_component_catalog());
                     let plugin = if let Some(configuration) = crate::localization::configuration() { plugin.with_localization(configuration) } else { plugin };
                     plugin
-                    .with_source_root(concat!(env!("CARGO_MANIFEST_DIR"), "/../../src-ui"))
+                    .with_source_root(terra_core::installation_root().join("src-ui"))
                     .without_camera()
                 },
             )

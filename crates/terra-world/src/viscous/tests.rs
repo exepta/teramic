@@ -111,7 +111,7 @@ fn swimming_uses_galle_columns_and_never_solid_galle_blocks() {
     liquid(&mut chunks, &mut journal, [3, 3, 3], bile::FLUID, 32);
     let column = swimming_column(&chunks, &journal, [3.5, 2.4, 3.5]).unwrap();
     assert_eq!(column.bed, 2.);
-    assert!((column.level - 3.498).abs() < 0.0001);
+    assert!((column.level - 3.5).abs() < 0.0001);
     let (owner, local) = global_to_section([3, 2, 3]);
     chunks
         .loaded

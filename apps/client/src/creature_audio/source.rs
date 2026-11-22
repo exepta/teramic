@@ -203,7 +203,9 @@ impl Iterator for Stream {
             self.faucet_energy = 0.0;
         }
         if self.frame.is_multiple_of(256)
-            && let Ok(mut queue) = self.controls.queue.lock()
+            // A stalled game thread must never stall the device callback. Pending
+            // cues remain in the queue until the next 256-frame boundary.
+            && let Ok(mut queue) = self.controls.queue.try_lock()
         {
             while self.voices.len() < MAX_VOICES {
                 let Some(cue) = queue.pop_front() else { break };
@@ -222,7 +224,8 @@ impl Iterator for Stream {
                     if let Some(index) = cue
                         .sound
                         .checked_sub(super::worm::FIRST)
-                        .filter(|&index| index < super::worm::COUNT)
+                        .filter(|&index| index < super::worm::BANK_LEN)
+                        .map(|index| index % super::worm::COUNT)
                     {
                         self.controls.worm_played[index].fetch_add(1, Ordering::Relaxed);
                     }
@@ -524,6 +527,22 @@ mod tests {
         }
         .decoder();
         (controls, stream)
+    }
+
+    #[test]
+    fn contended_cue_queue_defers_playback_and_keeps_the_audio_clock_running() {
+        let (controls, mut stream) =
+            queued_constant_voice(Category::Environment, &Default::default());
+        {
+            let queue = controls.queue.lock().unwrap();
+            for _ in 0..512 {
+                assert!(stream.next().is_some());
+            }
+            assert_eq!(queue.len(), 1);
+            assert_eq!(controls.played.load(Ordering::Relaxed), 0);
+        }
+        stream.next();
+        assert_eq!(controls.played.load(Ordering::Relaxed), 1);
     }
 
     fn constant_voice(

@@ -148,6 +148,10 @@ pub fn update_debug_overlay(
             terra_core::creatures::CreatureBehavior::Tremor => "Bodenbeben / Angriffswarnung",
             terra_core::creatures::CreatureBehavior::Emerge => "Taucht auf",
             terra_core::creatures::CreatureBehavior::Retreat => "Gräbt sich ein",
+            terra_core::creatures::CreatureBehavior::DragonVolley => "Wirft eine Salve",
+            terra_core::creatures::CreatureBehavior::DragonWard => "Baut einen Schild auf",
+            terra_core::creatures::CreatureBehavior::DragonSurge => "Bündelt Elementarkraft",
+            terra_core::creatures::CreatureBehavior::Spit if animal.kind.is_dragon() => "Speit Elementaratem",
             terra_core::creatures::CreatureBehavior::Spit => "Speit Galle",
         }
         .into();

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": 460,
+  "name": "Salt Stalactite",
+  "description": "Tapered salt crystals hanging from the ceiling.",
+  "creative_category": "decoration",
+  "mining_level": 0,
+  "hardness": 0.7,
+  "resistance": 2,
+  "struct_block": true,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/salt_stalactite.glb",
+  "textures": {
+    "Cleavage edge": "textures/salt_cave/compact_side.png",
+    "Halite": "textures/salt_cave/clear_side.png",
+    "Warm core": "textures/salt_cave/clear_side.png",
+    "Chipped facet": "textures/salt_cave/crust_top.png",
+    "Rock": "textures/salt_cave/base_side.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.1,
+        0.73,
+        0.1
+      ],
+      "maximum": [
+        0.9,
+        1,
+        0.9
+      ]
+    },
+    {
+      "minimum": [
+        0.33,
+        0.07,
+        0.33
+      ],
+      "maximum": [
+        0.67,
+        0.73,
+        0.67
+      ]
+    }
+  ]
+}

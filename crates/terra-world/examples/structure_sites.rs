@@ -99,6 +99,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         (StructureKind::Outpost, _) => 6,
                         (StructureKind::Cemetery, _) => 7,
                         (StructureKind::GraveDungeon, _) => 8,
+                        (
+                            StructureKind::DarkDragonLair
+                            | StructureKind::EarthDragonLair
+                            | StructureKind::WaterDragonLair,
+                            _,
+                        ) => continue,
                     };
                     if !found[index] {
                         println!(

@@ -1,0 +1,102 @@
+[
+  {
+    "source": "Dark Dragon",
+    "en": "Dark Dragon",
+    "de": "Dunkeldrache"
+  },
+  {
+    "source": "Elder Dark Dragon",
+    "en": "Elder Dark Dragon",
+    "de": "Älterer Dunkeldrache"
+  },
+  {
+    "source": "Abyssal Dark Dragon",
+    "en": "Abyssal Dark Dragon",
+    "de": "Abgrunddrache"
+  },
+  {
+    "source": "Earth Dragon",
+    "en": "Earth Dragon",
+    "de": "Erddrache"
+  },
+  {
+    "source": "Water Dragon",
+    "en": "Water Dragon",
+    "de": "Wasserdrache"
+  },
+  {
+    "source": "Ice Dragon",
+    "en": "Ice Dragon",
+    "de": "Eisdrache"
+  },
+  {
+    "source": "Deepwater Dragon",
+    "en": "Deepwater Dragon",
+    "de": "Tiefseedrache"
+  },
+  {
+    "source": "Ruin Dragon",
+    "en": "Ruin Dragon",
+    "de": "Ruinendrache"
+  },
+  {
+    "source": "Shadow Wyrm",
+    "en": "Shadow Wyrm",
+    "de": "Schattenwyrm"
+  },
+  {
+    "source": "Void Dragon",
+    "en": "Void Dragon",
+    "de": "Voiddrache"
+  },
+  {
+    "source": "Tidecrest Dragon",
+    "en": "Tidecrest Dragon",
+    "de": "Wellenkammdrache"
+  },
+  {
+    "source": "Abyssal Tide Dragon",
+    "en": "Abyssal Tide Dragon",
+    "de": "Tiefsee-Gezeitendrache"
+  },
+  {
+    "source": "Icewater Dragon",
+    "en": "Icewater Dragon",
+    "de": "Eiswasserdrache"
+  },
+  {
+    "source": "Mountain Earth Dragon",
+    "en": "Mountain Earth Dragon",
+    "de": "Gebirgserddrache"
+  },
+  {
+    "source": "Granite Dragon",
+    "en": "Granite Dragon",
+    "de": "Granitdrache"
+  },
+  {
+    "source": "Magma Dragon",
+    "en": "Magma Dragon",
+    "de": "Magmadrache"
+  },
+  {
+    "source": "Wirft eine Salve",
+    "de": "Wirft eine Salve",
+    "en": "Launching a volley"
+  },
+  {
+    "source": "Baut einen Schild auf",
+    "de": "Baut einen Schild auf",
+    "en": "Raising a shield"
+  },
+  {
+    "source": "Bündelt Elementarkraft",
+    "de": "Bündelt Elementarkraft",
+    "en": "Channeling elemental power"
+  },
+  {
+    "source": "Speit Elementaratem",
+    "de": "Speit Elementaratem",
+    "en": "Breathing elemental energy"
+  }
+]

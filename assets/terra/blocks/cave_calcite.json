@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": 466,
+  "name": "Pale Calcite",
+  "description": "Pale bands of crystalline limestone.",
+  "creative_category": "terrain",
+  "hardness": 1.0,
+  "resistance": 8.0,
+  "required_tool": "pickaxe",
+  "mining_level": 1,
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0,
+  "face_materials": [
+    "Cleavage",
+    "Cleavage",
+    "Cleavage",
+    "Bedding",
+    "Cleavage",
+    "Cleavage"
+  ],
+  "materials": {
+    "Cleavage": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.37,
+      "reflectance": 0.32,
+      "normal_texture": "textures/dripstone_cave/calcite_side_normal.png"
+    },
+    "Bedding": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.37,
+      "reflectance": 0.32,
+      "normal_texture": "textures/dripstone_cave/calcite_top_normal.png"
+    }
+  },
+  "textures": {
+    "Cleavage": "textures/dripstone_cave/calcite_side.png",
+    "Bedding": "textures/dripstone_cave/calcite_top.png"
+  }
+}

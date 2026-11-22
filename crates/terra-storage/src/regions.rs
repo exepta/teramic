@@ -10,6 +10,7 @@ use terra_core::{GameplayState, Inventory, PlayerStats, PlayerUuid, WorldDrop, W
 use terra_world::edits::{BeltOwner, EditJournal, SectionDelta};
 
 const MAX_FILE: u64 = 64 * 1024 * 1024;
+const DRAGON_EGGS: &str = "dragon-eggs.data";
 const TRANSACTION: &str = ".save-transaction";
 const INDEX: &str = "level.data";
 const MAGIC: &[u8; 8] = b"TERAMIC\0";
@@ -1445,7 +1446,7 @@ fn write(path: &Path, bytes: &[u8]) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 fn safe_relative(name: &str) -> bool {
-    if name == INDEX {
+    if name == INDEX || name == DRAGON_EGGS {
         return true;
     }
     let parts: Vec<_> = name.split('/').collect();
@@ -2004,6 +2005,26 @@ fn commit(root: &Path, world: WorldId, journal: &EditJournal) -> Result<(), Stri
         plan.files.push((name, checksum(&bytes)));
         Ok(())
     };
+    // Keep existing saves byte-identical until the first egg is incubated. An empty
+    // committed list clears the previous clutch after the last hatch.
+    let dragons: Vec<_> = gameplay
+        .creatures
+        .animals
+        .values()
+        .filter_map(|a| a.needs.dragon.map(|life| (a.id, life)))
+        .collect();
+    if !dragons.is_empty()
+        || !gameplay.dragon_eggs.is_empty()
+        || root
+            .join(DRAGON_EGGS)
+            .try_exists()
+            .map_err(|e| e.to_string())?
+    {
+        stage(
+            DRAGON_EGGS.into(),
+            encode(b"EGG2", &(world, &gameplay.dragon_eggs, dragons))?,
+        )?;
+    }
     let mut bonds: BTreeMap<_, Vec<_>> = BTreeMap::new();
     let mut pet_orders: BTreeMap<_, Vec<_>> = BTreeMap::new();
     let mut families: BTreeMap<_, Vec<_>> = BTreeMap::new();
@@ -3084,6 +3105,63 @@ fn load(root: &Path, world: WorldId) -> Result<EditJournal, String> {
         if let Some(location) = location {
             journal.update_player_location(id, location)?;
         }
+    }
+    let egg_path = root.join(DRAGON_EGGS);
+    if egg_path.try_exists().map_err(|e| e.to_string())? {
+        use terra_core::creatures::{
+            dragon_eggs::{self, IncubatingEgg},
+            dragon_life::DragonLife,
+        };
+        let bytes = read(&egg_path)?;
+        let (owner, eggs, life): (WorldId, Vec<IncubatingEgg>, Vec<(u64, DragonLife)>) =
+            if bytes.get(12..16) == Some(b"EGG1") {
+                #[derive(Deserialize)]
+                struct OldEgg {
+                    position: [i64; 3],
+                    shell: u16,
+                    owner: PlayerUuid,
+                    seconds: u16,
+                }
+                let (owner, eggs): (WorldId, Vec<OldEgg>) = decode(b"EGG1", &bytes)?;
+                if eggs.iter().any(|e| e.seconds > 120) {
+                    return Err("Invalid legacy dragon egg timer".into());
+                }
+                (
+                    owner,
+                    eggs.into_iter()
+                        .map(|e| IncubatingEgg {
+                            position: e.position,
+                            shell: e.shell,
+                            owner: e.owner,
+                            elapsed_days: f64::from(e.seconds) * 5. / 120.,
+                        })
+                        .collect(),
+                    vec![],
+                )
+            } else {
+                decode(b"EGG2", &bytes)?
+            };
+        if owner != world
+            || !dragon_eggs::valid(&eggs)
+            || life.len() > gameplay.creatures.animals.len()
+        {
+            return Err("Invalid dragon nursery registry".into());
+        }
+        for (id, record) in life {
+            let animal = gameplay
+                .creatures
+                .animals
+                .get_mut(&id)
+                .ok_or("Missing dragon for nursery record")?;
+            if !record.valid()
+                || !animal.kind.is_dragon()
+                || !terra_core::creatures::breeding::is_birth_id(id)
+                || animal.needs.dragon.replace(record).is_some()
+            {
+                return Err("Invalid dragon growth record".into());
+            }
+        }
+        gameplay.dragon_eggs = eggs;
     }
     gameplay.drops.sort_unstable_by_key(|drop| drop.id);
     journal.import_gameplay(gameplay)?;

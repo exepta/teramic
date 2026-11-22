@@ -12,6 +12,7 @@ pub(in crate::creatures) struct Point {
 pub(in crate::creatures) struct Route {
     pub target: [f64; 3],
     pub points: VecDeque<Point>,
+    ascent: Option<([f64; 3], [i8; 3])>,
     pub expires: f64,
     pub blocked: bool,
     progress: [f64; 3],
@@ -59,6 +60,7 @@ pub(super) fn advance(
     let route = nav.surface_routes.entry(a.id).or_insert_with(|| Route {
         target,
         points: VecDeque::new(),
+        ascent: None,
         expires: 0.0,
         blocked: false,
         progress: center(a),
@@ -68,6 +70,7 @@ pub(super) fn advance(
     if distance(route.target, target) > 4.0 {
         route.points.clear();
         route.target = target;
+        route.ascent = None;
         route.blocked = false;
         route.closest = distance(center(a), target);
         route.progress_at = a.age;
@@ -93,6 +96,31 @@ pub(super) fn advance(
         route.expires = 0.0;
         route.progress_at = a.age;
     }
+    // When prey stands directly above the spider, projecting its position
+    // onto the floor produces no direction. Find a nearby climbable face and
+    // remember the approach across ticks, even while the detour increases the
+    // straight-line distance to the prey.
+    let here = center(a);
+    if search
+        && route.points.is_empty()
+        && route.expires <= a.age
+        && normal(a)[1] > 0
+        && target[1] > here[1] + 1.5
+        && (target[0] - here[0]).hypot(target[2] - here[2]) < 3.
+    {
+        route.ascent = ascent(a, h, target);
+        route.expires = a.age + if route.ascent.is_some() { 4. } else { 0.6 };
+    }
+    if let Some((wall, face)) = route.ascent {
+        if normal(a) == face || route.expires <= a.age || target[1] <= here[1] + 0.6 {
+            route.ascent = None;
+        } else if move_surface_with_depth(a, h, wall, dt, speed, owned) {
+            return true;
+        } else {
+            route.ascent = None;
+            route.blocked = true;
+        }
+    }
     if route.blocked && route.points.is_empty() && search && route.expires <= a.age {
         route.points = path(a, h, target, owned);
         route.expires = a.age + if route.points.is_empty() { 0.8 } else { 2.5 };
@@ -105,6 +133,30 @@ pub(super) fn advance(
         route.blocked = true;
     }
     moved
+}
+
+fn ascent(a: &Creature, h: &Habitat, target: [f64; 3]) -> Option<([f64; 3], [i8; 3])> {
+    let here = center(a);
+    let mut best: Option<(f64, [f64; 3], [i8; 3])> = None;
+    for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+        for radius in 1..=5 {
+            let x = here[0] + f64::from(dx * radius);
+            let z = here[2] + f64::from(dz * radius);
+            let wall = [x, here[1], z];
+            if super::shape_contains(h, wall).is_none() {
+                continue;
+            }
+            // A single pebble is a poor wall. The upper face must also exist.
+            if super::shape_contains(h, [x, here[1] + 1., z]).is_some() {
+                let score = f64::from(radius) + 0.4 * (target[0] - x).hypot(target[2] - z);
+                if best.is_none_or(|(cost, ..)| score < cost) {
+                    best = Some((score, wall, [-dx as i8, 0, -dz as i8]));
+                }
+            }
+            break;
+        }
+    }
+    best.map(|(_, p, n)| (p, n))
 }
 
 fn path(a: &Creature, h: &Habitat, target: [f64; 3], owned: bool) -> VecDeque<Point> {

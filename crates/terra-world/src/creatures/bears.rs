@@ -131,6 +131,7 @@ pub fn step_with_navigation(
         return Effect::None;
     }
     a.age += f64::from(dt);
+    let previous_timer = a.timer;
     a.timer = (a.timer - dt).max(0.0);
     needs::update(a, h, dt, search);
     if a.health <= 0.0 {
@@ -148,7 +149,7 @@ pub fn step_with_navigation(
 
     let definition = terra_core::creatures::definitions::get(Kind::Bear);
     if let Some(combat) = definition.combat {
-        let pursuing = a.behavior == Behavior::Attack;
+        let pursuing = matches!(a.behavior, Behavior::Attack | Behavior::Hunt);
         let radius = combat.aggro_radius * if pursuing { 1.75 } else { 1.0 };
         let nearest = super::perception::nearest_visible_at(
             h,
@@ -162,40 +163,39 @@ pub fn step_with_navigation(
         if let Some((index, player)) = nearest {
             let before = a.behavior;
             a.needs.goal = None;
-            a.behavior = Behavior::Attack;
-            if let Some(nav) = navigation.as_deref_mut() {
-                nav.intend(
-                    a,
-                    terra_core::creatures::intentions::IntentReason::Hunt,
-                    Some(player),
-                );
-            }
-            if before != Behavior::Attack {
-                a.timer = 0.5;
-            }
             face(a, player, h);
             if distance(a.position, player) <= combat.reach.powi(2)
                 && visible(h, head(a.position), head(player))
             {
+                a.behavior = Behavior::Attack;
                 if let Some(nav) = navigation.as_deref_mut() {
                     nav.forget(a.id);
+                    nav.intend(
+                        a,
+                        terra_core::creatures::intentions::IntentReason::Attack,
+                        Some(player),
+                    );
                 }
                 a.velocity[0] = 0.0;
                 a.velocity[2] = 0.0;
                 settle(a, h, dt);
                 // Support edits can move the bear during settling; never apply
                 // a strike using the reach or line of sight from its old position.
-                if a.timer <= 0.0
-                    && distance(a.position, player) <= combat.reach.powi(2)
+                if distance(a.position, player) <= combat.reach.powi(2)
                     && visible(h, head(a.position), head(player))
+                    && combat.melee_contact(
+                        before != Behavior::Attack,
+                        previous_timer,
+                        &mut a.timer,
+                    )
                 {
-                    a.timer = combat.cooldown;
                     return Effect::StrikePlayer {
                         index,
                         damage: combat.damage,
                     };
                 }
             } else {
+                a.behavior = Behavior::Hunt;
                 travel(
                     a,
                     h,

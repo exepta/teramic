@@ -3,6 +3,7 @@ use terra_core::CropKind;
 
 const PATH: u16 = 102;
 const WOOL: u16 = 103;
+pub(super) mod dragon_lairs;
 mod graves;
 pub(super) mod royal;
 mod village;
@@ -36,6 +37,10 @@ impl Builder<'_> {
             )
         {
             (MAX_SITE_CELLS, MAX_SITE_SECTIONS)
+        } else if self.terrain.config().structures_revision >= 15
+            && self.summary.kind.dragon().is_some()
+        {
+            (450_000, 384)
         } else {
             (300_000, 256)
         }
@@ -468,7 +473,9 @@ impl Builder<'_> {
             let x = from[0] + (to[0] - from[0]) * step / steps;
             let z = from[2] + (to[2] - from[2]) * step / steps;
             let natural = self.ground(x, z);
-            let water = self.terrain.water_column(x as f64 + 0.5, z as f64 + 0.5);
+            let water = self
+                .terrain
+                .natural_surface_water(x as f64 + 0.5, z as f64 + 0.5);
             let bridge = water.is_some_and(|w| w.level > natural as f64);
             let desired = if bridge {
                 water.unwrap().level.ceil() as i64 + 1
@@ -754,6 +761,9 @@ impl Builder<'_> {
 }
 
 pub(super) fn plan(terrain: &TerraGenerator, region: [i64; 2], seed: u32) -> Option<Site> {
+    if let Some(site) = dragon_lairs::plan(terrain, region, seed) {
+        return Some(site);
+    }
     if let Some(site) = graves::plan(terrain, region, seed) {
         return Some(site);
     }
@@ -875,7 +885,10 @@ pub(super) fn plan_legacy(terrain: &TerraGenerator, region: [i64; 2], seed: u32)
         StructureKind::Kingdom
         | StructureKind::Outpost
         | StructureKind::Cemetery
-        | StructureKind::GraveDungeon => return None,
+        | StructureKind::GraveDungeon
+        | StructureKind::DarkDragonLair
+        | StructureKind::EarthDragonLair
+        | StructureKind::WaterDragonLair => return None,
     }
     b.finish()
 }
@@ -957,7 +970,7 @@ mod tests {
                 let x = from[0] + travel[0] * step;
                 let z = from[2] + travel[1] * step;
                 let water = terrain
-                    .water_column(x as f64 + 0.5, z as f64 + 0.5)
+                    .natural_surface_water(x as f64 + 0.5, z as f64 + 0.5)
                     .unwrap();
                 assert!(
                     water.depth >= 8.0,

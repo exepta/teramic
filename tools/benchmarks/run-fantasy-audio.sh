@@ -54,10 +54,11 @@ from pathlib import Path
 import json,re,sys
 root=Path(sys.argv[1]);log=re.sub(r'\x1b\[[0-9;]*m','',(root/'native.log').read_text(errors='replace'))
 assert 'Recorded steps passed:' in log,'real audio sink did not consume the contacts'
-assert re.search(r'clips=132\b',log),'new shared audio bank was not decoded'
+bank=re.search(r'\bclips=(\d+)\b',log)
+assert bank and int(bank.group(1))>=150,'shared audio bank was not decoded'
 assert not re.search(r'\bERROR\b|panicked at|Validation Error|Shader processing error',log)
-report=dict(status='passed',client_sha256=(root/'client.sha256').read_text().split()[0],decoded_clips=132,
+report=dict(status='passed',client_sha256=(root/'client.sha256').read_text().split()[0],decoded_clips=int(bank.group(1)),
             scope='Actual game decoder/device sink and 27 injected material-contact messages. Biome mixing is independently exercised through the same decoder in the waveform test; this is not a recording of natural biome traversal.')
 (root/'verification.json').write_text(json.dumps(report,indent=2)+'\n')
-print('Native shared audio sink passed: 132 decoded clips and 27 consumed contacts')
+print(f'Native shared audio sink passed: {bank.group(1)} decoded clips and 27 consumed contacts')
 PY

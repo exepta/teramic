@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": 456,
+  "name": "Salt Dust Floor",
+  "description": "Fine salt dust settles on dry ledges.",
+  "creative_category": "terrain",
+  "hardness": 1.0,
+  "resistance": 8.0,
+  "required_tool": "pickaxe",
+  "mining_level": 1,
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0,
+  "face_materials": [
+    "Cleavage",
+    "Cleavage",
+    "Cleavage",
+    "Bedding",
+    "Cleavage",
+    "Cleavage"
+  ],
+  "materials": {
+    "Cleavage": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.15,
+      "normal_texture": "textures/salt_cave/dust_side_normal.png"
+    },
+    "Bedding": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.94,
+      "reflectance": 0.15,
+      "normal_texture": "textures/salt_cave/dust_top_normal.png"
+    }
+  },
+  "textures": {
+    "Cleavage": "textures/salt_cave/dust_side.png",
+    "Bedding": "textures/salt_cave/dust_top.png"
+  }
+}

@@ -8928,3 +8928,17 @@ aus. Die Wasserhöhenabfrage folgt denselben Dreiecken wie die sichtbare
 Fläche. Die Zwischenbilder verbinden aufeinanderfolgende Querschnitte.
 In geschlossenen Becken erreicht die Flüssigkeit auch die letzte Zelle
 schrittweise. Freie Meeres- und Seeoberflächen behalten ihre Darstellung.
+
+## 272. Natürliche Höhlenräume (F36)
+
+Neue Welten verwenden Höhlenrevision 11. In Stein-, Pflanzen- und Kaskadenhöhlen
+wechseln sich entlang der Gesteinsschichten hohe Gewölbe und niedrige Sättel ab.
+Seitliche Klüfte erweitern einzelne Kammern. Flach geneigte Schichten bilden
+begehbare Bänke am Ufer. Verbindungsstollen werden abschnittsweise breiter oder
+schmaler und öffnen sich an den trockenen Flanken der Kammern. Unter Wasser
+bleibt der Beckenboden geschlossen.
+
+Lokale Welten und dedizierte Server laden die gespeicherte Höhlenrevision.
+Weltdateien ohne diesen Eintrag behalten Revision 0. Die Regressionstests
+prüfen Kammermaße, Terrassen, Tunnelanschlüsse und den Übergang über
+Chunk- und Regionsgrenzen.

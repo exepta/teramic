@@ -1,4 +1,5 @@
 //! Explicit model/animation inspection, separate from authoritative network tests.
+mod dragon;
 mod forest;
 mod sandworm;
 mod spirit;
@@ -49,6 +50,10 @@ fn setup(
     if std::env::var_os("TERRA_EYE_INSPECT").is_some()
         || std::env::var_os("TERRA_SPIDER_MODEL_INSPECT").is_some()
     {
+        return;
+    }
+    if std::env::var_os("TERRA_DRAGON_INSPECT").is_some() {
+        dragon::setup(&mut creatures);
         return;
     }
     if std::env::var_os("TERRA_SANDWORM_INSPECT").is_some() {
@@ -197,6 +202,10 @@ fn run(world: &mut World) {
     if std::env::var_os("TERRA_EYE_INSPECT").is_some()
         || std::env::var_os("TERRA_SPIDER_MODEL_INSPECT").is_some()
     {
+        return;
+    }
+    if std::env::var_os("TERRA_DRAGON_INSPECT").is_some() {
+        dragon::run(world);
         return;
     }
     if std::env::var_os("TERRA_SANDWORM_INSPECT").is_some() {

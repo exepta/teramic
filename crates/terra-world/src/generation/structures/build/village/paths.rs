@@ -189,7 +189,7 @@ impl Routes {
             let natural = builder.ground(p[0], p[1]);
             let water = builder
                 .terrain
-                .water_column(p[0] as f64 + 0.5, p[1] as f64 + 0.5);
+                .natural_surface_water(p[0] as f64 + 0.5, p[1] as f64 + 0.5);
             let bridge = water.is_some_and(|w| w.level > natural as f64);
             let desired = self.levels.get(&p).copied().unwrap_or_else(|| {
                 if bridge {

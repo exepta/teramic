@@ -45,13 +45,9 @@ pub(crate) fn append(
             batch.normals.extend([normal; 3]);
             // A common face projection keeps touching fracture strips identical at
             // joins instead of sampling a different texture triangle at each turn.
-            let axis = if tone != 1.0 {
-                side / 2
-            } else {
-                (0..3)
-                    .max_by(|&a, &b| normal[a].abs().total_cmp(&normal[b].abs()))
-                    .unwrap_or(side / 2)
-            };
+            let axis = (0..3)
+                .max_by(|&a, &b| normal[a].abs().total_cmp(&normal[b].abs()))
+                .unwrap_or(side / 2);
             batch
                 .uvs
                 .extend(triangle.map(|vertex| [vertex[(axis + 1) % 3], vertex[(axis + 2) % 3]]));

@@ -37,6 +37,9 @@ fn unrestricted(sampler: &Sampler<'_>, journal: &EditJournal, p: [i64; 3]) -> bo
 fn in_channel(sampler: &mut Sampler<'_>, p: [i64; 3]) -> bool {
     let surface_column = column(sampler, p);
     surface_column.water_flow != [0.0; 2] || surface_column.water_level.is_some()
+        // The caller checks voxel permeability. Open passages under the
+        // adjacent bank can receive river water at and below their inlet.
+        || (p[1] as f64 + 0.5) < surface_column.height
 }
 /// Follow only the actual stored lateral direction or vertical supply. An
 /// explicit player block/fixture ends the proof and retains ordinary physics.

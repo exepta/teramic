@@ -3,6 +3,58 @@ use super::CreatureKind;
 use crate::{ItemKind, ItemStack};
 
 pub fn forest_loot(kind: CreatureKind, variant: u8, id: u64) -> [Option<ItemStack>; 2] {
+    if kind.is_dragon() {
+        use super::dragons::DragonLoot::*;
+        let roll = (id ^ (id >> 33))
+            .wrapping_mul(0x9e3779b97f4a7c15)
+            .rotate_left(21);
+        let (scale, secondary) = match kind {
+            CreatureKind::DarkDragon => (
+                DarkScale,
+                match roll % 100 {
+                    0 => ShadowHeart,
+                    1..=5 => ShadowCore,
+                    6..=15 => Blood,
+                    16..=27 => ShadowCrystal,
+                    28..=42 => Membrane,
+                    43..=57 => Fang,
+                    _ => Hide,
+                },
+            ),
+            CreatureKind::EarthDragon => (
+                EarthScale,
+                match roll % 100 {
+                    0..=7 => EarthCrystal,
+                    8..=19 => Dust,
+                    20..=39 => Fang,
+                    40..=65 => Hide,
+                    _ => RawMeat,
+                },
+            ),
+            CreatureKind::WaterDragon => (
+                WaterScale,
+                match roll % 100 {
+                    0..=2 => WaterHeart,
+                    3..=10 => IceEssence,
+                    11..=27 => Horn,
+                    28..=44 => Claw,
+                    45..=67 => Membrane,
+                    _ => WaterEssence,
+                },
+            ),
+            _ => unreachable!(),
+        };
+        return [
+            Some(ItemStack {
+                item: ItemKind::DragonLoot(scale),
+                count: 3 + (roll % 4) as u16,
+            }),
+            Some(ItemStack {
+                item: ItemKind::DragonLoot(secondary),
+                count: 1,
+            }),
+        ];
+    }
     if kind == CreatureKind::SpiritGloom {
         let mut hash = id.wrapping_add(u64::from(variant) * 0x9e37_79b9);
         hash = (hash ^ (hash >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);

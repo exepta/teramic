@@ -15,8 +15,7 @@ pub(super) fn item_name(source: &str, english: bool) -> String {
         return source.into();
     }
     let catalog = TRANSLATIONS.get_or_init(|| {
-        let path =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src-ui/locales/source");
+        let path = terra_core::installation_root().join("src-ui/locales/source");
         let mut result = HashMap::new();
         if let Ok(entries) = std::fs::read_dir(path) {
             for entry in entries.flatten() {

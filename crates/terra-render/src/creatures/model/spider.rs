@@ -8,6 +8,41 @@ const SHELL: [f32; 3] = [0.23, 0.20, 0.255];
 const ORANGE: [f32; 3] = [0.33, 0.245, 0.19];
 const RED: [f32; 3] = [0.65, 0.055, 0.065];
 
+/// Tensioned radial strands carry three looser rings. The fine curved silk
+/// needs its own directed strands so that oblique threads stay distinct.
+fn web_projectile() -> Result<Mesh, String> {
+    let mut net = crate::players::model::Builder::default();
+    let mut strand = |a: Vec3, b: Vec3, width: f32| {
+        let delta = b - a;
+        net.rotated(
+            ((a + b) * 0.5).to_array(),
+            [width, delta.length(), width],
+            [0.95, 0.95, 0.90],
+            Quat::from_rotation_arc(Vec3::Y, delta.normalize()),
+        )
+    };
+    let rib = |i: usize, radius: f32| {
+        let angle = std::f32::consts::TAU * (i % 7) as f32 / 7.;
+        let r = radius * (1. + 0.075 * (angle * 3.).cos());
+        Vec3::new(r * angle.cos(), r * angle.sin(), r * r * 0.46)
+    };
+    for i in 0..7 {
+        strand(Vec3::ZERO, rib(i, 0.66), 0.027)?;
+        for radius in [0.20, 0.37, 0.57] {
+            let a = rib(i, radius);
+            let b = rib(i + 1, radius);
+            let middle = (a + b) * 0.46 - Vec3::Z * radius * 0.09;
+            strand(a, middle, 0.020)?;
+            strand(middle, b, 0.020)?;
+        }
+        if i % 2 == 0 {
+            let tip = rib(i, 0.66);
+            strand(tip, tip + tip.normalize() * 0.06 + Vec3::Z * 0.17, 0.018)?;
+        }
+    }
+    net.finish()
+}
+
 pub(super) fn parts(kind: Kind) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
     let [w, h, l] = match kind {
         Kind::SmallSpider => [0.145, 0.1, 0.195],
@@ -111,6 +146,9 @@ pub(super) fn parts(kind: Kind) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
         [0.88, 0.82, 0.70],
     )?;
     parts.push((Part::Silk, Vec3::ZERO, thread.finish()?));
+    if kind != Kind::SmallSpider {
+        parts.push((Part::WebShot, Vec3::ZERO, web_projectile()?));
+    }
     for side in [-1.0, 1.0] {
         for index in 0..4 {
             let z = (index as f32 - 1.5) * l * 0.19;

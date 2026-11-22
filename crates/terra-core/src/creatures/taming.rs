@@ -125,7 +125,9 @@ impl CompanionView {
 }
 
 pub fn tameable(kind: Kind) -> bool {
-    matches!(kind, Kind::Sheep | Kind::Cow | Kind::Pig | Kind::Horse) || kind.is_spider()
+    matches!(kind, Kind::Sheep | Kind::Cow | Kind::Pig | Kind::Horse)
+        || kind.is_spider()
+        || kind.is_dragon()
 }
 
 /// This is also the HUD's source of truth for species-specific food.
@@ -140,6 +142,14 @@ pub fn food_gain(kind: Kind, item: ItemKind) -> Option<u8> {
             item,
             ItemKind::Crop(CropItem::Corn | CropItem::Lettuce)
                 | ItemKind::Prop(ResourcePropKind::Mushroom)
+        ),
+        Kind::WaterDragon => matches!(
+            item,
+            ItemKind::Animal(AnimalProduct::Fish | AnimalProduct::Clownfish)
+        ),
+        Kind::EarthDragon | Kind::DarkDragon => matches!(
+            item,
+            ItemKind::Animal(AnimalProduct::Beef | AnimalProduct::Mutton | AnimalProduct::Pork)
         ),
         kind if kind.is_spider() => matches!(
             item,
@@ -169,6 +179,9 @@ pub fn offered(
     food: ItemKind,
 ) -> Option<AnimalBond> {
     let gain = food_gain(animal.kind, food)?;
+    if animal.kind.is_dragon() && population.owners.get(&animal.id) != Some(&player) {
+        return None;
+    }
     if player.is_nil()
         || !animal.age.is_finite()
         || animal.age < 0.0

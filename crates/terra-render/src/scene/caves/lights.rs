@@ -2,6 +2,7 @@
 mod distant;
 mod soft_core;
 mod sunlight;
+pub(super) use sunlight::known_top;
 mod updates;
 use crate::blocks::{BlockAssets, definitions::BlockLight};
 use bevy::prelude::*;
@@ -187,7 +188,14 @@ fn select(
         CaveQuality::High => 12,
         CaveQuality::Ultra => 16,
     };
-    let selected = select_emitters(&cache.emitters, &chunks, &journal, focus, budget);
+    let selected = select_emitters(
+        &cache.emitters,
+        &chunks,
+        &journal,
+        focus,
+        *camera.forward(),
+        budget,
+    );
     sync_lamps(
         &mut commands,
         &mut lamps,
@@ -282,59 +290,86 @@ fn select_emitters(
     chunks: &ChunkStore,
     journal: &EditJournal,
     focus: Vec3,
+    forward: Vec3,
     budget: usize,
 ) -> BTreeMap<[i64; 3], BlockLight> {
     let mut candidates: Vec<_> = emitters
         .iter()
-        .copied()
-        .filter(|(p, _)| {
-            let (section, _) = global_to_section(*p);
-            chunks.loaded.contains_key(&section)
+        .filter_map(|&(cell, light)| {
+            let section = global_to_section(cell).0;
+            let delta = Vec3::from_array(cell.map(|v| v as f32)) - focus;
+            chunks
+                .loaded
+                .contains_key(&section)
+                .then_some((delta.length_squared(), cell, light))
         })
         .collect();
-    candidates.sort_by(|(a, _), (b, _)| {
-        Vec3::from_array(a.map(|v| v as f32))
-            .distance_squared(focus)
-            .total_cmp(&Vec3::from_array(b.map(|v| v as f32)).distance_squared(focus))
-            .then(a.cmp(b))
-    });
-    let mut ranked = Vec::with_capacity(64);
-    for (p, light) in candidates.into_iter().take(64) {
+    candidates.sort_unstable_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+    candidates.dedup_by_key(|candidate| candidate.1);
+
+    let exposed = |cell, light| {
+        let block = |p| chunks.block_at(p).map(|id| journal.block(p).unwrap_or(id));
         let source = emitter_location(
             journal,
-            p,
+            cell,
             light,
-            location(
-                p,
-                journal.block(p).or_else(|| chunks.block_at(p)) == Some(40),
-                |p| chunks.block_at(p).map(|m| journal.block(p).unwrap_or(m)),
-            ),
+            location(cell, block(cell) == Some(40), block),
         );
-        let exposed = visible(focus, source, |p| {
-            chunks.block_at(p).map(|m| journal.block(p).unwrap_or(m))
-        });
-        if !exposed && source.distance_squared(focus) > (light.range + 2.0).powi(2) {
+        visible(
+            focus,
+            source,
+            |p| if p == cell { Some(0) } else { block(p) },
+        )
+    };
+
+    // Reserve a few of the existing slots for visible sections farther ahead.
+    // A dense near wall of crystals must not leave the next chamber completely dark.
+    let mut selected = BTreeMap::new();
+    let mut sampled = HashMap::<SectionPos, u8>::new();
+    for &(_, cell, _) in candidates.iter().take(budget - budget / 4) {
+        sampled.insert(global_to_section(cell).0, 3);
+    }
+    let mut probes = 0;
+    for &(distance, cell, light) in &candidates {
+        if selected.len() >= budget / 4 || probes >= 32 {
+            break;
+        }
+        let delta = Vec3::from_array(cell.map(|v| v as f32)) - focus;
+        if delta.dot(forward) < 0.4 * distance.sqrt() {
             continue;
         }
-        // Hidden household lamps must not exhaust the pool before a visible
-        // street light. Keep nearby corner lights eligible, rather than hard
-        // culling them whenever a doorway briefly blocks the camera ray.
-        let distance = Vec3::from_array(p.map(|v| v as f32)).distance_squared(focus);
-        let penalty = if exposed {
+        let section = global_to_section(cell).0;
+        let count = sampled.entry(section).or_default();
+        if *count >= 3 {
+            continue;
+        }
+        *count += 1;
+        probes += 1;
+        if exposed(cell, light) {
+            selected.insert(cell, light);
+            *count = 3;
+        }
+    }
+    let mut ranked = Vec::with_capacity(64);
+    for (distance, cell, light) in candidates.into_iter().take(64) {
+        let clear = exposed(cell, light);
+        if !clear && distance > (light.range + 2.0).powi(2) {
+            continue;
+        }
+        // Nearby light can spill around a doorway even if the bulb itself is hidden.
+        let penalty = if clear {
             0.0
         } else {
             (light.range * 0.65).powi(2)
         };
-        ranked.push((distance + penalty, p, light));
+        ranked.push((distance + penalty, cell, light));
     }
-    ranked.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
-    // One emitter per logical object, within the existing quality budget.
-    let mut selected = BTreeMap::new();
-    for (_, p, light) in ranked {
-        selected.insert(p, light);
+    ranked.sort_unstable_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+    for (_, cell, light) in ranked {
         if selected.len() >= budget {
             break;
         }
+        selected.insert(cell, light);
     }
     selected
 }
@@ -636,18 +671,37 @@ fn effective_cells<'a>(
 }
 
 fn visible(from: Vec3, to: Vec3, mut block: impl FnMut([i64; 3]) -> Option<u16>) -> bool {
-    let direction = to - from;
-    terra_voxel::blocks::raycast_blocks(
-        from.to_array().map(f64::from),
-        direction.to_array().map(f64::from),
-        f64::from(direction.length().max(0.05) - 0.05),
-        |p| {
-            Some(u16::from(block(p).is_none_or(|id| {
-                terra_voxel::MaterialId::from_raw(id).is_none_or(terra_voxel::MaterialId::is_opaque)
-            })))
-        },
-    )
-    .is_none()
+    let delta = to.as_dvec3() - from.as_dvec3();
+    let distance = delta.length();
+    if !distance.is_finite() {
+        return false;
+    }
+    if distance <= 0.05 {
+        return true;
+    }
+    let direction = delta / distance;
+    let mut travelled = 0.0;
+    // The shared voxel picker accepts rays up to 128 m. Split the sight line
+    // so a longer, rejected query cannot accidentally report an open tunnel.
+    while travelled < distance - 0.05 {
+        let length = (distance - 0.05 - travelled).min(128.0);
+        let hit = terra_voxel::blocks::raycast_blocks(
+            (from.as_dvec3() + direction * travelled).to_array(),
+            direction.to_array(),
+            length,
+            |p| {
+                Some(u16::from(block(p).is_none_or(|id| {
+                    terra_voxel::MaterialId::from_raw(id)
+                        .is_none_or(terra_voxel::MaterialId::is_opaque)
+                })))
+            },
+        );
+        if hit.is_some() {
+            return false;
+        }
+        travelled += length;
+    }
+    true
 }
 
 fn location(p: [i64; 3], torch: bool, mut block: impl FnMut([i64; 3]) -> Option<u16>) -> Vec3 {
@@ -1408,7 +1462,14 @@ mod tests {
         emitters.push(([-1, 0, 0], definition));
         let journal = EditJournal::default();
         for budget in [4, 8, 12, 16] {
-            let selected = select_emitters(&emitters, &chunks, &journal, Vec3::ZERO, budget);
+            let selected = select_emitters(
+                &emitters,
+                &chunks,
+                &journal,
+                Vec3::ZERO,
+                Vec3::NEG_Z,
+                budget,
+            );
             assert_eq!(selected.len(), budget);
             assert!(!selected.contains_key(&[-1, 0, 0]));
             let mut expected: Vec<_> = emitters
@@ -1473,6 +1534,7 @@ mod tests {
                 app.world().resource::<ChunkStore>(),
                 app.world().resource::<EditJournal>(),
                 focus,
+                Vec3::NEG_Z,
                 budget,
             );
             assert_eq!(selected.len(), budget.min(ids.len()));
@@ -1525,6 +1587,7 @@ mod tests {
                 &chunks,
                 &EditJournal::default(),
                 Vec3::new(0.5, 1.9, 0.5),
+                Vec3::NEG_Z,
                 budget,
             );
             assert_eq!(selected.len(), budget);
@@ -1794,6 +1857,9 @@ mod tests {
         assert!(visible(a, b, |_| Some(15)));
         assert!(!visible(a, b, |p| Some(if p[0] == 6 { 3 } else { 0 })));
         assert!(!visible(a, b, |p| (p[0] != 6).then_some(0)));
+        let far = Vec3::new(225.5, 0.5, 0.5);
+        assert!(visible(a, far, |_| Some(0)));
+        assert!(!visible(a, far, |p| Some(if p[0] == 150 { 3 } else { 0 })));
     }
     #[test]
     fn emitters_clear_their_opaque_flame_and_crystal_geometry() {

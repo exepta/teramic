@@ -35,6 +35,178 @@ use terra_core::{Config, WorldConfig};
 use terra_voxel::global_to_section;
 
 #[test]
+fn reported_desert_gallery_has_one_connected_daylight_opening_and_roofed_side_halls() {
+    let terrain = TerraGenerator::new(WorldConfig {
+        seed: terra_core::WorldSeed(2286876405460410298),
+        cave_structure_revision: 11,
+        ..Default::default()
+    })
+    .unwrap();
+    let generator = SectionGenerator::new(terrain.clone());
+    let mut aperture = std::collections::HashSet::new();
+    let mut window = None;
+    for z in -9550..-9480 {
+        for x in 215..355 {
+            let (px, pz) = (f64::from(x) + 0.5, f64::from(z) + 0.5);
+            let column = terrain.surface_column(px, pz);
+            let room = column.cave;
+            if !room.open_to_sky() {
+                continue;
+            }
+            let (lip, _) = room.salt_skylight(room.floor + 1.).unwrap();
+            assert_eq!(*window.get_or_insert(lip), lip);
+            let top = (column.height - 0.5).floor() + 0.5;
+            let surface = terrain.sample_with_column([px, top, pz], column);
+            if surface.density > 0.0 {
+                aperture.insert([x, z]);
+            } else if column.surface_material == MaterialId::Sand && room.salt_window_wall(top) {
+                assert_eq!(surface.material, MaterialId::Sand as u16);
+            }
+        }
+    }
+    assert!(
+        (40..560).contains(&aperture.len()),
+        "surface window area {}",
+        aperture.len()
+    );
+    let mut connected = vec![*aperture.iter().next().unwrap()];
+    while let Some(point @ [x, z]) = connected.pop() {
+        if aperture.remove(&point) {
+            connected.extend([[x - 1, z], [x + 1, z], [x, z - 1], [x, z + 1]]);
+        }
+    }
+    assert!(aperture.is_empty());
+    // Both ends of the same gallery used to bore straight up through the dunes.
+    for [x, z] in [[240, -9520], [332, -9522]] {
+        let column = terrain.surface_column(x as f64 + 0.5, z as f64 + 0.5);
+        let top = (column.height - 0.5).floor() as i64;
+        assert!(column.cave.active());
+        for y in top - 3..=top {
+            assert_ne!(generator.block_at([x, y, z]).unwrap(), 0);
+        }
+        assert!(
+            ((column.cave.floor.ceil() as i64)..(column.cave.ceiling.floor() as i64))
+                .any(|y| generator.block_at([x, y, z]).unwrap() == 0)
+        );
+    }
+    // The unclipped chamber ceiling crosses the terrain surface here. It
+    // previously painted a ring of stone and salt ore across the intact dune.
+    for [x, y, z] in [[241, 62, -9514], [241, 63, -9504]] {
+        assert_eq!(
+            generator.block_at([x, y, z]).unwrap(),
+            MaterialId::Sand as u16
+        );
+    }
+    // The adjacent natural ravine still descends fifteen metres, with sand
+    // deposited on the open banks above the buried mineral gallery.
+    let bed = [295, 50, -9468];
+    assert!(terrain.surface_column(295.5, -9467.5).height > 64.5);
+    assert_eq!(generator.block_at(bed).unwrap(), MaterialId::Sand as u16);
+    assert_eq!(generator.block_at([295, 51, -9468]).unwrap(), 0);
+    let dig = [240, 60, -9520];
+    let (section, local) = global_to_section(dig);
+    assert_ne!(generator.block_at(dig).unwrap(), 0);
+    let mut edits = crate::edits::EditJournal::default();
+    edits.record(dig, MaterialId::Air as u16).unwrap();
+    let rebuilt = generator
+        .build(
+            section,
+            edits.revision(section),
+            &edits.snapshot(section).unwrap(),
+            false,
+        )
+        .unwrap();
+    assert_eq!(rebuilt.data.block(local).unwrap(), MaterialId::Air as u16);
+}
+
+#[test]
+fn revision_eleven_beds_and_cross_joints_replace_the_round_stone_room() {
+    let previous = CaveStructure {
+        kind: CaveEcology::Stone,
+        center: [-192., -40., -16.],
+        radius: 58.,
+        height: 25.,
+        revision: 10,
+        ..Default::default()
+    };
+    let current = CaveStructure {
+        revision: 11,
+        ..previous
+    };
+    let [x, _, z] = current.center;
+    assert_eq!(previous.geometry(x, z), [-61.5, -19.]);
+    let [_, vault] = current.geometry(x, z);
+    let [_, saddle] = current.geometry(x + 26., z);
+    assert!(vault - saddle > 5.);
+    let floor: Vec<_> = (10..=23)
+        .map(|v| current.geometry(x, z + f64::from(v))[0])
+        .collect();
+    assert!(floor.windows(3).any(|w| w[0] == w[2]));
+    assert!(floor.last().unwrap() - floor[0] > 1.0);
+    // The side bay departs from the main axis on just one side of the strike.
+    assert!(current.radial_at(x + 16., z + 36.) < 1.);
+    assert!(current.radial_at(x + 16., z - 36.) > 1.);
+    for (dx, dz) in [(59., 0.), (0., 59.), (-52., -31.)] {
+        assert!(current.radial_at(x + dx, z + dz) > 1.);
+    }
+}
+
+#[test]
+fn revision_eleven_joins_a_tunnel_at_the_outer_shoulder_without_unsealing_its_water_bed() {
+    let room = CaveStructure {
+        kind: CaveEcology::Stone,
+        revision: 11,
+        radius: 50.,
+        floor: -40.,
+        ceiling: -26.,
+        radial: 0.88,
+        water: Some(WaterColumn {
+            level: -36.,
+            bed: -40.,
+            depth: 4.,
+        }),
+        ..Default::default()
+    };
+    let previous = CaveStructure {
+        revision: 10,
+        ..room
+    };
+    assert_eq!(previous.carve(-25., 2., 20.), -1.);
+    assert!(room.carve(-25., 2., 20.) >= 2.);
+    assert!(room.carve(-25., -6., 20.) < 0.);
+    assert!(room.carve(-41., 2., 20.) < 0.);
+}
+
+#[test]
+fn modern_dripstone_rooms_emit_rooted_fluted_growth_with_air_between_opposing_tips() {
+    let room = CaveStructure {
+        kind: CaveEcology::Dripstone,
+        floor: -48.,
+        ceiling: 4.,
+        radius: 60.,
+        revision: 10,
+        ..Default::default()
+    };
+    let mut opposed = 0;
+    for x in 0..48 {
+        for z in 0..48 {
+            let material = |y: i32| {
+                room.room_feature(
+                    [f64::from(x) + 0.5, f64::from(y) + 0.5, f64::from(z) + 0.5],
+                    4.,
+                    0.,
+                )
+            };
+            if [material(-48), material(3)] == [Some(MaterialId::DripstoneTip); 2] {
+                assert_eq!(material(-22), None);
+                opposed += 1;
+            }
+        }
+    }
+    assert!(opposed > 4);
+}
+
+#[test]
 fn explicit_revision_three_corridors_survive_chamber_guards_without_losing_their_floor_or_roof() {
     let terrain = TerraGenerator::new(WorldConfig {
         landscape_revision: 3,
@@ -323,7 +495,7 @@ fn revision_four_ecologies_have_distinct_terraces_and_safe_basin_bounds() {
 
 #[test]
 fn new_cave_contract_is_explicit_validated_and_absent_in_existing_worlds() {
-    assert_eq!(WorldConfig::default().cave_structure_revision, 8);
+    assert_eq!(WorldConfig::default().cave_structure_revision, 13);
     assert_eq!(
         WorldConfig::from_toml("").unwrap().cave_structure_revision,
         0
@@ -334,7 +506,7 @@ fn new_cave_contract_is_explicit_validated_and_absent_in_existing_worlds() {
             .cave_structure_revision,
         7
     );
-    assert!(WorldConfig::from_toml("cave_structure_revision=9").is_err());
+    assert!(WorldConfig::from_toml("cave_structure_revision=14").is_err());
     let old = TerraGenerator::new(WorldConfig {
         cave_structure_revision: 0,
         ..Default::default()
@@ -714,4 +886,292 @@ fn salt_lengths_are_two_to_ten_blocks_and_dripstone_contains_wide_spanning_pilla
         }
     }
     assert!(terrain.config().cave_structure_revision > 0);
+}
+
+#[test]
+fn salt_galleries_have_supported_bridges_clear_water_and_both_crystal_growth_directions() {
+    let config = WorldConfig::default();
+    let terrain = TerraGenerator::new(config.clone()).unwrap();
+    let mut room = None;
+    'search: for z in -20..20 {
+        for x in -20..20 {
+            let Some(center) = terrain
+                .cave_chamber_center(f64::from(x) * 192.0 + 96.0, f64::from(z) * 192.0 + 96.0)
+            else {
+                continue;
+            };
+            let sample = terrain.cave_structure_at(center[0], center[2]);
+            if sample.kind == CaveEcology::Salt
+                && sample.active()
+                && !sample.dynamic_water
+                && sample.radius > 32.0
+            {
+                room = Some(sample);
+                break 'search;
+            }
+        }
+    }
+    let room = room.expect("natural salt gallery");
+    let previous = TerraGenerator::new(WorldConfig {
+        cave_structure_revision: 8,
+        ..config
+    })
+    .unwrap();
+    let mut materials = std::collections::BTreeSet::new();
+    let mut waters = 0;
+    let mut bridges = 0;
+    let [x, _, z] = room.center.map(|v| v.floor() as i64);
+    for pz in (z - 55)..=(z + 55) {
+        for px in (x - 55)..=(x + 55) {
+            let (sx, sz) = (px as f64 + 0.5, pz as f64 + 0.5);
+            let c = terrain.surface_column(sx, sz);
+            if c.cave.kind != CaveEcology::Salt || !c.cave.active() {
+                continue;
+            }
+            let old = previous.cave_structure_at(sx, sz);
+            assert_eq!(old.salt_gallery, SaltGallery::default());
+            if c.cave.water.is_some() {
+                waters += 1;
+            }
+            let mut saw_air = false;
+            for iy in (c.cave.floor.ceil() as i64)..(c.cave.ceiling as i64) {
+                let sy = iy as f64 + 0.5;
+                let d = c.cave.carve(sy, -3.0, c.height);
+                if d > 1.0 {
+                    saw_air = true;
+                }
+                if d < 0.0 && saw_air && sy < c.cave.ceiling - 2.0 {
+                    bridges += 1;
+                }
+                if let Some(material) = terrain.cave_ecology_material([sx, sy, sz], c, d) {
+                    materials.insert(material as u16);
+                }
+            }
+        }
+    }
+    assert!(
+        waters > 50 && bridges > 50,
+        "water {waters}, bridge {bridges}"
+    );
+    for prop in 459..=463 {
+        assert!(materials.contains(&prop), "missing salt formation {prop}");
+    }
+}
+
+#[test]
+fn long_caves_cross_region_seams_with_connected_vaults_banks_and_bridges() {
+    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let mut lengths = std::collections::BTreeSet::new();
+    let mut crossed = [false; 2];
+    'scan: for x in -80..0 {
+        for z in -80..0 {
+            let (region, _, gallery) = terrain.gallery_region([x, z]);
+            let Some(g) = gallery else {
+                continue;
+            };
+            lengths.insert(g.half_length as i64);
+            if g.half_length < 112. {
+                continue;
+            }
+            let kind = usize::from(region.salt);
+            if crossed[kind] {
+                continue;
+            }
+            let room = terrain.cave_room_at(region.center[0], region.center[2]);
+            let (sin, cos) = g.angle.sin_cos();
+            // The seam falls at u=0; both region owners must supply this very same hall.
+            let mut active = 0;
+            let mut bridges = std::collections::BTreeSet::new();
+            let mut pools = 0;
+            for u in -100..=100 {
+                let u = f64::from(u);
+                let v = g.bend(u, room.radius);
+                let px = region.center[0] + u * cos - v * sin;
+                let pz = region.center[2] + u * sin + v * cos;
+                let sample = terrain.cave_room_at(px, pz);
+                assert_eq!(sample.center, room.center);
+                if sample.active() && sample.ceiling - sample.floor > 3. {
+                    active += 1;
+                }
+                if sample.salt_gallery.bridge.is_some() {
+                    bridges.insert((u / 15.).round() as i32);
+                }
+                if sample.water.is_some() {
+                    pools += 1;
+                }
+            }
+            assert_eq!(active, 201, "200-block unobstructed cavern axis");
+            if kind == 1 {
+                assert!(
+                    bridges.len() >= 2 && pools > 60,
+                    "bridges {bridges:?}, wet channel {pools}"
+                );
+            }
+            crossed[kind] = true;
+            if crossed == [true, true] && lengths.len() > 4 {
+                break 'scan;
+            }
+        }
+    }
+    assert_eq!(crossed, [true, true]);
+    assert!(lengths.len() > 4);
+}
+
+#[test]
+fn revision_eleven_karst_forms_long_wet_galleries_with_joined_pillars_and_dry_banks() {
+    let terrain = TerraGenerator::new(WorldConfig {
+        cave_structure_revision: 11,
+        ..Default::default()
+    })
+    .unwrap();
+    let (region, gallery) = (-32..0)
+        .flat_map(|x| (-32..0).map(move |z| [x, z]))
+        .find_map(|cell| {
+            let (region, _, gallery) = terrain.gallery_region(cell);
+            let g = gallery?;
+            (region.ecology == super::super::CaveBiome::Normal
+                && region.kind == CaveKind::Dripstone
+                && g.half_length >= 143.)
+                .then_some((region, g))
+        })
+        .expect("paired dripstone gallery");
+    assert!(region.radius >= 45.);
+    let (s, c) = gallery.angle.sin_cos();
+    let mut wet = 0;
+    let mut pillars = 0;
+    let mut dry = 0;
+    for along in (-120..=120).step_by(2) {
+        let u = f64::from(along);
+        for bank in (-48..=48).step_by(2) {
+            let v = gallery.bend(u, region.radius) + f64::from(bank);
+            let x = region.center[0] + u * c - v * s;
+            let z = region.center[2] + u * s + v * c;
+            let room = terrain.cave_room_at(x, z);
+            if room.kind != CaveEcology::Dripstone || !room.active() {
+                continue;
+            }
+            let mid = (room.ceiling + room.floor) * 0.5;
+            if let Some(water) = room.water {
+                assert!(water.depth > 0. && water.depth <= 4.);
+                wet += 1;
+            } else {
+                dry += 1;
+            }
+            if room.salt_gallery.density(5., mid) < 0. && room.salt_gallery.bridge.is_none() {
+                assert!(
+                    room.salt_gallery.density(5., room.ceiling - 0.5) < 0.
+                        && room.salt_gallery.density(5., room.floor + 0.5) < 0.
+                );
+                pillars += 1;
+            }
+        }
+    }
+    assert!(
+        wet > 300 && dry > 300 && pillars > 0,
+        "wet {wet} dry {dry} continuous columns {pillars}"
+    );
+}
+
+#[test]
+fn living_galleries_generate_banked_water_native_palettes_and_rooted_ornaments() {
+    use std::collections::BTreeSet;
+    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    for (kind, required) in [
+        (
+            CaveEcology::Lush,
+            [
+                MaterialId::CaveGrass,
+                MaterialId::OvergrownStone,
+                MaterialId::CaveWildflowers,
+            ],
+        ),
+        (
+            CaveEcology::Waterfall,
+            [
+                MaterialId::SnowDustStone,
+                MaterialId::FrozenStone,
+                MaterialId::IceCrystal,
+            ],
+        ),
+    ] {
+        let center = (-96..96)
+            .flat_map(|z| (-96..96).map(move |x| [x, z]))
+            .filter_map(|[x, z]| {
+                terrain.cave_chamber_center(f64::from(x * 192 + 96), f64::from(z * 192 + 96))
+            })
+            .find(|c| {
+                let room = terrain.cave_structure_at(c[0], c[2]);
+                room.active() && room.kind == kind && room.radius > 25.0
+            })
+            .unwrap();
+        let mut ids = BTreeSet::new();
+        let mut mushroom_sites = BTreeSet::new();
+        let mut levels = BTreeSet::new();
+        let (mut bridges, mut pools, mut empty) = (0, 0, 0);
+        for dz in -32..=32 {
+            for dx in -32..=32 {
+                let x = center[0].floor() + f64::from(dx) + 0.5;
+                let z = center[2].floor() + f64::from(dz) + 0.5;
+                let c = terrain.surface_column(x, z);
+                if !c.cave.active() || c.cave.kind != kind {
+                    continue;
+                }
+                if let Some(water) = c.cave.water {
+                    levels.insert(water.level.floor() as i64);
+                    assert_eq!(c.cave.pool_ecology_at(water.level), Some(kind));
+                    assert_eq!(c.cave.pool_ecology_at(c.cave.ceiling + 1.), None);
+                }
+                pools += usize::from(c.cave.water.is_some());
+                empty += usize::from(c.cave.water.is_none());
+                if let Some([lo, hi]) = c.cave.living.bridge {
+                    let y = 0.5 * f64::from(lo + hi);
+                    if c.cave.floor + 2. < f64::from(lo) && c.cave.ceiling - 2. > f64::from(hi) {
+                        assert!(c.cave.living.density(4.0, y) <= 0.0);
+                        assert!(c.cave.living.density(4.0, f64::from(lo) - 1.) > 0.0);
+                        bridges += 1;
+                    }
+                }
+                let floor = (c.cave.floor - 0.5).floor() as i64;
+                let roof = (c.cave.ceiling - 0.5).ceil() as i64;
+                for iy in [floor - 2, floor, floor + 1, roof - 2, roof - 1, roof] {
+                    let sample = terrain.sample_with_column([x, iy as f64 + 0.5, z], c);
+                    if sample.density <= 0.0 {
+                        ids.insert(sample.material);
+                        if sample.material == MaterialId::CaveMushroom as u16 {
+                            mushroom_sites.insert((dx, dz));
+                        }
+                    }
+                }
+            }
+        }
+        if kind == CaveEcology::Lush {
+            assert_eq!(
+                levels.len(),
+                3,
+                "two separate Lush falls connect three pools"
+            );
+            let clustered = mushroom_sites
+                .iter()
+                .filter(|&&(x, z)| {
+                    [(x + 1, z), (x - 1, z), (x, z - 1), (x, z + 1)]
+                        .iter()
+                        .any(|p| mushroom_sites.contains(p))
+                })
+                .count();
+            assert!(
+                clustered >= 4,
+                "warm mushroom colonies need adjacent fruiting bodies"
+            );
+        }
+        for material in required {
+            assert!(
+                ids.contains(&(material as u16)),
+                "{kind:?} missing {material:?}: {ids:?}"
+            );
+        }
+        assert!(
+            bridges > 0 && pools > 0 && empty > 0,
+            "{kind:?} bridges={bridges} wet={pools} dry={empty}"
+        );
+    }
 }

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": 462,
+  "name": "Salt Rubble",
+  "description": "Loose halite chips and fragments of cave stone.",
+  "creative_category": "decoration",
+  "mining_level": 0,
+  "hardness": 0.7,
+  "resistance": 2,
+  "struct_block": true,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/salt_rubble.glb",
+  "textures": {
+    "Cleavage edge": "textures/salt_cave/compact_side.png",
+    "Halite": "textures/salt_cave/clear_side.png",
+    "Chipped facet": "textures/salt_cave/crust_top.png",
+    "Rock": "textures/salt_cave/base_side.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.1,
+        0,
+        0.1
+      ],
+      "maximum": [
+        0.9,
+        0.23,
+        0.9
+      ]
+    }
+  ]
+}

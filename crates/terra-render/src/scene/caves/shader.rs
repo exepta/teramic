@@ -31,6 +31,12 @@ pub(crate) struct CaveSettings {
     pub scattering: Vec4,
     pub ink: Vec4,
     pub smoke: Vec4,
+    pub salt_window: Vec4,
+    pub sun_direction: Vec4,
+    pub beam_depths: Vec4,
+    pub beam_radii: Vec4,
+    pub beam_cross_radii: Vec4,
+    pub gallery_dust: f32,
 }
 impl Default for CaveSettings {
     fn default() -> Self {
@@ -43,6 +49,12 @@ impl Default for CaveSettings {
             scattering: Vec4::ZERO,
             ink: Vec4::ZERO,
             smoke: Vec4::ZERO,
+            salt_window: Vec4::ZERO,
+            sun_direction: Vec4::ZERO,
+            beam_depths: Vec4::ZERO,
+            beam_radii: Vec4::ZERO,
+            beam_cross_radii: Vec4::ZERO,
+            gallery_dust: 1.,
         }
     }
 }
@@ -152,6 +164,7 @@ fn draw(
     // Dry outdoor views and Low water quality without ink have no extra pass.
     if settings.parameters.x <= 0.001
         && settings.parameters.z <= 0.001
+        && settings.parameters.w <= 0.001
         && settings.underwater.x <= 0.001
         && settings.waterline.y <= 0.001
         && settings.ink.x <= 0.001

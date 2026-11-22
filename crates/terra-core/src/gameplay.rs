@@ -210,6 +210,7 @@ pub enum ItemKind {
     RoadAggregate,
     GloomEssence,
     LightSplitter,
+    DragonLoot(crate::creatures::dragons::DragonLoot),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -647,7 +648,7 @@ impl ItemKind {
             Self::WoodenBlock { material, wood }
         }
     }
-    pub const EXTRA: [Self; 208] = [
+    pub const EXTRA: [Self; 227] = [
         Self::GlassBottle,
         Self::WaterBottle,
         Self::Potion(1),
@@ -1072,6 +1073,25 @@ impl ItemKind {
         Self::RoadAggregate,
         Self::GloomEssence,
         Self::LightSplitter,
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::DarkScale),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::EarthScale),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::WaterScale),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::Fang),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::Hide),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::ShadowCore),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::Blood),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::ShadowCrystal),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::ShadowHeart),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::Membrane),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::EarthCrystal),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::RawMeat),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::CookedMeat),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::Dust),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::Claw),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::Horn),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::WaterHeart),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::IceEssence),
+        Self::DragonLoot(crate::creatures::dragons::DragonLoot::WaterEssence),
     ];
     pub fn can_harvest(self, material: u16) -> bool {
         if let Some(ore) = crate::OreKind::from_material(material) {
@@ -1116,6 +1136,7 @@ impl ItemKind {
             Self::Bitumen => "teramic::bitumen".into(),
             Self::RoadAggregate => "teramic::road_aggregate".into(),
             Self::GloomEssence => "teramic::gloom_essence".into(),
+            Self::DragonLoot(loot) => format!("teramic::{}", loot.slug()),
             Self::LightSplitter => "teramic::light_splitter".into(),
             Self::Apple => "teramic::apple".into(),
             Self::AppleCore => "teramic::apple_core".into(),
@@ -1197,7 +1218,8 @@ impl ItemKind {
             | Self::Bitumen
             | Self::RoadAggregate
             | Self::GloomEssence
-            | Self::LightSplitter => true,
+            | Self::LightSplitter
+            | Self::DragonLoot(_) => true,
             Self::Dye(_) => true,
             Self::Armor(_) | Self::Accessory(_) | Self::Cape(_) | Self::Dust(_) | Self::Crop(_) => {
                 true
@@ -1468,6 +1490,18 @@ fn identity_rotation() -> [f32; 4] {
     [0.0, 0.0, 0.0, 1.0]
 }
 impl WorldDrop {
+    /// Half a turn around X points the model’s growth axis down. Detached
+    /// minerals retain this pose and never spin like discarded inventory.
+    pub const MINERAL_TIP_DOWN: [f32; 4] = [1., 0., 0., 0.];
+
+    pub fn detached_mineral_length(&self) -> Option<u16> {
+        (!self.grounded
+            && matches!(self.stack.item, ItemKind::Block(51..=53 | 460))
+            && self.rotation == Self::MINERAL_TIP_DOWN
+            && self.angular_velocity == [0.; 3])
+            .then_some(self.stack.count.clamp(1, 32))
+    }
+
     pub fn valid(&self) -> bool {
         self.id != 0
             && self.stack.valid()
@@ -1518,6 +1552,7 @@ pub struct GameplayState {
     pub pet_orders: BTreeMap<u64, crate::creatures::taming::CompanionMode>,
     pub animal_families: BTreeMap<u64, crate::creatures::breeding::AnimalFamily>,
     pub next_animal_birth: u32,
+    pub dragon_eggs: Vec<crate::creatures::dragon_eggs::IncubatingEgg>,
     pub spider_dens: BTreeMap<u64, crate::creatures::taming::SpiderDen>,
     pub inventories: BTreeMap<PlayerUuid, Inventory>,
     pub player_stats: BTreeMap<PlayerUuid, PlayerStats>,
@@ -1528,7 +1563,8 @@ pub struct GameplayState {
 impl GameplayState {
     pub fn valid(&self) -> bool {
         let mut ids = HashSet::new();
-        self.trains.valid()
+        crate::creatures::dragon_eggs::valid(&self.dragon_eggs)
+            && self.trains.valid()
             && self.buildings.valid()
             && self.jobs.valid()
             && self.trees.valid()
@@ -1566,10 +1602,9 @@ impl GameplayState {
                 !crate::creatures::breeding::is_birth_id(animal.id)
                     || crate::creatures::breeding::birth_serial(animal.id)
                         .is_some_and(|serial| serial <= self.next_animal_birth)
-                        && self
-                            .animal_families
-                            .get(&animal.id)
-                            .is_some_and(|family| family.parents.is_some())
+                        && self.animal_families.get(&animal.id).is_some_and(|family| {
+                            family.parents.is_some() || animal.kind.is_dragon()
+                        })
                         && (self.creatures.owners.contains_key(&animal.id)
                             || animal.kind == crate::creatures::CreatureKind::Bee
                                 && self.creatures.ecology.bees.contains_key(&animal.id))

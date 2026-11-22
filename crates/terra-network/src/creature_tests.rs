@@ -74,8 +74,31 @@ fn wild_bee_birth_snapshots_keep_two_udp_clients_updating_and_invalid_births_rec
         intentions: Vec::new(),
         bonds: Vec::new(),
         families: vec![family],
+        boss: None,
         stalker_grip: None,
     };
+    // Animation age and calendar age intentionally disagree. Both UDP clients
+    // must reconstruct the calendar record and use it for geometry after joining.
+    let dragon_id = breeding::next_birth_id(&CreaturePopulation::default(), 1).unwrap();
+    let mut dragon = make(dragon_id, CreatureKind::WaterDragon);
+    let life = dragon_life::DragonLife {
+        months: 4.5,
+        training: 26.,
+        ..Default::default()
+    };
+    dragon.needs.dragon = Some(life);
+    packet
+        .families
+        .push(breeding::FamilyView::new(&dragon, Default::default()));
+    let keeper = terra_core::PlayerUuid::from_u128(155);
+    packet.bonds.push(taming::CompanionView {
+        id: dragon_id,
+        player: keeper,
+        owner: Some(keeper),
+        trust: 100,
+        mode: taming::CompanionMode::Follow,
+    });
+    packet.creatures.push(dragon);
     for phase in 0..4 {
         packet.tick = base + phase;
         packet.creatures[1].position[0] = 3.0 + phase as f64 * 0.25;
@@ -92,6 +115,13 @@ fn wild_bee_birth_snapshots_keep_two_udp_clients_updating_and_invalid_births_rec
             })
         });
         for client in [&a, &b] {
+            let dragon = &client
+                .world()
+                .resource::<client::ReplicatedCreatures>()
+                .creatures[&dragon_id]
+                .current;
+            assert_eq!(dragon.needs.dragon, Some(life));
+            assert_eq!(dragon.dragon_stage(), dragon_life::DragonStage::Adolescent);
             assert!(client.world().resource::<client::ClientSession>().ready);
             assert_eq!(
                 client
@@ -1166,6 +1196,7 @@ fn full_creature_interest_budget_and_needs_reach_two_real_udp_clients() {
                     age: 0.0,
                     variant: 0,
                     needs: CreatureNeeds {
+                        dragon: None,
                         food: 15.0,
                         water: 12.0,
                         search_in: 15.0,
@@ -1287,4 +1318,115 @@ fn resource_search_budget_eventually_serves_all_256_animals_with_two_clients() {
         *served == ids
     });
     assert_eq!(served.borrow().len(), 256);
+}
+
+#[test]
+fn territorial_spider_replicates_locked_web_and_slows_only_the_struck_survivor() {
+    use terra_core::{EffectKind, GameMode, PlayerLocation, PlayerProfile};
+    let mut host = server();
+    let profiles = [PlayerProfile::default(), PlayerProfile::default()];
+    let victim = profiles[0].uuid;
+    {
+        let mut config = host.world_mut().resource_mut::<GameConfig>();
+        config.server.game_mode = GameMode::Survival;
+        config.server.natural_mob_limit = Some(0);
+    }
+    {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        for x in 1..32 {
+            for z in 5..15 {
+                for y in 31..38 {
+                    journal
+                        .record([x, y, z], if y == 31 { 3 } else { 0 })
+                        .unwrap();
+                }
+            }
+        }
+        for (p, x) in profiles.iter().zip([13.5, 28.5]) {
+            journal
+                .update_player_location(
+                    p.uuid,
+                    PlayerLocation {
+                        position: [x, 32. + terra_physics::character::PLAYER_HALF_HEIGHT, 10.5],
+                        look: [0.; 2],
+                        flying: false,
+                    },
+                )
+                .unwrap();
+        }
+    }
+    let address = host
+        .world()
+        .resource::<server::ServerRuntime>()
+        .address
+        .unwrap();
+    let [mut a, mut b] = profiles.map(|p| profile_client(address, p));
+    let mut clients = [&mut a, &mut b];
+    wait(&mut host, &mut clients, |_, clients| {
+        clients.iter().all(|c| {
+            c.world()
+                .resource::<client::ClientSession>()
+                .confirmed_state()
+                .is_some_and(|s| s.grounded)
+        })
+    });
+    let id = {
+        let mut journal = host.world_mut().resource_mut::<EditJournal>();
+        let pop = &mut journal.gameplay_mut().creatures;
+        pop.animals.clear();
+        let id = spawning::next_command_id(pop).unwrap();
+        let kind = CreatureKind::LargeSpider;
+        pop.animals.insert(
+            id,
+            Creature {
+                id,
+                kind,
+                home: [0, 0],
+                position: [3.5, 32.015, 10.5],
+                velocity: [0.; 3],
+                yaw: 0.,
+                health: kind.health(),
+                behavior: CreatureBehavior::Crawl,
+                timer: 0.,
+                age: 29. - (id % 11) as f64,
+                variant: 0,
+                needs: CreatureNeeds::full(kind),
+            },
+        );
+        id
+    };
+    wait(&mut host, &mut clients, |_, clients| {
+        clients.iter().all(|c| {
+            c.world()
+                .resource::<client::ReplicatedCreatures>()
+                .creatures
+                .get(&id)
+                .is_some_and(|track| spiders::WebShot::of(&track.current).is_some())
+        })
+    });
+    wait(&mut host, &mut clients, |host, clients| {
+        host.world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .player_stats
+            .get(&victim)
+            .is_some_and(|s| s.survival.effects.contains(EffectKind::Slow))
+            && clients[0]
+                .world()
+                .resource::<client::ClientSession>()
+                .stats
+                .survival
+                .effects
+                .get(EffectKind::Slow)
+                .is_some_and(|e| e.level == 2)
+    });
+    assert!(
+        !clients[1]
+            .world()
+            .resource::<client::ClientSession>()
+            .stats
+            .survival
+            .effects
+            .contains(EffectKind::Slow)
+    );
 }

@@ -6,17 +6,36 @@
   "creative_category": "decoration",
   "render_kind": "segment",
   "struct_block": true,
-  "collision_boxes": [{"minimum": [0.075, 0.0, 0.075], "maximum": [0.925, 1.0, 0.925]}],
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.075,
+        0.0,
+        0.075
+      ],
+      "maximum": [
+        0.925,
+        1.0,
+        0.925
+      ]
+    }
+  ],
   "materials": {
     "Living surface": {
       "base_color": [
+        1,
+        0.98,
         0.96,
-        0.91,
-        0.84,
         1
       ],
-      "roughness": 0.88,
-      "reflectance": 0.22
+      "emission": [
+        0.044,
+        0.023,
+        0.011
+      ],
+      "roughness": 0.38,
+      "reflectance": 0.44,
+      "normal_texture": "textures/salt_cave/compact_side_normal.png"
     }
   },
   "face_materials": [
@@ -30,5 +49,8 @@
   "hardness": 0.45,
   "resistance": 1,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Living surface": "textures/salt_cave/compact_side.png"
+  }
 }

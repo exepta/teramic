@@ -84,6 +84,7 @@ fn packet(state: &GameplayState, tick: u64) -> CreatureStates {
             .iter()
             .map(|(id, family)| breeding::FamilyView::new(&state.creatures.animals[id], *family))
             .collect(),
+        boss: None,
         stalker_grip: None,
     }
 }
@@ -170,4 +171,75 @@ fn invalid_snapshot_diagnostics_are_bounded_and_warn_at_most_once_per_five_secon
     creatures.rejected_snapshots = u64::MAX;
     creatures.reject_snapshot(502, "invalid creature state", next);
     assert_eq!(creatures.rejected_snapshots, u64::MAX);
+}
+
+#[test]
+fn replicated_boss_must_be_a_present_living_dragon() {
+    let (mut state, _) = colony();
+    let id = creature_id([0, 0], 0).unwrap();
+    let mut snapshot = packet(&state, 1);
+    snapshot.boss = Some(id);
+    assert!(snapshot_ids(&snapshot).is_err());
+    state
+        .creatures
+        .animals
+        .insert(id, animal(id, CreatureKind::DarkDragon));
+    let mut snapshot = packet(&state, 2);
+    snapshot.boss = Some(id);
+    assert!(snapshot_ids(&snapshot).is_ok());
+    snapshot.boss = Some(u64::MAX);
+    assert!(snapshot_ids(&snapshot).is_err());
+    snapshot.boss = Some(id);
+    snapshot
+        .creatures
+        .iter_mut()
+        .find(|a| a.id == id)
+        .unwrap()
+        .health = 0.0;
+    assert!(snapshot_ids(&snapshot).is_err());
+}
+
+#[test]
+fn repeated_full_snapshots_leave_real_strides_and_attack_clocks_intact_for_every_species() {
+    let start = Instant::now();
+    for kind in CreatureKind::ALL {
+        let mut actor = animal(1, kind);
+        actor.behavior = CreatureBehavior::Wander;
+        actor.velocity[0] = 2.0;
+        let mut track = CreatureTrack {
+            playback: Default::default(),
+            current: actor.clone(),
+            previous: actor.clone(),
+            received: start,
+            interval: 0.1,
+        };
+        let mut reference = track.clone();
+        for tick in 0..=10 {
+            let now = start + Duration::from_millis(tick * 100);
+            let stamp = tick as f64 * 0.1;
+            if tick % 2 == 0 {
+                actor.age = stamp;
+                actor.position[0] = 3.0 + stamp * 2.0;
+                reference.apply(actor.clone(), stamp, now);
+            } else {
+                actor.health -= 0.1;
+            }
+            track.apply(actor.clone(), stamp, now);
+            assert_eq!(track.current.health, actor.health);
+            assert_eq!(track.received, reference.received, "{kind:?}");
+            let between = now + Duration::from_millis(50);
+            assert_eq!(
+                track.position_at(between),
+                reference.position_at(between),
+                "{kind:?}"
+            );
+        }
+        // A real same-age transition (e.g. an interaction between AI ticks)
+        // must still reach the renderer immediately.
+        actor.behavior = CreatureBehavior::Attack;
+        let now = start + Duration::from_millis(1100);
+        track.apply(actor, 1.1, now);
+        assert_eq!(track.received, now);
+        assert_eq!(track.current.behavior, CreatureBehavior::Attack);
+    }
 }

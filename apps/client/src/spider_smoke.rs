@@ -163,14 +163,14 @@ fn run(world: &mut World) {
         world.write_message(AppExit::error());
         return;
     }
-    if stage >= if model_only { 4 } else { 9 } {
+    if stage >= if model_only { 4 } else { 10 } {
         if model_only {
             info!(
                 "Spider model gallery passed: three sizes; overview, small front, medium front, large elevated side; real cached meshes and animation"
             );
         } else {
             info!(
-                "Spider visual fixture passed: three body sizes front/side, articulated wall/ceiling/descending poses and ten actual web mesh templates; model-only fixture"
+                "Spider visual fixture passed: three body sizes front/side, articulated wall/ceiling/descending poses web shot in flight and ten actual web mesh templates; model-only fixture"
             );
         }
         world.write_message(AppExit::Success);
@@ -197,6 +197,8 @@ fn run(world: &mut World) {
             } else {
                 Vec3::new(size * 3.1, size * 0.9, size * 0.9)
             }
+    } else if stage == 9 {
+        Vec3::new(20.5, 35.0, 12.8)
     } else if stage == 6 {
         Vec3::new(12.0, 36.5, 14.0)
     } else if stage == 7 {
@@ -217,6 +219,8 @@ fn run(world: &mut World) {
             32.0 + [0.08, 0.39, 0.96][stage / 2],
             20.0,
         )
+    } else if stage == 9 {
+        Vec3::new(16.0, 33.2, 17.4)
     } else if stage == 6 {
         Vec3::new(10.0, 33.5, 20.0)
     } else {
@@ -243,7 +247,17 @@ fn run(world: &mut World) {
             [0.25, 0.0, 0.0]
         };
         track.current.position[1] = if stage == 6 { 34.0 } else { 32.0 };
-        track.current.needs.goal = if stage == 6 && index == 2 {
+        track.current.needs.goal = if stage == 9 && index == 2 {
+            track.current.timer = terra_core::creatures::spiders::WEB_CAST_TIME
+                - terra_core::creatures::spiders::WEB_WINDUP
+                - 0.23;
+            track.current.velocity = [0.; 3];
+            track.current.behavior = Behavior::Hunt;
+            Some(terra_core::creatures::NeedGoal {
+                kind: terra_core::creatures::NeedKind::AttackAim,
+                position: [16, 33, 11],
+            })
+        } else if stage == 6 && index == 2 {
             Some(terra_core::creatures::NeedGoal {
                 kind: terra_core::creatures::NeedKind::Food,
                 position: [16, 39, 20],

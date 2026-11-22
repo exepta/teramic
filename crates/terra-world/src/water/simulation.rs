@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use terra_voxel::global_to_section;
 
-const TICK_SECONDS: f64 = 0.1;
+const TICK_SECONDS: f64 = terra_core::fluid_surface::WATER_STEP_SECONDS;
 const CELL_BUDGET: usize = 256;
 mod flux;
 mod pools;
@@ -328,7 +328,10 @@ pub(crate) fn tick(
     if !access.authoritative() || time.elapsed_secs_f64() - *last < TICK_SECONDS {
         return;
     }
-    *last = time.elapsed_secs_f64();
+    // Retain the fractional step even when rendering or the server frame runs
+    // late. Perform at most one bounded simulation step per update.
+    let elapsed = time.elapsed_secs_f64() - *last;
+    *last += (elapsed / TICK_SECONDS).floor() * TICK_SECONDS;
     let started = std::time::Instant::now();
     match simulate_fluid_step(
         &terrain.0,

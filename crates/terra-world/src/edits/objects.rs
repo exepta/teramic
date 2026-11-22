@@ -96,7 +96,11 @@ impl LiquidState {
                 (if self.age & terra_core::bile::FINE != 0 {
                     (1..=64).contains(&self.volume)
                         && self.age & terra_core::bile::LIFETIME_MASK
-                            <= terra_core::bile::SPIT_STEPS
+                            <= if self.age & terra_core::bile::TIMER_8HZ != 0 {
+                                terra_core::bile::SPIT_STEPS
+                            } else {
+                                25
+                            }
                         && (self.source || self.age & terra_core::bile::LIFETIME_MASK == 0)
                 } else {
                     self.age <= 31 && (1..=8).contains(&self.volume)

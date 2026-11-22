@@ -131,4 +131,4 @@ pub(super) fn nearest_visible_at(
 }
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;

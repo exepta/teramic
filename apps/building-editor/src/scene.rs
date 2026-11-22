@@ -112,25 +112,63 @@ pub fn install_document(world: &mut World, document: Document) -> Result<(), Str
     world.insert_resource(document);
     Ok(())
 }
-pub fn seed(world: &mut World) {
-    let mut args = std::env::args().skip(1);
-    let mut loaded = None;
+fn load_argument() -> Result<Option<std::path::PathBuf>, String> {
+    let mut args = std::env::args_os().skip(1);
+    let mut path = None;
     while let Some(argument) = args.next() {
         if argument == "--load" {
-            loaded = args.next();
+            if path.is_some() {
+                return Err("--load can only be provided once".into());
+            }
+            path = Some(args.next().ok_or("--load requires a template path")?.into());
         }
     }
-    let result = loaded
-        .as_ref()
-        .map(|path| {
-            terra_core::building_jobs::template::BuildingTemplate::load(std::path::Path::new(path))
-                .and_then(|template| Document::from_template(template, Some(path.into())))
-        })
-        .unwrap_or_else(|| Ok(Document::default()))
-        .and_then(|document| install_document(world, document));
+    Ok(path)
+}
+
+fn load_document(world: &mut World, path: std::path::PathBuf) -> Result<(), String> {
+    let template = terra_core::building_jobs::template::BuildingTemplate::load(&path)?;
+    install_document(world, Document::from_template(template, Some(path))?)
+}
+
+pub fn seed(world: &mut World) {
+    let result = load_argument().and_then(|path| match path {
+        Some(path) => load_document(world, path),
+        None => install_document(world, Document::default()),
+    });
     if let Err(error) = result {
         world.resource_mut::<crate::editor::Editor>().error = error;
     }
+}
+
+pub(crate) fn verify_package() -> Result<(), String> {
+    let path = load_argument()?.ok_or("--verify-package requires --load PATH.json")?;
+    let mut world = World::new();
+    world.init_resource::<WorkspacePlatform>();
+    world.init_resource::<ChunkStore>();
+    world.init_resource::<crate::editor::Editor>();
+    world.insert_resource(terra_world::streaming::ChunkFocus([0.0; 3]));
+    load_document(&mut world, path)?;
+    let document = world.resource::<Document>();
+    let journal = world.resource::<EditJournal>();
+    if document.cells.is_empty() {
+        return Err("The installed template contains no authored cells".into());
+    }
+    for (&position, cell) in &document.cells {
+        if journal.block(position) != Some(cell.material)
+            || journal.object_state(position).unwrap_or_default() != cell.state
+        {
+            return Err(format!(
+                "Installed template differs from the workspace at {position:?}"
+            ));
+        }
+    }
+    println!(
+        "Package editor verified ({}: {} cells)",
+        document.id,
+        document.cells.len()
+    );
+    Ok(())
 }
 pub(super) fn document_bounds(document: &Document) -> (Vec3, Vec3) {
     let anchor = Vec3::from_array(document.anchor.map(|v| v as f32));

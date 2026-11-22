@@ -692,23 +692,24 @@ fn capture_range(
                     if water.amount == 0 {
                         continue;
                     }
-                    let is_blood = *blood.entry([p[0], p[2]]).or_insert_with(|| {
-                        source
-                            .chunks
-                            .surface_column_at(p[0], p[2])
-                            .map_or_else(
-                                || {
-                                    source
+                    let surface_blood = blood.entry([p[0], p[2]]).or_insert_with(|| {
+                        let sample = |column: &terra_world::SurfaceColumn| {
+                            (column.biome.weights.blood_forest > 0.5).then_some(column.cave)
+                        };
+                        source.chunks.surface_column_at(p[0], p[2]).map_or_else(
+                            || {
+                                sample(
+                                    &source
                                         .terrain
                                         .0
-                                        .biome_at(p[0] as f64 + 0.5, p[2] as f64 + 0.5)
-                                },
-                                |c| c.biome,
-                            )
-                            .weights
-                            .blood_forest
-                            > 0.5
+                                        .surface_column(p[0] as f64 + 0.5, p[2] as f64 + 0.5),
+                                )
+                            },
+                            sample,
+                        )
                     });
+                    let is_blood = surface_blood
+                        .is_some_and(|cave| cave.pool_ecology_at(p[1] as f64 + 0.5).is_none());
                     Region {
                         minimum: local,
                         maximum: [

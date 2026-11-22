@@ -1,5 +1,6 @@
 //! Native views of generated biome features. No fixture blocks or world edits.
 mod blood;
+mod dragon_lairs;
 mod ecology;
 mod graves;
 mod light_timing;
@@ -51,6 +52,7 @@ enum Scene {
     KingdomWinter,
     Outpost,
     Grave(graves::Kind),
+    DragonLair(dragon_lairs::Kind),
     Picker(terra_core::BiomeKind),
 }
 
@@ -84,6 +86,7 @@ impl Scene {
             Self::KingdomWinter => "kingdom-winter",
             Self::Outpost => "outpost",
             Self::Grave(kind) => kind.name(),
+            Self::DragonLair(kind) => kind.name(),
             Self::Picker(kind) => match kind {
                 terra_core::BiomeKind::Ocean => "picker-ocean",
                 terra_core::BiomeKind::Plains => "picker-plains",
@@ -190,6 +193,9 @@ pub(crate) fn install(app: &mut App) {
         Ok("kingdom-temperate") => (Scene::KingdomTemperate, false),
         Ok("kingdom-winter") => (Scene::KingdomWinter, false),
         Ok("outpost") => (Scene::Outpost, false),
+        Ok("dragon-lair-dark") => (Scene::DragonLair(dragon_lairs::Kind::Dark), false),
+        Ok("dragon-lair-earth") => (Scene::DragonLair(dragon_lairs::Kind::Earth), false),
+        Ok("dragon-lair-water") => (Scene::DragonLair(dragon_lairs::Kind::Water), false),
         Ok("cemetery") => (Scene::Grave(graves::Kind::Cemetery), false),
         Ok("grave-knight") => (Scene::Grave(graves::Kind::Knight), false),
         Ok("grave-priestess") => (Scene::Grave(graves::Kind::Priestess), false),
@@ -241,6 +247,7 @@ fn locate(world: &mut World) {
     let scene = world.resource::<BiomeSmoke>().scene;
     let views = match scene {
         Scene::Grave(kind) => graves::views(world, &terrain, kind),
+        Scene::DragonLair(kind) => dragon_lairs::views(world, &terrain, kind),
         Scene::Picker(terra_core::BiomeKind::BloodForest) => blood::picker_views(world, &terrain),
         Scene::Picker(kind) => picker_views(&terrain, kind),
         Scene::Cave => cave_views(&terrain),
@@ -273,16 +280,21 @@ fn locate(world: &mut World) {
         );
         return;
     };
+    let fov = if matches!(scene, Scene::DragonLair(_)) {
+        70.0
+    } else {
+        55.0
+    };
     if world
         .resource::<terra_core::GameConfig>()
         .client
         .fov_degrees
-        != 55.0
+        != fov
     {
         world
             .resource_mut::<terra_core::GameConfig>()
             .client
-            .fov_degrees = 55.0;
+            .fov_degrees = fov;
     }
     world
         .resource_mut::<bevy::gizmos::config::GizmoConfigStore>()
@@ -292,7 +304,11 @@ fn locate(world: &mut World) {
     set_camera(world, views.overview);
     if matches!(
         scene,
-        Scene::KingdomTemperate | Scene::KingdomWinter | Scene::Outpost | Scene::Grave(_)
+        Scene::KingdomTemperate
+            | Scene::KingdomWinter
+            | Scene::Outpost
+            | Scene::Grave(_)
+            | Scene::DragonLair(_)
     ) {
         // Stream around the real settlement, so a distant overview camera never
         // excludes the rear keep or the ground beneath its own high viewpoint.
@@ -1651,7 +1667,7 @@ fn inspect_atmosphere(world: &World, state: &mut BiomeSmoke) -> Result<bool, Str
 fn run(world: &mut World) {
     world.resource_scope(|world, mut state: Mut<BiomeSmoke>| {
         if state.stage == 3 { return; }
-        if matches!(state.scene, Scene::Picker(_) | Scene::BloodForest | Scene::Ecology(_) | Scene::Reference(_) | Scene::KingdomTemperate | Scene::KingdomWinter | Scene::Outpost | Scene::Grave(_)) {
+        if matches!(state.scene, Scene::Picker(_) | Scene::BloodForest | Scene::Ecology(_) | Scene::Reference(_) | Scene::KingdomTemperate | Scene::KingdomWinter | Scene::Outpost | Scene::Grave(_) | Scene::DragonLair(_)) {
             // The real feature remains in the frustum without repeatedly
             // invalidating the camera after its settled projection is correct.
             ensure_preview_range(world);
@@ -1686,7 +1702,7 @@ fn run(world: &mut World) {
                 > Duration::from_secs(
                     if matches!(
                         state.scene,
-                        Scene::KingdomTemperate | Scene::KingdomWinter | Scene::Outpost | Scene::Grave(_)
+                        Scene::KingdomTemperate | Scene::KingdomWinter | Scene::Outpost | Scene::Grave(_) | Scene::DragonLair(_)
                     ) {
                         240
                     } else {
@@ -1723,14 +1739,25 @@ fn run(world: &mut World) {
                     | Scene::KingdomWinter
                     | Scene::Outpost
                     | Scene::Picker(_)
-                    | Scene::Grave(_)
+                    | Scene::Grave(_) | Scene::DragonLair(_)
             ) && !world.resource::<terra_render::PropRenderStatus>().ready
             || generation.status != GenerationStatus::Ready
         {
             state.since = Instant::now();
             return;
         }
-        if state.since.elapsed() < Duration::from_secs(3) {
+        if matches!(state.scene, Scene::DragonLair(_)) {
+            match dragon_lairs::guardian_ready(world) {
+                Ok(true) => {}
+                Ok(false) => return,
+                Err(reason) => {
+                    error!(%reason, "Invalid generated dragon encounter");
+                    state.failed = true;
+                    return;
+                }
+            }
+            if state.started.elapsed()<Duration::from_secs(8) { return; }
+        } else if state.since.elapsed() < Duration::from_secs(3) {
             return;
         }
         let Some(views) = &state.views else {

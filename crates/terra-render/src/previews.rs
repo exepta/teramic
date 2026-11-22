@@ -668,6 +668,7 @@ fn compose_item(
         | ItemKind::Bone
         | ItemKind::Bitumen
         | ItemKind::GloomEssence
+        | ItemKind::DragonLoot(_)
         | ItemKind::LightSplitter
         | ItemKind::RoadAggregate => forest_items::batches(item, templates.item_materials.opaque),
         ItemKind::Apple | ItemKind::AppleCore => {
@@ -766,6 +767,7 @@ fn render_next(
                     | ItemKind::Bone
                     | ItemKind::Bitumen
                     | ItemKind::GloomEssence
+                    | ItemKind::DragonLoot(_)
                     | ItemKind::LightSplitter
                     | ItemKind::RoadAggregate
                     | ItemKind::Flower(_)
@@ -1262,10 +1264,14 @@ pub(crate) fn batch_mesh(batch: &MeshBatch) -> Mesh {
     .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, batch.uvs.clone())
     .with_inserted_indices(Indices::U32(batch.indices.clone()));
     if !batch.tangents.is_empty() {
-        mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, batch.tangents.clone());
+        let mut tangents = batch.tangents.clone();
+        batch.complete_tangents(&mut tangents, batch.positions.len());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, tangents);
     }
     if !batch.colors.is_empty() {
-        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, batch.colors.clone());
+        let mut colors = batch.colors.clone();
+        colors.resize(batch.positions.len(), [1.; 4]);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
     }
     if batch.colors.first().is_some_and(|color| color[3] == 4.0) {
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_1, vec![[0.0; 2]; batch.positions.len()]);

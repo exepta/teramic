@@ -8,7 +8,7 @@ fn spiders_have_eight_separate_banded_legs_and_body_specific_dimensions() {
         (Kind::LargeSpider, [1.345, 1.25, 1.895]),
     ] {
         let parts = parts(kind).unwrap();
-        assert_eq!(parts.len(), 12);
+        assert_eq!(parts.len(), 12 + usize::from(kind != Kind::SmallSpider));
         assert_eq!(
             parts
                 .iter()
@@ -71,7 +71,7 @@ fn spider_eye_fronts_are_outside_the_shell_and_unoccluded_by_body_head_or_legs()
             );
             let origin = target + Vec3::NEG_Z * length;
             for (part, offset, mesh) in &parts {
-                if matches!(part, Part::SpiderEyes | Part::Silk) {
+                if matches!(part, Part::SpiderEyes | Part::Silk | Part::WebShot) {
                     continue;
                 }
                 let Some(VertexAttributeValues::Float32x3(points)) =

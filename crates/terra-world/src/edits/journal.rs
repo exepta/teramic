@@ -1117,6 +1117,11 @@ impl EditJournal {
         // Installing their section cells is not a new local replacement edit.
         if relinquish_tree {
             self.gameplay.trees.relinquish(global);
+            if !self.gameplay.dragon_eggs.is_empty() {
+                self.gameplay
+                    .dragon_eggs
+                    .retain(|egg| egg.position != global || egg.shell == material);
+            }
         }
         let edits = self.sections.entry(owner).or_default();
         let previous = edits.blocks.insert(local, material);

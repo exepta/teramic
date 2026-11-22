@@ -41,13 +41,26 @@ pub struct MobCombat {
     pub poison_seconds: f32,
 }
 impl MobCombat {
+    pub const MELEE_IMPACT_PHASE: f32 = 0.42;
+
     /// Presentation and authority share a wind-up, impact, recovery cycle.
     /// `Creature::timer` counts down from the complete configured cooldown.
     pub fn melee_phase(self, remaining: f32) -> f32 {
         (1.0 - remaining / self.cooldown).clamp(0.0, 1.0)
     }
     pub fn melee_impact_remaining(self) -> f32 {
-        self.cooldown * 0.58
+        self.cooldown * (1.0 - Self::MELEE_IMPACT_PHASE)
+    }
+
+    /// Advance a strike only while in reach and visible. Contact starts a
+    /// fresh wind-up; exactly one tick crosses the impact of each full cycle.
+    pub fn melee_contact(self, entering: bool, previous: f32, remaining: &mut f32) -> bool {
+        let impact = self.melee_impact_remaining();
+        let hit = !entering && previous > impact && *remaining <= impact;
+        if entering || *remaining <= 0.0 {
+            *remaining = self.cooldown;
+        }
+        hit
     }
 
     fn valid(self) -> bool {
@@ -238,6 +251,18 @@ pub fn get(kind: CreatureKind) -> &'static MobDefinition {
             (
                 "sand_worm",
                 include_str!("../../../../assets/terra/mobs/sand_worm.json"),
+            ),
+            (
+                "dark_dragon",
+                include_str!("../../../../assets/terra/mobs/dark_dragon.json"),
+            ),
+            (
+                "earth_dragon",
+                include_str!("../../../../assets/terra/mobs/earth_dragon.json"),
+            ),
+            (
+                "water_dragon",
+                include_str!("../../../../assets/terra/mobs/water_dragon.json"),
             ),
         ]
         .into_iter()

@@ -101,6 +101,7 @@ pub(crate) fn batches(item: ItemKind, material: usize) -> Result<Vec<MeshBatch>,
                             [0.025, 0.028, 0.032]
                         })
                     }
+                    ItemKind::DragonLoot(loot) => dragon_sample(loot, dx, dy, dz),
                     ItemKind::GloomEssence => {
                         let bulb = dx * dx + (dy + 4.0).powi(2) + dz * dz < 68.0;
                         let curl = (dx - 3.0).powi(2) + dz * dz < (28 - y) as f32 * 0.30
@@ -148,6 +149,90 @@ pub(crate) fn batches(item: ItemKind, material: usize) -> Result<Vec<MeshBatch>,
         s.cuboid([9, 25, 15], [15, 26, 19], [0.15, 0.28, 0.12]);
     }
     Ok(vec![s.faceted_mesh(material)?])
+}
+
+fn dragon_sample(
+    loot: terra_core::creatures::dragons::DragonLoot,
+    x: f32,
+    y: f32,
+    z: f32,
+) -> Option<[f32; 3]> {
+    use terra_core::creatures::dragons::DragonLoot::*;
+    let blue = [0.11, 0.54, 0.90];
+    let violet = [0.46, 0.12, 0.66];
+    let amber = [0.88, 0.51, 0.19];
+    let (inside, color) = match loot {
+        DarkScale | EarthScale | WaterScale => {
+            let body = x.abs() * 0.87 + (y - 1.0).abs() * 0.65 < 10.0
+                && (z + x * 0.14).abs() < 2.8 - (y.abs() * 0.08);
+            (
+                body,
+                match loot {
+                    DarkScale => violet,
+                    EarthScale => amber,
+                    _ => blue,
+                },
+            )
+        }
+        Fang | Claw | Horn => {
+            let t = (y + 12.) / 25.;
+            let r = (1. - t) * 4.6 + 0.4;
+            (
+                (0.0..1.0).contains(&t) && (x - 6. * t * t).powi(2) + z * z < r * r,
+                if y < -7. {
+                    [0.45, 0.31, 0.24]
+                } else {
+                    [0.94, 0.82, 0.63]
+                },
+            )
+        }
+        Hide | Membrane => (
+            (x.abs() * 0.7 + y.abs() * 0.63) < 12.
+                && (z - 0.16 * x - 0.4 * (y * 0.5).sin()).abs() < 1.5,
+            if loot == Hide {
+                [0.39, 0.17, 0.10]
+            } else {
+                violet
+            },
+        ),
+        ShadowHeart | WaterHeart => (
+            ((x.abs() - 3.6).powi(2) + (y - 3.).powi(2) + z * z < 38.)
+                || (y < 2. && x.abs() + z.abs() < 8. + y * 0.7),
+            if loot == WaterHeart { blue } else { violet },
+        ),
+        Blood => {
+            let r = if y < 1. { 5.5 } else { 2.5 };
+            (
+                y.abs() < 9. && x * x + z * z < r * r,
+                if y < 0. {
+                    [0.54, 0.06, 0.45]
+                } else {
+                    [0.65, 0.78, 0.9]
+                },
+            )
+        }
+        RawMeat | CookedMeat => (
+            (x * 0.9).powi(2) + (y * 1.1).powi(2) + (z * 1.7).powi(2) < 80.,
+            if loot == RawMeat {
+                [0.76, 0.17, 0.19]
+            } else {
+                [0.53, 0.26, 0.13]
+            },
+        ),
+        Dust => {
+            let r = (6. - y) * 0.78;
+            (y > -8. && x * x + z * z < r * r, amber)
+        }
+        ShadowCore | EarthCrystal | ShadowCrystal | IceEssence | WaterEssence => (
+            (x - y * 0.18).abs() + z.abs() + 0.50 * y.abs() < 7.3,
+            match loot {
+                EarthCrystal => amber,
+                IceEssence | WaterEssence => blue,
+                _ => violet,
+            },
+        ),
+    };
+    inside.then_some(color)
 }
 
 #[cfg(test)]

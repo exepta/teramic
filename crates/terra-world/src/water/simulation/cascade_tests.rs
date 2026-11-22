@@ -361,12 +361,21 @@ fn stepped_waterfall_crosses_horizontal_and_vertical_sections_partial_outlet_and
 
 #[test]
 fn generated_cascade_uses_real_gravity_cells_and_survives_delta_reload() {
+    check_generated_cascade(false);
+}
+
+#[test]
+fn lush_terrace_falls_use_real_gravity_cells_and_survive_delta_reload() {
+    check_generated_cascade(true);
+}
+
+fn check_generated_cascade(lush: bool) {
     let mut config = WorldConfig::default();
     config.cave_biomes.distribution = terra_core::config::CaveDistribution {
         normal_weight: 0.0,
         salt_weight: 0.0,
-        lush_weight: 0.0,
-        cascade_weight: 1.0,
+        lush_weight: f64::from(lush),
+        cascade_weight: f64::from(!lush),
     };
     let terrain = TerraGenerator::new(config).unwrap();
     let mut outlet = None;
@@ -384,7 +393,12 @@ fn generated_cascade_uses_real_gravity_cells_and_survives_delta_reload() {
                         (center[2] + dz as f64).floor() + 0.5,
                     );
                     let room = terrain.cave_structure_at(px, pz);
-                    if let Some(p) = room.fluid_outlet(px, pz) {
+                    if let Some(p) = room.fluid_outlet(px, pz)
+                        && terrain
+                            .cave_structure_at(p[0] as f64 + 0.5, p[2] as f64 + 0.5)
+                            .floor
+                            < p[1] as f64 - 4.0
+                    {
                         outlet = Some(p);
                         break 'find;
                     }

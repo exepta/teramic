@@ -126,6 +126,33 @@ fn step(
     .unwrap()
 }
 #[test]
+fn river_can_feed_a_connected_passage_under_its_bank() {
+    let base = [15, 15];
+    let (terrain, chunks, mut journal, mut columns) = fixture(base, false);
+    // The dry surface terraces in fixture are untouched. A narrow gallery
+    // under the higher nominal bank provides the alternative drainage route.
+    for dx in 1..=4 {
+        columns
+            .get_mut(&[base[0] + dx, base[1] + 1])
+            .unwrap()
+            .height = 26.;
+    }
+    for _ in 0..160 {
+        step(&terrain, &chunks, &mut journal, &columns);
+    }
+    assert!(
+        journal.fluid_cells().any(|(p, c)| {
+            p[0] >= base[0] + 2 && p[2] == base[1] + 1 && p[1] < 20 && c.amount > 0
+        })
+    );
+    assert!(
+        !journal
+            .fluid_cells()
+            .any(|(p, c)| { p[0] != base[0] && p[2] > base[1] + 2 && c.amount > 0 })
+    );
+}
+
+#[test]
 fn natural_falls_cross_section_seams_without_flooding_grass_and_sand_terraces_but_player_water_spreads()
  {
     for base in [[15, 15], [-17, -17]] {

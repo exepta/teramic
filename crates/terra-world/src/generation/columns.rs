@@ -21,6 +21,8 @@ pub struct PreparedColumn {
     pub(super) surface_sections: Option<[i64; 2]>,
     #[cfg(feature = "bevy")]
     pub(super) cave_eye_bounds: Option<[f64; 2]>,
+    #[cfg(feature = "bevy")]
+    pub(crate) gallery_skyline: bool,
 }
 
 #[cfg(all(test, feature = "bevy"))]
@@ -69,6 +71,7 @@ mod snow_tests {
                 maximum: 0.0,
                 surface_sections: None,
                 cave_eye_bounds: None,
+                gallery_skyline: false,
             };
             assert_eq!(
                 prepared.has_snow_coatable_structure(&[section]),
@@ -90,6 +93,14 @@ impl PreparedColumn {
         self.structures
             .iter()
             .any(|site| site.block_at(cell).is_some())
+    }
+
+    /// Includes the air carved for the chamber and its passages. The space
+    /// above the roof and neighbouring natural caves use their own atmosphere.
+    pub fn in_dragon_lair(&self, cell: [i64; 3]) -> bool {
+        self.structures
+            .iter()
+            .any(|site| site.summary.kind.dragon().is_some() && site.block_at(cell).is_some())
     }
 
     #[cfg(test)]
@@ -407,6 +418,16 @@ impl SectionGenerator {
         let structures = self
             .terrain()
             .structures_for_column(coordinate, padding + 20);
+        for site in structures
+            .iter()
+            .filter(|s| s.summary.kind.dragon().is_some())
+        {
+            for (i, column) in columns.iter_mut().enumerate() {
+                let x = start[0] + (i % size) as i64;
+                let z = start[2] + (i / size) as i64;
+                site.clip_water(column, x, z);
+            }
+        }
         let trees: Vec<_> = trees_in_column(self.terrain(), start, size)
             .into_iter()
             .filter(|tree| {
@@ -438,7 +459,9 @@ impl SectionGenerator {
                 c.river_cavity
                     .into_iter()
                     .chain(c.cave_cavity)
-                    .fold(c.height, |height, cavity| height.min(cavity[0]))
+                    .map(|cavity| cavity[0])
+                    .chain(c.cave.surface_view_floor())
+                    .fold(c.height, f64::min)
             })
             .fold(f64::INFINITY, f64::min);
         let mut maximum = columns
@@ -473,14 +496,26 @@ impl SectionGenerator {
                 maximum = maximum.max((section.y * 16 + 15) as f64);
             }
         }
-        let surface_sections = with_mesh.then_some([
-            ((minimum - 0.5).floor() as i64).div_euclid(16) - 1,
-            (maximum.ceil() as i64).div_euclid(16),
-        ]);
+        let surface_sections = with_mesh.then(|| {
+            let range = [
+                ((minimum - 0.5).floor() as i64).div_euclid(16) - 1,
+                (maximum.ceil() as i64).div_euclid(16),
+            ];
+            if self.terrain().config().bounded_world {
+                range.map(|y| y.clamp(-8, 22))
+            } else {
+                range
+            }
+        });
         // Horizontal flight reuses this immutable column across many interest
         // changes. Reject impossible cave views before inspecting 256 cells.
         #[cfg(feature = "bevy")]
         let cave_eye_bounds = cave_eye_bounds(&columns, padding, size);
+        #[cfg(feature = "bevy")]
+        let gallery_skyline = with_mesh
+            && columns
+                .iter()
+                .any(|c| c.cave.surface_view_floor().is_some());
         Ok(PreparedColumn {
             config: self.terrain().config().clone(),
             coordinate,
@@ -495,6 +530,8 @@ impl SectionGenerator {
             surface_sections,
             #[cfg(feature = "bevy")]
             cave_eye_bounds,
+            #[cfg(feature = "bevy")]
+            gallery_skyline,
         })
     }
 }
@@ -614,5 +651,61 @@ mod cave_streaming_tests {
             .for_each(|c| c.cave.kind = super::super::CaveEcology::None);
         column.cave_eye_bounds = cave_eye_bounds(&column.columns, column.padding, column.size);
         assert!(column.cave_view_sections(-24.0).is_none());
+    }
+
+    #[test]
+    fn flying_over_a_gallery_window_requests_the_floor_with_the_first_surface_batch() {
+        let terrain = crate::TerraGenerator::new(WorldConfig {
+            trees: false,
+            structures_revision: 0,
+            cave_structure_revision: 11,
+            ..Default::default()
+        })
+        .unwrap();
+        // Locate an actual opening where the airborne camera's ordinary depth
+        // budget cannot reach the floor, in seed coordinates on either side of zero.
+        let fixture = std::iter::once((-33, -96))
+            .chain((-96..=0).flat_map(|z| (-96..=96).map(move |x| (x, z))))
+            .find_map(|(x, z)| {
+                let center = terrain
+                    .cave_chamber_center(f64::from(x * 192 + 96), f64::from(z * 192 + 96))?;
+                let room = terrain.cave_structure_at(center[0], center[2]);
+                if !matches!(
+                    room.kind,
+                    super::super::CaveEcology::Dripstone | super::super::CaveEcology::Salt
+                ) {
+                    return None;
+                }
+                (-3..=3)
+                    .flat_map(|i| (-3..=3).map(move |j| (i, j)))
+                    .find_map(|(i, j)| {
+                        let x = (center[0] + f64::from(i) * room.radius * 0.16).floor();
+                        let z = (center[2] + f64::from(j) * room.radius * 0.16).floor();
+                        let c = terrain.surface_column(x + 0.5, z + 0.5);
+                        (c.cave.active() && c.cave.open_to_sky() && c.height - c.cave.floor > 50.)
+                            .then_some(([x as i64, z as i64], c))
+                    })
+            })
+            .expect("deep natural window");
+        let coord = fixture.0.map(|v| v.div_euclid(16));
+        let eye = fixture.1.height + 48.;
+        let floor = (fixture.1.cave.floor.floor() as i64).div_euclid(16);
+        let generator = SectionGenerator::new(terrain);
+        let column = generator.prepare_column(coord, true).unwrap();
+        assert!(column.cave_view_sections(eye).is_none());
+        let first = generator
+            .build_prepared(
+                SectionPos::new(coord[0], (eye as i64).div_euclid(16), coord[1]),
+                0,
+                &Default::default(),
+                &column,
+            )
+            .unwrap();
+        let [low, high] = first.surface_sections.unwrap();
+        assert!((low..=high).contains(&floor));
+        assert!(
+            low >= floor - 3,
+            "scope the apron to the local room, not the world bottom"
+        );
     }
 }

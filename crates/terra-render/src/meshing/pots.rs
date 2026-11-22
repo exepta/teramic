@@ -74,6 +74,7 @@ impl Profiles {
             );
             batch.normals.extend_from_slice(&mesh.normals);
             batch.uvs.extend_from_slice(&mesh.uvs);
+            batch.append_tangents(base as usize, mesh.tangents.iter().copied());
             if mesh.colors.is_empty() {
                 batch
                     .colors

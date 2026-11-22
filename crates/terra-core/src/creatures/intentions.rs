@@ -66,6 +66,7 @@ impl CreatureIntent {
             IntentReason::Silk
         } else {
             match animal.needs.goal.map(|goal| goal.kind) {
+                Some(NeedKind::AttackAim) => IntentReason::Attack,
                 Some(NeedKind::Shelter) => IntentReason::DayRefuge,
                 Some(NeedKind::Food) => IntentReason::Food,
                 Some(NeedKind::Water) => IntentReason::Water,

@@ -301,7 +301,7 @@ fn check_with_chest(
     let crystal_placement = matches!(
         command.action,
         EditAction::Block {
-            material: 51..=53,
+            material: 51..=53 | 460,
             ..
         }
     );
@@ -541,15 +541,24 @@ fn check_with_chest(
             {
                 return EditOutcome::Invalid;
             }
+            if let Some(dy) = terra_world::segments::fixed_mineral_root(material)
+                && !world
+                    .chunks
+                    .block_at([position[0], position[1] + dy, position[2]])
+                    .is_some_and(|m| {
+                        (material == 460 && m == material) || terra_world::segments::root_block(m)
+                    })
+            {
+                return EditOutcome::Invalid;
+            }
             if terra_world::segments::is_segment(material) {
                 let below = [position[0], position[1] - 1, position[2]];
                 let above = [position[0], position[1] + 1, position[2]];
                 let support = |p| {
-                    world.chunks.block_at(p).is_some_and(|m| {
-                        m == material
-                            || (!terra_world::segments::is_segment(m)
-                                && MaterialId::from_raw(m).is_some_and(MaterialId::is_solid))
-                    })
+                    world
+                        .chunks
+                        .block_at(p)
+                        .is_some_and(|m| m == material || terra_world::segments::root_block(m))
                 };
                 let valid = match material {
                     50 | 56 => support(below),
@@ -1380,6 +1389,18 @@ fn apply_with_chest(
                         return EditOutcome::Invalid;
                     }
                 }
+                let incubate = terra_core::creatures::dragon_eggs::kind(material).is_some()
+                    && world
+                        .chunks
+                        .block_at([position[0], position[1] - 1, position[2]])
+                        == Some(terra_voxel::MaterialId::StrawBlock as u16);
+                if incubate
+                    && (peer.uuid.is_nil()
+                        || world.journal.gameplay().dragon_eggs.len()
+                            >= terra_core::creatures::dragon_eggs::MAX_INCUBATING)
+                {
+                    return EditOutcome::Invalid;
+                }
                 let result = commit_block_edit(
                     &mut world.chunks,
                     &mut world.journal,
@@ -1390,6 +1411,18 @@ fn apply_with_chest(
                     },
                     &world.block_properties,
                 );
+                if matches!(result, Ok(true)) && incubate {
+                    let state = world.journal.gameplay_mut();
+                    state
+                        .dragon_eggs
+                        .push(terra_core::creatures::dragon_eggs::IncubatingEgg {
+                            position,
+                            shell: material,
+                            owner: peer.uuid,
+                            elapsed_days: 0.,
+                        });
+                    state.revision = state.revision.wrapping_add(1);
+                }
                 if matches!(result, Ok(true))
                     && (material == 40 || terra_core::lantern::is_part(material))
                 {

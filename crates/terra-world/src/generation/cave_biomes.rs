@@ -180,6 +180,9 @@ impl TerraGenerator {
                     w[2] *= 1.0 - (climate.temperature - 0.55).abs() * 0.7;
                     w[3] *= 0.65 + climate.humidity * 0.7;
                 }
+                if self.config().cave_structure_revision >= 13 {
+                    w[1] *= 0.43;
+                }
                 let pick = f64::from(layer_seed(id, 302))
                     / (f64::from(u32::MAX)
                         + if self.config().cave_structure_revision >= 4 {

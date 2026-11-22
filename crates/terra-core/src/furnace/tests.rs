@@ -16,7 +16,12 @@ fn bag(bellows: Option<BellowsKind>) -> Inventory {
 }
 #[test]
 fn smelting_assets_are_valid_unique_and_fuels_are_wood_not_snow_or_clay() {
-    assert_eq!(recipes().len(), 10);
+    assert_eq!(recipes().len(), 11);
+    use crate::creatures::dragons::DragonLoot::{CookedMeat, RawMeat};
+    assert_eq!(
+        recipe_for(ItemKind::DragonLoot(RawMeat)).unwrap().output,
+        stack(ItemKind::DragonLoot(CookedMeat), 1)
+    );
     for recipe in recipes() {
         assert!(recipe.valid());
     }

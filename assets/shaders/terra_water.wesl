@@ -43,7 +43,7 @@ struct WaterDynamics {
     environment: vec4<f32>,
     wake_positions: array<vec4<f32>, 16>,
     wake_motions: array<vec4<f32>, 16>,
-    particle: vec4<f32>,
+    gallery_aperture: vec4<f32>,
 }
 @group(constants::MATERIAL_BIND_GROUP) @binding(104) var<storage, read> terra_water: WaterDynamics;
 
@@ -630,7 +630,18 @@ fn fragment(input: WaterVertexOutput, @builtin(front_facing) front: bool) -> Fra
             * fresnel * (1.0 - reflection_weight) * (1.0 - foam);
     }
 }
-    let color = scene.rgb * transmission * (1.0 + caustics) + reflected_and_scattered.rgb + sky_reflection
+    // Single scattering from the measured opening into the brine column. The
+    // lost transmission weights its depth. Shallow edges still show the bed.
+    let aperture = terra_water.gallery_aperture;
+    var brine_light = vec3<f32>(0.0);
+    if input.biome_tint.a < 0.0 && aperture.w > 0.0 && input.world_position.y < aperture.y {
+        let delta = input.world_position.xyz - aperture.xyz;
+        let area = aperture.w * aperture.w;
+        let sky_angle = area / (area + dot(delta, delta));
+        brine_light = scatter * vec3<f32>(0.58, 1.05, 1.18)
+            * (16.0 * sky_angle) * clamp(-input.biome_tint.a, 0.0, 1.0);
+    }
+    let color = scene.rgb * transmission * (1.0 + caustics) + reflected_and_scattered.rgb + sky_reflection + brine_light
         + reflection.rgb * fresnel * reflection_weight;
     var output: FragmentOutput;
     output.color = main_pass_post_lighting_processing(pbr, vec4<f32>(color, tint.w));

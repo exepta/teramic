@@ -13,10 +13,33 @@ use bevy::prelude::*;
 use terra_core::{block_properties::BlockPropertiesCatalog, roads};
 use terra_voxel::global_to_section;
 
-pub const PATH: u16 = 102;
+pub use terra_core::roads::PATH;
 pub const TICK_SECONDS: f64 = 2.0;
 pub const CELL_BUDGET: usize = 1024;
 const DIRECTIONS: [[i64; 3]; 4] = [[1, 0, 0], [0, 0, 1], [-1, 0, 0], [0, 0, -1]];
+
+pub(crate) fn coating(
+    position: [i64; 3],
+    material: u16,
+    volume: u8,
+    journal: &EditJournal,
+    mut block_at: impl FnMut([i64; 3]) -> Option<u16>,
+) -> terra_core::block_shapes::ShapeBox {
+    roads::tar_coating(material, volume, |side| {
+        let mut p = position;
+        p[side / 2] += if side % 2 == 0 { -1 } else { 1 };
+        let id = block_at(p);
+        let volume = if id == Some(roads::WET_TAR) {
+            let state = journal.object_state(p).unwrap_or_default();
+            state
+                .liquid
+                .map_or(roads::tar_amount(state.facing) * 8, |liquid| liquid.volume)
+        } else {
+            0
+        };
+        (id, volume)
+    })
+}
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TarStep {
@@ -271,7 +294,11 @@ pub fn advance(chunks: &mut ChunkStore, journal: &mut EditJournal) -> Result<Tar
     let mut cursor = 0;
     let mut total = TarStep::default();
     for step in 0..10 {
-        let part = advance_from(chunks, journal, &mut cursor, step == 9)?;
+        let cells = wet_tar_cells(chunks, journal);
+        if cells.is_empty() {
+            break;
+        }
+        let part = advance_from(chunks, journal, &mut cursor, step == 9, cells)?;
         total.visited += part.visited;
         total.flowed += part.flowed;
         total.dried += part.dried;
@@ -279,18 +306,23 @@ pub fn advance(chunks: &mut ChunkStore, journal: &mut EditJournal) -> Result<Tar
     Ok(total)
 }
 
+fn wet_tar_cells(chunks: &ChunkStore, journal: &EditJournal) -> Vec<[i64; 3]> {
+    journal
+        .object_sections()
+        .flat_map(|p| journal.object_states_in_section(p))
+        .filter(|(p, id, _)| *id == roads::WET_TAR && chunks.block_at(*p) == Some(roads::WET_TAR))
+        .map(|(p, _, _)| p)
+        .collect()
+}
+
 fn advance_from(
     chunks: &mut ChunkStore,
     journal: &mut EditJournal,
     cursor: &mut usize,
     drying: bool,
+    mut positions: Vec<[i64; 3]>,
 ) -> Result<TarStep, String> {
     use std::collections::{BTreeMap, BTreeSet, VecDeque};
-    let mut positions: Vec<_> = journal
-        .object_states()
-        .filter(|(p, id, _)| *id == roads::WET_TAR && chunks.block_at(*p) == Some(roads::WET_TAR))
-        .map(|(p, _, _)| p)
-        .collect();
     positions.sort_unstable();
     let count = positions.len();
     if count > 0 {
@@ -487,7 +519,12 @@ pub(crate) fn tick(
     if drying {
         work.2 = now;
     }
-    if let Err(error) = advance_from(&mut chunks, &mut journal, &mut work.1, drying) {
+    let cells = wet_tar_cells(&chunks, &journal);
+    if cells.is_empty() {
+        work.1 = 0;
+        return;
+    }
+    if let Err(error) = advance_from(&mut chunks, &mut journal, &mut work.1, drying, cells) {
         tracing::error!(%error, "Tar simulation update rejected");
     }
 }

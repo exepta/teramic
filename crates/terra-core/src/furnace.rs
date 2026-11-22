@@ -36,7 +36,11 @@ impl SmeltingRecipe {
             && (0.5..=600.0).contains(&self.seconds)
     }
 }
-const RECIPES: [(&str, &str); 10] = [
+const RECIPES: [(&str, &str); 11] = [
+    (
+        "dragon_meat",
+        include_str!("../../../assets/crafting/processes/smelting/dragon_meat.json"),
+    ),
     (
         "beef",
         include_str!("../../../assets/crafting/processes/smelting/beef.json"),

@@ -10,6 +10,12 @@ struct CaveSettings {
     scattering: vec4<f32>,
     ink: vec4<f32>,
     smoke: vec4<f32>,
+    salt_window: vec4<f32>,
+    sun_direction: vec4<f32>,
+    beam_depths: vec4<f32>,
+    beam_radii: vec4<f32>,
+    beam_cross_radii: vec4<f32>,
+    gallery_dust: f32,
 }
 @group(0) @binding(0) var scene_color: texture_2d<f32>;
 @group(0) @binding(1) var scene_sampler: sampler;
@@ -37,6 +43,18 @@ fn ink_mask(uv: vec2<f32>) -> f32 {
     return clamp(max(streak * falling * 0.86, blot), 0.0, 1.0);
 }
 
+// Integrate a soft-edged shaft over the portion of the camera ray that
+// intersects it. Both the aperture plane and the opaque scene depth clip it.
+fn shaft_length(start: vec2<f32>, motion: vec2<f32>, radius: f32, near: f32, far: f32) -> f32 {
+    let speed2 = max(dot(motion, motion), 0.00001);
+    let center = clamp(-dot(start, motion) / speed2, near, far);
+    let closest = start + center * motion;
+    let width2 = radius * radius;
+    let span = sqrt(max(width2 - dot(closest, closest), 0.0) / speed2);
+    let length_in_air = max(0.0, min(center + span, far) - max(center - span, near));
+    return (1.0 - exp(-0.055 * length_in_air)) * (1.0 - smoothstep(0.12, 1.0, length(closest) / radius));
+}
+
 @fragment
 fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let water = cave.underwater.x;
@@ -60,6 +78,60 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     // Infinite reversed-Z: untouched sky/portals must not get cave haze painted over them.
     if depth > 0.000001 {
         result = mix(result, vec3<f32>(0.006, 0.0065, 0.007), haze * cave.parameters.x);
+        // Integrate scattered skylight only along the visible part of a view ray.
+        // Projection onto the aperture follows the sun and widens with angular diffusion.
+        if cave.parameters.w > 0.001 && cave.salt_window.w > 0.0 {
+            let origin = cave.world_from_view[3].xyz;
+            let ray = normalize(world - origin);
+            let altitude = cave.sun_direction.y;
+            let travel = min(distance, 100.0);
+            let height = cave.salt_window.y - origin.y;
+            var near = 0.0;
+            var far = travel;
+            if ray.y > 0.0001 { far = min(far, height / ray.y); }
+            if ray.y < -0.0001 { near = max(near, height / ray.y); }
+            if far > near && altitude > 0.01 && (height > 0.0 || ray.y < -0.0001) {
+                let slope = cave.sun_direction.xz / max(altitude, 0.06);
+                let start = origin.xz + height * slope - cave.salt_window.xz;
+                let motion = ray.xz - ray.y * slope;
+                let r = cave.salt_window.w;
+                let offsets = array<vec2<f32>, 4>(vec2<f32>(0., 0.), vec2<f32>(0.60, 0.),
+                    vec2<f32>(-0.30, 0.52), vec2<f32>(-0.30, -0.52));
+                var shaft = 0.0;
+                for (var i = 0u; i < 4u; i += 1u) {
+                    let depth_limit = cave.beam_depths[i];
+                    if depth_limit <= 0.0 { continue; }
+                    let floor_height = height - depth_limit;
+                    var begin = near;
+                    var end = far;
+                    if ray.y > 0.0001 { begin = max(begin, floor_height / ray.y); }
+                    else if ray.y < -0.0001 { end = min(end, floor_height / ray.y); }
+                    else if floor_height > 0.0 { continue; }
+                    if end > begin {
+                        let center = floor(cave.salt_window.xz + offsets[i] * r) + vec2<f32>(0.5);
+                        let axes = max(vec2<f32>(cave.beam_radii[i], cave.beam_cross_radii[i]), vec2<f32>(0.05));
+                        let scattered = shaft_length((start + cave.salt_window.xz - center) / axes, motion / axes, 1.0, begin, end);
+                        shaft = max(shaft, scattered);
+                    }
+                }
+                let sun_color = mix(vec3<f32>(0.70, 0.82, 1.0), vec3<f32>(1.0, 0.70, 0.43), cave.sun_direction.w);
+                result += sun_color * shaft * (0.47 * cave.parameters.w * smoothstep(0.01, 0.23, altitude));
+            }
+            if cave.gallery_dust > 0.001 {
+                // Along the visible ray, integrate diffuse skylight scattered by
+                // mineral haze. The aperture subtends progressively less sky
+                // in the side galleries. Stop at the opaque surface or sky lip.
+                let area = cave.salt_window.w * cave.salt_window.w;
+                var incident = 0.0;
+                for (var i = 0; i < 3; i += 1) {
+                    let sample_pos = origin + ray * (travel * (f32(i) + 0.5) / 3.0);
+                    let delta = cave.salt_window.xyz - sample_pos;
+                    incident += area / (area + dot(delta, delta)) * smoothstep(-0.5, 2.0, delta.y);
+                }
+                let scattered = (1.0 - exp(-0.013 * travel)) * incident / 3.0 * cave.parameters.w;
+                result = mix(result, vec3<f32>(0.37, 0.59, 0.93), clamp(scattered * 1.7, 0.0, 0.32) * cave.gallery_dust);
+            }
+        }
         // Spirit Forest air reaches a little way into the mouth. The local
         // density vanishes in deep caves; depth and height prevent a sky veil.
         if cave.parameters.z > 0.001 {

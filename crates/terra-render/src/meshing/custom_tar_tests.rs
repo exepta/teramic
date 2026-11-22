@@ -69,7 +69,7 @@ fn tar_films_keep_earth_beneath_them_and_match_pick_and_collision_height_at_ever
                 let soil = batches.iter().find(|b| b.material == 0).unwrap();
                 let film = batches.iter().find(|b| b.material == 1).unwrap();
                 let bounds = terra_core::construction::placed_boxes(material, facing, [None; 6])[0];
-                let height = roads::tar_height(facing);
+                let height = 1.;
                 for batch in [&soil, &film] {
                     for point in &batch.positions {
                         let local = point.map(|v| f64::from(v - 8.0));
@@ -125,7 +125,7 @@ fn tar_profile_cache_uses_volume_without_rotating_or_caching_every_drying_age() 
                 .flat_map(|p| &p.positions)
                 .map(|p| p[1])
                 .fold(0.0, f32::max);
-            assert_eq!(highest, roads::tar_height(model.state.facing));
+            assert_eq!(highest, 1.);
         }
     }
     assert_eq!(cache.0.len(), 8);
@@ -177,6 +177,13 @@ fn tar_leading_film_advances_over_visible_prepared_soil_and_tracks_neighbor_pres
             .positions
             .iter()
             .all(|p| p[1] == roads::PATH_HEIGHT)
+    );
+    assert!(
+        full_head
+            .iter()
+            .filter(|f| f.material == 1 && f.normals[0][1] > 0.9)
+            .flat_map(|f| &f.positions)
+            .all(|p| p[1] == 1.)
     );
     model.neighbor_facing[0] = 32;
     let half_head = cache.get(&model, &templates).unwrap().into_owned();

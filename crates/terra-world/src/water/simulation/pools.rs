@@ -334,8 +334,8 @@ impl Resting {
             }
         }
         let index: BTreeMap<_, _> = positions.iter().enumerate().map(|(i, &p)| (p, i)).collect();
-        // Relax only touching cells by one eighth per step. A distant dry member
-        // of the same basin cannot instantly acquire the source's full height.
+        // Default to a shallow contact film, then increase discharge with the
+        // head difference. Every finite donor pays exactly what crosses its face.
         for (i, &p) in positions.iter().enumerate() {
             for d in [[1, 0, 0], [0, 0, 1], [-1, 0, 0], [0, 0, -1]] {
                 let q = std::array::from_fn(|a| p[a] + d[a]);
@@ -347,10 +347,26 @@ impl Resting {
                 if difference < if old[i].source { 1 } else { 2 } || next[i].amount == 0 {
                     continue;
                 }
-                if !old[i].source {
-                    next[i].amount -= 1;
+                let available = if old[i].source {
+                    difference
+                } else {
+                    (difference / 2).min(next[i].amount.saturating_sub(1))
+                };
+                let moved =
+                    available
+                        .min(bank_capacity - next[j].amount)
+                        .min(if old[j].amount == 0 {
+                            1
+                        } else {
+                            terra_core::fluid_surface::LATERAL_TRANSFER
+                        });
+                if moved == 0 {
+                    continue;
                 }
-                next[j].amount += 1;
+                if !old[i].source {
+                    next[i].amount -= moved;
+                }
+                next[j].amount += moved;
                 next[j].flow = [d[0] as i8, d[2] as i8];
             }
         }

@@ -98,6 +98,84 @@ fn far_sources_survive_the_near_point_light_budget_but_never_survive_an_edit_or_
 }
 
 #[test]
+fn a_prop_lantern_on_normal_stone_is_visible_at_eighty_metres_until_removed() {
+    use terra_world::props::{PropId, PropKind, WorldProp};
+    let mut chunks = ChunkStore::default();
+    let mut journal = EditJournal::default();
+    let support = [1, 2, -80];
+    add(&mut chunks, support, 3);
+    let section = global_to_section(support).0;
+    let prop = WorldProp {
+        id: PropId(1),
+        kind: PropKind::Scarecrow,
+        position: [1.5, 3.0, -79.5],
+        rotation: 0.0,
+        scale: 1.0,
+        variant: 0,
+        section,
+        removed: false,
+    };
+    let id = prop.id;
+    assert!(journal.place_prop(prop).unwrap());
+    let mut cache = Lamps::default();
+    let defs = definitions();
+    discover(&mut cache, &chunks, &journal, &defs, Vec3::ZERO, 120.0);
+    assert_eq!(cache.emitters.len(), 1);
+    let count = |journal: &EditJournal| {
+        candidates(
+            &cache,
+            &chunks,
+            journal,
+            &Transform::default(),
+            &defs,
+            120.0,
+            4,
+        )
+        .len()
+    };
+    assert_eq!(count(&journal), 1);
+    journal.remove_prop(section, id).unwrap();
+    assert_eq!(count(&journal), 0);
+}
+
+#[test]
+fn visible_crystals_have_a_real_light_beyond_a_dense_nearby_group() {
+    let defs = definitions();
+    let crystal = 486;
+    let mut chunks = ChunkStore::default();
+    let mut emitters = Vec::new();
+    for x in 2..13 {
+        for z in 2..13 {
+            let cell = [x, 2, z];
+            add(&mut chunks, cell, crystal);
+            emitters.push((cell, defs[&crystal]));
+        }
+    }
+    let far = [2, 2, -80];
+    for z in (-80..=0).step_by(16) {
+        add(&mut chunks, [2, 2, z], 0);
+    }
+    add(&mut chunks, far, crystal);
+    emitters.push((far, defs[&crystal]));
+    let eye = Vec3::new(2.5, 2.5, 0.5);
+    let lights = |chunks: &ChunkStore| {
+        select_emitters(
+            &emitters,
+            chunks,
+            &EditJournal::default(),
+            eye,
+            Vec3::NEG_Z,
+            4,
+        )
+    };
+    let selected = lights(&chunks);
+    assert_eq!(selected.len(), 4);
+    assert!(selected.contains_key(&far));
+    add(&mut chunks, [2, 2, -50], 3);
+    assert!(!lights(&chunks).contains_key(&far));
+}
+
+#[test]
 fn cemetery_sources_share_the_existing_distant_batch_and_decorative_mist_is_not_a_light() {
     let mut cache = Lamps::default();
     let mut chunks = ChunkStore::default();

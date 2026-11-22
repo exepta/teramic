@@ -69,9 +69,11 @@ F68 mit Asphalt-Herstellung, Straßenformen und Rückbau steht in
 
 ### Welt Und Darstellung
 
-- [ ] **F36 Natuerliche Hoehlenraeume:** Bestehende Kammer-/Connector-Engine um unregelmaessige, geologisch lesbare Raeume, Terrassen und wechselnde Querschnitte erweitern. Natuerliche Uebergaenge statt auffaelliger Kugelraeume erzeugen; historische Welten durch versionierte Generierung erhalten.
 
 - [ ] **F15 Schaeden An Weltobjekten:** Brand-/Lebenspunktschaeden fuer geeignete Objekte ergaenzen. Treffer, Feuer, Zustand, Zerstoerung und Drops an vorhandene autoritative Welt-/Inventarpfade anbinden.
+- [ ] **F85 Feuer und Drachenatem.** Brennbare Weltblöcke entzünden, Feuer ausbreiten und ausbrennen lassen. Feuerangriffe von Drachen sollen am Einschlag brennende Stellen hinterlassen.
+- [ ] **F86 Feuer mit Wasser löschen.** Platziertes und fließendes Wasser soll Feuer bei Kontakt löschen und die Ausbreitung an dieser Stelle beenden.
+- [ ] **F87 Lava.** Lava als eigene leuchtende, zähflüssige Flüssigkeit mit Quellen, Fluss und Hitzeschaden umsetzen.
 
 - [ ] **F24 Entfernte 3D-Karte:** Budgetierte entfernte 3D-Rekonstruktion mit getrennten Boden-/Kronenhoehen oder echten Mesh-LODs ergaenzen. Vorhandene gespeicherte Kartendaten nutzen; Hoehlenkarten bleiben flach.
 

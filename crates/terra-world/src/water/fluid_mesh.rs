@@ -156,7 +156,7 @@ pub(crate) fn append_fluid_patch<'a>(
                     .unwrap_or(p[1] as f64 + cell.height()),
             )
         } else {
-            let water = columns[x + 18 * z].water_columns().at(p[1])?;
+            let water = columns.get(x + 18 * z)?.water_columns().at(p[1])?;
             (
                 super::fluid::from_column(Some(water), p[1]),
                 water.level.min(p[1] as f64 + 1.0),
@@ -227,6 +227,9 @@ pub(crate) fn append_fluid_patch<'a>(
         // The complete worker snapshot also keeps explicit full sources at the
         // natural plane in its original (upper) section, avoiding a two-tile
         // ownership migration while independent mesh jobs finish.
+        if columns.is_empty() {
+            return None;
+        }
         let levels = options.precise_levels?;
         if let Some(&level) = levels.get(&p) {
             return Some(level);
@@ -236,7 +239,7 @@ pub(crate) fn append_fluid_patch<'a>(
         if x >= 18 || z >= 18 {
             return None;
         }
-        let natural = columns[x + 18 * z].water_columns().at(p[1])?;
+        let natural = columns.get(x + 18 * z)?.water_columns().at(p[1])?;
         let level = p[1] as f64 + cell.height();
         ((natural.level - level).abs() < 1e-8).then_some(level)
     };
@@ -256,6 +259,11 @@ pub(crate) fn append_fluid_patch<'a>(
     cells.sort_unstable_by_key(|(p, _)| **p);
     for (&p, &cell) in cells {
         let Some(height) = sample(p) else { continue };
+        let local_height = if columns.is_empty() {
+            (height - p[1] as f64) as f32
+        } else {
+            cell.height() as f32
+        };
         let natural_surface = canonical_level(p, cell).is_some();
         if p[1] < origin[1] {
             // The natural grid assigns integral boundary planes to the upper
@@ -301,10 +309,9 @@ pub(crate) fn append_fluid_patch<'a>(
                 )
             };
             let column =
-                columns[(p[0] - origin[0] + 1) as usize + 18 * (p[2] - origin[2] + 1) as usize];
+                columns.get((p[0] - origin[0] + 1) as usize + 18 * (p[2] - origin[2] + 1) as usize);
             let reservoir_impact = column
-                .water_columns()
-                .at(p[1] - 1)
+                .and_then(|c| c.water_columns().at(p[1] - 1))
                 .is_some_and(|w| (w.level - p[1] as f64).abs() < 0.01);
             let covered = connected_above(p);
             let effects = if covered || sample(below).is_some() || open_below {
@@ -415,7 +422,9 @@ pub(crate) fn append_fluid_patch<'a>(
                         let cx = (neighbor[0] - origin[0] + 1) as usize;
                         let cz = (neighbor[2] - origin[2] + 1) as usize;
                         if !fluids.contains_key(&neighbor)
-                            && let Some(water) = columns[cx + 18 * cz].water_columns().at(p[1])
+                            && let Some(water) = columns
+                                .get(cx + 18 * cz)
+                                .and_then(|c| c.water_columns().at(p[1]))
                             && let level = water.level
                             && level <= p[1] as f64 + 1.0
                         {
@@ -472,9 +481,10 @@ pub(crate) fn append_fluid_patch<'a>(
                     && sample(ahead).is_none()
             };
             if dry
+                && !super::tongue::wet_flank(p, axis, |q| sample(q).is_some())
                 && let Some(head) = sample(back)
                 && let Some(front) = terra_core::fluid_surface::Front::new(
-                    cell.height() as f32,
+                    local_height,
                     (head - p[1] as f64) as f32,
                     axis,
                     component > 0,
@@ -494,17 +504,19 @@ pub(crate) fn append_fluid_patch<'a>(
                     continue;
                 }
                 let shape = [
-                    [x, y + cell.height() as f32, z],
-                    [x, y + cell.height() as f32, z + 1.],
-                    [x + 1., y + cell.height() as f32, z + 1.],
-                    [x + 1., y + cell.height() as f32, z],
+                    [x, y + local_height, z],
+                    [x, y + local_height, z + 1.],
+                    [x + 1., y + local_height, z + 1.],
+                    [x + 1., y + local_height, z],
                 ];
-                points = shape.map(|point| front.deform(point, [x, y, z], cell.height() as f32));
+                points = shape.map(|point| front.deform(point, [x, y, z], local_height));
                 top_normal = front.normal();
             }
         }
+        let below_pos = [p[0], p[1] - 1, p[2]];
+        let wet = |q| sample(q).is_some();
         if !natural_surface && covered && cell.amount < 8 {
-            let width = (cell.height() as f32).sqrt();
+            let width = super::front::inlet_width(p, cell, wet) as f32;
             for point in &mut points {
                 point[0] = x + 0.5 + (point[0] - x - 0.5) * width;
                 point[2] = z + 0.5 + (point[2] - z - 0.5) * width;
@@ -513,18 +525,22 @@ pub(crate) fn append_fluid_patch<'a>(
         let flow = cell.flow.map(f32::from);
         let upper_owns_top = natural_surface && (height - (origin[1] + 16) as f64).abs() < 1e-8;
         if !covered && !upper_owns_top {
-            quad(
-                water,
-                points,
-                top_normal,
-                flow,
-                cell.height() as f32,
-                [0.0; 4],
-            );
+            quad(water, points, top_normal, flow, local_height, [0.0; 4]);
         }
         let below = (p[0] - origin[0] + 1) as usize
             + 18 * ((p[1] - origin[1]) as usize + 18 * (p[2] - origin[2] + 1) as usize);
-        if super::can_hold_fluid(padded[below]) && sample([p[0], p[1] - 1, p[2]]).is_none() {
+        let mut bottom = points.map(|v| [v[0], y, v[2]]);
+        if !natural_surface
+            && matches!(padded[below], 0 | 27)
+            && let Some(&receiving) = fluids.get(&below_pos).filter(|f| f.amount > 0)
+        {
+            let width = super::front::inlet_width(below_pos, receiving, wet) as f32;
+            for (base, corner) in bottom.iter_mut().zip(corners) {
+                base[0] = x + 0.5 + (corner[0] as f32 - 0.5) * width;
+                base[2] = z + 0.5 + (corner[1] as f32 - 0.5) * width;
+            }
+        }
+        if super::can_hold_fluid(padded[below]) && sample(below_pos).is_none() {
             quad(
                 water,
                 [
@@ -535,7 +551,7 @@ pub(crate) fn append_fluid_patch<'a>(
                 ],
                 [0.0, -1.0, 0.0],
                 flow,
-                cell.height() as f32,
+                local_height,
                 [0.0; 4],
             );
         }
@@ -559,10 +575,9 @@ pub(crate) fn append_fluid_patch<'a>(
                 || sample([p[0], p[1] - 1, p[2]]).is_some()
                 || super::can_hold_fluid(padded[below]);
             let column =
-                columns[(p[0] - origin[0] + 1) as usize + 18 * (p[2] - origin[2] + 1) as usize];
+                columns.get((p[0] - origin[0] + 1) as usize + 18 * (p[2] - origin[2] + 1) as usize);
             let reservoir_impact = column
-                .water_columns()
-                .at(p[1] - 1)
+                .and_then(|c| c.water_columns().at(p[1] - 1))
                 .is_some_and(|w| (w.level - p[1] as f64).abs() < 0.01);
             let effects = if flowing_down {
                 [
@@ -578,7 +593,7 @@ pub(crate) fn append_fluid_patch<'a>(
             } else {
                 [0.0; 4]
             };
-            let points = [b, a, [a[0], y, a[2]], [b[0], y, b[2]]];
+            let points = [b, a, bottom[side], bottom[(side + 1) % 4]];
             let normal = [offset[0] as f32, 0.0, offset[1] as f32];
             if let Some(occluders) = occluders {
                 let mut masks = occluders.clone();
@@ -614,7 +629,7 @@ pub(crate) fn append_fluid_patch<'a>(
                         &fragment,
                         normal,
                         flow,
-                        cell.height() as f32,
+                        local_height,
                         fragment_effects,
                     );
                 }
@@ -623,9 +638,9 @@ pub(crate) fn append_fluid_patch<'a>(
                 // descend below this cell. Clip its walls to its own volume:
                 // an inverted wall overlaps the next falling cell and shimmers.
                 let points = occlusion::clip(&points, 1, y, true);
-                polygon(water, &points, normal, flow, cell.height() as f32, effects);
+                polygon(water, &points, normal, flow, local_height, effects);
             } else {
-                quad(water, points, normal, flow, cell.height() as f32, effects);
+                quad(water, points, normal, flow, local_height, effects);
             }
         }
     }
@@ -633,7 +648,9 @@ pub(crate) fn append_fluid_patch<'a>(
     // any faces. It is a valid simulation state, not a renderable water mesh.
     if patch.as_ref().is_some_and(|water| water.indices.is_empty()) {
         *patch = None;
-    } else if let Some(water) = patch {
+    } else if let Some(water) = patch
+        && !columns.is_empty()
+    {
         // These cells materialize the unchanged natural surface so construction
         // can clip it. A neighboring worker may not see the construction two
         // cells beyond its halo, and must still displace their shared edge in
@@ -798,6 +815,77 @@ mod tests {
             front.iter().all(|p| p[0] <= 8.251),
             "new eighth must advance only a quarter cell against a full head"
         );
+    }
+
+    #[test]
+    fn neighboring_fingers_share_the_whole_wet_edge_across_chunk_boundaries() {
+        for axis in [0usize, 2] {
+            for seam in [-16i64, 16] {
+                let cross = 2 - axis;
+                let mut fluids = FluidSnapshot::new();
+                let mut flow = [0; 2];
+                flow[axis / 2] = 1;
+                for side in [seam - 1, seam] {
+                    let mut front = [7, 7, 7];
+                    front[cross] = side;
+                    let mut back = front;
+                    back[axis] -= 1;
+                    fluids.insert(
+                        back,
+                        FluidCell {
+                            amount: 8,
+                            source: true,
+                            flow: [0; 2],
+                        },
+                    );
+                    fluids.insert(
+                        front,
+                        FluidCell {
+                            amount: if side == seam { 3 } else { 1 },
+                            source: false,
+                            flow,
+                        },
+                    );
+                }
+                let mut halves = Vec::new();
+                for side in [seam - 1, seam] {
+                    let mut owner = [0; 3];
+                    owner[cross] = side.div_euclid(16);
+                    let section = SectionPos::new(owner[0], owner[1], owner[2]);
+                    let origin = section.origin().unwrap();
+                    let mut mesh = None;
+                    append_fluid_patch(
+                        &mut mesh,
+                        section,
+                        &columns(),
+                        &vec![0; 18usize.pow(3)],
+                        &fluids,
+                        false,
+                    );
+                    let mesh = mesh.unwrap();
+                    let mut edge: Vec<_> = mesh
+                        .positions
+                        .iter()
+                        .zip(&mesh.normals)
+                        .filter_map(|(p, n)| {
+                            let along = p[axis] + origin[axis] as f32;
+                            (n[1] > 0.
+                                && p[cross] + origin[cross] as f32 == seam as f32
+                                && along >= 7.)
+                                .then_some([along.to_bits(), p[1].to_bits()])
+                        })
+                        .collect();
+                    edge.sort_unstable();
+                    edge.dedup();
+                    assert!(
+                        edge.iter().any(|p| f32::from_bits(p[0]) == 8.),
+                        "surface fractured at {seam}"
+                    );
+                    halves.push(edge);
+                }
+                assert_eq!(halves[0], halves[1]);
+            }
+        }
     }
 
     #[test]
@@ -1135,6 +1223,23 @@ mod tests {
         let upper = upper.unwrap();
         assert!(lower.positions.iter().any(|p| p[1] == 16.0));
         assert!(upper.positions.iter().any(|p| p[1] == 0.0));
+        let ring = |patch: &WaterPatch, y: f32| {
+            let mut ring: Vec<_> = patch
+                .positions
+                .iter()
+                .filter(|p| p[1] == y)
+                .map(|p| [p[0].to_bits(), p[2].to_bits()])
+                .collect();
+            ring.sort_unstable();
+            ring.dedup();
+            ring
+        };
+        assert_eq!(ring(&lower, 16.).len(), 4);
+        assert_eq!(
+            ring(&lower, 16.),
+            ring(&upper, 0.),
+            "the two waterfall segments must share their inlet perimeter"
+        );
         assert_eq!(
             lower
                 .normals

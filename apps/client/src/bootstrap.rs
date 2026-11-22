@@ -25,6 +25,27 @@ mod preview_demand;
 #[path = "startup_ui.rs"]
 pub(crate) mod startup_ui;
 
+pub(crate) fn connect_address() -> Result<Option<std::net::SocketAddr>, Box<dyn Error>> {
+    let mut arguments = std::env::args().skip(1);
+    let mut address = None;
+    while let Some(argument) = arguments.next() {
+        if argument == "--connect" {
+            if address.is_some() {
+                return Err("--connect can only be provided once".into());
+            }
+            address = Some(
+                arguments
+                    .next()
+                    .ok_or("--connect requires IP:PORT")?
+                    .parse::<std::net::SocketAddr>()?,
+            );
+        } else if argument == "--connect-token" {
+            return Err("Join files are no longer needed; use --connect IP:PORT".into());
+        }
+    }
+    Ok(address)
+}
+
 pub fn build_app() -> Result<App, Box<dyn Error>> {
     let task_pool_options = crate::task_pools::options(
         std::env::args().any(|argument| argument.starts_with("--smoke-test")),
@@ -210,9 +231,14 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
     }
     if std::env::args().any(|arg| arg == "--smoke-test-biomes") {
         let scene = std::env::var("TERRA_BIOME_SCENE").unwrap_or_default();
-        if scene.starts_with("kingdom-") || scene == "outpost" {
+        if scene.starts_with("dragon-lair-") {
+            world = WorldConfig::default();
+            client.view_distance = 5;
+            client.vertical_view_distance = 3;
+            client.fog_distance = 0.0;
+        } else if scene.starts_with("kingdom-") || scene == "outpost" {
             // Native structure evidence must use the finder's exact terrain.
-            world.structures_revision = 10;
+            world.structures_revision = terra_core::WorldConfig::CURRENT_STRUCTURES_REVISION;
             client.view_distance = 12;
             client.vertical_view_distance = 5;
             // The detached overview is 228 m from the keep. Disable distance
@@ -358,24 +384,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
             world.water = false;
             world.rivers = false;
         }
-        let mut arguments = std::env::args().skip(1);
-        let mut address = None;
-        while let Some(argument) = arguments.next() {
-            if argument == "--connect" {
-                if address.is_some() {
-                    return Err("--connect can only be provided once".into());
-                }
-                address = Some(
-                    arguments
-                        .next()
-                        .ok_or("--connect requires IP:PORT")?
-                        .parse::<std::net::SocketAddr>()?,
-                );
-            } else if argument == "--connect-token" {
-                return Err("Join files are no longer needed; use --connect IP:PORT".into());
-            }
-        }
-        address
+        connect_address()?
     };
     if fixture && connect_address.is_some() {
         return Err("Rendering fixtures cannot join a multiplayer session".into());

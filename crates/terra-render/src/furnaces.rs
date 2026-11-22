@@ -20,6 +20,13 @@ use terra_world::{
 
 const MAX_FIRES: usize = 32;
 const MAX_LIGHTS: usize = 8;
+const FIRE_VIEW_DISTANCE: f32 = 96.0;
+
+// Match the visible fire mesh and soften the last sixteen metres of its pool.
+fn fire_light_gain(distance: f32) -> f32 {
+    let t = ((FIRE_VIEW_DISTANCE - distance) / 16.0).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
 const MAX_SMOKE_CELLS: usize = 256;
 
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
@@ -485,7 +492,8 @@ fn update(
                 .is_some_and(|raw| journal.block(f.position).unwrap_or(raw) == 59)
         })
         .filter(|f| {
-            Vec3::from_array(f.position.map(|v| v as f32)).distance_squared(eye) < 96.0_f32.powi(2)
+            Vec3::from_array(f.position.map(|v| v as f32)).distance_squared(eye)
+                < FIRE_VIEW_DISTANCE.powi(2)
         })
         .collect();
     nearby.sort_by(|a, b| {
@@ -517,15 +525,8 @@ fn update(
     let mut light_positions: Vec<_> = nearby
         .iter()
         .filter(|f| f.lit)
-        .filter_map(|f| {
-            let position = fire_position(f.position, &journal);
-            (position.distance_squared(eye) < 28.0_f32.powi(2)).then_some((f.position, position))
-        })
-        .chain(
-            alchemy
-                .lights()
-                .filter(|(_, position)| position.distance_squared(eye) < 28.0_f32.powi(2)),
-        )
+        .map(|f| (f.position, fire_position(f.position, &journal)))
+        .chain(alchemy.lights())
         .collect();
     light_positions.sort_by(|a, b| {
         a.1.distance_squared(eye)
@@ -535,7 +536,7 @@ fn update(
     for (entity, lamp, mut light, mut transform) in &mut lamps {
         if let Some(position) = desired.remove(&lamp.0) {
             transform.translation = position;
-            light.intensity = intensity;
+            light.intensity = intensity * fire_light_gain(position.distance(eye));
         } else {
             commands.entity(entity).despawn();
         }
@@ -546,7 +547,7 @@ fn update(
             FurnaceLamp(cell),
             PointLight {
                 color: Color::srgb(1.0, 0.62, 0.28),
-                intensity,
+                intensity: intensity * fire_light_gain(position.distance(eye)),
                 range: 8.0,
                 radius: 0.16,
                 shadow_maps_enabled: false,
@@ -769,6 +770,15 @@ fn update(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fire_light_keeps_its_strength_at_midrange_and_fades_with_its_mesh() {
+        for d in [20.0, 28.0, 40.0, 79.0] {
+            assert_eq!(super::fire_light_gain(d), 1.0);
+        }
+        assert_eq!(super::fire_light_gain(88.0), 0.5);
+        assert_eq!(super::fire_light_gain(super::FIRE_VIEW_DISTANCE), 0.0);
+    }
 
     #[test]
     fn escaping_smoke_has_bounded_increasing_tiers_without_adding_wisps() {

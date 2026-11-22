@@ -115,7 +115,12 @@ fn update(
             }
         }
         let volumetric = active
+            && cave.gallery_air() > 0.001
             && underwater.blend < 0.01
+            && graphics
+                .as_deref()
+                .is_none_or(|g| g.shadow_quality != terra_core::ShadowQuality::Off)
+            && cave.beam_depths.max_element() > 0.0
             && cave.ceiling >= 8.0
             && quality == CaveQuality::Ultra;
         // Waterfall mist shares these Bevy components, but owns a separate claim.
@@ -148,7 +153,7 @@ fn update(
                 commands.entity(entity).insert(VolumetricLight);
             }
         }
-        let density = 0.006 * cave.blend;
+        let density = 0.006 * cave.blend * cave.salt_skylight * cave.gallery_air();
         if let Some(entity) = volumes.iter().next() {
             if let Ok((mut fog, mut transform)) = air.get_mut(entity) {
                 fog.density_factor = density;
@@ -192,6 +197,8 @@ mod tests {
         app.insert_resource(super::super::CaveState {
             blend: 1.0,
             ceiling: 12.0,
+            beam_depths: Vec4::splat(12.),
+            salt_skylight: 1.,
             ..default()
         })
         .init_resource::<GraphicsConfig>()
@@ -233,6 +240,35 @@ mod tests {
             1
         );
         app.world_mut()
+            .resource_mut::<super::super::CaveState>()
+            .lair_blend = 1.;
+        app.update();
+        assert!(app.world().get::<VolumetricFog>(camera).is_none());
+        assert!(app.world().get::<VolumetricLight>(sun).is_none());
+        assert!(
+            app.world_mut()
+                .query::<&CaveAir>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        app.world_mut()
+            .resource_mut::<super::super::CaveState>()
+            .lair_blend = 0.;
+        app.update();
+        assert!(app.world().get::<VolumetricFog>(camera).is_some());
+        app.world_mut()
+            .resource_mut::<super::super::CaveState>()
+            .beam_depths = Vec4::ZERO;
+        app.update();
+        assert!(app.world().get::<VolumetricLight>(sun).is_none());
+        assert!(app.world().get::<VolumetricFog>(camera).is_none());
+        assert!(
+            app.world()
+                .get::<ScreenSpaceAmbientOcclusion>(camera)
+                .is_some()
+        );
+        app.world_mut()
             .resource_mut::<GraphicsConfig>()
             .cave_quality = CaveQuality::Low;
         app.update();
@@ -268,6 +304,8 @@ mod tests {
         app.insert_resource(super::super::CaveState {
             blend: 1.0,
             ceiling: 12.0,
+            beam_depths: Vec4::splat(12.),
+            salt_skylight: 1.,
             ..default()
         })
         .insert_resource(GraphicsConfig {
@@ -342,6 +380,8 @@ mod tests {
             })
             .insert_resource(super::super::CaveState {
                 ceiling: 12.0,
+                beam_depths: Vec4::splat(12.),
+                salt_skylight: 1.,
                 ..default()
             })
             // Register the downstream writer first; the explicit set must

@@ -69,115 +69,7 @@ fn point(side: usize, [u, v, height]: [f32; 3]) -> [f32; 3] {
     result
 }
 
-/// Local unit-cell triangles. Transverse coordinates stay inside the carrier.
-fn visit_crystals(
-    ore: OreKind,
-    position: [i64; 3],
-    side: usize,
-    detail: OreDetail,
-    mut visit: impl FnMut([[f32; 3]; 3]),
-) {
-    if side >= 6 {
-        return;
-    }
-    if ore == OreKind::Salt {
-        visit_salt(position, side, detail, 0.0, visit);
-        return;
-    }
-    let seed = hash(
-        position,
-        side,
-        0x6f72_655f_6465_7461 ^ u64::from(ore.material()),
-    );
-    let mut triangle = |a, b, c| {
-        let mut result = [point(side, a), point(side, b), point(side, c)];
-        if side.is_multiple_of(2) {
-            result.swap(1, 2);
-        }
-        visit(result);
-    };
-    let flecks = match detail {
-        OreDetail::Near => 3,
-        OreDetail::Middle => 1,
-        OreDetail::Far => 0,
-    };
-    for index in 0..flecks {
-        let random = hash(position, side, seed.wrapping_add(index * 31));
-        let u = 0.15 + sample(random, 0) * 0.70;
-        let v = 0.15 + sample(random, 8) * 0.70;
-        let radius = 0.025 + sample(random, 16) * 0.065;
-        // A buried root spans the inward-cut rock relief; the visible diamond
-        // is shallow, not a hole in the supporting cube.
-        let a = [u - radius, v, -0.075];
-        let b = [u, v - radius * 0.75, -0.075];
-        let c = [u + radius, v, -0.075];
-        let d = [u, v + radius * 0.75, -0.075];
-        let tip = [u, v, 0.018 + sample(random, 24) * 0.045];
-        for (first, next) in [(a, b), (b, c), (c, d), (d, a)] {
-            triangle(first, next, tip);
-        }
-    }
-    let count = match (side == 3, detail) {
-        (true, OreDetail::Near) => 4,
-        (true, OreDetail::Middle) => 3,
-        (true, OreDetail::Far) => 2,
-        (false, OreDetail::Near) => 2,
-        _ => 1,
-    };
-    for index in 0..count {
-        let random = hash(position, side, seed.wrapping_add(300 + index * 51));
-        let centers = [[0.52, 0.55], [0.25, 0.34], [0.76, 0.62], [0.55, 0.23]];
-        let center = centers[index as usize].map(|value| value + (sample(random, 0) - 0.5) * 0.06);
-        let tier = ((seed >> 48) % 3) as f32;
-        let primary = 0.36 + tier * 0.23 + sample(random, 16) * 0.13;
-        let height = if index == 0 {
-            primary
-        } else {
-            primary * (0.40 + sample(random, 24) * 0.35)
-        };
-        let height = height
-            * match ore {
-                OreKind::Coal => 0.78,
-                OreKind::Iron => 0.94,
-                OreKind::Salt => 1.05,
-                _ => 1.0,
-            }
-            * if side == 3 { 1.0 } else { 0.34 };
-        let radius = if index == 0 {
-            0.14 + sample(random, 32) * 0.035
-        } else {
-            0.075 + sample(random, 32) * 0.035
-        };
-        let angle = sample(random, 40) * std::f32::consts::TAU;
-        let lean = [
-            (sample(random, 48) - 0.5) * 0.11,
-            (sample(random, 56) - 0.5) * 0.11,
-        ];
-        let ring = |index: usize, upper: bool| {
-            let angle = angle + index as f32 * std::f32::consts::FRAC_PI_2;
-            let scale = if upper { 0.89 } else { 1.0 };
-            [
-                center[0] + angle.cos() * radius * scale + if upper { lean[0] } else { 0.0 },
-                center[1] + angle.sin() * radius * scale + if upper { lean[1] } else { 0.0 },
-                if upper { height * 0.82 } else { -0.075 },
-            ]
-        };
-        let tip = [
-            center[0] + lean[0] + radius * 0.18,
-            center[1] + lean[1],
-            height,
-        ];
-        for index in 0..4 {
-            let a = ring(index, false);
-            let b = ring((index + 1) % 4, false);
-            let c = ring(index, true);
-            let d = ring((index + 1) % 4, true);
-            triangle(a, b, c);
-            triangle(c, b, d);
-            triangle(c, d, tip);
-        }
-    }
-}
+mod geodes;
 
 /// Tapered mineral growth shared by salt and dry dripstone. Only supported
 /// horizontal faces carry points; vertical walls keep sparse shallow inlays.
@@ -188,79 +80,6 @@ pub fn visit_dripstone_face(
     visit: impl FnMut([[f32; 3]; 3]),
 ) {
     salt::visit_growth(37, position, side, detail, 0.0, visit);
-}
-
-fn visit_dripstone_shape(
-    position: [i64; 3],
-    side: usize,
-    detail: OreDetail,
-    full_tip: bool,
-    mut visit: impl FnMut([[f32; 3]; 3]),
-) {
-    if side >= 6 {
-        return;
-    }
-    let seed = hash(position, side, 0x6472_6970_7374_6f6e);
-    let mut triangle = |a, b, c| {
-        let mut result = [point(side, a), point(side, b), point(side, c)];
-        if side.is_multiple_of(2) {
-            result.swap(1, 2);
-        }
-        visit(result);
-    };
-    let flecks = match detail {
-        OreDetail::Near => 3,
-        OreDetail::Middle => 2,
-        OreDetail::Far => 1,
-    };
-    for index in 0..flecks {
-        let random = hash(position, side, seed.wrapping_add(index * 31));
-        let u = 0.18 + sample(random, 0) * 0.64;
-        let v = 0.18 + sample(random, 8) * 0.64;
-        let r = 0.035 + sample(random, 16) * 0.04;
-        let top = [u, v, 0.035];
-        for (a, b) in [
-            ([u - r, v, -0.075], [u, v - r, -0.075]),
-            ([u, v - r, -0.075], [u + r, v, -0.075]),
-            ([u + r, v, -0.075], [u, v + r, -0.075]),
-            ([u, v + r, -0.075], [u - r, v, -0.075]),
-        ] {
-            triangle(a, b, top);
-        }
-    }
-    if !matches!(side, 2 | 3) || (!full_tip && !seed.is_multiple_of(3)) {
-        return;
-    }
-    let center = [0.43 + sample(seed, 0) * 0.14, 0.43 + sample(seed, 8) * 0.14];
-    let height = if full_tip {
-        0.72 + sample(seed, 16) * 0.23
-    } else {
-        0.35 + sample(seed, 16) * 0.57
-    };
-    let radius = if full_tip {
-        0.32 + sample(seed, 24) * 0.08
-    } else {
-        0.11 + sample(seed, 24) * 0.09
-    };
-    let ring = |i: usize, upper: bool| {
-        let angle = i as f32 * std::f32::consts::TAU / 6.0;
-        let r = radius * if upper { 0.43 } else { 1.0 };
-        [
-            center[0] + angle.cos() * r,
-            center[1] + angle.sin() * r,
-            if upper { height * 0.61 } else { -0.075 },
-        ]
-    };
-    for i in 0..6 {
-        let next = (i + 1) % 6;
-        triangle(ring(i, false), ring(next, false), ring(i, true));
-        triangle(ring(i, true), ring(next, false), ring(next, true));
-        triangle(
-            ring(i, true),
-            ring(next, true),
-            [center[0], center[1], height],
-        );
-    }
 }
 
 pub fn visit_material_face(
@@ -313,7 +132,7 @@ pub fn visit_shaded_face_with_growth(
         return;
     }
     if let Some(ore) = OreKind::from_material(material) {
-        visit_crystals(ore, position, side, detail, |triangle| visit(triangle, 1.0));
+        geodes::deposit(ore, position, side, detail, &mut visit);
         if ore != OreKind::Salt && side < 6 {
             visit_veins(ore, position, side, detail, visit);
         }
@@ -321,10 +140,20 @@ pub fn visit_shaded_face_with_growth(
         salt::visit_growth(material, position, side, detail, growth, |triangle| {
             visit(triangle, 1.0)
         });
-    } else if matches!(material, 38 | 39) {
-        visit_dripstone_shape(position, side, detail, true, |triangle| {
-            visit(triangle, 1.0)
-        });
+    } else if matches!(material, 38 | 39) && side < 6 {
+        let facet = hash(position, side, 0x4652_4143_5455_5245);
+        let prominent = matches!(side, 2 | 3);
+        let height = if prominent {
+            0.79 + 0.15 * sample(facet, 24)
+        } else {
+            0.03 + 0.06 * sample(facet, 16)
+        };
+        let emit = |triangle| visit(triangle, 1.);
+        if material == 38 {
+            salt::visit_halite(position, side, detail, height, prominent, emit);
+        } else {
+            salt::visit_calcite(position, side, detail, height, prominent, emit);
+        }
     }
 }
 

@@ -18,18 +18,76 @@ pub struct CreatureTrack {
     pub interval: f32,
 }
 impl CreatureTrack {
+    fn apply(&mut self, current: Creature, stamp: f64, now: Instant) {
+        // The server broadcasts full snapshots at 10 Hz, including distant
+        // actors whose AI runs at 5 Hz. Stamping the unchanged pose as a new
+        // sample inserts a stop between every two real strides.
+        if self.playback.has_samples()
+            && current.age == self.current.age
+            && current.position == self.current.position
+            && current.velocity == self.current.velocity
+            && current.yaw == self.current.yaw
+            && current.behavior == self.current.behavior
+            && current.timer == self.current.timer
+        {
+            self.current = current;
+            return;
+        }
+        // The tail is already fully underground before authority re-anchors
+        // the worm at the second hole. Interpolating that hidden move would
+        // drag its next upright breach sideways through fourteen metres.
+        let reanchor = current.kind == terra_core::creatures::CreatureKind::SandWorm
+            && matches!(
+                self.current.behavior,
+                terra_core::creatures::CreatureBehavior::Leap
+                    | terra_core::creatures::CreatureBehavior::Hunt
+            )
+            && current.behavior != self.current.behavior;
+        let mut previous = self.current.clone();
+        if reanchor {
+            self.playback = Default::default();
+            previous.position = current.position;
+        } else {
+            previous.position = self.position_at(now).to_array().map(f64::from);
+        }
+        self.interval = now
+            .saturating_duration_since(self.received)
+            .as_secs_f32()
+            .clamp(0.05, 0.4);
+        self.playback.push(
+            Vec3::from_array(current.position.map(|v| v as f32)),
+            Vec3::from_array(current.velocity),
+            stamp,
+            now,
+            current.kind.is_dragon()
+                && matches!(
+                    current.behavior,
+                    terra_core::creatures::CreatureBehavior::Hunt
+                        | terra_core::creatures::CreatureBehavior::Wander
+                ),
+        );
+        self.previous = previous;
+        self.current = current;
+        self.received = now;
+    }
     pub fn position(&self) -> Vec3 {
-        if let Some(position) = self.playback.position_at(Instant::now()) {
+        self.position_at(Instant::now())
+    }
+
+    fn position_at(&self, now: Instant) -> Vec3 {
+        if let Some(position) = self.playback.position_at(now) {
             return position;
         }
         Vec3::from_array(self.previous.position.map(|v| v as f32)).lerp(
             Vec3::from_array(self.current.position.map(|v| v as f32)),
-            (self.received.elapsed().as_secs_f32() / self.interval).clamp(0.0, 1.0),
+            (now.saturating_duration_since(self.received).as_secs_f32() / self.interval)
+                .clamp(0.0, 1.0),
         )
     }
 }
 #[derive(Resource, Default)]
 pub struct ReplicatedCreatures {
+    pub boss: Option<u64>,
     pub creatures: BTreeMap<u64, CreatureTrack>,
     pub intentions: BTreeMap<u64, terra_core::creatures::intentions::CreatureIntent>,
     pub bonds: BTreeMap<u64, terra_core::creatures::taming::CompanionView>,
@@ -68,6 +126,14 @@ fn snapshot_ids(packet: &CreatureStates) -> Result<std::collections::HashSet<u64
     }
     if packet.creatures.iter().any(|animal| !animal.valid()) {
         return Err("invalid creature state");
+    }
+    if packet.boss.is_some_and(|id| {
+        !packet
+            .creatures
+            .iter()
+            .any(|a| a.id == id && a.kind.is_dragon() && a.health > 0.0)
+    }) {
+        return Err("invalid boss encounter");
     }
     if !packet.ecology.valid() {
         return Err("invalid ecology state");
@@ -109,16 +175,14 @@ fn snapshot_ids(packet: &CreatureStates) -> Result<std::collections::HashSet<u64
     }
     if packet.creatures.iter().any(|animal| {
         terra_core::creatures::breeding::is_birth_id(animal.id)
-            && (!packet
-                .families
+            && (!packet.families.iter().any(|family| {
+                family.id == animal.id && (family.parents.is_some() || animal.kind.is_dragon())
+            }) || !(packet
+                .bonds
                 .iter()
-                .any(|family| family.id == animal.id && family.parents.is_some())
-                || !(packet
-                    .bonds
-                    .iter()
-                    .any(|bond| bond.id == animal.id && bond.owner.is_some())
-                    || animal.kind == terra_core::creatures::CreatureKind::Bee
-                        && packet.ecology.bees.contains_key(&animal.id)))
+                .any(|bond| bond.id == animal.id && bond.owner.is_some())
+                || animal.kind == terra_core::creatures::CreatureKind::Bee
+                    && packet.ecology.bees.contains_key(&animal.id)))
     }) {
         return Err("offspring is missing its family, owner or wild bee ecology");
     }
@@ -175,9 +239,16 @@ fn receive(
         session.stalker_grip = None;
         session.stalker_grip_at = None;
     }
+    // If the last living player dies, the server suspends creature snapshots.
+    // Vitals still arrive, and an older creature packet must not restart that fight.
+    let can_fight =
+        active && !session.dead() && session.game_mode == terra_core::GameMode::Survival;
+    if !can_fight && creatures.boss.is_some() {
+        creatures.boss = None;
+    }
     for (entity, mut receiver) in &mut receivers {
         let mut pending: Option<(CreatureStates, std::collections::HashSet<u64>)> = None;
-        for packet in receiver.receive() {
+        for mut packet in receiver.receive() {
             // Snapshot packets can beat the reliable world-ready message. Always
             // drain them; otherwise Lightyear discards an unhandled queue in Last.
             if !active || session.connection != Some(entity) {
@@ -189,6 +260,25 @@ fn receive(
                     .is_some_and(|(previous, _)| packet.tick <= previous.tick)
             {
                 continue;
+            }
+            if packet.families.len() <= terra_core::creatures::MAX_VISIBLE_CREATURES
+                && packet.creatures.len() <= terra_core::creatures::MAX_VISIBLE_CREATURES
+            {
+                // Shared region creatures retain their legacy binary layout; the network
+                // family owns the age record for reared dragons.
+                for family in packet
+                    .families
+                    .iter()
+                    .filter(|family| family.dragon.is_some())
+                {
+                    if let Some(animal) = packet
+                        .creatures
+                        .iter_mut()
+                        .find(|animal| animal.id == family.id)
+                    {
+                        animal.needs.dragon = family.dragon;
+                    }
+                }
             }
             let ids = match snapshot_ids(&packet) {
                 Ok(ids) => ids,
@@ -205,6 +295,7 @@ fn receive(
             continue;
         };
         creatures.tick = packet.tick;
+        creatures.boss = packet.boss.filter(|_| can_fight);
         session.stalker_grip = packet.stalker_grip;
         session.stalker_grip_at = Some(Instant::now());
         creatures.bonds = packet
@@ -237,36 +328,7 @@ fn receive(
                     received: now,
                     interval: 0.1,
                 });
-            // The tail is already fully underground before authority re-anchors
-            // the worm at the second hole. Interpolating that hidden move would
-            // drag its next upright breach sideways through fourteen metres.
-            let reanchor = current.kind == terra_core::creatures::CreatureKind::SandWorm
-                && matches!(
-                    track.current.behavior,
-                    terra_core::creatures::CreatureBehavior::Leap
-                        | terra_core::creatures::CreatureBehavior::Hunt
-                )
-                && current.behavior != track.current.behavior;
-            let mut previous = track.current.clone();
-            if reanchor {
-                track.playback = Default::default();
-                previous.position = current.position;
-            } else {
-                previous.position = track.position().to_array().map(f64::from);
-            }
-            track.interval = now
-                .saturating_duration_since(track.received)
-                .as_secs_f32()
-                .clamp(0.05, 0.4);
-            track.playback.push(
-                Vec3::from_array(current.position.map(|v| v as f32)),
-                Vec3::from_array(current.velocity),
-                stamp,
-                now,
-            );
-            track.previous = previous;
-            track.current = current;
-            track.received = now;
+            track.apply(current, stamp, now);
         }
     }
 }
@@ -396,6 +458,7 @@ mod spirit_wire_tests {
             intentions: Vec::new(),
             bonds: Vec::new(),
             families: Vec::new(),
+            boss: None,
             stalker_grip: None,
         };
         let restored: CreatureStates =

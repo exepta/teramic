@@ -1,4 +1,35 @@
 //! Volume-preserving leading wedge shared by realtime liquid surfaces.
+pub const LATERAL_TRANSFER: u8 = 3;
+pub const WATER_STEP_SECONDS: f64 = 1.0 / 16.0;
+
+/// Paid transfer in storage units. A new sheet first wets its bed with one
+/// water level; a connected waterfall retains a film at its inlet.
+pub fn discharge(
+    donor: u8,
+    receiver: u8,
+    space: u8,
+    source: bool,
+    falling: bool,
+    retained: u8,
+    unit: u8,
+) -> u8 {
+    let pressure = if falling {
+        donor.saturating_sub(retained)
+    } else if source {
+        donor.saturating_sub(receiver)
+    } else {
+        donor.saturating_sub(receiver) / 2
+    };
+    let limit = if falling {
+        4
+    } else if receiver == 0 {
+        1
+    } else {
+        LATERAL_TRANSFER
+    };
+    pressure.min(space).min(limit * unit).min(donor)
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Front {
     pub length: f32,

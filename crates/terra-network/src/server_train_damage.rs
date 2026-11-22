@@ -189,6 +189,7 @@ pub(super) fn hurt_creature(game: &mut terra_core::GameplayState, id: u64, damag
     let Some(animal) = game.creatures.animals.get(&id).filter(|a| a.health > 0.0) else {
         return false;
     };
+    let damage = terra_core::creatures::dragons::incoming_damage(animal, damage);
     let dies = damage >= animal.health;
     let position = animal.position;
     let mut drops = Vec::new();

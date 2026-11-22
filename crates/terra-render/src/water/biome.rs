@@ -3,6 +3,18 @@ use terra_world::{TerraGenerator, generation::biomes::BiomeSample};
 
 /// Linear scattering colors. Ocean, plains and forest retain the original tint.
 pub(crate) const DEFAULT_TINT: [f32; 3] = [0.025, 0.20, 0.16];
+/// Clear brine receives its light from the chamber rather than the surface forest.
+pub(crate) const SALT_POOL_TINT: [f32; 3] = [0.009, 0.092, 0.135];
+pub(crate) fn pool_tint(cave: terra_world::generation::CaveStructure, y: f64) -> Option<[f32; 3]> {
+    use terra_world::generation::CaveEcology;
+    match cave.pool_ecology_at(y)? {
+        CaveEcology::Salt => Some(SALT_POOL_TINT),
+        CaveEcology::Lush => Some([0.012, 0.24, 0.205]),
+        CaveEcology::Waterfall => Some([0.022, 0.17, 0.33]),
+        _ => None,
+    }
+}
+
 pub(crate) const CHERRY_TINT: [f32; 3] = [0.42, 0.16, 0.29];
 pub(crate) const SPIRIT_TINT: [f32; 3] = [0.26, 0.68, 0.61];
 pub(crate) const BLOOD_TINT: [f32; 3] = [0.46, 0.065, 0.115];
@@ -61,6 +73,23 @@ impl WaterTint {
             samples.map(|sample| sample.weights.spirit_blossom as f32),
             samples.map(|sample| sample.weights.blood_forest as f32),
         )
+    }
+
+    pub(crate) fn optics(
+        &self,
+        origin: [i64; 3],
+        point: [f32; 3],
+        column: Option<&terra_world::PreparedColumn>,
+    ) -> ([f32; 4], f32) {
+        let x = origin[0] + point[0].clamp(0., 15.) as i64;
+        let z = origin[2] + point[2].clamp(0., 15.) as i64;
+        let y = origin[1] as f64 + f64::from(point[1]);
+        if let Some([r, g, b]) = column.and_then(|c| pool_tint(c.surface_at(x, z)?.cave, y)) {
+            // Negative spirit weight selects the chamber's water-light response.
+            ([r, g, b, -1.0], 0.)
+        } else {
+            (self.payload(point), self.blood_at(point))
+        }
     }
 
     #[cfg(test)]

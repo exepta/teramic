@@ -6,6 +6,19 @@ pub(super) const ICON_SIZE: usize = SIDE + 2;
 const OUTLINE: [u8; 4] = [24, 29, 30, 255];
 const ALERT: [u8; 4] = [188, 61, 52, 255];
 type Sprite = [&'static str; SIDE];
+const DRAGON: Sprite = [
+    "w   w w   w",
+    "yy  yey  yy",
+    "yyw yyy wyy",
+    " ynnyyynny ",
+    "  ynyny y  ",
+    "  y yyy y  ",
+    "   yyyyy   ",
+    "   wy yy   ",
+    "      yy   ",
+    "       yyy ",
+    "         yy",
+];
 const SAND_WORM: Sprite = [
     "    ooo    ",
     "   yyyyy   ",
@@ -361,6 +374,7 @@ pub(super) fn creature(
         CreatureKind::BloodWisp => &GLOOM,
         CreatureKind::ThornBrute => &STALKER,
         CreatureKind::SandWorm => &SAND_WORM,
+        CreatureKind::DarkDragon | CreatureKind::EarthDragon | CreatureKind::WaterDragon => &DRAGON,
         CreatureKind::SmallSpider | CreatureKind::MediumSpider | CreatureKind::LargeSpider => {
             &SPIDER
         }
@@ -415,6 +429,9 @@ fn sample(sprite: &Sprite, x: i32, y: i32) -> u8 {
 
 fn palette(kind: CreatureKind, variant: u8, glyph: u8) -> [u8; 4] {
     let rgb = match (kind, glyph) {
+        (CreatureKind::DarkDragon, b'y') => [175, 91, 220],
+        (CreatureKind::EarthDragon, b'y') => [208, 148, 75],
+        (CreatureKind::WaterDragon, b'y') => [71, 166, 222],
         (CreatureKind::SandWorm, b'y') => [240, 178, 66],
         (CreatureKind::SandWorm, b'o') => [182, 88, 28],
         (CreatureKind::Raven, b'b') => [60, 40, 80],

@@ -43,6 +43,9 @@ pub enum StructureKind {
     Outpost,
     Cemetery,
     GraveDungeon,
+    DarkDragonLair,
+    EarthDragonLair,
+    WaterDragonLair,
 }
 impl StructureKind {
     fn enabled(self, settings: terra_core::StructureSettings) -> bool {
@@ -52,6 +55,7 @@ impl StructureKind {
             Self::Outpost => settings.outposts,
             Self::Ruin | Self::Cemetery | Self::GraveDungeon => settings.ruins,
             Self::Mine => settings.mines,
+            Self::DarkDragonLair | Self::EarthDragonLair | Self::WaterDragonLair => settings.ruins,
         }
     }
 }
@@ -165,6 +169,33 @@ pub(crate) struct Site {
     pub settlement: Option<Arc<VillageSettlement>>,
 }
 impl Site {
+    /// A reservoir is planned against natural stone. Carving away its bed or
+    /// replacing its wet cells invalidates that reservoir at this column only.
+    pub(crate) fn displaces_water(&self, x: i64, z: i64, water: crate::water::WaterColumn) -> bool {
+        let [lo, hi] = self.summary.bounds;
+        if x < lo[0] || x > hi[0] || z < lo[2] || z > hi[2] {
+            return false;
+        }
+        let bottom = water.bed.ceil() as i64;
+        let top = water.level.ceil() as i64 - 1;
+        self.block_at([x, bottom - 1, z])
+            .is_some_and(crate::water::can_hold_fluid)
+            || (bottom.max(lo[1])..=top.min(hi[1])).any(|y| self.block_at([x, y, z]).is_some())
+    }
+
+    pub(crate) fn clip_water(&self, column: &mut super::SurfaceColumn, x: i64, z: i64) {
+        let [surface, cave, _] = column.water_columns().intervals;
+        if surface.is_some_and(|w| self.displaces_water(x, z, w)) {
+            column.water_level = None;
+            column.water_flow = [0.; 2];
+            column.ocean.ice_depth = 0;
+            column.seagrass_height = 0;
+        }
+        if cave.is_some_and(|w| self.displaces_water(x, z, w)) {
+            column.cave.water = None;
+        }
+    }
+
     pub fn block_at(&self, global: [i64; 3]) -> Option<u16> {
         let (owner, local) = global_to_section(global);
         let index = (local[0] + 16 * (local[1] + 16 * local[2])) as u16;
@@ -221,6 +252,10 @@ struct Entries {
 }
 #[derive(Default)]
 pub(super) struct StructureCache(Mutex<Entries>);
+// Coastal chambers may seek a bank 84 blocks off-center. Their clearance
+// extends at most another 84 blocks, still wholly inside their original region.
+const COASTAL_REGION_MARGIN: i64 = REGION_SIZE / 2 - 84 - 84;
+
 impl TerraGenerator {
     fn planned_site(&self, region: [i64; 2]) -> Option<Arc<Site>> {
         if self.config().structures_revision == 0
@@ -254,6 +289,19 @@ impl TerraGenerator {
         })
         .clone()
     }
+    pub(crate) fn water_lair(&self, x: i64, z: i64) -> Option<Arc<Site>> {
+        let region = [x, z].map(|v| v.div_euclid(REGION_SIZE));
+        if !self.dragon_lair_candidate(region)
+            || [x, z].into_iter().any(|v| {
+                !(COASTAL_REGION_MARGIN..=REGION_SIZE - COASTAL_REGION_MARGIN)
+                    .contains(&v.rem_euclid(REGION_SIZE))
+            })
+        {
+            return None;
+        }
+        self.planned_site(region)
+            .filter(|s| s.summary.kind.dragon().is_some())
+    }
     /// Exact immutable plan used for generation, suitable for native/debug views.
     pub fn structure_site(&self, region: [i64; 2]) -> Option<SiteSummary> {
         self.planned_site(region).map(|s| s.summary.clone())
@@ -283,10 +331,16 @@ impl TerraGenerator {
             for x in region[0] - 1..=region[0] + 1 {
                 // Sites occupy the interior of a region. Avoid building nine
                 // plans just to discover that an ordinary column misses them.
-                if [x, z]
-                    .into_iter()
-                    .enumerate()
-                    .any(|(i, r)| high[i] < r * REGION_SIZE + 96 || low[i] > r * REGION_SIZE + 288)
+                let outside = |margin: i64| {
+                    [x, z].into_iter().enumerate().any(|(i, r)| {
+                        high[i] < r * REGION_SIZE + margin
+                            || low[i] > (r + 1) * REGION_SIZE - margin
+                    })
+                };
+                if outside(96)
+                    && (outside(COASTAL_REGION_MARGIN)
+                        || self.config().structures_revision < 13
+                        || !self.dragon_lair_candidate([x, z]))
                 {
                     continue;
                 }
@@ -309,14 +363,20 @@ impl TerraGenerator {
         // A point can belong to only one interior site envelope. Unlike column
         // preparation, this hot path needs neither nine region probes nor a Vec.
         let horizontal = [global[0], global[2]];
-        if horizontal
-            .iter()
-            .any(|v| !(96..=288).contains(&v.rem_euclid(REGION_SIZE)))
+        let region = horizontal.map(|v| v.div_euclid(REGION_SIZE));
+        let outside = |margin: i64| {
+            horizontal
+                .iter()
+                .any(|v| !(margin..=REGION_SIZE - margin).contains(&v.rem_euclid(REGION_SIZE)))
+        };
+        if outside(96)
+            && (outside(COASTAL_REGION_MARGIN)
+                || self.config().structures_revision < 13
+                || !self.dragon_lair_candidate(region))
         {
             return None;
         }
-        self.planned_site(horizontal.map(|v| v.div_euclid(REGION_SIZE)))?
-            .block_at(global)
+        self.planned_site(region)?.block_at(global)
     }
     pub(crate) fn structure_clears_tree(&self, root: [i64; 3]) -> bool {
         self.structures_for_column(

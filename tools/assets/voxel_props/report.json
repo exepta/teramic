@@ -79,9 +79,9 @@
         "bytes": 70764
       },
       "after": {
-        "vertices": 464,
-        "triangles": 232,
-        "bytes": 28172
+        "vertices": 1024,
+        "triangles": 512,
+        "bytes": 58416
       },
       "definition_unchanged": true
     },
@@ -260,8 +260,8 @@
     "bytes": 1373556
   },
   "after": {
-    "vertices": 18408,
-    "triangles": 9204,
-    "bytes": 1056808
+    "vertices": 18968,
+    "triangles": 9484,
+    "bytes": 1087052
   }
 }

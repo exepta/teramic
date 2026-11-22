@@ -318,6 +318,8 @@ mod tests {
                 surface_sections: None,
                 #[cfg(feature = "bevy")]
                 cave_eye_bounds: None,
+                #[cfg(feature = "bevy")]
+                gallery_skyline: false,
             };
             assert_eq!(column.tree_appearance_at(leaf, material), Some(expected));
             assert_eq!(column.tree_appearance_at(leaf, 3), None);

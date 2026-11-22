@@ -71,8 +71,23 @@ fn candidates(
             let material = chunks
                 .block_at(cell)
                 .map(|id| journal.block(cell).unwrap_or(id))?;
-            if !chunks.loaded.contains_key(&section) || !definitions.contains_key(&material) {
-                return None;
+            if !definitions.contains_key(&material) {
+                // A prop is indexed by its support cell. Validate the live
+                // prop itself when the voxel underneath is ordinary terrain.
+                let loaded = chunks.loaded.get(&section)?;
+                let prop = loaded
+                    .props
+                    .iter()
+                    .chain(journal.placed_props(section))
+                    .any(|prop| {
+                        prop.kind == terra_world::props::PropKind::Scarecrow
+                            && !prop.removed
+                            && !journal.prop_removed(section, prop.id)
+                            && terra_world::props::placement::support(prop) == cell
+                    });
+                if !prop {
+                    return None;
+                }
             }
             let point = emitter_location(
                 journal,

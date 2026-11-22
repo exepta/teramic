@@ -23,11 +23,16 @@ fn unsupported(chunks: &ChunkStore, p: [i64; 3], m: u16) -> bool {
     if matches!(m, 54 | 55) {
         return segments::hanging_support(p, |p| chunks.block_at(p)) == Some(false);
     }
-    let down = anchored(chunks, p, m, -1);
-    let up = anchored(chunks, p, m, 1);
+    if segments::is_crystal(m) {
+        return segments::mineral_support(p, m, |p| chunks.block_at(p)) == Some(false);
+    }
+    if let Some(dy) = segments::fixed_mineral_root(m) {
+        return chunks
+            .block_at([p[0], p[1] + dy, p[2]])
+            .is_some_and(|m| !segments::root_block(m));
+    }
     match m {
-        50 | 56 => down == Some(false),
-        51..=53 => down == Some(false) && up == Some(false),
+        50 | 56 => anchored(chunks, p, m, -1) == Some(false),
         _ => false,
     }
 }
@@ -106,7 +111,10 @@ fn prune(
         }
         return Ok(());
     }
-    let Some(material) = chunks.block_at(p).filter(|m| segments::is_segment(*m)) else {
+    let Some(material) = chunks
+        .block_at(p)
+        .filter(|m| segments::is_segment(*m) || segments::fixed_mineral_root(*m).is_some())
+    else {
         return Ok(());
     };
     if !unsupported(chunks, p, material) {
@@ -115,6 +123,9 @@ fn prune(
     if !journal.gameplay().can_drop() {
         chunks.support_queue.push_back(p);
         return Ok(());
+    }
+    if segments::is_crystal(material) {
+        return detach_mineral(chunks, journal, p, material, properties);
     }
     if commit_segment_edit(
         chunks,
@@ -129,17 +140,73 @@ fn prune(
         journal
             .gameplay_mut()
             .drop_one(p.map(|v| v as f64 + 0.5), ItemKind::Block(material));
-        if segments::is_crystal(material)
-            && let Some(drop) = journal.gameplay_mut().drops.last_mut()
-        {
-            drop.velocity = [0.0, -1.0, 0.0];
-            drop.angular_velocity = [0.0; 3];
-            drop.rotation = [0.0, 0.0, 0.0, 1.0];
-            drop.pickup_delay_seconds = 1.0;
-        }
         after_edit(chunks, journal, p, properties)?;
     }
     Ok(())
+}
+
+/// Remove a contiguous unsupported shaft, publishing one physical drop for it.
+/// Both exposed ends still reconcile other plants or minerals that they supported.
+fn detach_mineral(
+    chunks: &mut ChunkStore,
+    journal: &mut EditJournal,
+    [x, y, z]: [i64; 3],
+    material: u16,
+    properties: &BlockPropertiesCatalog,
+) -> Result<(), String> {
+    let mut low = y;
+    while y - low < segments::MAX_CHAIN - 1 && chunks.block_at([x, low - 1, z]) == Some(material) {
+        low -= 1;
+    }
+    let state = journal.gameplay_mut();
+    let origin = [x as f64 + 0.5, low as f64 + 0.5, z as f64 + 0.5];
+    // Reserve the one drop slot before block removals can release attached objects.
+    if !state.drop_one(origin, ItemKind::Block(material)) {
+        chunks.support_queue.push_back([x, y, z]);
+        return Ok(());
+    }
+    let slot = state.drops.len() - 1;
+    let mut count = 0;
+    let mut pending_error = None;
+    while count < segments::MAX_CHAIN {
+        let point = [x, low + count, z];
+        if chunks.block_at(point) != Some(material) {
+            break;
+        }
+        match commit_segment_edit(
+            chunks,
+            journal,
+            &BlockEditRequest {
+                position: point,
+                expected_material: material,
+                material: 0,
+            },
+            properties,
+        ) {
+            Ok(true) => count += 1,
+            Ok(false) => break,
+            Err(error) => {
+                pending_error = Some(error);
+                break;
+            }
+        }
+    }
+    let state = journal.gameplay_mut();
+    if count == 0 {
+        state.drops.remove(slot);
+    } else {
+        let drop = &mut state.drops[slot];
+        drop.position[1] = low as f64 + count as f64 * 0.5;
+        drop.stack.count = count as u16;
+        drop.rotation = terra_core::WorldDrop::MINERAL_TIP_DOWN;
+        drop.angular_velocity = [0.; 3];
+        drop.velocity = [0., -1., 0.];
+        drop.pickup_delay_seconds = 1.;
+        chunks
+            .support_queue
+            .extend([[x, low - 1, z], [x, low + count, z]]);
+    }
+    pending_error.map_or(Ok(()), Err)
 }
 
 pub(super) fn loaded(
@@ -155,7 +222,10 @@ pub(super) fn loaded(
         && let Ok(origin) = position.origin()
     {
         for (index, &material) in section.data.blocks().iter().enumerate() {
-            if !matches!(material, 50 | 54 | 55 | 56) && !terra_core::lantern::is_part(material) {
+            if !matches!(material, 50 | 54 | 55 | 56)
+                && segments::fixed_mineral_root(material).is_none()
+                && !terra_core::lantern::is_part(material)
+            {
                 continue;
             }
             let p = [
@@ -167,7 +237,8 @@ pub(super) fn loaded(
                 work.push(p);
                 continue;
             }
-            let neighbor = if matches!(material, 54 | 55) { 1 } else { -1 };
+            let neighbor = segments::fixed_mineral_root(material)
+                .unwrap_or(if matches!(material, 54 | 55) { 1 } else { -1 });
             if !chunks
                 .block_at([p[0], p[1] + neighbor, p[2]])
                 .is_some_and(|m| m == material || matches!((material, m), (54 | 55, 54 | 55)))
@@ -180,15 +251,18 @@ pub(super) fn loaded(
         for z in 0..16 {
             for x in 0..16 {
                 let p = [origin[0] + x, origin[1] - 1, origin[2] + z];
-                if let Some(material) = chunks.block_at(p).filter(|m| matches!(m, 54 | 55))
+                if let Some(material) = chunks
+                    .block_at(p)
+                    .filter(|m| matches!(m, 54 | 55) || segments::fixed_mineral_root(*m) == Some(1))
                     && unsupported(chunks, p, material)
                 {
                     work.push(p);
                 }
                 // A rooted aquatic chain may have arrived before its floor.
                 let p = [origin[0] + x, origin[1] + 16, origin[2] + z];
-                if let Some(material) = chunks.block_at(p).filter(|m| matches!(m, 50 | 56))
-                    && unsupported(chunks, p, material)
+                if let Some(material) = chunks.block_at(p).filter(|m| {
+                    matches!(m, 50 | 56) || segments::fixed_mineral_root(*m) == Some(-1)
+                }) && unsupported(chunks, p, material)
                 {
                     work.push(p);
                 }
@@ -233,10 +307,11 @@ pub(super) fn loaded(
             let changed = std::array::from_fn::<_, 3, _>(|axis| origin[axis] + local[axis] as i64);
             for direction in [-1, 1] {
                 let p = [changed[0], changed[1] + direction, changed[2]];
-                let Some(material) = chunks
-                    .block_at(p)
-                    .filter(|m| segments::is_segment(*m) || *m == 98)
-                else {
+                let Some(material) = chunks.block_at(p).filter(|m| {
+                    segments::is_segment(*m)
+                        || segments::fixed_mineral_root(*m).is_some()
+                        || *m == 98
+                }) else {
                     continue;
                 };
                 work.push(p);
