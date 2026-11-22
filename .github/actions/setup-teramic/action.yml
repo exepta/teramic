@@ -1,0 +1,32 @@
+name: Set up Teramic
+description: Install the locked Rust toolchain, native libraries and matching TiltUI source
+runs:
+  using: composite
+  steps:
+    - name: Read TiltUI revision from the source checkout instructions
+      id: tilt
+      working-directory: projects/hobby/teramic
+      shell: bash
+      run: |
+        revision=$(sed -nE 's/^git -C .*tilt-ui checkout --detach ([0-9a-f]{40})$/\1/p' README.md)
+        [[ "$revision" =~ ^[0-9a-f]{40}$ ]]
+        echo "revision=$revision" >> "$GITHUB_OUTPUT"
+    - name: Check out TiltUI next to the hobby projects
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: exepta/tilt-ui
+        ref: ${{ steps.tilt.outputs.revision }}
+        path: projects/tilt-us/tilt-ui
+        persist-credentials: false
+    - name: Install Linux build and runtime libraries
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y libasound2-dev libudev-dev pkg-config libwayland-dev libxkbcommon-dev libx11-dev libxi-dev libxcursor-dev libxrandr-dev libfontconfig1-dev
+    - name: Activate rust-toolchain.toml
+      working-directory: projects/hobby/teramic
+      shell: bash
+      run: |
+        rustup show active-toolchain
+        cargo --version
