@@ -10,7 +10,7 @@ use terra_core::{
 };
 use terra_voxel::{BlockSection, MaterialId, SectionPos};
 
-fn fixture() -> (TerraGenerator, ChunkStore, EditJournal) {
+pub(in crate::creatures) fn fixture() -> (TerraGenerator, ChunkStore, EditJournal) {
     let terrain = TerraGenerator::new(WorldConfig {
         water: false,
         biomes: false,

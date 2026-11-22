@@ -177,6 +177,12 @@ fn torch_emits_but_ores_only_reflect_existing_light() {
             411,
             414,
             421,
+            terra_voxel::MaterialId::AmberGeode as u16,
+            terra_voxel::MaterialId::TideGeode as u16,
+            terra_voxel::MaterialId::SaltCrystalCluster as u16,
+            terra_voxel::MaterialId::CaveCrystalCluster as u16,
+            terra_voxel::MaterialId::GlowVine as u16,
+            terra_voxel::MaterialId::GlacialCrystalCluster as u16,
         ]
         .into_iter()
         .collect()
@@ -229,7 +235,7 @@ fn torch_emits_but_ores_only_reflect_existing_light() {
             "cemetery light {id} must stay on its authored flame, not an adjacent air cell"
         );
     }
-    for (id, light) in assets.lights().filter(|(id, _)| *id >= 400) {
+    for (id, light) in assets.lights().filter(|(id, _)| (400..=421).contains(id)) {
         assert!(
             !light.shadows,
             "Blood Forest light {id} shares the unshadowed lamp pool"
@@ -248,6 +254,18 @@ fn torch_emits_but_ores_only_reflect_existing_light() {
         assert_eq!(light.cave_intensity, 0.7);
         assert_eq!(light.flicker, 0.02);
     }
+    for (material, color) in [
+        (terra_voxel::MaterialId::AmberGeode, [1.0, 0.52, 0.08]),
+        (terra_voxel::MaterialId::TideGeode, [0.14, 0.74, 1.0]),
+    ] {
+        let (_, light) = assets
+            .lights()
+            .find(|(id, _)| *id == material as u16)
+            .unwrap();
+        assert_eq!(light.color, color);
+        assert_eq!((light.range, light.intensity), (12.0, 920.0));
+        assert!(!light.shadows);
+    }
     assert!(
         assets
             .library
@@ -263,10 +281,9 @@ fn torch_emits_but_ores_only_reflect_existing_light() {
     assert_eq!(crusher_lantern.range, 4.0);
     assert_eq!(crusher_lantern.offset, Some([0.0425, 0.454, 0.896]));
     assert!(!crusher_lantern.shadows && crusher_lantern.intensity <= 80.0);
-    assert_eq!(
-        assets.lights().find(|(id, _)| *id == 56).unwrap().1.range,
-        4.0
-    );
+    let (_, cave_mushroom) = assets.lights().find(|(id, _)| *id == 56).unwrap();
+    assert_eq!((cave_mushroom.range, cave_mushroom.intensity), (7.0, 680.0));
+    assert_eq!(cave_mushroom.color, [1.0, 0.57, 0.22]);
     let (_, lantern) = assets.lights().find(|(id, _)| *id == 28).unwrap();
     assert_eq!(lantern.range, 4.0);
     assert_eq!(
@@ -502,6 +519,9 @@ fn shipped_cube_materials_share_soil_but_keep_whole_snow_distinct_from_rock() {
             + 2 // Shared asphalt aggregate and contrasting stone curb textures.
             + 2 // New independent oak and birch end grain.
             + 2 // Wet and cured tar surface materials.
+            + 14 // Salt gallery bedding, cleavage faces and halite ore matrix.
+            + 9 // Five karst bedding/flank pairs replace one procedural dripstone material.
+            + 24 // Twelve living cave surfaces, each with a separate side and top.
             + new_slots.len()
     );
     let spirit_slots: std::collections::BTreeSet<_> = slots
@@ -610,10 +630,12 @@ fn shipped_cube_materials_share_soil_but_keep_whole_snow_distinct_from_rock() {
     assert_ne!(slots[&(38, "Salt body")], slots[&(30, "Host rock")]);
     assert_eq!(slots[&(37, "Dripstone")], slots[&(39, "Dripstone")]);
     for ore in terra_core::OreKind::ALL {
-        assert_eq!(
-            slots[&(ore.material(), "Host rock")],
-            slots[&(3, "Weathered blue stone")]
-        );
+        let host = slots[&(ore.material(), "Host rock")];
+        if ore == terra_core::OreKind::Salt {
+            assert_ne!(host, slots[&(3, "Weathered blue stone")]);
+        } else {
+            assert_eq!(host, slots[&(3, "Weathered blue stone")]);
+        }
     }
     assert_eq!(
         slots[&(14, "Animated water")],

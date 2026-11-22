@@ -6,18 +6,45 @@
   "creative_category": "terrain",
   "render_kind": "cube",
   "surface": "rock",
-  "bevel_width": 0.0,
+  "bevel_width": 0,
   "materials": {
     "Mineral rock": {
-      "texture_pattern": "mineral",
-      "base_color": [0.88, 0.70, 0.72, 1.0],
-      "roughness": 0.94,
-      "reflectance": 0.10
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.54,
+      "reflectance": 0.29,
+      "normal_texture": "textures/salt_cave/layer_side_normal.png"
+    },
+    "Bedding": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.54,
+      "reflectance": 0.29,
+      "normal_texture": "textures/salt_cave/layer_top_normal.png"
     }
   },
-  "face_materials": ["Mineral rock", "Mineral rock", "Mineral rock", "Mineral rock", "Mineral rock", "Mineral rock"],
+  "face_materials": [
+    "Mineral rock",
+    "Mineral rock",
+    "Mineral rock",
+    "Bedding",
+    "Mineral rock",
+    "Mineral rock"
+  ],
   "hardness": 1.0,
   "resistance": 8.0,
   "required_tool": "pickaxe",
-  "mining_level": 1
+  "mining_level": 1,
+  "textures": {
+    "Mineral rock": "textures/salt_cave/layer_side.png",
+    "Bedding": "textures/salt_cave/layer_top.png"
+  }
 }

@@ -55,7 +55,7 @@ impl TerraGenerator {
         } else if ground_patch < -0.25 {
             MaterialId::CrimsonMycelium
         } else {
-            MaterialId::BloodGrass
+            MaterialId::BloodDirt
         })
     }
 
@@ -163,6 +163,7 @@ mod tests {
                 for (index, weight) in weights.into_iter().enumerate() {
                     let material =
                         world.blood_surface_material(point, weight, 0.0, MaterialId::Grass);
+                    assert_ne!(material, Some(MaterialId::BloodGrass));
                     assert_eq!(
                         material,
                         restored.blood_surface_material(point, weight, 0.0, MaterialId::Grass)
@@ -277,7 +278,7 @@ mod tests {
             for (surface, dirt, stone) in [
                 (MaterialId::Grass, MaterialId::Dirt, MaterialId::Stone),
                 (
-                    MaterialId::BloodGrass,
+                    MaterialId::BloodDirt,
                     MaterialId::BloodDirt,
                     MaterialId::BloodStone,
                 ),

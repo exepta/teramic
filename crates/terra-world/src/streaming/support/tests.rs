@@ -253,7 +253,7 @@ fn seagrass_top_is_independent_and_lower_cut_only_retires_above_across_sections(
 
 #[test]
 fn hanging_mineral_cut_drops_only_detached_part_and_retains_ceiling_root() {
-    for material in [51, 52, 53] {
+    for material in [51, 52, 53, 460] {
         let (mut chunks, mut journal, properties) = fixture();
         put(&mut chunks, [-1, 2, -1], 3);
         for y in -8..=1 {
@@ -266,7 +266,10 @@ fn hanging_mineral_cut_drops_only_detached_part_and_retains_ceiling_root() {
         for y in -8..=-2 {
             assert_eq!(chunks.block_at([-1, y, -1]), Some(0));
         }
-        assert_eq!(journal.gameplay().drops.len(), 6);
+        assert_eq!(journal.gameplay().drops.len(), 1);
+        let shaft = &journal.gameplay().drops[0];
+        assert_eq!(shaft.detached_mineral_length(), Some(6));
+        assert_eq!(shaft.position[1], -5.);
         assert!(
             journal
                 .gameplay()
@@ -319,7 +322,11 @@ fn empty_support_section_arriving_last_reconciles_unknown_anchor_without_startup
         prune(&mut chunks, &mut journal, p, &properties).unwrap();
     }
     assert_eq!(chunks.block_at([-1, 0, -1]), Some(0));
-    assert_eq!(journal.gameplay().drops.len(), 2);
+    assert_eq!(journal.gameplay().drops.len(), 1);
+    assert_eq!(
+        journal.gameplay().drops[0].detached_mineral_length(),
+        Some(2)
+    );
 }
 
 #[test]
@@ -333,15 +340,15 @@ fn saturated_drop_capacity_defers_segment_removal_without_losing_items() {
             .gameplay_mut()
             .drop_one([-4.0; 3], ItemKind::Block(3));
     }
-    journal.gameplay_mut().drops.pop();
     prune(&mut chunks, &mut journal, [-1, 0, -1], &properties).unwrap();
-    assert_eq!(chunks.block_at([-1, 0, -1]), Some(0));
-    assert_eq!(chunks.block_at([-1, 1, -1]), Some(52));
+    assert_eq!(chunks.block_at([-1, 0, -1]), Some(52));
     assert!(!chunks.support_queue.is_empty());
-    journal.gameplay_mut().drops.clear();
+    journal.gameplay_mut().drops.pop();
     while let Some(p) = chunks.support_queue.pop_front() {
         prune(&mut chunks, &mut journal, p, &properties).unwrap();
     }
-    assert_eq!(chunks.block_at([-1, 2, -1]), Some(0));
-    assert_eq!(journal.gameplay().drops.len(), 2);
+    assert!((0..3).all(|y| chunks.block_at([-1, y, -1]) == Some(0)));
+    let shaft = journal.gameplay().drops.last().unwrap();
+    assert_eq!(shaft.position[1], 1.5);
+    assert_eq!(shaft.detached_mineral_length(), Some(3));
 }

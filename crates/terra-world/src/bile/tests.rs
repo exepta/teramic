@@ -104,7 +104,10 @@ fn acid_contact_follows_thin_surface_instead_of_whole_voxel() {
         &chunks,
         &journal
     ));
-    assert_eq!(bile::FLOW_SECONDS, 0.2);
+    assert_eq!(
+        bile::FLOW_SECONDS,
+        2. * terra_core::fluid_surface::WATER_STEP_SECONDS
+    );
 }
 
 #[test]
@@ -161,9 +164,17 @@ fn spit_sources_expire_after_five_seconds_even_after_unload_but_collected_bucket
     take_source(&mut chunks, &mut journal, p).unwrap();
     deposit_from_spit(&mut chunks, &mut journal, p).unwrap();
     chunks.loaded.remove(&global_to_section(p).0);
-    for _ in 0..25 {
-        advance(&mut chunks, &mut journal).unwrap();
-    }
+    let cells = bile_cells(&journal);
+    advance_from(
+        &mut chunks,
+        &mut journal,
+        &mut 0,
+        bile::SPIT_STEPS - 1,
+        cells,
+    )
+    .unwrap();
+    assert!(journal.object_state(p).is_some());
+    advance(&mut chunks, &mut journal).unwrap();
     assert_eq!(journal.block(p), Some(0));
     assert!(journal.object_state(p).is_none());
 }
@@ -194,9 +205,195 @@ fn children_recede_after_an_unloaded_spit_source_expires_across_a_section_edge()
     let child = [0, 2, 0];
     assert!(liquid(&chunks, &journal, child).is_some());
     chunks.loaded.remove(&global_to_section(p).0);
-    for _ in 0..41 {
+    for _ in 0..bile::SPIT_STEPS + 8 {
         advance(&mut chunks, &mut journal).unwrap();
     }
     assert_eq!(journal.block(p), Some(0));
     assert!(liquid(&chunks, &journal, child).is_none());
+}
+
+#[test]
+fn galle_uses_the_water_surface_across_a_section_edge_at_half_the_clock_rate() {
+    let (mut chunks, mut journal) = fixture();
+    let source = [-1, 2, 5];
+    deposit_from_bucket(&mut chunks, &mut journal, source).unwrap();
+    advance(&mut chunks, &mut journal).unwrap();
+    let pos = SectionPos::default();
+    let snapshot =
+        BileSurface::capture(&chunks.loaded[&pos].data, &journal, |p| chunks.block_at(p)).unwrap();
+    let galle = snapshot.mesh().unwrap();
+    let mut fluid = crate::water::FluidSnapshot::new();
+    let mut padded = Vec::new();
+    for z in -1..=16 {
+        for y in -1..=16 {
+            for x in -1..=16 {
+                let p = [x, y, z];
+                padded.push(match chunks.block_at(p) {
+                    Some(0 | bile::FLUID) => 0,
+                    _ => 3,
+                });
+                if let Some(s) = liquid(&chunks, &journal, p) {
+                    fluid.insert(
+                        p,
+                        crate::water::FluidCell {
+                            amount: s.volume / 8,
+                            source: s.source,
+                            flow: if s.source {
+                                [0; 2]
+                            } else {
+                                [(x - source[0]) as i8, (z - source[2]) as i8]
+                            },
+                        },
+                    );
+                }
+            }
+        }
+    }
+    let mut water = None;
+    crate::water::append_fluid_patch(&mut water, pos, &[], &padded, &fluid, false);
+    let water = water.unwrap();
+    assert_eq!(water.positions, galle.positions);
+    assert_eq!(water.normals, galle.normals);
+    assert_eq!(water.indices, galle.indices);
+    assert_eq!(water.flow, galle.flow);
+    assert!(
+        galle
+            .surface_effects
+            .iter()
+            .any(|v| v[3] == crate::water::POUR_SURFACE)
+    );
+    let tip = galle.positions.iter().map(|p| p[0]).fold(0., f32::max);
+    assert!(tip > 0.2 && tip < 0.5);
+    assert!(height_at(&chunks, &journal, [0.1, 2.02, 5.5]).is_some());
+    assert!(height_at(&chunks, &journal, [0.8, 2.02, 5.5]).is_none());
+    assert!(!hitbox_contact(
+        terra_core::creatures::hitboxes::Hitbox {
+            center: [0.8, 2.04, 5.5],
+            size: [0.12; 3],
+            axes: [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]
+        },
+        &chunks,
+        &journal
+    ));
+    assert_eq!(
+        bile::FLOW_SECONDS,
+        2. * terra_core::fluid_surface::WATER_STEP_SECONDS
+    );
+}
+
+#[test]
+fn old_spit_timers_keep_their_remaining_seconds_on_the_faster_clock() {
+    let (mut chunks, mut journal) = fixture();
+    let p = [2, 2, 2];
+    set(
+        &mut chunks,
+        &mut journal,
+        p,
+        Some(LiquidState {
+            origin: p,
+            volume: 64,
+            source: true,
+            age: bile::FINE | 10,
+        }),
+    )
+    .unwrap();
+    for _ in 0..15 {
+        advance(&mut chunks, &mut journal).unwrap();
+    }
+    assert!(liquid(&chunks, &journal, p).is_some_and(|s| s.source));
+    advance(&mut chunks, &mut journal).unwrap();
+    assert!(!liquid(&chunks, &journal, p).is_some_and(|s| s.source));
+}
+
+#[test]
+fn blocking_the_only_channel_drains_the_isolated_flow_while_the_source_survives() {
+    let (mut chunks, mut journal) = fixture();
+    for x in -1..=5 {
+        for z in [2, 4] {
+            let (section, local) = global_to_section([x, 2, z]);
+            chunks
+                .loaded
+                .get_mut(&section)
+                .unwrap()
+                .data
+                .set_block(local, 3)
+                .unwrap();
+        }
+    }
+    let origin = [0, 2, 3];
+    deposit_from_bucket(&mut chunks, &mut journal, origin).unwrap();
+    for _ in 0..32 {
+        advance(&mut chunks, &mut journal).unwrap();
+    }
+    assert!(liquid(&chunks, &journal, [3, 2, 3]).is_some());
+    commit_block_edit(
+        &mut chunks,
+        &mut journal,
+        &BlockEditRequest {
+            position: [1, 2, 3],
+            expected_material: bile::FLUID,
+            material: 3,
+        },
+        &BlockPropertiesCatalog::default(),
+    )
+    .unwrap();
+    for _ in 0..12 {
+        advance(&mut chunks, &mut journal).unwrap();
+    }
+    assert!(liquid(&chunks, &journal, origin).is_some_and(|s| s.source));
+    assert!(liquid(&chunks, &journal, [3, 2, 3]).is_none());
+}
+
+#[test]
+fn a_falling_jet_returns_to_a_lower_reservoir_without_spilling_sideways_in_midair() {
+    let (mut chunks, mut journal) = fixture();
+    for y in [2, 4] {
+        deposit_from_bucket(&mut chunks, &mut journal, [2, y, 2]).unwrap();
+        for [dx, _, dz] in SIDES {
+            let (section, local) = global_to_section([2 + dx, y, 2 + dz]);
+            chunks
+                .loaded
+                .get_mut(&section)
+                .unwrap()
+                .data
+                .set_block(local, 3)
+                .unwrap();
+        }
+    }
+    for _ in 0..24 {
+        advance(&mut chunks, &mut journal).unwrap();
+    }
+    assert!(liquid(&chunks, &journal, [2, 3, 2]).is_some_and(|cell| cell.volume > 0));
+    for [dx, _, dz] in SIDES {
+        assert!(liquid(&chunks, &journal, [2 + dx, 3, 2 + dz]).is_none());
+    }
+}
+
+#[test]
+fn idle_acid_and_tar_ticks_leave_terrain_and_journal_change_ticks_untouched() {
+    let mut app = App::new();
+    app.init_resource::<Time>()
+        .init_resource::<WorldAccess>()
+        .init_resource::<ChunkStore>()
+        .init_resource::<EditJournal>()
+        .add_systems(Update, (tick, crate::roads::tick));
+    app.update();
+    let before = (
+        app.world().resource_ref::<ChunkStore>().last_changed(),
+        app.world().resource_ref::<EditJournal>().last_changed(),
+    );
+    for _ in 0..3 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(1));
+        app.update();
+        assert_eq!(
+            app.world().resource_ref::<ChunkStore>().last_changed(),
+            before.0
+        );
+        assert_eq!(
+            app.world().resource_ref::<EditJournal>().last_changed(),
+            before.1
+        );
+    }
 }

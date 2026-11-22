@@ -2,6 +2,17 @@
 use super::{FluidCell, can_hold_fluid};
 use crate::{TerraGenerator, edits::EditJournal, streaming::ChunkStore};
 
+/// Both sections at a vertical boundary sample the receiving cell's inlet.
+/// An isolated free jet narrows, while a flooded layer stays joined to its banks.
+pub(crate) fn inlet_width(p: [i64; 3], cell: FluidCell, wet: impl Fn([i64; 3]) -> bool) -> f64 {
+    if cell.source || cell.amount >= 8 || (0..2).any(|axis| super::tongue::wet_flank(p, axis, &wet))
+    {
+        1.
+    } else {
+        cell.height().sqrt()
+    }
+}
+
 pub fn leading_front(
     chunks: &ChunkStore,
     terrain: &TerraGenerator,
@@ -26,6 +37,11 @@ pub fn leading_front(
             .fluid_cell_at(terrain, journal, ahead, material)
             .amount
             > 0
+        || super::tongue::wet_flank(p, axis, |q| {
+            chunks
+                .block_at(q)
+                .is_some_and(|m| chunks.fluid_cell_at(terrain, journal, q, m).amount > 0)
+        })
     {
         return None;
     }
@@ -63,11 +79,32 @@ pub fn flowing_surface_height(
                     [0, 1, 0],
                 )
             {
-                let half_width = cell.height().sqrt() * 0.5;
-                let inside = [0, 2]
+                let at = |q| {
+                    chunks
+                        .block_at(q)
+                        .map(|m| chunks.fluid_cell_at(terrain, journal, q, m))
+                };
+                let wet = |q| at(q).is_some_and(|c| c.amount > 0);
+                let top = inlet_width(p, cell, wet);
+                let below = [p[0], p[1] - 1, p[2]];
+                let bottom = at(below)
+                    .filter(|c| c.amount > 0)
+                    .filter(|_| matches!(chunks.block_at(below), Some(0 | 27)))
+                    .map_or(top, |c| inlet_width(below, c, wet));
+                let span = [0, 2]
                     .into_iter()
-                    .all(|axis| (position[axis] - p[axis] as f64 - 0.5).abs() <= half_width);
-                return inside.then_some(p[1] as f64 + 1.);
+                    .map(|i| 2. * (position[i] - p[i] as f64 - 0.5).abs())
+                    .fold(0., f64::max);
+                let local_y = position[1] - p[1] as f64;
+                if span > bottom + (top - bottom) * local_y {
+                    return None;
+                }
+                let surface = if span > top {
+                    (bottom - span) / (bottom - top)
+                } else {
+                    1.
+                };
+                return Some(p[1] as f64 + surface);
             }
         }
     }

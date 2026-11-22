@@ -55,11 +55,11 @@ from pathlib import Path
 import hashlib,json,re,struct,sys,wave
 root=Path(sys.argv[1]);log=re.sub(r'\x1b\[[0-9;]*m','',(root/'native.log').read_text(errors='replace'))
 assert 'Sandworm audio passed:' in log,'real audio sink did not consume observed worm phase sounds'
-assert re.search(r'clips=132\b',log),'expanded shared audio bank was not decoded'
+assert re.search(r'worm_clips=27\b',log),'worm takes missing from shared bank'
 assert not re.search(r'\bERROR\b|panicked at|Validation Error|Shader processing error',log)
 clips=[]
-for name in ['roar','dig','landing','bite','spit','hurt','death','breath']:
-    path=root/'audio'/f'worm-{name}.wav'
+for path in sorted((root/'audio').glob('worm-*.wav')):
+    name=path.stem[5:]
     with wave.open(str(path),'rb') as source:
         assert source.getnchannels()==1 and source.getframerate()==24000 and source.getsampwidth()==2
         data=source.readframes(source.getnframes());samples=struct.unpack('<'+'h'*(len(data)//2),data)
@@ -68,8 +68,9 @@ for name in ['roar','dig','landing','bite','spit','hurt','death','breath']:
         assert .008<rms<.35 and .29<=peak<=.681,(name,rms,peak)
         assert samples[0]==0 and samples[-1]==0
         clips.append(dict(name=name,seconds=len(samples)/24000,peak=peak,rms=rms,sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
-report=dict(status='passed',client_sha256=(root/'client.sha256').read_text().split()[0],decoded_clips=132,clips=clips,
-            scope='Observed replicated phase fixtures and real shared audio decoder/device sink; one breach roar across Leap/Emerge, granular digging, landing, bite, spit, hurt, death. Eight original/CC0-derived WAV exports for listening. This is an injected phase fixture, not natural AI footage.')
+assert len(clips)==27 and len({clip['sha256'] for clip in clips})==27
+report=dict(status='passed',client_sha256=(root/'client.sha256').read_text().split()[0],worm_clips=len(clips),clips=clips,
+            scope='Observed replicated phase fixtures and real shared audio decoder/device sink; one breach roar across Leap/Emerge, granular digging, landing, bite, spit, hurt, death. Three original/CC0-derived takes for each of nine actions exported as WAV for listening. This is an injected phase fixture, not natural AI footage.')
 (root/'verification.json').write_text(json.dumps(report,indent=2)+'\n')
 print('Native worm audio passed:',root/'verification.json')
 PY

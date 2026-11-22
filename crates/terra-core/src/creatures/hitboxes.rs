@@ -1,6 +1,8 @@
 //! Anatomical picking volumes, separate from conservative locomotion clearance.
 use super::{Creature, CreatureBehavior, CreatureKind as Kind};
 
+mod dragon;
+
 const CAPACITY: usize = 48;
 const IDENTITY: [[f64; 3]; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
 
@@ -215,6 +217,7 @@ pub fn for_creature(a: &Creature) -> Hitboxes {
         },
     };
     match a.kind {
+        Kind::DarkDragon | Kind::EarthDragon | Kind::WaterDragon => dragon::add(&mut result, a),
         Kind::SandWorm => {
             if matches!(
                 a.behavior,

@@ -262,16 +262,19 @@ impl PropAppearanceState {
 }
 #[derive(Default)]
 struct PropQueue {
-    dirty: bool,
     selection_dirty: bool,
     positions: Vec<(SectionPos, DetailLevel, u64, u64)>,
     changed: HashSet<SectionPos>,
     changes: PropChangeReader,
+    loaded_epochs: HashMap<SectionPos, u64>,
     vegetated: HashSet<SectionPos>,
     web_owners: HashSet<SectionPos>,
     selection: VecDeque<SectionPos>,
     selecting: HashSet<SectionPos>,
+    // A missing neighbour is a dependency. Only a publication/unload touching
+    // that dependency invalidates the otherwise usable partial mesh.
     waiting_support: HashSet<SectionPos>,
+    support_changes: HashSet<SectionPos>,
     prop_epochs: HashMap<SectionPos, u64>,
     #[cfg(test)]
     selection_prune_visits: usize,
@@ -400,6 +403,22 @@ fn neighbor_owners(
 }
 
 impl PropQueue {
+    // ChunkStore also contains simulation queues and streaming bookkeeping.
+    // A mutable borrow can change its Bevy tick without publishing any blocks.
+    fn reconcile_untracked(&self, chunks: &ChunkStore, changes: &mut PropChanges) {
+        changes
+            .published
+            .extend(chunks.loaded.iter().filter_map(|(&position, section)| {
+                (self.loaded_epochs.get(&position) != Some(&section.mesh_epoch)).then_some(position)
+            }));
+        changes.removed.extend(
+            self.loaded_epochs
+                .keys()
+                .copied()
+                .filter(|p| !chunks.loaded.contains_key(p)),
+        );
+    }
+
     fn record_web_owner(&mut self, owner: SectionPos, chunks: &ChunkStore) {
         if chunks.loaded.get(&owner).is_some_and(|section| {
             section
@@ -416,7 +435,7 @@ impl PropQueue {
     fn invalidate_web_neighbors(&mut self, changes: impl Iterator<Item = SectionPos>) {
         let affected = neighbor_owners(&self.web_owners, changes, [2, 1, 2]).positions;
         self.changed.extend(affected.iter().copied());
-        self.waiting_support.extend(affected);
+        self.support_changes.extend(affected);
     }
 
     fn record_prop_edits(&mut self, chunks: &ChunkStore, journal: &EditJournal) {
@@ -664,7 +683,7 @@ fn dispatch(
         }
         true
     });
-    let changes = queue.changes.read(&world);
+    let mut changes = queue.changes.read(&world);
     queue.changed.extend(jobs.1.drain());
     if world.journal.is_changed() {
         queue.record_prop_edits(&world.chunks, &world.journal);
@@ -684,48 +703,29 @@ fn dispatch(
     });
     // Empty sky/rock sections never acquire a vegetation LOD merely because
     // the camera moved. Publications maintain the small live selection domain.
-    if untracked_change || world.terrain.is_changed() {
-        queue.vegetated = world
-            .chunks
-            .loaded
-            .iter()
-            .filter_map(|(&p, section)| section.props.iter().any(|prop| !prop.removed).then_some(p))
-            .collect();
-        queue.web_owners = queue
-            .vegetated
-            .iter()
-            .filter(|owner| {
-                world.chunks.loaded[*owner]
-                    .props
-                    .iter()
-                    .any(|prop| prop.kind == PropKind::SpiderWeb && !prop.removed)
-            })
-            .copied()
-            .collect();
-        queue
-            .selection
-            .retain(|p| world.chunks.loaded.contains_key(p));
-        queue
-            .selecting
-            .retain(|p| world.chunks.loaded.contains_key(p));
-        queue
-            .waiting_support
-            .retain(|p| world.chunks.loaded.contains_key(p));
-        queue
-            .prop_epochs
-            .retain(|p, _| world.chunks.loaded.contains_key(p));
-    } else {
-        for position in &changes.published {
-            queue.record_web_owner(*position, &world.chunks);
-            if world
-                .chunks
-                .loaded
-                .get(position)
-                .is_some_and(|s| s.props.iter().any(|p| !p.removed))
-            {
-                queue.vegetated.insert(*position);
+    if world.terrain.is_changed() {
+        changes.published.clear();
+        changes.removed.extend(
+            queue
+                .loaded_epochs
+                .keys()
+                .copied()
+                .filter(|p| !world.chunks.loaded.contains_key(p)),
+        );
+        changes
+            .published
+            .extend(world.chunks.loaded.keys().copied());
+    } else if untracked_change {
+        queue.reconcile_untracked(&world.chunks, &mut changes);
+    }
+    for &position in &changes.published {
+        if let Some(section) = world.chunks.loaded.get(&position) {
+            queue.loaded_epochs.insert(position, section.mesh_epoch);
+            queue.record_web_owner(position, &world.chunks);
+            if section.props.iter().any(|p| !p.removed) {
+                queue.vegetated.insert(position);
             } else {
-                queue.vegetated.remove(position);
+                queue.vegetated.remove(&position);
             }
         }
     }
@@ -740,7 +740,8 @@ fn dispatch(
         [1, 1, 1],
     )
     .positions;
-    queue.changed.extend(waiting);
+    queue.changed.extend(waiting.iter().copied());
+    queue.support_changes.extend(waiting);
     queue.changed.extend(changes.published);
     if !changes.removed.is_empty() {
         let removed: HashSet<_> = changes
@@ -750,11 +751,13 @@ fn dispatch(
             .collect();
         for position in &removed {
             cancel_job(&mut jobs, *position, &mut meshes);
+            queue.loaded_epochs.remove(position);
             queue.changed.remove(position);
             queue.vegetated.remove(position);
             queue.web_owners.remove(position);
             queue.selecting.remove(position);
             queue.waiting_support.remove(position);
+            queue.support_changes.remove(position);
             queue.prop_epochs.remove(position);
         }
         queue.selection.retain(|p| !removed.contains(p));
@@ -784,7 +787,6 @@ fn dispatch(
         && status.last_focus.is_some_and(|previous| {
             crate::meshing::focus_bucket(previous) == crate::meshing::focus_bucket(world.focus.0)
         })
-        && !world.chunks.is_changed()
         && !world.journal.is_changed()
         && !world.config.is_changed()
         && !world.terrain.is_changed()
@@ -801,7 +803,6 @@ fn dispatch(
         || world.config.is_changed()
         || world.terrain.is_changed()
         || assets.is_changed();
-    queue.dirty |= queue.selection_dirty || untracked_change;
     status.last_focus = Some(world.focus.0);
     // Focus changes can skip an entering root. Only that root needs another
     // selection pass when its fade finishes.
@@ -837,7 +838,7 @@ fn dispatch(
             .positions
             .push((position, level, prop_epoch, appearance_epoch));
     }
-    if animation_finished && !queue.dirty {
+    if animation_finished && !queue.selection_dirty {
         queue.prioritize(world.focus.0);
     }
     if status.error.is_some() {
@@ -876,17 +877,6 @@ fn dispatch(
     let Some(templates) = &templates.geometry else {
         return;
     };
-    if untracked_change {
-        let removed: Vec<_> = jobs
-            .0
-            .keys()
-            .copied()
-            .filter(|p| !world.chunks.loaded.contains_key(p))
-            .collect();
-        for position in removed {
-            cancel_job(&mut jobs, position, &mut meshes);
-        }
-    }
     let available = world
         .config
         .client
@@ -898,31 +888,10 @@ fn dispatch(
         status.pending_jobs = jobs.0.len();
         return;
     }
-    let candidates: Vec<_> = if queue.dirty {
-        let pending: HashSet<_> = if queue.selection_dirty {
-            HashSet::new()
-        } else {
-            queue
-                .positions
-                .iter()
-                .map(|(p, ..)| *p)
-                .chain(queue.changed.iter().copied())
-                .collect()
-        };
+    let candidates: Vec<_> = if queue.selection_dirty {
         let mut candidates: Vec<_> = queue.vegetated.iter().copied().collect();
-        candidates.extend(pending);
         candidates.extend(queue.changed.iter().copied());
-        // An empty section may still own a previous batch that must retire.
-        if untracked_change {
-            candidates.extend(
-                rendered
-                    .0
-                    .iter()
-                    .filter_map(|(&p, old)| old.entity.is_some().then_some(p)),
-            );
-        }
         queue.changed.clear();
-        queue.dirty = false;
         queue.selection_dirty = false;
         candidates
     } else {
@@ -983,8 +952,7 @@ fn dispatch(
                     && p.terrain_epoch == section.mesh_epoch
                     && p.prop_epoch == prop_epoch
                     && p.appearance_epoch == appearance_epoch
-            }) && !queue.waiting_support.contains(&position)
-                && previous.is_none_or(|p| !p.support_pending)
+            }) && !queue.support_changes.contains(&position)
             {
                 continue;
             }
@@ -995,8 +963,7 @@ fn dispatch(
                     && p.level == level
                     && p.density == 1.0
                     && !p.expired_crop_fade(now)
-            }) && !queue.waiting_support.contains(&position)
-                && previous.is_none_or(|p| !p.support_pending)
+            }) && !queue.support_changes.contains(&position)
             {
                 continue;
             }
@@ -1023,7 +990,7 @@ fn dispatch(
             if jobs.0.contains_key(&position)
                 || section.mesh_epoch != world.journal.mesh_epoch(position)
             {
-                if queue.waiting_support.contains(&position) {
+                if queue.support_changes.contains(&position) {
                     queue.changed.insert(position);
                 }
                 continue;
@@ -1043,6 +1010,7 @@ fn dispatch(
         let Some(section) = world.chunks.loaded.get(&position) else {
             continue;
         };
+        queue.support_changes.remove(&position);
         let density = 1.0;
         let mut unknown_support = false;
         let props: Vec<_> = section
@@ -1127,7 +1095,7 @@ fn dispatch(
     status.ready = queue.positions.is_empty()
         && queue.changed.is_empty()
         && queue.selection.is_empty()
-        && !queue.dirty
+        && !queue.selection_dirty
         && jobs.0.is_empty()
         && jobs.1.is_empty();
     static TRACE_READY: std::sync::LazyLock<bool> =
@@ -1135,7 +1103,7 @@ fn dispatch(
     if *TRACE_READY
         && readiness_trace.is_none_or(|last| last.elapsed() >= std::time::Duration::from_secs(5))
     {
-        tracing::info!(focus=?world.focus.0, invalidations=invalidation_flags, jobs=jobs.0.len(), retries=jobs.1.len(), queued=queue.positions.len(), changed=queue.changed.len(), selection=queue.selection.len(), dirty=queue.dirty, waiting_support=queue.waiting_support.len(), "Prop readiness trace");
+        tracing::info!(focus=?world.focus.0, invalidations=invalidation_flags, jobs=jobs.0.len(), retries=jobs.1.len(), queued=queue.positions.len(), changed=queue.changed.len(), selection=queue.selection.len(), dirty=queue.selection_dirty, waiting_support=queue.waiting_support.len(), completed=status.completed_jobs, "Prop readiness trace");
         *readiness_trace = Some(std::time::Instant::now());
     }
     status.pending_jobs = jobs.0.len();
@@ -2381,7 +2349,7 @@ mod scheduling_tests {
             queue.invalidate_web_neighbors(std::iter::once(far_anchor));
             assert_eq!(queue.changed, HashSet::from([owner]));
             assert!(
-                queue.waiting_support.contains(&owner),
+                queue.support_changes.contains(&owner),
                 "bypass unchanged owner epochs and recheck support"
             );
             queue.changed.clear();
@@ -2550,6 +2518,15 @@ mod scheduling_tests {
                 support_pending: true,
             },
         );
+        for frame in 0..60 {
+            app.world_mut().resource_mut::<ChunkFocus>().0[0] =
+                if frame % 2 == 0 { 4.0 } else { 13.0 };
+            app.update();
+            assert!(
+                app.world().resource::<PropJobs>().0.is_empty(),
+                "Crossing a focus bucket cannot resolve a missing support chunk"
+            );
+        }
         app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
             root_section,
             terra_world::streaming::LoadedSection {

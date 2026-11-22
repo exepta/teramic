@@ -90,6 +90,12 @@ impl TerraGenerator {
         )
         .is_multiple_of(7)
     }
+    pub(super) fn ore_host(&self, material: u16) -> bool {
+        matches!(material, 3 | 308)
+            || self.config().cave_structure_revision >= 4 && matches!(material, 13 | 57 | 58)
+            || self.config().cave_structure_revision >= 9 && (454..=457).contains(&material)
+    }
+
     fn deposits(&self, start: [i64; 3], size: usize, mut visit: impl FnMut(Deposit)) {
         if !self.config().ores.enabled {
             return;
@@ -189,10 +195,7 @@ impl TerraGenerator {
         columns: &[SurfaceColumn],
         blocks: &mut [u16],
     ) {
-        let host = |m| {
-            matches!(m, 3 | 308)
-                || self.config().cave_structure_revision >= 4 && matches!(m, 13 | 57 | 58)
-        };
+        let host = |m| self.ore_host(m);
         if !self.config().ores.enabled || !blocks.iter().any(|&m| host(m)) {
             return;
         }

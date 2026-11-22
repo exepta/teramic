@@ -354,7 +354,10 @@ pub(super) fn tick(
                         && terra_world::conveyors::routing_carrying(drop, &world.journal).is_none()
                         && terra_world::conveyors::infusion_carrying(drop, &world.journal).is_none()
                         && (drop.grounded
-                            || !matches!(drop.stack.item, terra_core::ItemKind::Block(51..=53)))
+                            || !matches!(
+                                drop.stack.item,
+                                terra_core::ItemKind::Block(51..=53 | 460)
+                            ))
                         && pickup_visible_with_context(
                             &world.chunks,
                             &world.journal,
@@ -893,7 +896,20 @@ pub(super) fn simulate_drops(
     for (drop, current) in drops.iter_mut().zip(currents) {
         let before = (drop.position, drop.rotation, drop.grounded, drop.velocity);
         let impact_speed = drop.velocity[1].abs();
-        let falling = matches!(drop.stack.item, terra_core::ItemKind::Block(51..=53))
+        // Older saves used individual downward-moving, non-spinning crystals.
+        // The first authoritative step upgrades their pose before replication.
+        if !drop.grounded
+            && matches!(drop.stack.item, terra_core::ItemKind::Block(51..=53))
+            && drop.stack.count == 1
+            && drop.rotation == [0., 0., 0., 1.]
+            && drop.angular_velocity == [0.; 3]
+            && drop.velocity[1] < 0.
+        {
+            drop.rotation = terra_core::WorldDrop::MINERAL_TIP_DOWN;
+        }
+        let shaft = drop.detached_mineral_length();
+        let shaft_half = f64::from(shaft.unwrap_or(1)) * 0.5;
+        let falling = matches!(drop.stack.item, terra_core::ItemKind::Block(51..=53 | 460))
             && !drop.grounded
             && drop.velocity[1] < -4.0;
         drop.pickup_delay_seconds = (drop.pickup_delay_seconds - dt).max(0.0);
@@ -959,8 +975,8 @@ pub(super) fn simulate_drops(
                 let p = body.translation.to_array().map(f64::from);
                 if (drop.position[0] - p[0]).abs() < 0.65
                     && (drop.position[2] - p[2]).abs() < 0.65
-                    && before.0[1] + 0.5 >= p[1] - 0.9
-                    && drop.position[1] - 0.5 <= p[1] + 0.9
+                    && before.0[1] + shaft_half >= p[1] - 0.9
+                    && drop.position[1] - shaft_half <= p[1] + 0.9
                 {
                     let mode = impact
                         .config
@@ -974,20 +990,19 @@ pub(super) fn simulate_drops(
                         mode,
                         terra_core::DamageCause::FallingMineral,
                     );
-                    drop.stack.item = match drop.stack.item {
-                        terra_core::ItemKind::Block(51) => {
-                            terra_core::ItemKind::Mineral(terra_core::OreKind::Salt.resource())
-                        }
-                        terra_core::ItemKind::Block(52) => terra_core::ItemKind::Block(37),
-                        _ => terra_core::ItemKind::Block(49),
-                    };
+                    drop.stack.item = mineral_fragments(drop.stack.item);
                     drop.velocity = [0.0; 3];
                     break;
                 }
             }
         }
-        if drop.grounded && drop.stack.item == terra_core::ItemKind::Block(51) {
-            drop.stack.item = terra_core::ItemKind::Mineral(terra_core::OreKind::Salt.resource());
+        if drop.grounded
+            && (shaft.is_some() || matches!(drop.stack.item, terra_core::ItemKind::Block(51 | 460)))
+        {
+            drop.stack.item = mineral_fragments(drop.stack.item);
+            if shaft.is_some() {
+                drop.position[1] -= shaft_half - 0.16;
+            }
         }
         moved |= (drop.position, drop.rotation, drop.grounded, drop.velocity) != before;
     }
@@ -997,6 +1012,16 @@ pub(super) fn simulate_drops(
     if moved || count != state.drops.len() || *sync >= 1.0 {
         state.revision = state.revision.saturating_add(1);
         *sync = 0.0;
+    }
+}
+
+fn mineral_fragments(item: terra_core::ItemKind) -> terra_core::ItemKind {
+    use terra_core::ItemKind;
+    match item {
+        ItemKind::Block(51 | 460) => ItemKind::Mineral(terra_core::OreKind::Salt.resource()),
+        ItemKind::Block(52) => ItemKind::Block(37),
+        ItemKind::Block(53) => ItemKind::Block(49),
+        _ => item,
     }
 }
 
@@ -1054,13 +1079,16 @@ pub(super) fn step_drop_with_context(
         rotation = rotation.slerp(target, (dt * 12.0).min(1.0)).normalize();
     }
     let axes = Mat3::from_quat(rotation);
-    let size = if !drop.grounded && matches!(drop.stack.item, terra_core::ItemKind::Block(51..=53))
+    let size = if !drop.grounded
+        && matches!(drop.stack.item, terra_core::ItemKind::Block(51..=53 | 460))
     {
         0.46
     } else {
         0.12
     };
-    let mut half = (axes.x_axis.abs() + axes.y_axis.abs() + axes.z_axis.abs()) * size;
+    let shaft_extension = f32::from(drop.detached_mineral_length().unwrap_or(1) - 1) * 0.5;
+    let mut half = (axes.x_axis.abs() + axes.y_axis.abs() + axes.z_axis.abs()) * size
+        + axes.y_axis.abs() * shaft_extension;
     // Rotating a cube can increase its height after touching the ground.
     if drop.grounded && !drop_bounds_clear(chunks, drop.position, half.to_array()) {
         let original = drop.position;

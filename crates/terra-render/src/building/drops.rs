@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use terra_core::ItemKind;
 
 #[derive(Component)]
-pub(super) struct ResourceDrop(u64, ItemKind);
+pub(super) struct ResourceDrop(u64, ItemKind, Option<u16>);
 
 #[derive(Component)]
 pub(super) struct DropPresentation {
@@ -68,6 +68,7 @@ pub(super) struct DropModels {
     bounds: HashMap<ItemKind, (Vec3, Vec3)>,
     foliage: HashMap<usize, Handle<StandardMaterial>>,
     dynamic_order: VecDeque<ItemKind>,
+    mineral_shafts: HashMap<(u16, u16), Handle<Mesh>>,
 }
 
 const MAX_DYNAMIC_MODELS: usize = 128;
@@ -152,6 +153,7 @@ impl DropAssets<'_> {
             | ItemKind::Bone
             | ItemKind::Bitumen
             | ItemKind::GloomEssence
+            | ItemKind::DragonLoot(_)
             | ItemKind::LightSplitter
             | ItemKind::RoadAggregate => {
                 crate::previews::forest_items::batches(item, templates.item_materials.opaque)
@@ -229,6 +231,56 @@ impl DropAssets<'_> {
         }
         self.models.meshes.insert(item, parts);
         true
+    }
+
+    fn mineral_shaft(
+        &mut self,
+        drop: &terra_core::WorldDrop,
+        blocks: &crate::blocks::BlockAssets,
+    ) -> Option<(Handle<Mesh>, Handle<StandardMaterial>)> {
+        let length = drop.detached_mineral_length()?;
+        let ItemKind::Block(material) = drop.stack.item else {
+            return None;
+        };
+        let mineral = if material == 460 { 51 } else { material };
+        let slot = blocks
+            .templates
+            .as_ref()?
+            .blocks
+            .get(&mineral)?
+            .face_materials[0];
+        let surface = blocks.materials.get(slot)?.clone();
+        let mesh = self
+            .models
+            .mineral_shafts
+            .entry((mineral, length))
+            .or_insert_with(|| {
+                let mut batches = std::collections::BTreeMap::new();
+                for y in 0..length {
+                    crate::meshing::segments::append(
+                        &mut batches,
+                        slot,
+                        mineral,
+                        [0, i64::from(y), 0],
+                        [0, u32::from(y), 0],
+                        terra_world::segments::Profile {
+                            below: y as u8,
+                            above: (length - y - 1) as u8,
+                            ..Default::default()
+                        },
+                        crate::meshing::DetailLevel::Near,
+                    )
+                    .expect("bounded detached mineral mesh");
+                }
+                let batch = batches.get_mut(&slot).expect("mineral shaft surface");
+                for p in &mut batch.positions {
+                    p[0] -= 0.5;
+                    p[1] -= f32::from(length) * 0.5;
+                    p[2] -= 0.5;
+                }
+                self.meshes.add(crate::previews::batch_mesh(batch))
+            });
+        Some((mesh.clone(), surface))
     }
 
     pub(super) fn bounds(&self, item: ItemKind) -> Option<(Vec3, Vec3)> {
@@ -322,17 +374,17 @@ impl DropAssets<'_> {
 fn drop_transform(drop: &terra_core::WorldDrop) -> Transform {
     let rotation = Quat::from_array(drop.rotation);
     Transform::from_translation(Vec3::from_array(drop.position.map(|v| v as f32)))
-        .with_scale(Vec3::splat(
-            if !drop.grounded && matches!(drop.stack.item, ItemKind::Block(51..=53)) {
-                1.0 / 0.24
-            } else if let Some(length) = crate::previews::tools::world_length(drop.stack.item) {
-                // Pickups keep the existing 24 cm collision proxy. Equipped
-                // tools reuse this mesh at its true 1.25 / 1.5 metre length.
-                0.24 / length
-            } else {
-                1.0
-            },
-        ))
+        .with_scale(Vec3::splat(if drop.detached_mineral_length().is_some() {
+            1.
+        } else if !drop.grounded && matches!(drop.stack.item, ItemKind::Block(51..=53)) {
+            1.0 / 0.24
+        } else if let Some(length) = crate::previews::tools::world_length(drop.stack.item) {
+            // Pickups keep the existing 24 cm collision proxy. Equipped
+            // tools reuse this mesh at its true 1.25 / 1.5 metre length.
+            0.24 / length
+        } else {
+            1.0
+        }))
         .with_rotation(
             if rotation.is_finite() && rotation.length_squared() > 0.001 {
                 rotation.normalize()
@@ -360,7 +412,7 @@ pub(super) fn animate(
     let mut present = HashSet::new();
     for (entity, drop, mut transform, mut presentation) in &mut drops {
         if let Some(data) = visible.get(&drop.0) {
-            if data.stack.item != drop.1 {
+            if data.stack.item != drop.1 || data.detached_mineral_length() != drop.2 {
                 // An authoritative infuser keeps custody and the drop ID while
                 // converting its contents. Refresh the model in this same pass.
                 commands.entity(entity).despawn();
@@ -379,19 +431,29 @@ pub(super) fn animate(
             continue;
         }
         let item = data.stack.item;
-        if !assets.prepare(item, &world.blocks) {
+        let shaft = assets.mineral_shaft(data, &world.blocks);
+        if shaft.is_none() && !assets.prepare(item, &world.blocks) {
             continue;
         }
         let root = commands
             .spawn((
-                ResourceDrop(id, item),
+                ResourceDrop(id, item, data.detached_mineral_length()),
                 DropPresentation::new(data),
                 drop_transform(data),
                 Visibility::default(),
                 Name::new("Dropped resource"),
             ))
             .id();
-        assets.spawn(&mut commands, root, item, &world.blocks, true);
+        if let Some((mesh, surface)) = shaft {
+            commands.entity(root).insert((
+                Mesh3d(mesh),
+                MeshMaterial3d(surface),
+                crate::miniature::layers(),
+                terra_core::miniature::MiniatureMesh::Drop,
+            ));
+        } else {
+            assets.spawn(&mut commands, root, item, &world.blocks, true);
+        }
     }
     status.drops = visible.len();
 }

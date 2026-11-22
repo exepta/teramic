@@ -42,13 +42,16 @@ pub(crate) fn refresh_growth(
         let mut columns = HashMap::new();
         for segment in &mut Arc::make_mut(geometry).segments {
             let global = std::array::from_fn(|a| origin[a] + i64::from(segment.cell[a]));
-            let column = *columns.entry([global[0], global[2]]).or_insert_with(|| {
-                terrain.surface_column(global[0] as f64 + 0.5, global[2] as f64 + 0.5)
+            let profile = generator.segment_profile(global, segment.material, edits, |[x, z]| {
+                *columns
+                    .entry([x, z])
+                    .or_insert_with(|| terrain.surface_column(x as f64 + 0.5, z as f64 + 0.5))
             });
-            let profile = generator.segment_profile(global, segment.material, column, edits);
             segment.below = profile.below;
             segment.above = profile.above;
             segment.hanging = profile.hanging;
+            segment.joined = profile.joined;
+            segment.fan = profile.fan;
         }
     }
     if terrain.config().cave_structure_revision > 0 {

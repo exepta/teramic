@@ -117,6 +117,7 @@ impl BuildingWorld<'_> {
                 | ItemKind::Bone
                 | ItemKind::Bitumen
                 | ItemKind::GloomEssence
+                | ItemKind::DragonLoot(_)
                 | ItemKind::LightSplitter
                 | ItemKind::RoadAggregate
                 | ItemKind::Dust(_) => Some(templates.item_materials.opaque),

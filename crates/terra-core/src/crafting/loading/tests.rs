@@ -98,7 +98,7 @@ fn only_the_three_declared_process_schema_roots_are_excluded_from_workbench_load
 #[test]
 fn every_shipped_process_recipe_matches_its_actual_runtime_catalog() {
     let root = crate::asset_directory().join("crafting/processes");
-    for (kind, count) in [("smelting", 10), ("crushing", 20), ("brewing", 12)] {
+    for (kind, count) in [("smelting", 11), ("crushing", 20), ("brewing", 12)] {
         let files: Vec<_> = std::fs::read_dir(root.join(kind))
             .unwrap()
             .map(|entry| entry.unwrap().path())

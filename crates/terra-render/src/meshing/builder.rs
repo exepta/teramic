@@ -36,6 +36,7 @@ pub(crate) struct MeshBatch {
     /// Optional UV1 weights: rooted terrain wind, or prop growth timing/ratio.
     pub rooted_wind: Vec<[f32; 2]>,
     pub surface_water: Vec<[f32; 2]>,
+    pub bile_motion: Vec<[f32; 4]>,
     pub growth_anchors: Vec<[f32; 3]>,
     /// CPU-only prop ranges for refreshing growth timing after worker completion.
     pub growth_ranges: Vec<(terra_world::props::PropId, std::ops::Range<usize>)>,
@@ -61,9 +62,7 @@ impl MeshBatch {
         {
             return;
         }
-        if !self.tangents.is_empty() {
-            self.fill_tangents(self.positions.len());
-        }
+        self.finish_tangents();
         if self.packed_normals.is_empty()
             && self.normals.len() == self.positions.len()
             && self.normals.iter().all(|normal| unit_direction(*normal))
@@ -105,8 +104,10 @@ impl MeshBatch {
         self.fill_tangents(self.positions.len());
     }
 
-    fn fill_tangents(&mut self, length: usize) {
-        for index in self.tangents.len()..length {
+    pub(crate) fn complete_tangents(&self, tangents: &mut Vec<[f32; 4]>, count: usize) {
+        // Untextured detail can be appended after a normal-mapped primitive.
+        // Bevy truncates the whole mesh to its shortest attribute at extraction.
+        tangents.extend((tangents.len()..count).map(|index| {
             let normal = self
                 .normals
                 .get(index)
@@ -114,23 +115,31 @@ impl MeshBatch {
                 .or_else(|| {
                     self.packed_normals
                         .get(index)
-                        .map(|normal| std::array::from_fn(|axis| f32::from(normal[axis]) / 127.0))
+                        .map(|n| std::array::from_fn(|i| f32::from(n[i]) / 127.))
                 })
-                .unwrap_or([0.0, 1.0, 0.0]);
-            self.tangents.push(crate::blocks::tangent_frame(
-                Vec3::X,
-                Vec3::from_array(normal),
-                1.0,
-            ));
+                .unwrap_or([0., 1., 0.]);
+            crate::blocks::tangent_frame(Vec3::X, Vec3::from_array(normal), 1.)
+        }));
+    }
+
+    fn fill_tangents(&mut self, length: usize) {
+        if self.tangents.len() < length {
+            let mut tangents = std::mem::take(&mut self.tangents);
+            self.complete_tangents(&mut tangents, length);
+            self.tangents = tangents;
+        }
+    }
+
+    pub(crate) fn finish_tangents(&mut self) {
+        if !self.tangents.is_empty() {
+            self.fill_tangents(self.positions.len());
         }
     }
 
     /// Final worker step, after all geometry edits. Smaller section batches do
     /// not need four-byte indices in ready queues or uploaded GPU buffers.
     pub(crate) fn compact_indices(&mut self) {
-        if !self.tangents.is_empty() {
-            self.fill_tangents(self.positions.len());
-        }
+        self.finish_tangents();
         if self.indices.is_empty()
             || self.positions.len() > usize::from(u16::MAX) + 1
             || self
@@ -378,6 +387,8 @@ pub(crate) fn compose_section_with_segments(
                 below: segment.below,
                 above: segment.above,
                 hanging: segment.hanging,
+                joined: segment.joined,
+                fan: segment.fan,
             },
             options.detail_level,
         )?;

@@ -1,13 +1,16 @@
 //! Shared meter-cell geometry and support rules for plants and mineral growth.
 use terra_voxel::MaterialId;
 
+mod halite;
+mod mineral_fan;
+
 pub const MAX_CHAIN: i64 = 32;
 
 pub const fn is_segment(material: u16) -> bool {
-    matches!(material, 50..=56)
+    matches!(material, 50..=56 | 460)
 }
 pub const fn is_crystal(material: u16) -> bool {
-    matches!(material, 51..=53)
+    matches!(material, 51..=53 | 460)
 }
 
 /// Hanging plants require an unbroken chain to a real ceiling. Unknown sections
@@ -27,11 +30,63 @@ pub fn hanging_support(
     Some(false)
 }
 
+/// Mineral needles can grow from either surface. A gap in the same-material
+/// run separates two formations; rock beyond that gap cannot support either.
+pub fn mineral_support(
+    position: [i64; 3],
+    material: u16,
+    mut block: impl FnMut([i64; 3]) -> Option<u16>,
+) -> Option<bool> {
+    let mut unknown = false;
+    for direction in [-1, 1] {
+        if material == 460 && direction < 0 {
+            continue;
+        }
+        for distance in 1..=MAX_CHAIN + 1 {
+            let p = [
+                position[0],
+                position[1].checked_add(direction * distance)?,
+                position[2],
+            ];
+            let Some(m) = block(p) else {
+                unknown = true;
+                break;
+            };
+            if m == material {
+                continue;
+            }
+            if root_block(m) {
+                return Some(true);
+            }
+            break;
+        }
+    }
+    (!unknown).then_some(false)
+}
+
+pub const fn fixed_mineral_root(material: u16) -> Option<i64> {
+    match material {
+        460 | 483 | 484 => Some(1),
+        459 | 461..=463 | 467 | 468 | 485..=487 => Some(-1),
+        _ => None,
+    }
+}
+
+pub fn root_block(m: u16) -> bool {
+    !is_segment(m)
+        && fixed_mineral_root(m).is_none()
+        && MaterialId::from_raw(m).is_some_and(MaterialId::is_solid)
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Profile {
     pub below: u8,
     pub above: u8,
     pub hanging: bool,
+    pub joined: bool,
+    /// Occupied neighbouring shafts at the lower and upper section of this cell.
+    /// Clockwise bits start at +X and alternate faces and diagonals.
+    pub fan: [u8; 2],
 }
 
 pub fn profile(
@@ -42,13 +97,12 @@ pub fn profile(
     let mut counts = [0; 2];
     let mut anchors = [false; 2];
     for (i, direction) in [-1, 1].into_iter().enumerate() {
-        for distance in 1..=MAX_CHAIN {
+        for distance in 1..=MAX_CHAIN + 1 {
             let p = [position[0], position[1] + distance * direction, position[2]];
             match block(p) {
-                Some(m) if m == material => counts[i] += 1,
+                Some(m) if m == material => counts[i] = (counts[i] + 1).min(MAX_CHAIN as u8),
                 Some(m) => {
-                    anchors[i] =
-                        !is_segment(m) && MaterialId::from_raw(m).is_some_and(MaterialId::is_solid);
+                    anchors[i] = root_block(m);
                     break;
                 }
                 None => break,
@@ -58,7 +112,13 @@ pub fn profile(
     Profile {
         below: counts[0],
         above: counts[1],
-        hanging: matches!(material, 54 | 55) || (!anchors[0] && anchors[1]),
+        joined: matches!(material, 52 | 53) && anchors == [true, true],
+        hanging: matches!(material, 54 | 55 | 460) || (!anchors[0] && anchors[1]),
+        fan: if is_crystal(material) {
+            mineral_fan::connections(position, material, &mut block)
+        } else {
+            [0; 2]
+        },
     }
 }
 
@@ -85,9 +145,7 @@ pub fn extension(
         position[1].checked_add(root_offset)?,
         position[2],
     ];
-    if block(root)
-        .is_none_or(|m| is_segment(m) || !MaterialId::from_raw(m).is_some_and(MaterialId::is_solid))
-    {
+    if !block(root).is_some_and(root_block) {
         return None;
     }
     let length = i64::from(if profile.hanging {
@@ -117,19 +175,54 @@ pub fn water_weight(profile: Profile, y: f32) -> f32 {
         * -6.5
 }
 
-pub fn radius(profile: Profile, y: f32) -> f32 {
+fn mineral_progress(profile: Profile, y: f32) -> f32 {
     let total = f32::from(profile.below) + f32::from(profile.above) + 1.0;
-    let distance = f32::from(if profile.hanging {
-        profile.above
+    let height = (f32::from(profile.below) + y) / total;
+    if profile.joined {
+        (1.0 - (height * 2.0 - 1.0).abs()) * 0.64
+    } else if profile.hanging {
+        1.0 - height
     } else {
-        profile.below
-    }) + if profile.hanging { 1.0 - y } else { y };
-    // Thick mineral shafts, with a short bevel only on the last cell.
-    // World-chain distance keeps both sides of section boundaries identical.
-    let progress = (distance / total).clamp(0.0, 1.0);
-    let shaft = 0.46 - (progress * 4.0).floor() * 0.025;
-    let bevel = ((distance - (total - 0.28)) / 0.28).clamp(0.0, 1.0);
-    shaft * (1.0 - bevel * 0.25)
+        height
+    }
+}
+
+/// Conservative horizontal envelope used by the four collision slices.
+pub fn radius(material: u16, profile: Profile, y: f32) -> f32 {
+    let radius = shaft_radius(material, profile, y)
+        + if profile.below > 0 || profile.above > 0 || profile.fan != [0; 2] {
+            0.095 * mineral_progress(profile, y).powi(2)
+        } else {
+            0.
+        };
+    if profile.fan == [0; 2] {
+        return radius;
+    }
+    let ends = profile.fan.map(|mask| {
+        if mask & 0x55 == 0 {
+            (radius * 1.05).min(0.5)
+        } else {
+            0.5
+        }
+    });
+    ends[0] * (1. - y) + ends[1] * y
+}
+
+fn shaft_radius(material: u16, profile: Profile, y: f32) -> f32 {
+    let t = mineral_progress(profile, y);
+    match material {
+        // Halite cleaves into blunt, bevelled prisms.
+        51 | 460 => {
+            let tip = ((t - 0.70) / 0.30).clamp(0., 1.);
+            0.035 + 0.427 * (1. - 0.34 * t) * (1. - tip)
+        }
+        // Dripping calcite accretes in rounded flutes. The rooted end flares
+        // into the ceiling, then slowly narrows along the entire pendant.
+        52 => 0.018 + 0.46 * (1. - t).powf(if profile.hanging { 0.81 } else { 1.07 }),
+        // Frosted shoulders give way to long cleavage faces and an ice point.
+        53 => 0.027 + 0.425 * (1.0 - 0.29 * t) * (1.0 - ((t - 0.73) / 0.27).clamp(0., 1.)),
+        _ => 0.030 + 0.42 * (1. - t * 0.52) * (1. - ((t - 0.61) / 0.39).clamp(0., 1.)),
+    }
 }
 
 pub fn displace(p: [f64; 3], weight: f32, time: f32) -> [f64; 3] {
@@ -146,19 +239,59 @@ pub fn visit(
     mut emit: impl FnMut([[f32; 3]; 3], [f32; 3]),
 ) {
     let h = seed(position);
+    // The ceiling-only halite block uses the same connected mineral geometry.
+    let (material, profile) = if material == 460 {
+        (
+            51,
+            Profile {
+                hanging: true,
+                ..profile
+            },
+        )
+    } else {
+        (material, profile)
+    };
+    if is_crystal(material) && (profile.fan != [0; 2] || profile.below > 0 || profile.above > 0) {
+        mineral_fan::visit(material, profile, h, coarse, &mut emit);
+        return;
+    }
+    if material == 51 {
+        halite::visit(profile, h, coarse, &mut emit);
+        return;
+    }
     if is_crystal(material) {
-        let sides = 4;
-        let angle = (h & 3) as f32 * std::f32::consts::FRAC_PI_2;
+        let sides = match material {
+            52 => 10,
+            _ => 8,
+        };
+        let angle = (h & 255) as f32 * (std::f32::consts::TAU / 256.);
+        let (s, c) = angle.sin_cos();
         let ring = |y: f32, i: usize| {
-            // Broad square mineral bodies, never octagonal rounded columns.
-            let corners = [[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]];
-            let [u, v] = corners[i];
-            let r = radius(profile, y);
-            [
-                0.5 + (u * angle.cos() - v * angle.sin()) * r,
-                y,
-                0.5 + (u * angle.sin() + v * angle.cos()) * r,
-            ]
+            let a = std::f32::consts::TAU * i as f32 / sides as f32;
+            let (u, v) = match material {
+                52 => {
+                    let flute = if i.is_multiple_of(2) {
+                        1.0
+                    } else {
+                        0.66 + ((h >> (i + 9)) & 3) as f32 * 0.05
+                    };
+                    (a.cos() * flute, a.sin() * flute)
+                }
+                // Unequal bevel widths create a split-crystal glint without
+                // changing the section outline between near and distant meshes.
+                _ => [
+                    (0.82, 0.48),
+                    (0.47, 0.91),
+                    (-0.44, 0.91),
+                    (-0.81, 0.51),
+                    (-0.81, -0.45),
+                    (-0.42, -0.94),
+                    (0.43, -0.94),
+                    (0.82, -0.49),
+                ][i % 8],
+            };
+            let r = radius(material, profile, y);
+            [0.5 + (c * u - s * v) * r, y, 0.5 + (s * u + c * v) * r]
         };
         let terminal = if profile.hanging {
             profile.below == 0
@@ -175,10 +308,10 @@ pub fn visit(
         };
         for i in 0..sides {
             let n = (i + 1) % sides;
-            let shade = 0.86 + (i % 3) as f32 * 0.055;
+            let shade = 0.74 + ((i + (h >> 12) as usize) % 5) as f32 * 0.061;
             let color = match material {
-                51 => [shade, shade * 0.91, shade * 0.94],
-                52 => [shade, shade * 0.94, shade * 0.85],
+                52 if i.is_multiple_of(3) => [shade, shade * 0.89, shade * 0.77],
+                52 => [shade * 0.95, shade * 0.93, shade * 0.91],
                 _ => [shade * 0.87, shade * 0.96, shade],
             };
             for ys in levels.windows(2) {
@@ -276,30 +409,44 @@ pub fn visit(
             }
         }
     } else if material == 56 {
-        voxel(
-            [0.5, 0.19, 0.5],
-            [0.085, 0.38, 0.085],
-            [0.86, 0.70, 0.38],
-            &mut emit,
-        );
-        voxel(
-            [0.5, 0.36, 0.5],
-            [0.40, 0.07, 0.34],
-            [1.0, 0.57, 0.18],
-            &mut emit,
-        );
-        voxel(
-            [0.5, 0.42, 0.5],
-            [0.30, 0.065, 0.27],
-            [1.0, 0.80, 0.41],
-            &mut emit,
-        );
-        voxel(
-            [0.5, 0.47, 0.5],
-            [0.16, 0.04, 0.15],
-            [1.0, 0.87, 0.58],
-            &mut emit,
-        );
+        // A larger crown and two young fruiting bodies share the same patch.
+        let phase = (h & 15) as f32 * 0.39;
+        for (x, z, height, radius) in [
+            (0.45, 0.47, 0.77, 0.28),
+            (0.72, 0.68, 0.46, 0.18),
+            (0.24, 0.76, 0.29, 0.13),
+        ] {
+            if coarse && height < 0.30 {
+                continue;
+            }
+            let y = height * 0.74;
+            voxel(
+                [x, y * 0.5, z],
+                [radius * 0.38, y, radius * 0.38],
+                [0.98, 0.79, 0.44],
+                &mut emit,
+            );
+            let point = |i: usize, r: f32, y: f32| {
+                let a = phase + i as f32 * std::f32::consts::FRAC_PI_4;
+                [x + a.cos() * radius * r, y, z + a.sin() * radius * r * 0.89]
+            };
+            for i in 0..8 {
+                let j = (i + 1) % 8;
+                let a = point(i, 1., y);
+                let b = point(j, 1., y);
+                let c = point(i, 0.58, height * 0.95);
+                let d = point(j, 0.58, height * 0.95);
+                let edge = if i % 3 == 0 {
+                    [1., 0.76, 0.25]
+                } else {
+                    [1., 0.57, 0.13]
+                };
+                emit([a, c, b], edge);
+                emit([c, d, b], edge);
+                emit([c, [x, height, z], d], [1., 0.83, 0.38]);
+                emit([a, b, [x, y - height * 0.075, z]], [1., 0.92, 0.62]);
+            }
+        }
     }
 }
 

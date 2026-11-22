@@ -6,10 +6,10 @@ pub(crate) mod fluid;
 #[cfg(any(feature = "bevy", test))]
 pub(crate) mod fluid_mesh;
 #[cfg(feature = "bevy")]
-mod front;
+pub(crate) mod front;
 mod geometry;
 #[cfg(any(feature = "bevy", test))]
-mod tongue;
+pub(crate) mod tongue;
 #[cfg(feature = "bevy")]
 pub use front::{flowing_surface_height, leading_front};
 #[cfg(feature = "bevy")]
@@ -82,15 +82,36 @@ impl WaterColumns {
 
 impl crate::TerraGenerator {
     pub fn water_columns(&self, x: f64, z: f64) -> WaterColumns {
-        WaterColumns {
+        let mut columns = WaterColumns {
             intervals: [
-                self.water_column(x, z),
+                self.natural_surface_water(x, z),
                 self.cave_structure_at(x, z).water,
                 None,
             ],
+        };
+        if columns.intervals.iter().any(Option::is_some) {
+            let [x, z] = [x, z].map(|v| v.floor() as i64);
+            if let Some(site) = self.water_lair(x, z) {
+                for water in &mut columns.intervals {
+                    if water.is_some_and(|w| site.displaces_water(x, z, w)) {
+                        *water = None;
+                    }
+                }
+            }
         }
+        columns
     }
     pub fn water_column(&self, x: f64, z: f64) -> Option<WaterColumn> {
+        let water = self.natural_surface_water(x, z)?;
+        let [x, z] = [x, z].map(|v| v.floor() as i64);
+        (!self
+            .water_lair(x, z)
+            .is_some_and(|s| s.displaces_water(x, z, water)))
+        .then_some(water)
+    }
+
+    // Site planners operate on the unmodified watershed and must never request their own plan.
+    pub(crate) fn natural_surface_water(&self, x: f64, z: f64) -> Option<WaterColumn> {
         if !self.config().water {
             return None;
         }

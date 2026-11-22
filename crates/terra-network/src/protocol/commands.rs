@@ -16,6 +16,14 @@ pub enum Command {
     EffectClear(Option<terra_core::EffectKind>),
 }
 
+use terra_world::generation::CaveEcology;
+pub(crate) const CAVE_BIOMES: [(&str, CaveEcology); 4] = [
+    ("lush_cave", CaveEcology::Lush),
+    ("salt_cave", CaveEcology::Salt),
+    ("ice_cave", CaveEcology::Waterfall),
+    ("drip_cave", CaveEcology::Dripstone),
+];
+
 pub const HELP_PAGE_SIZE: usize = 5;
 pub const RULE_PAGE_SIZE: usize = 8;
 pub fn rule_pages() -> usize {
@@ -46,10 +54,10 @@ pub const CATALOGUE: &[CommandDescription] = &[
     },
     CommandDescription {
         usage: "/locate biome <name>",
-        description: "Find a biome and a safe teleport destination.",
+        description: "Find a surface biome or lush_cave, salt_cave, ice_cave or drip_cave.",
     },
     CommandDescription {
-        usage: "/locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost|teramic::cemetery|teramic::grave_dungeon>",
+        usage: "/locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost|teramic::cemetery|teramic::grave_dungeon|teramic::dark_dragon_lair|teramic::earth_dragon_lair|teramic::water_dragon_lair>",
         description: "Find a generated structure; Creative also supports air and water landings.",
     },
     CommandDescription {
@@ -112,6 +120,17 @@ mod locate_tests {
             console_suggestions("as Alice locate struct teramic::r", &[]),
             ["as Alice locate struct teramic::ruin"]
         );
+        for (slug, _) in CAVE_BIOMES {
+            let input = format!("/locate biome {slug}");
+            assert_eq!(suggestions(&input, &[]), [input.as_str()]);
+            assert_eq!(console_suggestions(&input[1..], &[]), [&input[1..]]);
+        }
+        for species in ["dark", "earth", "water"] {
+            assert_eq!(
+                suggestions(&format!("/locate struct teramic::{species}"), &[]),
+                [format!("/locate struct teramic::{species}_dragon_lair")],
+            );
+        }
         assert_eq!(
             suggestions("/locate ", &[]),
             ["/locate biome ", "/locate struct "]
@@ -678,7 +697,8 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
             "spirit_blossom",
             "blood_forest",
         ]
-        .iter()
+        .into_iter()
+        .chain(CAVE_BIOMES.iter().map(|(slug, _)| *slug))
         .map(|v| format!("/locate biome {v}"))
         .collect()
     } else if prefix.starts_with("/locate struct ") {
@@ -690,6 +710,9 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
             "teramic::outpost",
             "teramic::cemetery",
             "teramic::grave_dungeon",
+            "teramic::dark_dragon_lair",
+            "teramic::earth_dragon_lair",
+            "teramic::water_dragon_lair",
         ]
         .iter()
         .map(|v| format!("/locate struct {v}"))

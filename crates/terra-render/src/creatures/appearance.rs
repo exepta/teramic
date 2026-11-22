@@ -14,6 +14,7 @@ impl Appearance {
                 Kind::Horse | Kind::Butterfly | Kind::SpiritGloom | Kind::Skeleton => {
                     animal.variant
                 }
+                kind if kind.is_dragon() => animal.variant.min(kind.variant_count() - 1),
                 Kind::Villager => model::villager_variant(animal.variant, animal.sex()),
                 Kind::Fish => u8::from(animal.variant >= 2),
                 _ => 0,
@@ -144,7 +145,7 @@ mod tests {
         for sex in [CreatureSex::Male, CreatureSex::Female] {
             let key = model::villager_variant(villagers::LUMBERJACK, sex);
             let parts = model::parts_variant(Kind::Villager, key).unwrap();
-            assert_eq!(parts.len(), 6);
+            assert_eq!(parts.len(), 10);
             assert!(
                 parts
                     .iter()

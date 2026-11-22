@@ -4,7 +4,7 @@ use crate::protocol::chat::{ChatEntry, LocateResult, sanitize};
 use bevy::tasks::{AsyncComputeTaskPool, Task, futures_lite::future};
 use terra_world::{
     TerraGenerator,
-    generation::{biomes::BiomeKind, structures::StructureKind},
+    generation::{CaveEcology, biomes::BiomeKind, structures::StructureKind},
     spawn::WorldSpawn,
 };
 
@@ -12,6 +12,8 @@ const SEARCH_STEP: i64 = 96;
 const SEARCH_RINGS: i64 = 64;
 const JOB_LIMIT: usize = 4;
 
+#[path = "server_cave_locate.rs"]
+mod cave_locate;
 #[path = "server_console.rs"]
 mod console;
 use console::{console_commands, finish_console_search};
@@ -65,7 +67,7 @@ pub(super) struct PendingTeleport {
     pub position: Vec3,
     started: Instant,
     pub deltas_ready: bool,
-    require_ground: bool,
+    ground: GroundCheck,
     creative_only: bool,
     respawn: bool,
     privileged: bool,
@@ -80,7 +82,7 @@ impl PendingTeleport {
             position,
             started: Instant::now(),
             deltas_ready: false,
-            require_ground: true,
+            ground: GroundCheck::Surface,
             creative_only: false,
             respawn: true,
             privileged: false,
@@ -150,6 +152,7 @@ struct Located {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LocateTarget {
     Biome(BiomeKind),
+    Cave(CaveEcology),
     Structure(StructureKind),
 }
 
@@ -157,6 +160,11 @@ impl LocateTarget {
     fn name(self) -> &'static str {
         match self {
             Self::Biome(kind) => biome_name(kind),
+            Self::Cave(CaveEcology::Salt) => "Salt Cave",
+            Self::Cave(CaveEcology::Lush) => "Lush Cave",
+            Self::Cave(CaveEcology::Dripstone) => "Dripstone Cave",
+            Self::Cave(CaveEcology::Waterfall) => "Ice Cave",
+            Self::Cave(_) => "Cave",
             Self::Structure(StructureKind::Village) => "Village",
             Self::Structure(StructureKind::Ruin) => "Ruin",
             Self::Structure(StructureKind::Mine) => "Mine",
@@ -164,13 +172,24 @@ impl LocateTarget {
             Self::Structure(StructureKind::Outpost) => "Outpost",
             Self::Structure(StructureKind::Cemetery) => "Cemetery",
             Self::Structure(StructureKind::GraveDungeon) => "Grave Dungeon",
+            Self::Structure(StructureKind::DarkDragonLair) => "Dark Dragon Lair",
+            Self::Structure(StructureKind::EarthDragonLair) => "Earth Dragon Lair",
+            Self::Structure(StructureKind::WaterDragonLair) => "Water Dragon Lair",
         }
     }
 }
 
 #[derive(Clone, Copy)]
+enum GroundCheck {
+    Surface,
+    Cave(WorldSpawn),
+    Air,
+}
+
+#[derive(Clone, Copy)]
 enum LocateLanding {
     Dry(WorldSpawn),
+    Cave(WorldSpawn),
     Creative([i64; 3]),
 }
 
@@ -181,7 +200,9 @@ impl LocateLanding {
 
     fn feet(self) -> [i64; 3] {
         match self {
-            Self::Dry(spawn) => [spawn.ground[0], spawn.ground[1] + 1, spawn.ground[2]],
+            Self::Dry(spawn) | Self::Cave(spawn) => {
+                [spawn.ground[0], spawn.ground[1] + 1, spawn.ground[2]]
+            }
             Self::Creative(feet) => feet,
         }
     }
@@ -189,6 +210,7 @@ impl LocateLanding {
     fn is_valid(self, terrain: &TerraGenerator, journal: &EditJournal) -> bool {
         match self {
             Self::Dry(spawn) => spawn.is_valid(terrain, journal),
+            Self::Cave(spawn) => cave_locate::clear(terrain, journal, spawn),
             Self::Creative(feet) => creative_clearance(terrain, journal, feet),
         }
     }
@@ -471,7 +493,11 @@ pub(super) fn tick(
                             + Vec3::Y * (terra_physics::character::PLAYER_HALF_HEIGHT + 0.02),
                         started: Instant::now(),
                         deltas_ready: false,
-                        require_ground: matches!(target, LocateLanding::Dry(_)),
+                        ground: match target {
+                            LocateLanding::Cave(spawn) => GroundCheck::Cave(spawn),
+                            LocateLanding::Dry(_) => GroundCheck::Surface,
+                            LocateLanding::Creative(_) => GroundCheck::Air,
+                        },
                         creative_only: matches!(target, LocateLanding::Creative(_)),
                         privileged: peer.chat.console_active,
                     });
@@ -537,10 +563,24 @@ fn finish_search(
         return;
     };
     let mut entry = world.runtime.entry("");
+    let cave = matches!(found.target, LocateTarget::Cave(_));
     let safe = found
         .spawn
-        .filter(|spawn| spawn.is_valid(&world.terrain.0, &world.journal));
-    let landing = safe.map(LocateLanding::Dry).or_else(|| {
+        .map(|spawn| {
+            if cave {
+                LocateLanding::Cave(spawn)
+            } else {
+                LocateLanding::Dry(spawn)
+            }
+        })
+        .filter(|target| target.is_valid(&world.terrain.0, &world.journal));
+    let landing = safe.or_else(|| {
+        if cave {
+            return (found.spawn.is_none()
+                && peer.game_mode(&world.config) == terra_core::GameMode::Creative
+                && creative_clearance(&world.terrain.0, &world.journal, found.position))
+            .then_some(LocateLanding::Creative(found.position));
+        }
         (peer.game_mode(&world.config) == terra_core::GameMode::Creative).then(|| {
             LocateLanding::Creative(creative_landing(
                 &world.terrain.0,
@@ -598,12 +638,16 @@ fn finish_teleport(
         return;
     };
     let position = pending.position;
-    let state = if pending.require_ground {
-        spawn::loaded_state(&world.chunks, &world.terrain.0, &world.journal, position)
-    } else {
-        teleport_space(&world.chunks, position)
+    let state = match pending.ground {
+        GroundCheck::Cave(spawn) => {
+            cave_locate::loaded(&world.chunks, &world.terrain.0, &world.journal, spawn)
+        }
+        GroundCheck::Surface => {
+            spawn::loaded_state(&world.chunks, &world.terrain.0, &world.journal, position)
+        }
+        GroundCheck::Air => teleport_space(&world.chunks, position),
     };
-    let require_ground = pending.require_ground;
+    let require_ground = !matches!(pending.ground, GroundCheck::Air);
     let respawn = pending.respawn;
     let expired = pending.started.elapsed() > Duration::from_secs(25);
     let permitted = (if respawn {
@@ -929,7 +973,7 @@ fn execute(
         position,
         started: Instant::now(),
         deltas_ready: false,
-        require_ground: false,
+        ground: GroundCheck::Air,
         creative_only: false,
         privileged: peer.chat.console_active,
     });
@@ -1170,14 +1214,12 @@ fn parse_command(text: &str) -> Result<Option<LocateTarget>, &'static str> {
         return Ok(None);
     }
     if parts.len() < 3 || parts[0] != "/locate" {
-        return Err(
-            "Usage: /locate biome <name> | /locate struct <teramic::village|ruin|mine|kingdom|outpost>.",
-        );
+        return Err("Usage: /locate biome <name> | /locate struct teramic::<structure>.");
     }
     if parts[1] == "struct" {
         if parts.len() != 3 {
             return Err(
-                "Usage: /locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost|teramic::cemetery|teramic::grave_dungeon>.",
+                "Usage: /locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost|teramic::cemetery|teramic::grave_dungeon|teramic::dark_dragon_lair|teramic::earth_dragon_lair|teramic::water_dragon_lair>.",
             );
         }
         return match parts[2].to_ascii_lowercase().as_str() {
@@ -1187,20 +1229,34 @@ fn parse_command(text: &str) -> Result<Option<LocateTarget>, &'static str> {
             "teramic::kingdom" => Ok(Some(LocateTarget::Structure(StructureKind::Kingdom))),
             "teramic::outpost" => Ok(Some(LocateTarget::Structure(StructureKind::Outpost))),
             "teramic::cemetery" => Ok(Some(LocateTarget::Structure(StructureKind::Cemetery))),
+            "teramic::dark_dragon_lair" => {
+                Ok(Some(LocateTarget::Structure(StructureKind::DarkDragonLair)))
+            }
+            "teramic::earth_dragon_lair" => Ok(Some(LocateTarget::Structure(
+                StructureKind::EarthDragonLair,
+            ))),
+            "teramic::water_dragon_lair" => Ok(Some(LocateTarget::Structure(
+                StructureKind::WaterDragonLair,
+            ))),
             "teramic::grave_dungeon" => {
                 Ok(Some(LocateTarget::Structure(StructureKind::GraveDungeon)))
             }
             _ => Err(
-                "Unknown structure. Use teramic::village, teramic::ruin, teramic::mine, teramic::kingdom, teramic::outpost, teramic::cemetery or teramic::grave_dungeon.",
+                "Unknown structure. Use teramic::village, teramic::ruin, teramic::mine, teramic::kingdom, teramic::outpost, teramic::cemetery, teramic::grave_dungeon, teramic::dark_dragon_lair, teramic::earth_dragon_lair or teramic::water_dragon_lair.",
             ),
         };
     }
     if parts[1] != "biome" {
-        return Err(
-            "Usage: /locate biome <name> | /locate struct <teramic::village|ruin|mine|kingdom|outpost>.",
-        );
+        return Err("Usage: /locate biome <name> | /locate struct teramic::<structure>.");
     }
-    let biome = match parts[2..].join("_").to_ascii_lowercase().as_str() {
+    let name = parts[2..].join("_").to_ascii_lowercase();
+    if let Some((_, ecology)) = crate::protocol::commands::CAVE_BIOMES
+        .iter()
+        .find(|(slug, _)| *slug == name)
+    {
+        return Ok(Some(LocateTarget::Cave(*ecology)));
+    }
+    let biome = match name.as_str() {
         "ocean" => BiomeKind::Ocean,
         "plains" => BiomeKind::Plains,
         "forest" => BiomeKind::Forest,
@@ -1218,6 +1274,7 @@ fn parse_command(text: &str) -> Result<Option<LocateTarget>, &'static str> {
 
 fn locate(terrain: &TerraGenerator, origin: [i64; 2], target: LocateTarget) -> Option<Located> {
     match target {
+        LocateTarget::Cave(kind) => cave_locate::find(terrain, origin, kind),
         LocateTarget::Biome(biome) => locate_biome(terrain, origin, biome),
         LocateTarget::Structure(kind) => locate_structure(terrain, origin, kind),
     }
@@ -1327,6 +1384,9 @@ fn locate_structure(
                 if matches!(kind, StructureKind::Kingdom | StructureKind::Outpost)
                     && terrain.royal_site_candidate(candidate) != Some(kind)
                 {
+                    continue;
+                }
+                if kind.dragon().is_some() && !terrain.dragon_lair_candidate(candidate) {
                     continue;
                 }
                 if matches!(kind, StructureKind::Cemetery | StructureKind::GraveDungeon)
@@ -1513,6 +1573,9 @@ mod tests {
             ("teramic::outpost", StructureKind::Outpost),
             ("teramic::cemetery", StructureKind::Cemetery),
             ("teramic::grave_dungeon", StructureKind::GraveDungeon),
+            ("teramic::dark_dragon_lair", StructureKind::DarkDragonLair),
+            ("teramic::earth_dragon_lair", StructureKind::EarthDragonLair),
+            ("teramic::water_dragon_lair", StructureKind::WaterDragonLair),
         ] {
             assert_eq!(
                 parse_command(&format!("/locate struct {id}")),

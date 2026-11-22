@@ -94,8 +94,13 @@ impl DedicatedStore {
             .map_or(2, |world| world.spirit_blossom_revision);
         result.cave_structure_revision = saved
             .as_ref()
-            .map_or(8, |world| world.cave_structure_revision);
-        result.structures_revision = saved.as_ref().map_or(10, |world| world.structures_revision);
+            .map_or(WorldConfig::CURRENT_CAVE_STRUCTURE_REVISION, |world| {
+                world.cave_structure_revision
+            });
+        result.structures_revision = saved.as_ref().map_or(
+            terra_core::WorldConfig::CURRENT_STRUCTURES_REVISION,
+            |world| world.structures_revision,
+        );
         result.structure_border_gap = saved
             .as_ref()
             .map_or(requested.structure_border_gap, |world| {
@@ -111,9 +116,13 @@ impl DedicatedStore {
         if let Some(saved) = &saved {
             result.cave_biomes = saved.cave_biomes.clone();
         }
-        if requested.ravine_revision == 0 {
-            result.ravine_revision = saved.as_ref().map_or(1, |world| world.ravine_revision);
-        }
+        result.ravine_revision = saved.as_ref().map_or_else(
+            || match requested.ravine_revision {
+                0 => WorldConfig::CURRENT_RAVINE_REVISION,
+                revision => revision,
+            },
+            |world| world.ravine_revision,
+        );
         result.validate().map_err(|error| error.to_string())?;
         Ok(result)
     }
@@ -219,7 +228,10 @@ mod tests {
             ..Default::default()
         };
         let created = DedicatedStore::resolve_world_config(&root, &requested).unwrap();
-        assert_eq!(created.structures_revision, 10);
+        assert_eq!(
+            created.structures_revision,
+            WorldConfig::CURRENT_STRUCTURES_REVISION
+        );
         assert_eq!(created.structure_border_gap, 7);
         let (store, mut journal) = DedicatedStore::open(&root, &created).unwrap();
         journal.record([-1, 20, -1], 3).unwrap();
@@ -315,8 +327,11 @@ mod tests {
         );
         assert!(!resolved.rivers);
         assert_eq!(resolved.ocean_revision, 1);
-        assert_eq!(resolved.cave_structure_revision, 8);
-        assert_eq!(resolved.structures_revision, 10);
+        assert_eq!(resolved.cave_structure_revision, 13);
+        assert_eq!(
+            resolved.structures_revision,
+            WorldConfig::CURRENT_STRUCTURES_REVISION
+        );
         assert_eq!(resolved.river_terrain_revision, 7);
         assert_eq!(resolved.seed, requested.seed);
         assert_eq!(resolved.generator_version, requested.generator_version);
@@ -525,8 +540,8 @@ mod tests {
     }
 
     #[test]
-    fn new_connector_clusters_do_not_upgrade_saved_cave_revisions_or_overwrite_edits() {
-        for revision in 0..=7 {
+    fn new_chambers_do_not_upgrade_saved_cave_revisions_or_overwrite_edits() {
+        for revision in 0..=10 {
             let root = fresh_directory();
             let saved = WorldConfig {
                 cave_structure_revision: revision,
@@ -625,11 +640,12 @@ mod tests {
     }
 
     #[test]
-    fn populated_settlements_do_not_replace_saved_revision_one_two_or_three_structures() {
-        for revision in 1..=3 {
+    fn new_structure_revisions_preserve_existing_sites_and_player_edits() {
+        for revision in [1, 2, 3, 10, 11, 12, 13] {
             let root = fresh_directory();
             let saved = WorldConfig {
                 structures_revision: revision,
+                ravine_revision: 1,
                 ..Default::default()
             };
             let (store, mut journal) = DedicatedStore::open(&root, &saved).unwrap();

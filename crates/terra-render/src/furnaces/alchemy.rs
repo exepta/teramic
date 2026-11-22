@@ -20,7 +20,8 @@ pub(super) fn nearby<'a>(
         chunks
             .block_at(position)
             .is_some_and(|raw| journal.block(position).unwrap_or(raw) == material)
-            && Vec3::from_array(position.map(|v| v as f32)).distance_squared(eye) < 96.0_f32.powi(2)
+            && Vec3::from_array(position.map(|v| v as f32)).distance_squared(eye)
+                < FIRE_VIEW_DISTANCE.powi(2)
     };
     let mut fires: Vec<_> = session
         .into_iter()

@@ -299,7 +299,10 @@ mod save_tests {
         let received = &client.world().resource::<GameConfig>().world;
         assert_eq!(received.kingdom_rules, config.world.kingdom_rules);
         assert_eq!(received.structure_border_gap, 5);
-        assert_eq!(received.structures_revision, 10);
+        assert_eq!(
+            received.structures_revision,
+            terra_core::WorldConfig::CURRENT_STRUCTURES_REVISION
+        );
         drop(client);
         server
             .request_save()

@@ -23,7 +23,7 @@ pub(super) struct WaterGpuData {
     pub environment: Vec4,
     pub wake_positions: [Vec4; super::contacts::WAKE_CAPACITY],
     pub wake_motions: [Vec4; super::contacts::WAKE_CAPACITY],
-    pub particle: Vec4,
+    pub gallery_aperture: Vec4,
 }
 
 impl Default for WaterGpuData {
@@ -33,7 +33,7 @@ impl Default for WaterGpuData {
             environment: Vec4::new(1.0, 0.0, 3600.0, 0.0),
             wake_positions: [Vec4::ZERO; super::contacts::WAKE_CAPACITY],
             wake_motions: [Vec4::ZERO; super::contacts::WAKE_CAPACITY],
-            particle: Vec4::ZERO,
+            gallery_aperture: Vec4::ZERO,
         }
     }
 }

@@ -166,7 +166,7 @@ mod tests {
         let mut shapes = std::collections::BTreeSet::new();
         for loadout in SoldierLoadout::ALL {
             let parts = parts(loadout).unwrap();
-            assert_eq!(parts.len(), 8);
+            assert_eq!(parts.len(), 12);
             let (_, offset, mesh) = parts
                 .iter()
                 .find(|(part, _, _)| matches!(part, Part::MilitaryWeapon(_)))

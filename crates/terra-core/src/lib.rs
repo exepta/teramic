@@ -104,7 +104,7 @@ pub use gameplay::{
     WoodSpecies, WorldDrop, crafting_preview,
 };
 pub use identity::{PlayerId, WorldId, WorldSeed};
-pub use paths::asset_directory;
+pub use paths::{asset_directory, installation_root};
 #[cfg(feature = "bevy")]
 pub use plugin::TerraCorePlugin;
 pub use profile::{

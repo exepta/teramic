@@ -16,9 +16,13 @@ mod ravine_tests {
     #[test]
     fn broad_ravines_have_organic_bounded_width_and_preserve_old_save_contracts() {
         assert_eq!(WorldConfig::from_toml("").unwrap().ravine_revision, 0);
-        assert_eq!(WorldConfig::default().ravine_revision, 1);
-        assert!(WorldConfig::from_toml("ravine_revision=2").is_err());
-        let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+        assert_eq!(WorldConfig::default().ravine_revision, 2);
+        assert!(WorldConfig::from_toml("ravine_revision=3").is_err());
+        let terrain = TerraGenerator::new(WorldConfig {
+            ravine_revision: 1,
+            ..WorldConfig::default()
+        })
+        .unwrap();
         let seed = layer_seed(terrain.config().seed.0, 0x726176);
         let phase = (seed % 628) as f64 * 0.01;
         let mut widths = Vec::new();
@@ -40,6 +44,55 @@ mod ravine_tests {
             assert!(terrain.ravine_depth(center, z).unwrap() > 1.0);
         }
         assert!(widths.windows(2).any(|w| (w[0] - w[1]).abs() > 1.0));
+    }
+
+    #[test]
+    fn coastal_ravine_tapers_to_the_hillside_in_the_reported_world() {
+        let t = TerraGenerator::new(WorldConfig {
+            seed: terra_core::WorldSeed(3809574271049500506),
+            ..Default::default()
+        })
+        .unwrap();
+        let mut crosses_cutoff = false;
+        for x in 10776..10788 {
+            let mut previous: Option<(f64, bool)> = None;
+            for z in 5888..5910 {
+                let c = t.surface_column(x as f64 + 0.5, z as f64 + 0.5);
+                let floor = c.cave_cavity.map_or(c.height, |cut| cut[0]);
+                if let Some((old_floor, cut)) = previous {
+                    crosses_cutoff |= cut && c.cave_cavity.is_none();
+                    assert!(
+                        (floor - old_floor).abs() < 2.,
+                        "{x},{z}: {old_floor} -> {floor}"
+                    );
+                }
+                previous = Some((floor, c.cave_cavity.is_some()));
+            }
+        }
+        assert!(crosses_cutoff);
+    }
+
+    #[test]
+    fn graded_ravine_has_a_walkable_bank_on_both_sides() {
+        let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+        let mut cuts = 0;
+        for z in (-85..85).step_by(7) {
+            let mut previous = 0.;
+            for x in -425..425 {
+                let cut = terrain
+                    .ravine_depth(f64::from(x) + 0.5, f64::from(z) + 0.5)
+                    .unwrap_or(0.);
+                if x > -425 {
+                    assert!(
+                        (cut - previous).abs() <= 1.,
+                        "abrupt ravine edge at ({x},{z})"
+                    );
+                }
+                cuts += usize::from(cut > 6.);
+                previous = cut;
+            }
+        }
+        assert!(cuts > 100);
     }
 }
 
@@ -338,6 +391,7 @@ pub(super) struct CaveCache(
     Mutex<HashMap<[i64; 2], Option<Portal>>>,
     Mutex<HashMap<[i64; 2], CaveRegion>>,
     Mutex<HashMap<[i64; 2], Option<Formation>>>,
+    pub(super) Mutex<HashMap<[i64; 2], super::cave_structures::GalleryRegion>>,
 );
 
 #[derive(Clone, Copy, Debug)]
@@ -426,6 +480,12 @@ impl TerraGenerator {
         };
         let kind = if salt {
             CaveKind::Dripstone
+        } else if self.config().cave_structure_revision >= 13 {
+            match seed % 10 {
+                1 => CaveKind::Dripstone,
+                2 | 7 => CaveKind::Spaghetti,
+                _ => CaveKind::Cheese,
+            }
         } else {
             match if self.config().cave_structure_revision >= 2 {
                 seed % 5
@@ -504,18 +564,26 @@ impl TerraGenerator {
         if self.config().geology_revision == 0 {
             return None;
         }
-        let region = self.cave_region([(x / 192.0).floor() as i64, (z / 192.0).floor() as i64]);
-        (region.salt && region.presence > 0.0).then_some(region.center)
+        let (region, _, _) =
+            self.gallery_region([(x / 192.0).floor() as i64, (z / 192.0).floor() as i64]);
+        (region.salt && region.presence > 0.0).then(|| {
+            if self.config().cave_structure_revision >= 10 && self.config().geology_revision >= 4 {
+                self.cave_room_at(x, z).center
+            } else {
+                region.center
+            }
+        })
     }
 
     pub fn cave_chamber_center(&self, x: f64, z: f64) -> Option<[f64; 3]> {
         if self.config().geology_revision == 0 || !self.config().caves {
             return None;
         }
-        let region = self.cave_region([(x / 192.0).floor() as i64, (z / 192.0).floor() as i64]);
+        let (region, _, _) =
+            self.gallery_region([(x / 192.0).floor() as i64, (z / 192.0).floor() as i64]);
         (region.kind != CaveKind::Spaghetti && region.presence > 0.0).then(|| {
             if self.config().cave_structure_revision >= 2 {
-                self.cave_structure_at(x, z).center
+                self.cave_room_at(x, z).center
             } else {
                 region.center
             }
@@ -573,9 +641,10 @@ impl TerraGenerator {
 
     fn native_cave_shape(&self, x: f64, z: f64, region: CaveRegion) -> CaveShape {
         let variety = self.valleys.get([x * 0.0031 + 9.17, z * 0.0031 - 4.13]);
+        let bedding = self.hills.get([x * 0.026 + 37.1, z * 0.026 - 19.3]);
         let radial = (((x - region.center[0]) / region.radius.max(1.0)).powi(2)
             + ((z - region.center[2]) / (region.radius.max(1.0) * 0.88)).powi(2))
-            * (1.0 + self.hills.get([x * 0.026 + 37.1, z * 0.026 - 19.3]) * 0.18);
+            * (1.0 + bedding * 0.18);
         let tunnel_width = if self.config().cave_structure_revision >= 3 {
             // Moderately thin the existing network. Never suppress entire
             // hundreds-of-metre regions with a negative width.
@@ -600,10 +669,22 @@ impl TerraGenerator {
         } else {
             tunnel_width
         };
+        let fissure = super::biomes::smoothstep(0.12, 0.48, variety);
+        let (tunnel_width, fissure) = if self.config().cave_structure_revision >= 11 {
+            // A local fracture widens one cut while compressing the opposite
+            // wall. Both fields vary continuously across chunk/region borders.
+            let joint = super::biomes::smoothstep(-0.44, 0.44, bedding);
+            (
+                tunnel_width * (0.78 + joint * 0.60),
+                fissure * 0.44 + (1.0 - joint) * 0.56,
+            )
+        } else {
+            (tunnel_width, fissure)
+        };
         CaveShape {
             tunnel_width,
             connector_limit: self.connector_presence(x, z),
-            fissure: super::biomes::smoothstep(0.12, 0.48, variety),
+            fissure,
             kind: region.kind,
             salt: region.salt
                 && radial < 1.2
@@ -711,6 +792,14 @@ impl TerraGenerator {
         if self.config().bounded_world && height > self.config().sea_level + 8.0 {
             if self.config().ravine_revision > 0 {
                 if let Some(depth) = self.ravine_depth(x, z) {
+                    // Close the incision into the coastal bank as the ground meets
+                    // its cutoff. Dropping the entire descriptor at that contour
+                    // leaves a straight wall as high as the full ravine depth.
+                    let depth = if self.config().ravine_revision >= 2 {
+                        depth.min(height - self.config().sea_level - 8.)
+                    } else {
+                        depth
+                    };
                     ravine = Some([(height - depth).max(-119.0), height + 2.0]);
                 }
             } else {
@@ -772,7 +861,7 @@ impl TerraGenerator {
         Some(interval)
     }
 
-    /// Meandering channels with a 3..11 m opening, rounded shoulders and
+    /// Meandering channels with revisioned banks, rounded shoulders and
     /// varying depth. All samples are column-local and deterministic.
     fn ravine_depth(&self, x: f64, z: f64) -> Option<f64> {
         let cell = ((z + 96.0) / 192.0).floor() as i64;
@@ -791,14 +880,22 @@ impl TerraGenerator {
         }
         let width =
             (7.0 + (z * 0.043 + phase).sin() * 2.6 + (z * 0.12).sin() * 1.2).clamp(3.0, 11.0);
+        let depth = 10.0 + (z * 0.035 + phase).sin() * 6.0 + (z * 0.083).cos() * 2.0;
+        if self.config().ravine_revision >= 2 {
+            // A narrow, deep incision leaves several metres of vertical wall at
+            // its very first voxel. Widen the banks with the depth so there is a
+            // continuous one-block route out, also where the channel meanders.
+            let half_width = width * 0.5 + depth * (1.8 + 0.15 * (z * 0.023 + phase).cos());
+            let bank = super::biomes::smoothstep(1., 0., across.abs() / half_width);
+            let cut = depth * bank * envelope;
+            return (cut > 0.001).then_some(cut);
+        }
         let lateral = across.abs() / (width * 0.5);
         if lateral >= 1.0 {
             return None;
         }
         let shoulder = (1.0 - lateral * lateral).sqrt();
-        let depth = (10.0 + (z * 0.035 + phase).sin() * 6.0 + (z * 0.083).cos() * 2.0)
-            * shoulder
-            * envelope;
+        let depth = depth * shoulder * envelope;
         (depth > 0.5).then_some(depth)
     }
 

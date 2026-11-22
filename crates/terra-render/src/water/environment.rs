@@ -208,9 +208,10 @@ pub(crate) fn update(
         let biome_color = chunks
             .prepared_column([cell[0].div_euclid(16), cell[2].div_euclid(16)])
             .and_then(|column| {
-                column
-                    .surface_at(cell[0], cell[2])
-                    .map(|surface| super::biome::biome_tint(surface.biome))
+                column.surface_at(cell[0], cell[2]).map(|surface| {
+                    super::biome::pool_tint(surface.cave, f64::from(p.y))
+                        .unwrap_or_else(|| super::biome::biome_tint(surface.biome))
+                })
             })
             .unwrap_or(super::biome::DEFAULT_TINT);
         let strength = match config.client.water_quality {
@@ -228,7 +229,11 @@ pub(crate) fn update(
             },
             strength,
         );
-        let scattering = medium_scattering(biome_color, daylight.daylight, cave.blend);
+        let clouds = weather.as_ref().map_or(1., |w| 1. - w.clouds * 0.5);
+        let aperture = cave.gallery_aperture(daylight.daylight * clouds);
+        let irradiance = crate::scene::caves::aperture_irradiance(aperture, p);
+        let mut scattering = medium_scattering(biome_color, daylight.daylight, cave.blend);
+        scattering += (underwater_color(biome_color) * (irradiance * 3.).min(0.9)).extend(0.);
         let medium_color = scattering.truncate();
         let tint_changed = optical.scattering != scattering;
         // A camera above the surface can still have its lower near-plane pixels
@@ -258,7 +263,11 @@ pub(crate) fn update(
                 projection.set_changed();
             }
         }
-        let world_from_view = if blend > 0.001 || near_medium || optical.parameters.z > 0.001 {
+        let world_from_view = if blend > 0.001
+            || near_medium
+            || optical.parameters.z > 0.001
+            || optical.parameters.w > 0.001
+        {
             Mat4::from_scale_rotation_translation(camera.scale, camera.rotation, camera.translation)
         } else {
             Mat4::IDENTITY
@@ -313,6 +322,23 @@ pub(crate) fn update(
             );
         }
         crate::scene::caves::apply(cave.blend, blend, &mut fog, &mut grading, &mut ambient);
+        // Diffuse light bounced from the actual gallery opening. A closed or
+        // absent skylight contributes nothing, even where the walls contain salt.
+        let bounce = cave.salt_skylight * cave.blend * daylight.daylight;
+        if aperture.w > 0. {
+            // Skylight illuminance admitted by an opening falls with its
+            // apparent area. Mix radiances in linear colour space so warm
+            // nearby lamps and reflective mineral faces retain their hues.
+            let incident = 9_000. * irradiance;
+            let combined = ambient.brightness + incident;
+            let base = ambient.color.to_linear();
+            let sky = LinearRgba::new(0.38, 0.67, 1., 1.);
+            ambient.color = base.mix(&sky, incident / combined.max(1.)).into();
+            ambient.brightness = combined;
+        } else if bounce > 0.0 {
+            ambient.brightness += 285.0 * bounce;
+            ambient.color = ambient.color.mix(&Color::srgb(0.79, 0.88, 1.0), bounce);
+        }
         apply_night_vision(
             vision,
             (1.0 - daylight.daylight).max(cave.blend),

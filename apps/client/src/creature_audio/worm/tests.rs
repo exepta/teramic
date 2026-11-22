@@ -128,8 +128,16 @@ fn buried_motion_has_quiet_granular_foley_and_standing_is_silent() {
     }
     a.velocity = [1.2, 0., 0.];
     a.age = 1.;
-    assert_eq!(state.update(&a, 1.).unwrap().sound, Sound::Dig);
+    let first = state.update(&a, 1.).unwrap();
+    assert_eq!(first.sound, Sound::Dig);
     assert!(state.update(&a, 1.05).is_none());
+    for step in 1..=3 {
+        let now = 1.0 + step as f32 * 0.79;
+        a.age = f64::from(now);
+        let dig = state.update(&a, now).unwrap();
+        assert_eq!(dig.sound, Sound::Dig);
+        assert_eq!(dig.take, (first.take + step) % TAKES);
+    }
     assert!(Sound::Roar.radius() > Sound::Dig.radius() * 3.0);
     let origin = Sound::Roar.position(&animal(B::Attack, 0., 1.), Vec3::new(8., 32., 12.));
     assert!(
@@ -143,7 +151,7 @@ fn all_worm_clips_use_the_single_shared_bank_and_can_be_mixed_to_a_real_stereo_s
     use bevy::audio::Decodable;
     use std::sync::{Arc, atomic::Ordering};
     let bank = super::super::clips::load().unwrap();
-    assert_eq!(bank.len(), FIRST + COUNT);
+    assert!(bank.len() >= FIRST + BANK_LEN);
     let controls = Arc::new(Controls::default());
     controls.volume.store(1_f32.to_bits(), Ordering::Relaxed);
     let mut stream = RecordedSoundscape {
@@ -151,12 +159,23 @@ fn all_worm_clips_use_the_single_shared_bank_and_can_be_mixed_to_a_real_stereo_s
         controls: controls.clone(),
     }
     .decoder();
-    for sound in Sound::ALL {
-        let clip = &bank[sound.clip()];
+    for (take, sound) in (0..TAKES).flat_map(|take| Sound::ALL.map(|sound| (take, sound))) {
+        let clip = &bank[sound.clip(take)];
+        assert_eq!(clip[0], 0.0);
+        assert_eq!(clip.last(), Some(&0.0));
+        assert!(
+            clip.iter()
+                .all(|sample| sample.is_finite() && sample.abs() <= 0.681)
+        );
+        let rms = (clip.iter().map(|s| s * s).sum::<f32>() / clip.len() as f32).sqrt();
+        assert!((0.008..0.35).contains(&rms), "{sound:?} take {take}: {rms}");
+        if take > 0 {
+            assert_ne!(clip, &bank[sound.clip(0)]);
+        }
         assert!(clip.iter().any(|s| s.abs() > 0.1));
         controls.enqueue(Cue {
             category: Category::Animals,
-            sound: sound.clip(),
+            sound: sound.clip(take),
             gains: [0.32, 0.24],
             pitch: 1.,
             reverb: 0.,
@@ -169,5 +188,5 @@ fn all_worm_clips_use_the_single_shared_bank_and_can_be_mixed_to_a_real_stereo_s
             sound.name()
         );
     }
-    assert_eq!(controls.played.load(Ordering::Relaxed), COUNT as u32);
+    assert_eq!(controls.played.load(Ordering::Relaxed), BANK_LEN as u32);
 }

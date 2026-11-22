@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": 486,
+  "name": "Glacial Crystal Cluster",
+  "description": "A fan of pale blue glacial crystals.",
+  "creative_category": "nature",
+  "struct_block": true,
+  "hardness": 0.35,
+  "resistance": 1,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/glacial_crystal_cluster.glb",
+  "textures": {
+    "rime": "textures/living_caves/rime_side.png",
+    "core": "textures/living_caves/clear_side.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.15,
+        0,
+        0.15
+      ],
+      "maximum": [
+        0.85,
+        0.25,
+        0.85
+      ]
+    }
+  ],
+  "light": {
+    "color": [
+      0.33,
+      0.73,
+      1
+    ],
+    "range": 7,
+    "intensity": 640,
+    "falloff": "soft_core",
+    "shadows": false,
+    "offset": [
+      0.5,
+      0.48,
+      0.5
+    ]
+  }
+}

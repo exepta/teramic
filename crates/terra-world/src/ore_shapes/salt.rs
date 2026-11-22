@@ -96,8 +96,99 @@ pub(super) fn visit_growth(
     } else {
         0.05 + sample(seed, 16) * 0.07
     };
+    if material == 30 {
+        visit_halite(position, side, detail, height, tall, &mut visit);
+        return;
+    }
+    visit_calcite(position, side, detail, height, tall, visit);
+}
+
+/// Calcite grows in lobed curtains; exposed salt cleaves into flat-sided cuboids.
+/// Both detail levels retain the same lead silhouette for picking from a distance.
+pub(super) fn visit_calcite(
+    position: [i64; 3],
+    side: usize,
+    detail: OreDetail,
+    height: f32,
+    prominent: bool,
+    mut visit: impl FnMut([[f32; 3]; 3]),
+) {
+    let seed = hash(position, side, 0x4341_4c43_4954_4521);
+    let count = if prominent && detail != OreDetail::Far {
+        3
+    } else {
+        1
+    };
+    let centers = [[0.51, 0.50], [0.25, 0.37], [0.73, 0.65]];
+    let sides = 8;
+    for (i, &center) in centers.iter().take(count).enumerate() {
+        let ticket = hash(position, side, seed.wrapping_add(i as u64 * 71));
+        let h = height
+            * if i == 0 {
+                1.
+            } else {
+                0.24 + 0.30 * sample(ticket, 8)
+            };
+        let r = if i == 0 && prominent {
+            0.34 + sample(ticket, 16) * 0.06
+        } else {
+            0.08 + sample(ticket, 16) * 0.045
+        };
+        let angle = sample(ticket, 32) * std::f32::consts::TAU;
+        let lean = (sample(ticket, 40) - 0.5) * 0.06;
+        let ring = |j: usize, t: f32, radius: f32| {
+            let a = angle + j as f32 * std::f32::consts::TAU / sides as f32;
+            let flute = if j.is_multiple_of(2) { 1. } else { 0.78 };
+            point(
+                side,
+                [
+                    center[0] + r * radius * flute * a.cos() + lean * t,
+                    center[1] + r * radius * flute * a.sin() - lean * t * 0.6,
+                    if t == 0. { -0.025 } else { t * h },
+                ],
+            )
+        };
+        let mut emit = |mut tri: [[f32; 3]; 3]| {
+            if side.is_multiple_of(2) {
+                tri.swap(1, 2);
+            }
+            visit(tri);
+        };
+        let tip = point(side, [center[0] + lean, center[1] - lean * 0.6, h]);
+        for j in 0..sides {
+            let k = (j + 1) % sides;
+            let a = ring(j, 0., 1.);
+            let b = ring(k, 0., 1.);
+            let m = ring(j, 0.23, 0.63);
+            let n = ring(k, 0.23, 0.63);
+            let c = ring(j, 0.70, 0.24);
+            let d = ring(k, 0.70, 0.24);
+            emit([a, b, m]);
+            emit([m, b, n]);
+            emit([m, n, c]);
+            emit([c, n, d]);
+            emit([c, d, tip]);
+        }
+    }
+}
+
+pub(super) fn visit_halite(
+    position: [i64; 3],
+    side: usize,
+    detail: OreDetail,
+    height: f32,
+    tall: bool,
+    mut visit: impl FnMut([[f32; 3]; 3]),
+) {
+    let seed = hash(position, side, 0x4841_4c49_5445);
+    let centers = [
+        [0.51, 0.52],
+        [0.28, 0.33],
+        [0.75, 0.62],
+        [0.59, 0.23],
+        [0.29, 0.73],
+    ];
     let count = match (tall, detail) {
-        (true, _) if material == 37 => 2,
         (true, OreDetail::Near) => 5,
         (true, OreDetail::Middle) => 3,
         (true, OreDetail::Far) => 2,
@@ -105,74 +196,62 @@ pub(super) fn visit_growth(
         (false, OreDetail::Middle) => 2,
         (false, OreDetail::Far) => 1,
     };
-    let centers = [
-        [0.52, 0.52],
-        [0.28, 0.34],
-        [0.75, 0.64],
-        [0.56, 0.22],
-        [0.29, 0.72],
-    ];
-    for (index, center) in centers[..count].iter().enumerate() {
-        let random = hash(position, side, seed.wrapping_add(index as u64 * 71));
+    let orientation = sample(seed, 0) * std::f32::consts::TAU;
+    for (i, &root) in centers.iter().take(count).enumerate() {
+        let variation = hash(position, side, seed.wrapping_add(i as u64 * 113));
         let h = height
-            * if index == 0 {
-                1.0
+            * if i == 0 {
+                1.
             } else {
-                0.32 + sample(random, 8) * 0.47
+                0.37 + 0.44 * sample(variation, 8)
             };
-        let radius = if index == 0 {
-            if material == 37 {
-                (0.24 + height * 0.015).min(0.44)
-            } else {
-                0.13
-            }
+        let radius = if i == 0 {
+            if tall { 0.21 } else { 0.155 }
         } else {
-            0.065 + sample(random, 24) * 0.035
+            0.095 + 0.036 * sample(variation, 16)
         };
-        let angle = sample(random, 32) * std::f32::consts::TAU;
-        let lean = [
-            (sample(random, 40) - 0.5) * 0.07,
-            (sample(random, 48) - 0.5) * 0.07,
-        ];
-        let ring = |i: usize, upper: bool| {
-            let a = angle + i as f32 * std::f32::consts::FRAC_PI_2;
-            let r = radius
-                * if upper {
-                    if material == 37 { 0.38 } else { 0.73 }
-                } else {
-                    1.0
-                };
-            [
-                center[0] + a.cos() * r + if upper { lean[0] } else { 0.0 },
-                center[1] + a.sin() * r + if upper { lean[1] } else { 0.0 },
-                if upper {
-                    h * if material == 37 { 0.55 } else { 0.90 }
-                } else if tall {
-                    -0.075
-                } else {
-                    -0.02
-                },
-            ]
+        let angle = orientation + (sample(variation, 24) - 0.5) * 0.52;
+        let (s, c) = angle.sin_cos();
+        let ring = |j: usize, level: f32, width: f32| {
+            let [dx, dz] = [[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]][j];
+            let x = dx * width * radius;
+            let z = dz * width * radius * (0.70 + 0.25 * sample(variation, 32));
+            let lean = 0.13 * level;
+            point(
+                side,
+                [
+                    root[0] + (root[0] - 0.5) * lean + c * x - s * z,
+                    root[1] + (root[1] - 0.5) * lean + s * x + c * z,
+                    if level == 0. {
+                        -0.055
+                    } else {
+                        level * h + (dx + dz - 2.) * 0.045 * radius
+                    },
+                ],
+            )
         };
-        let tip = [center[0] + lean[0], center[1] + lean[1], h];
-        for i in 0..4 {
-            let a = ring(i, false);
-            let b = ring((i + 1) % 4, false);
-            let c = ring(i, true);
-            let d = ring((i + 1) % 4, true);
-            let triangles = if tall {
-                [[a, b, c], [c, b, d], [c, d, tip]]
-            } else {
-                [[a, b, tip]; 3]
-            };
-            for triangle in &triangles[..if tall { 3 } else { 1 }] {
-                let mut triangle = triangle.map(|v| point(side, v));
-                if side.is_multiple_of(2) {
-                    triangle.swap(1, 2);
-                }
-                visit(triangle);
+        let mut emit = |mut tri: [[f32; 3]; 3]| {
+            if side.is_multiple_of(2) {
+                tri.swap(1, 2);
             }
+            visit(tri)
+        };
+        for j in 0..4 {
+            let k = (j + 1) % 4;
+            let a = ring(j, 0., 0.84);
+            let b = ring(k, 0., 0.84);
+            let m = ring(j, 0.88, 1.);
+            let n = ring(k, 0.88, 1.);
+            let c = ring(j, 1., 0.79);
+            let d = ring(k, 1., 0.79);
+            emit([a, b, m]);
+            emit([m, b, n]);
+            emit([m, n, c]);
+            emit([c, n, d]);
         }
+        let cap = [0, 1, 2, 3].map(|j| ring(j, 1., 0.79));
+        emit([cap[0], cap[1], cap[2]]);
+        emit([cap[0], cap[2], cap[3]]);
     }
 }
 
@@ -196,7 +275,7 @@ mod tests {
                     assert!((0.0..=1.0).contains(&vertex[2]));
                 }
             });
-            assert_eq!(triangles, 24);
+            assert_eq!(triangles, 40);
         }
         assert!((32..96).contains(&decorated));
     }
@@ -247,7 +326,7 @@ mod tests {
                 );
                 let mut near = Vec::new();
                 visit_salt(p, side, OreDetail::Near, h, |t| near.push(t));
-                assert_eq!(near.len(), 60);
+                assert_eq!(near.len(), 5 * 18);
                 for lod in [OreDetail::Middle, OreDetail::Far] {
                     visit_salt(p, side, lod, h, |t| assert!(near.contains(&t)));
                 }

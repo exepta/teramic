@@ -283,6 +283,7 @@ pub(super) fn interact(
 pub(super) struct SleepWorld<'w, 's> {
     clock: ResMut<'w, WorldClock>,
     weather: ResMut<'w, terra_core::WorldWeather>,
+    played: ResMut<'w, crate::world_time::PlayedDays>,
     config: Res<'w, GameConfig>,
     journal: ResMut<'w, EditJournal>,
     chunks: Res<'w, ChunkStore>,
@@ -354,6 +355,7 @@ pub(super) fn tick(
     ) {
         if let Some(next) = next_morning(*world.clock) {
             let skipped = (next.day - world.clock.day) as f64 + next.phase - world.clock.phase;
+            world.played.sleep(skipped);
             *world.clock = next;
             let seed = world.config.world.seed.0;
             let seasons = world.config.world.seasons;
@@ -569,6 +571,12 @@ mod tests {
             let next = next_morning(clock).unwrap();
             assert_eq!(next.day, day);
             assert_eq!(next.hour(), 8.0);
+            let mut played = crate::world_time::PlayedDays::default();
+            played.sleep((next.day - clock.day) as f64 + next.phase - clock.phase);
+            assert!(played.slept);
+            assert!((played.take() - (8.0 - hour).rem_euclid(24.) / 24.).abs() < 1e-12);
+            assert!(!played.slept);
+            assert_eq!(played.take(), 0.);
         }
         assert!(
             next_morning(WorldClock {

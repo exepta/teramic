@@ -41,10 +41,18 @@ impl Beds {
         let mut send = [0.0; 2];
         for (layer, &index) in LOOP_CLIPS.iter().enumerate() {
             self.power[layer] += (self.target[layer] - self.power[layer]) * RESPONSE;
-            let gain = self.power[layer].max(0.0).sqrt();
+
             let Some(clip) = bank.get(index).filter(|clip| clip.len() >= 4) else {
                 continue;
             };
+            if self.target[layer] == 0. && self.power[layer] < 1e-16 {
+                self.power[layer] = 0.;
+                for phase in &mut self.phase[layer] {
+                    advance(phase, clip.len() as f32);
+                }
+                continue;
+            }
+            let gain = self.power[layer].sqrt();
             for channel in 0..2 {
                 let value = loop_frame(clip, &mut self.phase[layer][channel]) * gain;
                 dry[channel] += value;
@@ -67,18 +75,27 @@ fn loop_frame(clip: &[f32], phase: &mut f32) -> f32 {
     // Overlap up to two seconds of 24 kHz source audio. Start both channels at
     // separate positions, and preserve their phase even while the region is quiet.
     let overlap = (length * 0.25).min(48_000.0);
-    *phase %= length;
+    if *phase >= length {
+        *phase %= length;
+    }
     let remaining = length - *phase;
     let mut value = interpolate(clip, *phase);
     if remaining < overlap {
         let mix = (1.0 - remaining / overlap).clamp(0.0, 1.0);
         value = value * (1.0 - mix).sqrt() + interpolate(clip, overlap - remaining) * mix.sqrt();
     }
+    advance(phase, length);
+    value
+}
+
+fn advance(phase: &mut f32, length: f32) {
+    if *phase >= length {
+        *phase %= length;
+    }
     *phase += 0.5;
     if *phase >= length {
-        *phase = overlap + (*phase - length);
+        *phase = (length * 0.25).min(48_000.) + (*phase - length);
     }
-    value
 }
 
 #[cfg(test)]

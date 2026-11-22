@@ -6,12 +6,46 @@
   "creative_category": "terrain",
   "render_kind": "cube",
   "surface": "rock",
-  "bevel_width": 0.0,
-  "materials": { "Dripstone": { "texture_pattern": "dripstone", "roughness": 0.99, "reflectance": 0.08 } },
-  "face_materials": ["Dripstone", "Dripstone", "Dripstone", "Dripstone", "Dripstone", "Dripstone"],
+  "bevel_width": 0,
+  "materials": {
+    "Dripstone": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.61,
+      "reflectance": 0.25,
+      "normal_texture": "textures/dripstone_cave/dripstone_side_normal.png"
+    },
+    "Bedding": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.61,
+      "reflectance": 0.25,
+      "normal_texture": "textures/dripstone_cave/dripstone_top_normal.png"
+    }
+  },
+  "face_materials": [
+    "Dripstone",
+    "Dripstone",
+    "Dripstone",
+    "Bedding",
+    "Dripstone",
+    "Dripstone"
+  ],
   "crystal_material": "Dripstone",
   "hardness": 1.25,
   "resistance": 6.0,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Dripstone": "textures/dripstone_cave/dripstone_side.png",
+    "Bedding": "textures/dripstone_cave/dripstone_top.png"
+  }
 }

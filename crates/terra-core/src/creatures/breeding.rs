@@ -64,6 +64,7 @@ pub fn feeding_age(animal: &Creature, family: Option<&AnimalFamily>) -> f64 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct FamilyView {
+    pub dragon: Option<super::dragon_life::DragonLife>,
     pub id: u64,
     pub parents: Option<[u64; 2]>,
     pub growth: f32,
@@ -74,6 +75,7 @@ impl FamilyView {
     pub fn new(animal: &Creature, family: AnimalFamily) -> Self {
         Self {
             id: animal.id,
+            dragon: animal.needs.dragon,
             parents: family.parents,
             growth: animal.growth(),
             cooldown_seconds: (family.ready_age - animal.age).clamp(0.0, COOLDOWN_SECONDS) as f32,
@@ -82,6 +84,9 @@ impl FamilyView {
     }
     pub fn valid(self) -> bool {
         self.id != 0
+            && self
+                .dragon
+                .is_none_or(|life| life.valid() && (life.months / 12.) as f32 == self.growth)
             && self.growth.is_finite()
             && (0.0..=1.0).contains(&self.growth)
             && self.cooldown_seconds.is_finite()

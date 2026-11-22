@@ -12,6 +12,22 @@ pub(crate) const FROM: MeshVertexAttribute =
     MeshVertexAttribute::new("Liquid_From", 1_883_214_076, VertexFormat::Float32x4);
 pub(crate) const DATA: MeshVertexAttribute =
     MeshVertexAttribute::new("Liquid_Motion", 1_883_214_077, VertexFormat::Float32x4);
+pub(crate) const POUR_COORDS: MeshVertexAttribute = MeshVertexAttribute::new(
+    "Bile_Pour_Coordinates",
+    1_883_214_078,
+    VertexFormat::Float32x4,
+);
+
+fn bile_direction(code: f32) -> IVec2 {
+    match code.abs() as u8 {
+        1 => IVec2::NEG_X,
+        2 => IVec2::X,
+        3 => IVec2::NEG_Y,
+        4 => IVec2::Y,
+        _ => IVec2::ZERO,
+    }
+}
+
 const MAX_VERTICES: usize = 65_536;
 const MAX_SURFACES: usize = 96;
 
@@ -24,8 +40,8 @@ pub(crate) enum Kind {
 impl Kind {
     fn period(self) -> f32 {
         match self {
-            Self::Water => 0.12,
-            Self::Galle => 0.28,
+            Self::Water => 0.075,
+            Self::Galle => 2. * Self::Water.period(),
             Self::Tar => 0.34,
         }
     }
@@ -138,6 +154,14 @@ struct PourPoint {
 }
 impl PourPoint {
     fn read(mesh: &Mesh, i: usize, owner: IVec3) -> Option<Self> {
+        if let Some(VertexAttributeValues::Float32x4(coords)) = mesh.attribute(POUR_COORDS) {
+            let [r, c, h, code] = coords[i];
+            return (code > 0.).then(|| Self {
+                owner,
+                flow: bile_direction(code),
+                uv: [r, c, h].map(f32::to_bits),
+            });
+        }
         let VertexAttributeValues::Float32x4(colors) = mesh.attribute(Mesh::ATTRIBUTE_COLOR)?
         else {
             return None;
@@ -258,7 +282,7 @@ impl FlowInterpolationStatus {
                         (n.z * 8.) as i32,
                     ];
                     let owner = (old_anchors[i] + offset).floor().as_ivec3();
-                    if key.1 == Kind::Water
+                    if key.1 != Kind::Tar
                         && let Some(label) = PourPoint::read(&surface.mesh, i, owner)
                     {
                         prior_pours.insert(label, point);
@@ -277,11 +301,15 @@ impl FlowInterpolationStatus {
         let anchors = anchors(mesh);
         let mut from = Vec::with_capacity(count);
         let mut data = Vec::with_capacity(count);
+        // Top and side faces often duplicate an edge vertex to carry different
+        // normals. Pick one trajectory per physical point or those faces open
+        // a slit between publications, especially as a sheet goes over a lip.
+        let mut water_corners = HashMap::<[u32; 3], (u8, Vec3)>::new();
         for (i, &point) in positions(mesh).iter().enumerate() {
             let target = Vec3::from_array(point);
             let n = normal(mesh, i);
             let owner = anchors[i].floor().as_ivec3();
-            let label = if animate && key.1 == Kind::Water {
+            let label = if animate && key.1 != Kind::Tar {
                 PourPoint::read(mesh, i, owner)
             } else {
                 None
@@ -368,6 +396,12 @@ impl FlowInterpolationStatus {
                     flow = current.normalize_or_zero();
                 }
             }
+            if let Some(VertexAttributeValues::Float32x4(coords)) = mesh.attribute(POUR_COORDS) {
+                let current = bile_direction(coords[i][3]);
+                if current != IVec2::ZERO {
+                    flow = current.as_vec2();
+                }
+            }
             let base = anchors[i].y - 0.5
                 + if key.1 == Kind::Tar {
                     terra_core::roads::PATH_HEIGHT
@@ -375,8 +409,29 @@ impl FlowInterpolationStatus {
                     0.
                 };
             let depth = (target.y - base).clamp(0., 1.);
+            if animate && key.1 != Kind::Tar {
+                let priority = if corresponding.is_some() {
+                    3
+                } else if best.is_some() && n.y > 0. {
+                    2
+                } else {
+                    u8::from(best.is_some())
+                };
+                let corner = water_corners
+                    .entry(point.map(f32::to_bits))
+                    .or_insert((priority, start));
+                if priority > corner.0 {
+                    *corner = (priority, start);
+                }
+            }
             from.push([start.x, start.y, start.z, now]);
             data.push([duration, flow.x, flow.y, depth]);
+        }
+        if !water_corners.is_empty() {
+            for (source, point) in from.iter_mut().zip(positions(mesh)) {
+                let start = water_corners[&point.map(f32::to_bits)].1;
+                source[..3].copy_from_slice(&start.to_array());
+            }
         }
         mesh.insert_attribute(FROM, from);
         mesh.insert_attribute(DATA, data);
@@ -610,6 +665,26 @@ mod tests {
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0., 1., 0.]; 4])
         .with_inserted_indices(Indices::U32(vec![0, 1, 2, 0, 2, 3]))
     }
+    #[test]
+    fn top_and_wall_follow_one_path_at_each_lip_vertex() {
+        let key = Key(SectionPos::default(), Kind::Water);
+        let mut history = History::default();
+        history.prepare(key, &mut surface(0., 0.75), 1., false, 0);
+        let mut next = surface(0.5, 0.5);
+        let mut wall = surface(0.5, 0.5);
+        wall.insert_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            vec![[1.5, 0.5, 0.], [1.5, 0.5, 1.], [1.5, 0., 1.], [1.5, 0., 0.]],
+        );
+        wall.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[1., 0., 0.]; 4]);
+        next.merge(&wall).unwrap();
+        history.prepare(key, &mut next, 1.1, true, 0);
+        for age in [0., 0.016, 0.04, 0.09] {
+            assert_eq!(rendered(&next, 3, age), rendered(&next, 4, age));
+            assert_eq!(rendered(&next, 2, age), rendered(&next, 5, age));
+        }
+    }
+
     #[test]
     fn poured_sheet_unfolds_from_the_wet_edge_and_keeps_its_transverse_coordinates() {
         let key = Key(SectionPos::default(), Kind::Water);

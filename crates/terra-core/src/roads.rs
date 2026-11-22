@@ -21,9 +21,11 @@ pub const TAR_BUCKET_UNITS: u8 = 8;
 pub const TAR_FINE_UNITS: u8 = 64;
 pub const TAR_RANGE: u64 = 4;
 
+/// Equivalent liquid depth for a particle simulation over a whole path cell.
 pub fn tar_fine_height(volume: u8) -> f32 {
     PATH_HEIGHT + f32::from(volume.clamp(1, 64)) / 1024.0
 }
+pub const PATH: u16 = 102;
 pub const PATH_HEIGHT: f32 = 15.0 / 16.0;
 
 pub const fn is_tar(material: u16) -> bool {
@@ -51,9 +53,49 @@ pub const fn tar_state(amount: u8, stage: u8) -> u8 {
     (stage << 3) | (amount - 1)
 }
 
-/// Both liquid and cured films sit directly on the inset path surface.
-pub const fn tar_height(state: u8) -> f32 {
-    PATH_HEIGHT + tar_amount(state) as f32 / 128.0
+/// Height of the covered portion of a path for any encoded volume or drying stage.
+pub const fn tar_height(_state: u8) -> f32 {
+    1.0
+}
+
+/// The paid volume controls how far a wet front has travelled. Covered pavement
+/// meets the surrounding full blocks at grade, including once it cures.
+pub fn tar_coating(
+    material: u16,
+    volume: u8,
+    mut neighbor: impl FnMut(usize) -> (Option<u16>, u8),
+) -> ShapeBox {
+    let mut film = ShapeBox {
+        minimum: [0., f64::from(PATH_HEIGHT), 0.],
+        maximum: [1.; 3],
+        hinged: false,
+    };
+    if material == WET_TAR {
+        let incoming = [0, 1, 4, 5]
+            .into_iter()
+            .filter_map(|side| {
+                let (id, head) = neighbor(side);
+                (id == Some(WET_TAR)).then_some((side, head))
+            })
+            .max_by_key(|&(_, head)| head);
+        if let Some((side, head)) = incoming
+            && neighbor(side ^ 1).0 == Some(PATH)
+            && let Some(front) = crate::fluid_surface::Front::new(
+                f32::from(volume) / 64.,
+                f32::from(head) / 64.,
+                usize::from(side >= 4),
+                side % 2 == 0,
+            )
+        {
+            let axis = side / 2;
+            if front.positive {
+                film.maximum[axis] = f64::from(front.length);
+            } else {
+                film.minimum[axis] = 1. - f64::from(front.length);
+            }
+        }
+    }
+    film
 }
 
 /// Natural grass, sand, gravel and earth, including regional soil variants.
@@ -135,8 +177,10 @@ mod tests {
                 let state = tar_state(amount, stage);
                 assert_eq!(tar_amount(state), amount);
                 assert_eq!(tar_stage(state), stage);
-                assert_eq!(tar_height(state), PATH_HEIGHT + f32::from(amount) / 128.0);
-                assert!((PATH_HEIGHT..=1.0).contains(&tar_height(state)));
+                assert_eq!(
+                    tar_coating(DRIED_TAR, amount * 8, |_| (None, 0)).maximum,
+                    [1.; 3]
+                );
             }
         }
         assert_eq!(tar_state(0, 0), tar_state(1, 0));

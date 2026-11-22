@@ -285,7 +285,12 @@ pub(super) fn ground_waypoint_with_access(
         stuck_since: a.age,
         arrived: false,
     });
-    if distance(route.target, target) > 0.35_f64.powi(2)
+    // A moving quarry can drift within the same approach while the mob is
+    // still on a viable detour. Keep the path until that drift accumulates.
+    let tracking = matches!(a.behavior, super::Behavior::Hunt | super::Behavior::Attack)
+        && !route.points.is_empty();
+    let goal_tolerance: f64 = if tracking { 1.5 } else { 0.35 };
+    if distance(route.target, target) > goal_tolerance.powi(2)
         || (route.target[1] - target[1]).abs() > 0.125
     {
         route.target = target;
@@ -430,7 +435,31 @@ fn path(
         result.push_front(nodes[best].0);
         best = nodes[best].1;
     }
+    smooth_route(start, &mut result, |from, to| {
+        traversable_sized(h, from, to, kind, size)
+    });
     result
+}
+
+/// Skip short runs of grid corners if the actual body can cross directly.
+fn smooth_route(
+    mut from: [f64; 3],
+    points: &mut VecDeque<[f64; 3]>,
+    can_cross: impl Fn([f64; 3], [f64; 3]) -> bool,
+) {
+    if points.len() < 2 {
+        return;
+    }
+    let mut remaining = std::mem::take(points);
+    while !remaining.is_empty() {
+        let skip = (1..remaining.len().min(4))
+            .rev()
+            .find(|&i| can_cross(from, remaining[i]))
+            .unwrap_or(0);
+        from = remaining[skip];
+        remaining.drain(..=skip);
+        points.push_back(from);
+    }
 }
 
 pub(super) fn fly_cached(

@@ -158,7 +158,10 @@ impl Surface {
             Some(SmithStation | ArmyStation | RailwayStation | MineStation | BishopStation) => {
                 Self::Stone
             }
-            Some(Grass | SpiritBlossomGrass | BloodGrass | BloodMoss) => Self::Grass,
+            Some(
+                Grass | SpiritBlossomGrass | BloodGrass | BloodMoss | CaveGrass | CaveMoss
+                | GlowMoss,
+            ) => Self::Grass,
             Some(DeadGrass) => Self::Grass,
             Some(
                 BlueClay | RedClay | GreenClay | YellowClay | WhiteClay | BlackClay | GrayClay
@@ -177,13 +180,30 @@ impl Surface {
             Some(SoulCrystalSmall | SoulCrystalLarge | BloodCrystalBlock | BloodCrystalPillar) => {
                 Self::Glass
             }
-            Some(Sand) => Self::Sand,
+            Some(
+                SaltCrystalCluster
+                | SaltStalactite
+                | SaltStalagmite
+                | TranslucentSaltBlock
+                | CaveCrystalCluster
+                | ClearCaveIce
+                | PackedCaveIce
+                | FrostedCaveIce
+                | BlueCrystalBlock
+                | FrostCluster
+                | GlacialCrystalCluster,
+            ) => Self::Glass,
+            Some(SaltRubble | CavePebbles) => Self::Gravel,
+            Some(Sand | SaltDustFloor) => Self::Sand,
             Some(
                 Dirt
                 | Farmland
                 | Path
                 | Clay
                 | Mud
+                | CaveMud
+                | RootedCaveDirt
+                | NestStraw
                 | MushroomStem
                 | PurpleMushroomCap
                 | RedMushroomCap
@@ -203,7 +223,7 @@ impl Surface {
                 | Bile
                 | StrawBlock,
             ) => Self::Dirt,
-            Some(Snow | SnowLayer | CastleSnowWall) => Self::Snow,
+            Some(Snow | SnowLayer | CastleSnowWall | SnowDustStone) => Self::Snow,
             Some(material) if terra_core::rails::is_rail(material as u16) => Self::Wood,
             Some(
                 Wood
@@ -290,7 +310,10 @@ impl Surface {
                 | FloweringShrub
                 | AlpineHeather
                 | DesertShrub
-                | ShoreReeds,
+                | ShoreReeds
+                | CaveWildflowers
+                | GlowVine
+                | FrostVine,
             ) => Self::Leaves,
             Some(CaveRoot) => Self::Wood,
             Some(DripstoneTip | terra_voxel::MaterialId::FlowerPot) => Self::Stone,
@@ -301,6 +324,12 @@ impl Surface {
                 | Sandstone
                 | SmoothStone
                 | MossyStone
+                | MossyCaveStone
+                | OvergrownStone
+                | FrozenStone
+                | LushCaveStone
+                | WetCaveStone
+                | CaveCalcite
                 | SolidWater
                 | FluidWater
                 | SaltOre
@@ -433,7 +462,7 @@ impl ContactVariation {
 pub type Bank = Arc<Vec<Vec<f32>>>;
 pub const THUNDER_CLIP: usize = PATHS.len();
 
-fn recording(root: &std::path::Path, name: &str) -> Result<Vec<f32>, String> {
+pub(super) fn recording(root: &std::path::Path, name: &str) -> Result<Vec<f32>, String> {
     let path = root.join(name);
     let data = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
     if data.len() > 4_000_000 {
@@ -492,8 +521,13 @@ pub fn load() -> Result<Bank, String> {
     clips.push(super::stalker::breath(&clips[STALKER_AIRWAY_CLIP], true));
     let leaves = recording(&root, "environment/leaves.wav")?;
     super::ambience::append(&mut clips, &leaves);
-    super::worm::append(&mut clips);
+    super::worm::append(&mut clips, &root)?;
     super::worm::export(&clips)?;
+    for family in super::dragons::FAMILIES {
+        for cue in super::dragons::CUES {
+            clips.push(recording(&root, &format!("dragons/{family}-{cue}.wav"))?);
+        }
+    }
     Ok(Arc::new(clips))
 }
 
@@ -600,6 +634,16 @@ mod tests {
         expected.extend([Dirt, Stone, Dirt, Stone]); // Wet tar, dry road, liquid Galle and its solid block (437–440).
         expected.extend([Stone; 7]); // Sidewalk block and its six edge profiles (441–447).
         expected.push(Dirt); // Straw muffles footsteps (448).
+        expected.extend([Stone; 5]); // Plated dragon eggs and mineral geodes (449–453).
+        expected.extend([
+            Stone, Stone, Sand, Stone, Glass, Glass, Glass, Glass, Gravel, Stone,
+        ]);
+        expected.extend([Dirt, Stone, Stone, Gravel, Glass, Stone, Dirt]); // Nest lining and dripstone materials.
+        // Lush bedding, glacial surfaces, and the five attached grotto props (471–487).
+        expected.extend([
+            Stone, Stone, Dirt, Grass, Grass, Grass, Glass, Glass, Glass, Stone, Snow, Glass,
+            Leaves, Leaves, Glass, Glass, Leaves,
+        ]);
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1
@@ -732,7 +776,9 @@ mod tests {
         let clips = load().unwrap();
         assert_eq!(
             clips.len(),
-            PATHS.len() + 18 + super::super::ambience::DERIVED + super::super::worm::COUNT
+            super::super::worm::FIRST
+                + super::super::worm::BANK_LEN
+                + super::super::dragons::FAMILIES.len() * super::super::dragons::CUES.len()
         );
         for (name, clip) in PATHS.iter().zip(clips.iter()) {
             let rms = (clip.iter().map(|s| s * s).sum::<f32>() / clip.len() as f32).sqrt();

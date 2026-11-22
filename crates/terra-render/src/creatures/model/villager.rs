@@ -62,16 +62,16 @@ pub(super) fn parts_for_sex(role: u8, female: bool) -> Result<Vec<(Part, Vec3, M
         ),
     ];
     for side in [-1.0, 1.0] {
-        parts.push((
-            Part::Leg(side),
-            Vec3::new(side * 0.125, 0.6025, 0.0),
-            leg(role).finish()?,
-        ));
-        parts.push((
-            Part::VillagerArm(side),
-            Vec3::new(side * 0.30, 1.15, 0.0),
-            arm(role, side).finish()?,
-        ));
+        let hip = Vec3::new(side * 0.125, 0.6025, 0.0);
+        let shoulder = Vec3::new(side * 0.30, 1.15, 0.0);
+        let (thigh, boot) = leg(role);
+        let (sleeve, hand) = arm(role, side);
+        parts.extend([
+            (Part::VillagerThigh(side), hip, thigh.finish()?),
+            (Part::Leg(side), hip, boot.finish()?),
+            (Part::VillagerSleeve(side), shoulder, sleeve.finish()?),
+            (Part::VillagerArm(side), shoulder, hand.finish()?),
+        ]);
     }
     Ok(parts)
 }
@@ -323,15 +323,16 @@ fn body(role: u8, female: bool) -> Sculpt {
     reference_gear::body(&mut b, role);
     b
 }
-fn leg(role: u8) -> Sculpt {
-    let mut b = Sculpt::default();
+fn leg(role: u8) -> (Sculpt, Sculpt) {
+    let mut thigh = Sculpt::default();
     let pants = match role {
         13 => cloth(role),
         14 => [0.27, 0.27, 0.31],
         0 | 15 => cloth(role),
         _ => [0.35, 0.28, 0.20],
     };
-    b.rounded_box([0.0, -0.16, 0.0], [0.22, 0.35, 0.25], 0.055, pants);
+    thigh.rounded_box([0.0, -0.15, 0.0], [0.22, 0.33, 0.25], 0.055, pants);
+    let mut b = Sculpt::default();
     b.block([0.0, -0.31, 0.0], [0.24, 0.075, 0.27], tint(pants, 1.22));
     let bare = matches!(role, 0 | 15);
     b.block(
@@ -363,9 +364,9 @@ fn leg(role: u8) -> Sculpt {
         b.block([0.0, -0.43, -0.13], [0.17, 0.16, 0.075], METAL);
         b.block([0.0, -0.52, -0.13], [0.24, 0.08, 0.19], EDGE);
     }
-    b
+    (thigh, b)
 }
-fn arm(role: u8, side: f32) -> Sculpt {
+fn arm(role: u8, side: f32) -> (Sculpt, Sculpt) {
     let mut b = Sculpt::default();
     let sleeve = match role {
         8 => SKIN,
@@ -438,6 +439,8 @@ fn arm(role: u8, side: f32) -> Sculpt {
         0.12
     };
     let inward = if carrying { -side * 0.35 } else { 0.0 };
+    let sleeve = b;
+    let mut b = Sculpt::default();
     b.articulated(
         forearm,
         Vec3::new(0.0, -0.17, 0.0),
@@ -465,7 +468,7 @@ fn arm(role: u8, side: f32) -> Sculpt {
         b.block([0.0, -0.49, -0.025], [0.20, 0.10, 0.11], [0.52, 0.36, 0.19]);
     }
     reference_gear::hand(&mut b, role, side);
-    b
+    (sleeve, b)
 }
 
 #[cfg(test)]
@@ -481,7 +484,7 @@ mod tests {
                 continue;
             }
             let parts = parts(role).unwrap();
-            assert_eq!(parts.len(), 6, "six shared rigid parts per resident");
+            assert_eq!(parts.len(), 10, "four two-joint limbs, head and torso");
             let vertices = parts
                 .iter()
                 .map(|(_, _, mesh)| mesh.count_vertices())

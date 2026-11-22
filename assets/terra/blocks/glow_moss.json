@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": 476,
+  "name": "Glow Moss",
+  "description": "Warm flecks glow among the moss leaves.",
+  "creative_category": "terrain",
+  "hardness": 1.0,
+  "resistance": 8.0,
+  "required_tool": "pickaxe",
+  "mining_level": 1,
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0,
+  "face_materials": [
+    "Cleavage",
+    "Cleavage",
+    "Cleavage",
+    "Bedding",
+    "Cleavage",
+    "Cleavage"
+  ],
+  "materials": {
+    "Cleavage": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.76,
+      "reflectance": 0.19,
+      "normal_texture": "textures/living_caves/glow_side_normal.png",
+      "emission": [
+        0.09,
+        0.058,
+        0.009
+      ]
+    },
+    "Bedding": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.76,
+      "reflectance": 0.19,
+      "normal_texture": "textures/living_caves/glow_top_normal.png",
+      "emission": [
+        0.09,
+        0.058,
+        0.009
+      ]
+    }
+  },
+  "textures": {
+    "Cleavage": "textures/living_caves/glow_side.png",
+    "Bedding": "textures/living_caves/glow_top.png"
+  }
+}

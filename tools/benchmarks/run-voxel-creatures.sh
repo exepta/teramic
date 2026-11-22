@@ -7,9 +7,9 @@ cd -- "$repo_dir"
 client_source="${TERRA_CLIENT_BINARY:-$repo_dir/target/debug/terra-client}"
 [[ -x "$client_source" ]] || { printf 'Build terra-client before running this gallery.\n' >&2; exit 1; }
 scenes=("$@")
-if (( ${#scenes[@]} == 0 )); then scenes=(standard spirit forest aquatic horse spiders villagers sandworm); fi
+if (( ${#scenes[@]} == 0 )); then scenes=(standard spirit forest aquatic horse spiders villagers sandworm dragons); fi
 for scene in "${scenes[@]}"; do
-    case "$scene" in standard|spirit|forest|aquatic|horse|spiders|villagers|sandworm) ;; *) printf 'Unknown gallery: %s\n' "$scene" >&2; exit 2;; esac
+    case "$scene" in standard|spirit|forest|aquatic|horse|spiders|villagers|sandworm|dragons) ;; *) printf 'Unknown gallery: %s\n' "$scene" >&2; exit 2;; esac
 done
 mkdir -p target/voxel-creatures
 run_dir=$(mktemp -d "$repo_dir/target/voxel-creatures/run.XXXXXX")
@@ -56,16 +56,24 @@ export TERRA_CONFIG_DIR="$run_dir/configs" TERRA_MENU_CONFIG_DIR="$run_dir/confi
 export TERRA_PROFILE_FILE="$run_dir/profiles/inspection.toml" TERRA_WORLD_DIR="$run_dir/worlds"
 export TERRA_KINGDOM_SAVE_DIR="$run_dir/kingdom-save" TERRA_ASSET_DIR="$repo_dir/assets"
 export TERRA_BENCH_GRAPHICS=1 TERRA_COMPUTE_THREADS=6 RUST_LOG=info
-unset TERRA_FOREST_INSPECT TERRA_SPIRIT_INSPECT TERRA_SMOKE_VILLAGERS TERRA_HORSE_INSPECT TERRA_SANDWORM_INSPECT
+unset TERRA_FOREST_INSPECT TERRA_SPIRIT_INSPECT TERRA_SMOKE_VILLAGERS TERRA_HORSE_INSPECT TERRA_SANDWORM_INSPECT TERRA_DRAGON_INSPECT
 unset TERRA_AQUATIC_INSPECT TERRA_LIFE_INSPECT TERRA_CREATURE_INSPECT TERRA_BEE_INSPECT
 unset TERRA_BEAR_INSPECT TERRA_BIOME_SCENE TERRA_BIOME_ATMOSPHERE
 unset TERRA_EYE_INSPECT TERRA_SPIDER_MODEL_INSPECT
+cp "$run_dir/configs/graphics.toml" "$run_dir/graphics-default.toml"
 for scene in "${scenes[@]}"; do
+    cp "$run_dir/graphics-default.toml" "$run_dir/configs/graphics.toml"
+    # The spread wings and cast targets extend across most of a three-chunk
+    # fixture. Keep the far plane while retaining the full model silhouette.
+    if [[ "$scene" == dragons ]]; then
+        printf '\nfog_distance = 0.0\n' >> "$run_dir/configs/graphics.toml"
+    fi
     mkdir -p "$run_dir/$scene"
     scene_env=()
     case "$scene" in
         spirit) scene_env+=(TERRA_SPIRIT_INSPECT=1);;
         forest) scene_env+=(TERRA_FOREST_INSPECT=1);;
+        dragons) scene_env+=(TERRA_DRAGON_INSPECT=1);;
         sandworm) scene_env+=(TERRA_SANDWORM_INSPECT=1);;
         aquatic) scene_env+=(TERRA_AQUATIC_INSPECT=1);;
         horse) scene_env+=(TERRA_HORSE_INSPECT=1);;
@@ -95,6 +103,7 @@ scenes = (
     ('standard', 'creatures', 13, 'Creature model inspection passed: six species, two fish variants'),
     ('spirit', 'spirit-creatures', 4, 'Spirit gallery rendered seven butterfly variants'),
     ('forest', 'forest-creatures', 6, 'Forest gallery rendered three Skeleton loadouts'),
+    ('dragons', 'dragon', 31, 'Dragon gallery passed:'),
     ('sandworm', 'sandworm', 15, 'Sandworm gallery passed:'),
     ('aquatic', 'creatures', 13, 'Aquatic creature model inspection passed:'),
     ('horse', 'horses', 4, 'Horse inspection passed: sixteen coats'),
@@ -121,12 +130,13 @@ for scene, prefix, count, marker in scenes:
     assert marker in log, (scene, 'missing completion marker')
     for failure in failures:
         assert failure.casefold() not in log.casefold(), (scene, failure)
-    expected = {f'{prefix}-{i}.png' for i in range(count)}
+    poses = ('dark-rest', 'elder-roar', 'shadow-rune', 'earth-rest', 'earth-takeoff', 'earth-impact', 'water-flight', 'water-glide', 'water-bank', 'water-landing', 'earth-stride', 'ice-breath', 'shadow-breath', 'earth-breath', 'deep-swim', 'earth-sleep', 'dark-fall', 'ruin-fissure', 'wyrm-phase', 'void-orbs', 'tidal-wave', 'deepwater-barrier', 'icewater-geyser', 'mountain-boulders', 'granite-shield', 'magma-fissure', 'water-baby', 'water-young', 'water-adolescent', 'water-young-adult', 'water-grown') if scene == 'dragons' else range(count)
+    expected = {f'{prefix}-{pose}.png' for pose in poses}
     actual = {p.name for p in folder.glob('*.png')}
     assert actual == expected, (scene, expected - actual, actual - expected)
     captures = []
-    for i in range(count):
-        path = folder / f'{prefix}-{i}.png'
+    for pose in poses:
+        path = folder / f'{prefix}-{pose}.png'
         data = path.read_bytes()
         assert data[:8] == b'\x89PNG\r\n\x1a\n', path
         assert struct.unpack('>II', data[16:24]) == (1920, 1080), path

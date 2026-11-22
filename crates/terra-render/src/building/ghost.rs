@@ -25,6 +25,8 @@ struct Segment {
     below: u8,
     above: u8,
     hanging: bool,
+    joined: bool,
+    fan: [u8; 2],
 }
 
 #[derive(Resource, Default)]
@@ -95,6 +97,8 @@ fn cells(
                     below: profile.below,
                     above: profile.above,
                     hanging: profile.hanging,
+                    joined: profile.joined,
+                    fan: profile.fan,
                 }
             });
             Some(Cell {
@@ -144,6 +148,8 @@ fn geometry(cells: &[Cell], templates: &TemplateSet) -> Result<MeshBatch, String
                     below: segment.below,
                     above: segment.above,
                     hanging: segment.hanging,
+                    joined: segment.joined,
+                    fan: segment.fan,
                 },
                 crate::meshing::DetailLevel::Near,
             )?;

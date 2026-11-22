@@ -16,13 +16,6 @@ impl Default for ViscousContact {
     }
 }
 
-const SIDES: [(usize, [i64; 3]); 4] = [
-    (0, [-1, 0, 0]),
-    (1, [1, 0, 0]),
-    (4, [0, 0, -1]),
-    (5, [0, 0, 1]),
-];
-
 fn amount(journal: &EditJournal, p: [i64; 3], material: u16) -> u8 {
     let state = journal.object_state(p).unwrap_or_default();
     state.liquid.map_or_else(
@@ -51,54 +44,18 @@ pub fn surface_at(chunks: &ChunkStore, journal: &EditJournal, point: [f64; 3]) -
     }
     let p = point.map(|v| v.floor() as i64);
     let material = chunks.block_at(p)?;
-    if !matches!(material, bile::FLUID | roads::WET_TAR) {
+    if material == bile::FLUID {
+        return crate::bile::height_at(chunks, journal, point);
+    }
+    if material != roads::WET_TAR {
         return None;
     }
     let volume = amount(journal, p, material);
-    let strongest = SIDES
+    let coating = crate::roads::coating(p, material, volume, journal, |p| chunks.block_at(p));
+    let inside = [0, 2]
         .into_iter()
-        .filter_map(|(side, d)| {
-            let q = std::array::from_fn(|i| p[i] + d[i]);
-            (chunks.block_at(q) == Some(material)).then(|| (side, amount(journal, q, material)))
-        })
-        .max_by_key(|&(_, volume)| volume);
-    let front = strongest.and_then(|(side, head)| {
-        let d = SIDES.iter().find(|(s, _)| *s == side).unwrap().1;
-        let ahead = std::array::from_fn(|i| p[i] - d[i]);
-        let leading = if material == bile::FLUID {
-            chunks.block_at(ahead) != Some(material)
-        } else {
-            chunks.block_at(ahead) == Some(crate::roads::PATH)
-        };
-        leading
-            .then(|| {
-                terra_core::fluid_surface::Front::new(
-                    f32::from(volume) / 64.,
-                    f32::from(head) / 64.,
-                    usize::from(side >= 4),
-                    side % 2 == 0,
-                )
-            })
-            .flatten()
-    });
-    let base = if material == roads::WET_TAR {
-        f64::from(roads::PATH_HEIGHT)
-    } else {
-        0.
-    };
-    let height = if let Some(front) = front {
-        let axis = if front.axis == 0 { 0 } else { 2 };
-        f64::from(front.height_at((point[axis] - p[axis] as f64) as f32)?)
-            / if material == roads::WET_TAR { 16. } else { 1. }
-    } else if material == bile::FLUID {
-        journal.object_state(p).and_then(|s| s.liquid).map_or_else(
-            || f64::from(bile::height((volume / 8).max(1))),
-            |s| f64::from(bile::state_height(s.volume, s.age)),
-        )
-    } else {
-        f64::from(volume) / 1024.
-    };
-    Some(p[1] as f64 + base + height)
+        .all(|i| (coating.minimum[i]..=coating.maximum[i]).contains(&(point[i] - p[i] as f64)));
+    inside.then_some(p[1] as f64 + coating.maximum[1])
 }
 
 /// Galle is swimmable liquid. Solid Galle blocks and dry road surfaces are not.

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 485,
+  "name": "Frost Cluster",
+  "description": "Short blades of rime grow on glacial ledges.",
+  "creative_category": "nature",
+  "struct_block": true,
+  "hardness": 0.35,
+  "resistance": 1,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/frost_cluster.glb",
+  "textures": {
+    "rime": "textures/living_caves/rime_side.png",
+    "snow": "textures/living_caves/dust_side.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.15,
+        0,
+        0.15
+      ],
+      "maximum": [
+        0.85,
+        0.25,
+        0.85
+      ]
+    }
+  ]
+}

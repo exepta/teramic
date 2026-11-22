@@ -118,7 +118,9 @@ fn setup(
             {
                 for (part, offset, mesh) in parts {
                     let rotation = match part {
-                        model::Part::VillagerArm(side) => Quat::from_rotation_z(*side * 0.06),
+                        model::Part::VillagerArm(side)
+                        | model::Part::VillagerSleeve(side)
+                        | model::Part::MilitaryWeapon(side) => Quat::from_rotation_z(*side * 0.06),
                         _ => Quat::IDENTITY,
                     };
                     let mut child = commands.spawn((

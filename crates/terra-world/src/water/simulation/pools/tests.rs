@@ -95,6 +95,32 @@ fn snapshot(journal: &EditJournal) -> BTreeMap<Cell, FluidCell> {
 }
 
 #[test]
+fn a_poured_channel_advances_a_contiguous_front_at_play_speed() {
+    let (terrain, mut chunks, mut journal, cells) = rectangular_fixture([14, 7, 8], [6, 1]);
+    put(&mut chunks, &mut journal, cells[0], 27);
+    let mut arrival = None;
+    for tick in 1..=16 {
+        run(&terrain, &chunks, &mut journal, 1);
+        let mut dry = false;
+        for p in &cells[1..] {
+            if journal.fluid(*p).unwrap_or_default().amount == 0 {
+                dry = true;
+            } else {
+                assert!(!dry, "a wet cell cannot run ahead of a dry gap");
+            }
+        }
+        if !dry {
+            arrival = Some(tick as f64 * TICK_SECONDS);
+            break;
+        }
+    }
+    assert!(
+        arrival.is_some_and(|seconds| seconds <= 1.),
+        "five blocks should be reached within a second: {arrival:?}"
+    );
+}
+
+#[test]
 fn placed_water_advances_across_the_last_pool_cell_before_contacting_its_wall() {
     use crate::water::{FluidOccluders, append_fluid_patch, flowing_surface_height};
     use terra_core::block_shapes::ShapeBox;

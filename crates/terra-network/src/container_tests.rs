@@ -531,6 +531,11 @@ fn every_bed_dye_pose_accepts_authoritative_sleep_interaction_over_udp() {
     for position in [anchor, peer] {
         put(&mut host, position, 71);
     }
+    host.world_mut()
+        .resource_mut::<GameConfig>()
+        .world
+        .time
+        .paused = true;
     {
         let mut clock = host.world_mut().resource_mut::<terra_core::WorldClock>();
         clock.phase = 21.0 / 24.0;
@@ -606,7 +611,44 @@ fn every_bed_dye_pose_accepts_authoritative_sleep_interaction_over_udp() {
                 .sleeping()
                 .is_some_and(|sleep| sleep.anchor == anchor && sleep.facing == facing % 4)
         });
-        send(&mut a, crate::protocol::session::ClientControl::LeaveBed);
+        if Some(&color) == DyeColor::ALL.last() {
+            // The terminal vote now succeeds. A paused clock isolates the
+            // actual skipped night from the test runner's wall time.
+            let egg = [anchor[0] - 2, anchor[1], anchor[2]];
+            let shell = terra_voxel::MaterialId::WaterDragonEgg as u16;
+            put(
+                &mut host,
+                [egg[0], egg[1] - 1, egg[2]],
+                terra_voxel::MaterialId::StrawBlock as u16,
+            );
+            put(&mut host, egg, shell);
+            host.world_mut()
+                .resource_mut::<EditJournal>()
+                .gameplay_mut()
+                .dragon_eggs
+                .push(terra_core::creatures::dragon_eggs::IncubatingEgg {
+                    position: egg,
+                    shell,
+                    owner: terra_core::PlayerUuid::from_u128(155),
+                    elapsed_days: 1.,
+                });
+            let day = host.world().resource::<terra_core::WorldClock>().day;
+            host.world_mut()
+                .resource_mut::<GameConfig>()
+                .world
+                .game_rules
+                .sleep_percentage = 50.;
+            wait(&mut host, &mut [&mut a, &mut b], |host, _| {
+                host.world().resource::<terra_core::WorldClock>().day == day + 1
+            });
+            let journal = host.world().resource::<EditJournal>();
+            assert_eq!(journal.clock.unwrap().hour(), 8.);
+            assert!(
+                (journal.gameplay().dragon_eggs[0].elapsed_days - (1. + 11. / 24.)).abs() < 1e-8
+            );
+        } else {
+            send(&mut a, crate::protocol::session::ClientControl::LeaveBed);
+        }
         wait(&mut host, &mut [&mut a, &mut b], |_, clients| {
             clients[0]
                 .world()

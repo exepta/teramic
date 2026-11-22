@@ -5,6 +5,7 @@ mod ambience;
 mod beds;
 mod chests;
 mod clips;
+mod dragons;
 mod eating;
 mod furniture;
 mod plumbing;
@@ -51,6 +52,7 @@ pub(crate) fn install(app: &mut App) {
         );
     smoke::install(app);
     worm::install(app);
+    dragons::install(app);
     app.add_systems(Update, thunder::update.after(scene::update));
     app.add_systems(
         Update,

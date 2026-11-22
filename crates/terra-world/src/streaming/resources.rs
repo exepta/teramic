@@ -139,11 +139,32 @@ pub struct ChunkStore {
     pub(super) queue: super::queue::SectionQueue,
     pub(super) surface_ranges: HashMap<[i64; 2], [i64; 2]>,
     pub(super) columns: HashMap<[i64; 2], Arc<crate::PreparedColumn>>,
+    pub(super) dragon_foci: Vec<SectionPos>,
+    pub(super) surface_views: Option<(Vec<SectionPos>, i64)>,
     pub(super) cave_views: Vec<(SectionPos, i64)>,
+    /// Furthest visible surface of the currently occupied elongated cave.
+    pub gallery_view_distance: f32,
+    pub(super) gallery_columns: HashSet<[i64; 2]>,
     /// Forgotten overrides need their generated base before collision is known.
     pub(super) unknown_voxel_bases: HashMap<SectionPos, HashSet<[usize; 3]>>,
 }
 impl ChunkStore {
+    /// Guardians load only their moving collision neighborhood. Players remain
+    /// the only foci for view distance, visibility, and cave surveys.
+    pub fn track_dragon_flight(&mut self, positions: impl IntoIterator<Item = [f64; 3]>) {
+        let mut foci: Vec<_> = positions
+            .into_iter()
+            .filter(|p| {
+                p.iter()
+                    .all(|v| v.is_finite() && v.abs() < (1_i64 << 40) as f64 - 32.)
+            })
+            .map(|p| terra_voxel::global_to_section(p.map(|v| v.floor() as i64)).0)
+            .collect();
+        foci.sort_unstable_by_key(|p| (p.x, p.y, p.z));
+        foci.dedup();
+        self.dragon_foci = foci;
+    }
+
     pub(crate) fn invalidate_sections(&mut self, positions: impl IntoIterator<Item = SectionPos>) {
         for position in positions {
             if self.is_wanted(position) {

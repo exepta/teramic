@@ -22,16 +22,14 @@ use tilt_ui::{ElementId, html_shared};
 
 pub(crate) fn emblem_source(icon: KingdomIcon) -> String {
     match icon {
-        KingdomIcon::Wheat => concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../src-ui/assets/heraldry-wheat.svg"
-        )
-        .into(),
-        KingdomIcon::Hammer => concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../src-ui/assets/heraldry-hammer.svg"
-        )
-        .into(),
+        KingdomIcon::Wheat => terra_core::installation_root()
+            .join("src-ui/assets/heraldry-wheat.svg")
+            .to_string_lossy()
+            .into_owned(),
+        KingdomIcon::Hammer => terra_core::installation_root()
+            .join("src-ui/assets/heraldry-hammer.svg")
+            .to_string_lossy()
+            .into_owned(),
         _ => format!("tilt-icon:{}@32", icon.glyph()),
     }
 }

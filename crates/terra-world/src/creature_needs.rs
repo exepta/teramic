@@ -84,7 +84,7 @@ fn find_food(animal: &Creature, habitat: &Habitat) -> Option<NeedGoal> {
     nearest
 }
 
-fn water_at(habitat: &Habitat, p: [i64; 3]) -> bool {
+pub(super) fn water_at(habitat: &Habitat, p: [i64; 3]) -> bool {
     water_surface(habitat, p).is_some()
 }
 
@@ -97,7 +97,7 @@ fn water_surface(habitat: &Habitat, p: [i64; 3]) -> Option<f64> {
     (fluid.amount > 0).then_some(p[1] as f64 + fluid.height())
 }
 
-fn find_water(animal: &Creature, habitat: &Habitat, radius: i64) -> Option<NeedGoal> {
+pub(super) fn find_water(animal: &Creature, habitat: &Habitat, radius: i64) -> Option<NeedGoal> {
     let _scope = terra_core::profiling::ScopeTimer::new("creatures.needs.find_water");
     let origin = animal.position.map(|v| v.floor() as i64);
     // Include water one full block below the bank: at most 192 cell probes.
@@ -121,14 +121,17 @@ fn find_water(animal: &Creature, habitat: &Habitat, radius: i64) -> Option<NeedG
                 let vx = center[0] - animal.position[0];
                 let vz = center[2] - animal.position[2];
                 let length = vx.hypot(vz).max(0.1);
-                let bank_distance =
-                    (animal.kind.size()[0].max(animal.kind.size()[2]) * 0.5 + 0.75).max(1.6);
+                let size = animal.size();
+                let bank_distance = (size[0].max(size[2]) * 0.5 + 0.75).max(1.6);
                 let shore = [
                     center[0] - vx / length * bank_distance,
                     center[1],
                     center[2] - vz / length * bank_distance,
                 ];
-                if habitat.ground(shore, animal.kind).is_some() {
+                if habitat
+                    .ground_sized(shore, size, f64::from(animal.yaw))
+                    .is_some()
+                {
                     return Some(NeedGoal {
                         kind: NeedKind::Water,
                         position: p,

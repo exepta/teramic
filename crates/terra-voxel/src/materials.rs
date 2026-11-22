@@ -455,10 +455,49 @@ pub enum MaterialId {
     SidewalkArcRight = 446,
     SidewalkLowered = 447,
     StrawBlock = 448,
+    DarkDragonEgg = 449,
+    EarthDragonEgg = 450,
+    WaterDragonEgg = 451,
+    AmberGeode = 452,
+    TideGeode = 453,
+    SaltCaveStone = 454,
+    WetSaltStone = 455,
+    SaltDustFloor = 456,
+    DeepSaltStone = 457,
+    TranslucentSaltBlock = 458,
+    SaltCrystalCluster = 459,
+    SaltStalactite = 460,
+    SaltStalagmite = 461,
+    SaltRubble = 462,
+    SaltPillarFragment = 463,
+    NestStraw = 464,
+    WetCaveStone = 465,
+    CaveCalcite = 466,
+    CavePebbles = 467,
+    CaveCrystalCluster = 468,
+    MossyCaveStone = 469,
+    CaveMud = 470,
+    LushCaveStone = 471,
+    OvergrownStone = 472,
+    RootedCaveDirt = 473,
+    CaveGrass = 474,
+    CaveMoss = 475,
+    GlowMoss = 476,
+    ClearCaveIce = 477,
+    PackedCaveIce = 478,
+    FrostedCaveIce = 479,
+    FrozenStone = 480,
+    SnowDustStone = 481,
+    BlueCrystalBlock = 482,
+    GlowVine = 483,
+    FrostVine = 484,
+    FrostCluster = 485,
+    GlacialCrystalCluster = 486,
+    CaveWildflowers = 487,
 }
 
 impl MaterialId {
-    pub const LAST: u16 = Self::StrawBlock as u16;
+    pub const LAST: u16 = Self::CaveWildflowers as u16;
     pub const FOLIAGE: [u16; 10] = [7, 8, 9, 132, 133, 195, 310, 311, 312, 406];
     pub const BLOCK_COUNT: usize = Self::LAST as usize;
 
@@ -481,7 +520,46 @@ impl MaterialId {
             Self::SidewalkArcLeft => "teramic::sidewalk_arc_left",
             Self::SidewalkArcRight => "teramic::sidewalk_arc_right",
             Self::SidewalkLowered => "teramic::sidewalk_lowered",
+            Self::DarkDragonEgg => "teramic::dark_dragon_egg",
+            Self::EarthDragonEgg => "teramic::earth_dragon_egg",
+            Self::WaterDragonEgg => "teramic::water_dragon_egg",
+            Self::AmberGeode => "teramic::amber_geode",
+            Self::TideGeode => "teramic::tide_geode",
+            Self::SaltCaveStone => "teramic::salt_cave_stone",
+            Self::WetSaltStone => "teramic::wet_salt_stone",
+            Self::SaltDustFloor => "teramic::salt_dust_floor",
+            Self::DeepSaltStone => "teramic::deep_salt_stone",
+            Self::TranslucentSaltBlock => "teramic::translucent_salt_block",
+            Self::SaltCrystalCluster => "teramic::salt_crystal_cluster",
+            Self::SaltStalactite => "teramic::salt_stalactite",
+            Self::SaltStalagmite => "teramic::salt_stalagmite",
+            Self::SaltRubble => "teramic::salt_rubble",
+            Self::SaltPillarFragment => "teramic::salt_pillar_fragment",
+            Self::WetCaveStone => "teramic::wet_cave_stone",
+            Self::CaveCalcite => "teramic::cave_calcite",
+            Self::CavePebbles => "teramic::cave_pebbles",
+            Self::CaveCrystalCluster => "teramic::cave_crystal_cluster",
+            Self::MossyCaveStone => "teramic::mossy_cave_stone",
+            Self::CaveMud => "teramic::cave_mud",
+            Self::LushCaveStone => "teramic::lush_cave_stone",
+            Self::OvergrownStone => "teramic::overgrown_stone",
+            Self::RootedCaveDirt => "teramic::rooted_cave_dirt",
+            Self::CaveGrass => "teramic::cave_grass",
+            Self::CaveMoss => "teramic::cave_moss",
+            Self::GlowMoss => "teramic::glow_moss",
+            Self::ClearCaveIce => "teramic::clear_cave_ice",
+            Self::PackedCaveIce => "teramic::packed_cave_ice",
+            Self::FrostedCaveIce => "teramic::frosted_cave_ice",
+            Self::FrozenStone => "teramic::frozen_stone",
+            Self::SnowDustStone => "teramic::snow_dust_stone",
+            Self::BlueCrystalBlock => "teramic::blue_crystal_block",
+            Self::GlowVine => "teramic::glow_vine",
+            Self::FrostVine => "teramic::frost_vine",
+            Self::FrostCluster => "teramic::frost_cluster",
+            Self::GlacialCrystalCluster => "teramic::glacial_crystal_cluster",
+            Self::CaveWildflowers => "teramic::cave_wildflowers",
             Self::StrawBlock => "teramic::straw_block",
+            Self::NestStraw => "teramic::nest_straw",
             Self::FogBlock => "teramic::fog_block",
             Self::Cactus => "teramic::cactus",
             Self::MeadowDaisies => "teramic::meadow_daisies",
@@ -1369,6 +1447,45 @@ impl MaterialId {
             446 => Self::SidewalkArcRight,
             447 => Self::SidewalkLowered,
             448 => Self::StrawBlock,
+            449 => Self::DarkDragonEgg,
+            450 => Self::EarthDragonEgg,
+            451 => Self::WaterDragonEgg,
+            452 => Self::AmberGeode,
+            453 => Self::TideGeode,
+            454 => Self::SaltCaveStone,
+            455 => Self::WetSaltStone,
+            456 => Self::SaltDustFloor,
+            457 => Self::DeepSaltStone,
+            458 => Self::TranslucentSaltBlock,
+            459 => Self::SaltCrystalCluster,
+            460 => Self::SaltStalactite,
+            461 => Self::SaltStalagmite,
+            462 => Self::SaltRubble,
+            463 => Self::SaltPillarFragment,
+            464 => Self::NestStraw,
+            465 => Self::WetCaveStone,
+            466 => Self::CaveCalcite,
+            467 => Self::CavePebbles,
+            468 => Self::CaveCrystalCluster,
+            469 => Self::MossyCaveStone,
+            470 => Self::CaveMud,
+            471 => Self::LushCaveStone,
+            472 => Self::OvergrownStone,
+            473 => Self::RootedCaveDirt,
+            474 => Self::CaveGrass,
+            475 => Self::CaveMoss,
+            476 => Self::GlowMoss,
+            477 => Self::ClearCaveIce,
+            478 => Self::PackedCaveIce,
+            479 => Self::FrostedCaveIce,
+            480 => Self::FrozenStone,
+            481 => Self::SnowDustStone,
+            482 => Self::BlueCrystalBlock,
+            483 => Self::GlowVine,
+            484 => Self::FrostVine,
+            485 => Self::FrostCluster,
+            486 => Self::GlacialCrystalCluster,
+            487 => Self::CaveWildflowers,
 
             193 => Self::Lantern,
             194 => Self::Chain,
@@ -1378,13 +1495,14 @@ impl MaterialId {
 
     /// Fluid anchors and torches remain selectable without blocking movement.
     pub const fn is_solid(self) -> bool {
-        if matches!(self as u16, 359..=361 | 370..=372 | 374..=375 | 378..=387 | 399 | 412..=419 | 423..=429)
+        if matches!(self as u16, 359..=361 | 370..=372 | 374..=375 | 378..=387 | 399 | 412..=419 | 423..=429 | 483..=485 | 487)
         {
             return false;
         }
         !matches!(
             self,
             Self::Air
+                | Self::NestStraw
                 | Self::Bile
                 | Self::FluidWater
                 | Self::Torch
@@ -1407,7 +1525,7 @@ impl MaterialId {
         if matches!(self, Self::BileBlock | Self::StrawBlock) {
             return true;
         }
-        if matches!(self as u16, 324..=343 | 397..=398 | 400..=405 | 407..=411 | 422 | 430..=431 | 440)
+        if matches!(self as u16, 324..=343 | 397..=398 | 400..=405 | 407..=411 | 422 | 430..=431 | 440 | 454..=457 | 465..=466 | 469..=476 | 478..=482)
         {
             return true;
         }
@@ -1488,7 +1606,10 @@ impl MaterialId {
     pub const fn is_natural_ground(self) -> bool {
         matches!(
             self,
-            Self::Grass
+            Self::CaveGrass
+                | Self::CaveMoss
+                | Self::RootedCaveDirt
+                | Self::Grass
                 | Self::Dirt
                 | Self::Farmland
                 | Self::Path
@@ -1520,6 +1641,9 @@ impl MaterialId {
     }
 
     pub const fn flammable(self) -> bool {
+        if matches!(self, Self::StrawBlock | Self::NestStraw) {
+            return true;
+        }
         if matches!(self as u16, 404..=406 | 412..=416 | 418..=419 | 422..=429) {
             return true;
         }
@@ -1614,7 +1738,7 @@ mod tests {
             assert_eq!(material.is_opaque(), opaque);
             assert!(!material.flammable());
         }
-        assert_eq!(MaterialId::LAST, 448);
+        assert_eq!(MaterialId::LAST, 487);
     }
 
     #[test]
@@ -1819,7 +1943,7 @@ mod cemetery_tests {
             );
             assert_eq!(
                 material.is_solid(),
-                !matches!(id, 359..=361 | 370..=372 | 374..=375 | 378..=387 | 399 | 412..=419 | 423..=429)
+                !matches!(id, 359..=361 | 370..=372 | 374..=375 | 378..=387 | 399 | 412..=419 | 423..=429 | 483..=485 | 487)
             );
         }
     }

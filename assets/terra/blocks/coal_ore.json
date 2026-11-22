@@ -28,8 +28,9 @@
         0.055,
         1
       ],
-      "roughness": 0.8,
-      "metallic": 0
+      "roughness": 0.4,
+      "metallic": 0.05,
+      "reflectance": 0.53
     }
   },
   "face_materials": [

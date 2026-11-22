@@ -44,7 +44,11 @@ pub(crate) fn build_water_patch(
     const SIZE: usize = SECTION_SIZE + 2;
     let y = (plane - origin[1]) as usize + 1;
     let wet = |x: usize, z: usize| {
-        let bed = (columns[x + SIZE * z].height - 0.5).floor() + 1.0;
+        let c = columns[x + SIZE * z];
+        if c.water_level != Some(level) {
+            return false;
+        }
+        let bed = c.water_bed();
         let block = padded[x + SIZE * (y + SIZE * z)];
         let volume = if (level - plane as f64).abs() < 1e-8 && y > 0 {
             padded[x + SIZE * (y - 1 + SIZE * z)]

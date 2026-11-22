@@ -5,7 +5,7 @@ use terra_core::fluid_surface::Front;
 
 /// A film can advance across its last dry cell right up to a solid bank.
 /// Waterloggable shapes and open fixtures need their clipped surface instead.
-pub(super) fn front_boundary(material: u16) -> bool {
+pub(crate) fn front_boundary(material: u16) -> bool {
     matches!(material, 0 | 27)
         || (terra_voxel::MaterialId::from_raw(material).is_some_and(|id| id.is_solid())
             && !terra_core::plumbing::is_part(material)
@@ -15,7 +15,15 @@ pub(super) fn front_boundary(material: u16) -> bool {
 
 pub(super) const BANDS: usize = 4;
 
-pub(super) struct Tongue {
+pub(crate) fn wet_flank(p: [i64; 3], axis: usize, wet: impl Fn([i64; 3]) -> bool) -> bool {
+    [-1, 1].into_iter().any(|offset| {
+        let mut neighbor = p;
+        neighbor[if axis == 0 { 2 } else { 0 }] += offset;
+        wet(neighbor)
+    })
+}
+
+pub(crate) struct Tongue {
     pub front: Front,
     pub exposed: [bool; 2],
     pub tip_exposed: bool,

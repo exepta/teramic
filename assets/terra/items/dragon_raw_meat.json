@@ -1,0 +1,12 @@
+{
+  "item": {
+    "dragon_loot": "raw_meat"
+  },
+  "name": "Raw Dragon Meat",
+  "description": "Earth dragon meat. Roast it in a furnace for a more filling meal.",
+  "food": {
+    "nutrition": 24,
+    "saturation": 4,
+    "eat_seconds": 1.8
+  }
+}

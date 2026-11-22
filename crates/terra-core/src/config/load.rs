@@ -62,5 +62,5 @@ pub fn menu_config_directory() -> PathBuf {
 pub fn config_directory() -> PathBuf {
     std::env::var_os("TERRA_CONFIG_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../configs"))
+        .unwrap_or_else(|| crate::installation_root().join("configs"))
 }

@@ -10,6 +10,29 @@ def bones(mesh,count=7):
         cylinder(mesh,begin,end,.027,'bone',8)
         for p in [begin,end]:ellipsoid(mesh,p,[.045,.035,.045],'bone',8,4)
 
+def bone_pile(mesh):
+    # Crossed long bones bear on one another; ribs and a half-buried skull
+    # break up the silhouette above the wider, settled base.
+    for level, count, reach in [(0, 4, .35), (1, 3, .31), (2, 2, .26)]:
+        for i in range(count):
+            a = .45 + level*1.22 + i*.21
+            offset = (i - (count-1)*.5) * .155
+            x, z = .5 - math.sin(a)*offset, .52 + math.cos(a)*offset
+            low = [x-math.cos(a)*reach, .055+level*.105, z-math.sin(a)*reach]
+            high = [x+math.cos(a)*reach, .080+level*.105, z+math.sin(a)*reach]
+            cylinder(mesh, low, high, .037, 'bone', 6)
+            for tip in (low,high):
+                for side in [-1,1]:
+                    knob = [tip[0] - side*math.sin(a)*.024,tip[1], tip[2] + side*math.cos(a)*.024]
+                    ellipsoid(mesh, knob, [.042,.050,.044], 'bone', 6, 3)
+    skull(mesh,[.47,.442,.51],.37)
+    for i in range(3):
+        x = .20 + i*.078
+        a,b,c = [x,.12,.64],[x-.04,.25+i*.022,.57],[x+.025,.31+i*.023,.44]
+        cylinder(mesh,a,b,.024,'bone',5)
+        cylinder(mesh,b,c,.023,'bone',5,.014)
+
+
 def build(mesh,family):
     if family.startswith('gravestone_') or family=='cross':
         h={'gravestone_small':.56,'gravestone_medium':.75,'gravestone_large':.94,'cross':.94}[family]
@@ -45,8 +68,10 @@ def build(mesh,family):
             mesh.box([.02,.51,.73],[.98,.64,.95],'trim',.020,True)
         return True
     if family in ('skeleton','bones'):
-        bones(mesh,9 if family=='bones' else 5)
-        if family=='skeleton':
+        if family=='bones':
+            bone_pile(mesh)
+        else:
+            bones(mesh,5)
             skull(mesh,[.5,.16,.22],.25)
             cylinder(mesh,[.5,.09,.37],[.5,.09,.79],.035,'bone',8)
             for z in [.43,.50,.57]:

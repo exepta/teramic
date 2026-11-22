@@ -401,7 +401,8 @@ impl TerraGenerator {
         } else if self.config().blood_forest_revision > 0
             && matches!(
                 column.surface_material,
-                MaterialId::BloodGrass
+                MaterialId::BloodDirt
+                    | MaterialId::BloodGrass
                     | MaterialId::BloodMoss
                     | MaterialId::CrimsonMycelium
                     | MaterialId::BloodStone

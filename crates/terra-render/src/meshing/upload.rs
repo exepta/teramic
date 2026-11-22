@@ -236,6 +236,9 @@ pub(crate) fn upload_sections(
                             })
                     })
                     .map(|terrain| crate::water::biome::WaterTint::new(&terrain.0, origin));
+                let column = tint
+                    .as_ref()
+                    .and_then(|_| world.chunks.prepared_column([position.x, position.z]));
                 for batch in batches.iter_mut().filter(|batch| batch.staged.is_none()) {
                     if batch.positions.is_empty() || !batch.has_indices() {
                         continue;
@@ -254,7 +257,7 @@ pub(crate) fn upload_sections(
                         batch,
                         &world,
                         &assets,
-                        tint.as_ref(),
+                        tint.as_ref().map(|t| (t, origin, column.as_deref())),
                         &mut meshes,
                         job.level == super::DetailLevel::Far,
                     );
@@ -608,7 +611,11 @@ fn prepare_batch(
     batch: &mut super::builder::MeshBatch,
     world: &RenderWorld,
     assets: &BlockAssets,
-    tint: Option<&crate::water::biome::WaterTint>,
+    tint: Option<(
+        &crate::water::biome::WaterTint,
+        [i64; 3],
+        Option<&terra_world::PreparedColumn>,
+    )>,
     meshes: &mut Assets<Mesh>,
     far: bool,
 ) {
@@ -631,23 +638,17 @@ fn prepare_batch(
         0
     };
     let tints = if water {
-        tint.map(|t| {
-            (
-                batch
-                    .positions
-                    .iter()
-                    .map(|&p| t.payload(p))
-                    .collect::<Vec<_>>(),
-                batch
-                    .positions
-                    .iter()
-                    .map(|&p| t.blood_at(p))
-                    .collect::<Vec<_>>(),
-            )
+        tint.map(|(tint, origin, column)| {
+            batch
+                .positions
+                .iter()
+                .map(|&point| tint.optics(origin, point, column))
+                .unzip::<_, _, Vec<_>, Vec<_>>()
         })
     } else {
         None
     };
+    batch.finish_tangents();
     let indices = batch.take_indices();
     let mut mesh = Mesh::new(
         PrimitiveTopology::TriangleList,
@@ -658,6 +659,12 @@ fn prepare_batch(
         std::mem::take(&mut batch.positions),
     )
     .with_inserted_indices(indices);
+    if !batch.bile_motion.is_empty() {
+        mesh.insert_attribute(
+            crate::liquid_motion::POUR_COORDS,
+            std::mem::take(&mut batch.bile_motion),
+        );
+    }
     if !batch.uvs.is_empty() {
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, std::mem::take(&mut batch.uvs));
     }

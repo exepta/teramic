@@ -1,0 +1,192 @@
+[
+  {
+    "source": "Dark Dragon Scale",
+    "en": "Dark Dragon Scale",
+    "de": "Dunkeldrachenschuppe"
+  },
+  {
+    "source": "Earth Dragon Scale",
+    "en": "Earth Dragon Scale",
+    "de": "Erddrachenschuppe"
+  },
+  {
+    "source": "Water Dragon Scale",
+    "en": "Water Dragon Scale",
+    "de": "Wasserdrachenschuppe"
+  },
+  {
+    "source": "Dragon Fang",
+    "en": "Dragon Fang",
+    "de": "Drachenzahn"
+  },
+  {
+    "source": "Dragon Leather",
+    "en": "Dragon Leather",
+    "de": "Drachenleder"
+  },
+  {
+    "source": "Shadow Dragon Core",
+    "en": "Shadow Dragon Core",
+    "de": "Dunkeldrachenkern"
+  },
+  {
+    "source": "Dragon Blood",
+    "en": "Dragon Blood",
+    "de": "Drachenblut"
+  },
+  {
+    "source": "Dark Crystal Shard",
+    "en": "Dark Crystal Shard",
+    "de": "Dunkelkristallsplitter"
+  },
+  {
+    "source": "Dark Dragon Heart",
+    "en": "Dark Dragon Heart",
+    "de": "Dunkeldrachenherz"
+  },
+  {
+    "source": "Dragon Wing Membrane",
+    "en": "Dragon Wing Membrane",
+    "de": "Drachenflügelmembran"
+  },
+  {
+    "source": "Earth Core Crystal",
+    "en": "Earth Core Crystal",
+    "de": "Erdkernkristall"
+  },
+  {
+    "source": "Raw Dragon Meat",
+    "en": "Raw Dragon Meat",
+    "de": "Rohes Drachenfleisch"
+  },
+  {
+    "source": "Roast Dragon Meat",
+    "en": "Roast Dragon Meat",
+    "de": "Gebratenes Drachenfleisch"
+  },
+  {
+    "source": "Dragon Dust",
+    "en": "Dragon Dust",
+    "de": "Drachenstaub"
+  },
+  {
+    "source": "Dragon Claw",
+    "en": "Dragon Claw",
+    "de": "Drachenkralle"
+  },
+  {
+    "source": "Dragon Horn",
+    "en": "Dragon Horn",
+    "de": "Drachenhorn"
+  },
+  {
+    "source": "Water Dragon Heart",
+    "en": "Water Dragon Heart",
+    "de": "Wasserdrachenherz"
+  },
+  {
+    "source": "Ice Essence",
+    "en": "Ice Essence",
+    "de": "Eisessenz"
+  },
+  {
+    "source": "Water Essence",
+    "en": "Water Essence",
+    "de": "Wasseressenz"
+  },
+  {
+    "source": "Violet light shows through the cracks in this dark dragon scale.",
+    "en": "Violet light shows through the cracks in this dark dragon scale.",
+    "de": "Durch die Risse dieser Dunkeldrachenschuppe schimmert violettes Licht."
+  },
+  {
+    "source": "A heavy, ochre plate from the back of an earth dragon.",
+    "en": "A heavy, ochre plate from the back of an earth dragon.",
+    "de": "Eine schwere ockerfarbene Panzerplatte vom Rücken eines Erddrachen."
+  },
+  {
+    "source": "An overlapping blue scale from a water dragon’s flank.",
+    "en": "An overlapping blue scale from a water dragon’s flank.",
+    "de": "Eine blaue Schuppe von der Flanke eines Wasserdrachen."
+  },
+  {
+    "source": "A curved ivory tooth shed by an earth or dark dragon.",
+    "en": "A curved ivory tooth shed by an earth or dark dragon.",
+    "de": "Ein gebogener, elfenbeinfarbener Zahn eines Erd- oder Dunkeldrachen."
+  },
+  {
+    "source": "Thick leather from beneath a dragon’s armor plates.",
+    "en": "Thick leather from beneath a dragon’s armor plates.",
+    "de": "Dickes Leder, das unter den Panzerplatten eines Drachen lag."
+  },
+  {
+    "source": "A rare violet core from the chest of a dark dragon.",
+    "en": "A rare violet core from the chest of a dark dragon.",
+    "de": "Ein seltener violetter Kern aus der Brust eines Dunkeldrachen."
+  },
+  {
+    "source": "A vial of dark dragon blood.",
+    "en": "A vial of dark dragon blood.",
+    "de": "Ein Fläschchen mit dem Blut eines Dunkeldrachen."
+  },
+  {
+    "source": "A shard from the crystal growths of a dark dragon.",
+    "en": "A shard from the crystal growths of a dark dragon.",
+    "de": "Ein Splitter aus den Kristallauswüchsen eines Dunkeldrachen."
+  },
+  {
+    "source": "Only a few dark dragons leave an intact crystal heart.",
+    "en": "Only a few dark dragons leave an intact crystal heart.",
+    "de": "Nur wenige Dunkeldrachen hinterlassen ein unversehrtes Kristallherz."
+  },
+  {
+    "source": "A section of the flexible skin stretched between a dragon’s wing bones.",
+    "en": "A section of the flexible skin stretched between a dragon’s wing bones.",
+    "de": "Ein Stück der biegsamen Haut zwischen den Flügelknochen eines Drachen."
+  },
+  {
+    "source": "An amber crystal from the core of an earth dragon.",
+    "en": "An amber crystal from the core of an earth dragon.",
+    "de": "Ein bernsteinfarbener Kristall aus dem Kern eines Erddrachen."
+  },
+  {
+    "source": "Earth dragon meat. Roast it in a furnace for a more filling meal.",
+    "en": "Earth dragon meat. Roast it in a furnace for a more filling meal.",
+    "de": "Fleisch vom Erddrachen. Im Ofen gebraten sättigt es stärker."
+  },
+  {
+    "source": "A hearty cut of roasted earth dragon meat.",
+    "en": "A hearty cut of roasted earth dragon meat.",
+    "de": "Ein kräftiges Stück gebratenes Erddrachenfleisch."
+  },
+  {
+    "source": "Fine golden dust collected between an earth dragon’s scales.",
+    "en": "Fine golden dust collected between an earth dragon’s scales.",
+    "de": "Feiner Goldstaub aus den Schuppenzwischenräumen eines Erddrachen."
+  },
+  {
+    "source": "A hooked claw from a water dragon’s forefoot.",
+    "en": "A hooked claw from a water dragon’s forefoot.",
+    "de": "Eine gebogene Kralle vom Vorderfuß eines Wasserdrachen."
+  },
+  {
+    "source": "A pale horn from the crown of a water dragon.",
+    "en": "A pale horn from the crown of a water dragon.",
+    "de": "Ein helles Horn vom Kopf eines Wasserdrachen."
+  },
+  {
+    "source": "A rare blue heart encased in translucent scales.",
+    "en": "A rare blue heart encased in translucent scales.",
+    "de": "Ein seltenes blaues Herz, umschlossen von durchscheinenden Schuppen."
+  },
+  {
+    "source": "A cold cluster of ice crystals from a water dragon.",
+    "en": "A cold cluster of ice crystals from a water dragon.",
+    "de": "Eine kalte Gruppe von Eiskristallen eines Wasserdrachen."
+  },
+  {
+    "source": "A swirl of blue essence left by a water dragon.",
+    "en": "A swirl of blue essence left by a water dragon.",
+    "de": "Ein Wirbel blauer Essenz, den ein Wasserdrache hinterlassen hat."
+  }
+]

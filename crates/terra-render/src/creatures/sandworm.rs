@@ -11,6 +11,24 @@ pub(super) fn install(app: &mut App) {
     trail::install(app);
 }
 
+pub(super) fn presentation_progress(
+    previous: B,
+    current: f32,
+    behavior: B,
+    remaining: f32,
+    dt: f32,
+) -> f32 {
+    let target = pose::phase_progress(behavior, remaining);
+    if previous != behavior || (target - current).abs() > 0.20 {
+        return target;
+    }
+    // Dropping one or two packets must not replay the same part of the lunge.
+    let Some(duration) = pose::phase_duration(behavior) else {
+        return target;
+    };
+    current + (target - current).clamp(0., 1.4 * dt / duration)
+}
+
 pub(super) fn animate(m: &Motion, part: &Limb, t: &mut Transform, visibility: &mut Visibility) {
     t.translation = part.1;
     t.rotation = Quat::IDENTITY;
@@ -41,7 +59,15 @@ pub(super) fn animate(m: &Motion, part: &Limb, t: &mut Transform, visibility: &m
     if matches!(part.0, Part::WormDust) {
         let (visible, burst) = match m.behavior {
             B::Emerge => (true, (p * std::f32::consts::PI).sin().max(0.0)),
-            B::Leap => (true, (m.clock * 9.0).sin().abs() * 0.6),
+            B::Leap => {
+                let at_lip = if p < 0.44 {
+                    (p - 0.12) / 0.14
+                } else {
+                    (p - 0.79) / 0.21
+                };
+                let energy = (1. - at_lip * at_lip).clamp(0., 1.);
+                (energy > 0., energy * energy)
+            }
             B::Attack => (p < 0.26, (1.0 - p / 0.26).max(0.0) * 0.65),
             B::Retreat => (true, (p * std::f32::consts::PI).sin().max(0.0) * 0.65),
             B::Burrowed | B::Tremor => (false, 0.0),
@@ -115,8 +141,9 @@ pub(super) fn animate(m: &Motion, part: &Limb, t: &mut Transform, visibility: &m
     t.translation = Vec3::from_array(spine.center);
     t.rotation = Quat::from_rotation_x(spine.pitch);
     if let Part::WormSegment(index) = part.0 {
-        let pulse = (m.phase * 3.0 - f32::from(index) * 0.65).sin();
-        t.scale = Vec3::new(1.0 + pulse * 0.045, 1.0 + pulse * 0.055, 1.0 - pulse * 0.05);
+        let pulse = (m.phase * 2.7 - f32::from(index) * 0.62).cos();
+        let width = 1.0 + pulse * 0.064;
+        t.scale = Vec3::new(width, width, width.recip().powi(2));
     }
     if !matches!(part.0, Part::WormMandible(_) | Part::Jaw) {
         return;
@@ -244,7 +271,7 @@ mod tests {
                     let mut t = Transform::IDENTITY;
                     let mut v = Visibility::Inherited;
                     animate(&m, &Limb(part, Vec3::ZERO), &mut t, &mut v);
-                    let expected = pose::spine_pose(behavior, p, index);
+                    let expected = pose::spine_pose_at(behavior, p, m.phase, index);
                     assert!((t.translation - Vec3::from_array(expected.center)).length() < 1e-5);
                     assert!(
                         t.rotation

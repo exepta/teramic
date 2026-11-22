@@ -8,6 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 use terra_world::{
+    TerraGenerator, TerrainGenerator,
     generation::{CaveEcology, CaveStructure},
     streaming::{ChunkStore, GenerationStatus, WorldGeneration, WorldTerrain},
 };
@@ -32,11 +33,13 @@ struct Inspection {
     failure: Option<String>,
     benchmark: bool,
     shell: bool,
+    salt_gallery: bool,
     connector: Option<connectors::View>,
+    gallery_view: Option<(usize, Vec3, Vec3)>,
 }
 impl Inspection {
     fn end(&self) -> usize {
-        if self.shell {
+        if self.shell || self.salt_gallery {
             2
         } else if self.connector.is_some() {
             1
@@ -70,7 +73,9 @@ pub(crate) fn install(app: &mut App) {
         failure: None,
         benchmark: benchmark.is_some(),
         shell: std::env::var_os("TERRA_CAVE_SHELL_INSPECT").is_some(),
+        salt_gallery: std::env::var_os("TERRA_SALT_GALLERY_INSPECT").is_some(),
         connector: None,
+        gallery_view: None,
     })
     .insert_resource(terra_player::ControllerMode::Fly)
     .insert_resource(bevy::winit::WinitSettings::continuous())
@@ -132,6 +137,7 @@ fn locate(world: &mut World) {
         }
     }
     let shell = world.resource::<Inspection>().shell;
+    let gallery = world.resource::<Inspection>().salt_gallery;
     let mut rooms = [None; 4];
     if !shell {
         for (x, z) in
@@ -143,6 +149,29 @@ fn locate(world: &mut World) {
                 continue;
             };
             let room = terrain.cave_structure_at(center[0], center[2]);
+            if gallery
+                && (room.kind != CaveEcology::Salt
+                    || room.radius < 34.0
+                    || room.dynamic_water
+                    || !(-2..=2).any(|i| {
+                        (-2..=2).any(|j| {
+                            terrain
+                                .cave_structure_at(
+                                    room.center[0] + room.radius * f64::from(i) * 0.18,
+                                    room.center[2] + room.radius * f64::from(j) * 0.18,
+                                )
+                                .open_to_sky()
+                        })
+                    }))
+            {
+                continue;
+            }
+            if terrain.config().cave_structure_revision >= 12
+                && room.kind == CaveEcology::Lush
+                && (room.radius < 38.0 || !room.open_to_sky())
+            {
+                continue;
+            }
             if let Some(index) = KINDS.iter().position(|kind| *kind == room.kind)
                 && room.active()
                 && rooms[index].is_none()
@@ -150,13 +179,15 @@ fn locate(world: &mut World) {
                 info!(kind=?room.kind,center=?room.center,radius=room.radius,"Located natural cave ecology");
                 rooms[index] = Some(room);
             }
-            if rooms.iter().all(Option::is_some) {
+            if gallery && rooms[0].is_some() || rooms.iter().all(Option::is_some) {
                 break;
             }
         }
     }
     let mut state = world.resource_mut::<Inspection>();
-    if !shell && rooms.iter().any(Option::is_none) {
+    if !shell
+        && ((!gallery && rooms.iter().any(Option::is_none)) || (gallery && rooms[0].is_none()))
+    {
         state.failure = Some(format!(
             "Missing cave rooms: {rooms:?}; requires cave structures enabled, geology_revision=4"
         ));
@@ -167,7 +198,7 @@ fn locate(world: &mut World) {
         state.failure = Some(error.to_string());
     }
     let connector = state.connector.is_some();
-    for i in 0..if spectator { 0 } else { 2 } {
+    for i in 0..if spectator || gallery { 0 } else { 2 } {
         world.spawn((
             PointLight {
                 color: Color::srgb(0.88, 0.94, 1.0),
@@ -184,16 +215,121 @@ fn locate(world: &mut World) {
 }
 
 fn run(world: &mut World) {
-    world.resource_scope(|world,mut state:Mut<Inspection>| {
-        if let Err(error)=advance(world,&mut state) {
+    world.resource_scope(|world, mut state: Mut<Inspection>| {
+        if let Err(error) = advance(world, &mut state) {
             error!(%error,"Natural cave-structures acceptance failed");
             world.write_message(AppExit::error());
-        } else if state.stage==state.end() && state.entered.elapsed() >= Duration::from_millis(250) {
+        } else if state.stage == state.end()
+            && state.entered.elapsed() >= Duration::from_millis(250)
+        {
             // Drain screenshot readbacks before closing the render-world channel.
-            info!(spectator = std::env::var_os("TERRA_CAVE_SPECTATOR").is_some(), "Natural cave-structures acceptance passed; generated geometry, spectator fill or two explicit inspection lamps");
+            let spectator = std::env::var_os("TERRA_CAVE_SPECTATOR").is_some();
+            info!(
+                spectator,
+                inspection_lamps = if spectator || state.salt_gallery {
+                    0
+                } else {
+                    2
+                },
+                "Natural cave-structures acceptance passed"
+            );
             world.write_message(AppExit::Success);
         }
     });
+}
+
+/// Inspect a real spilling lip from the lower terrace. The same outlet API
+/// locates cells for the gravity/retention regression tests.
+fn falls_view(terrain: &TerraGenerator, room: CaveStructure) -> Option<(Vec3, Vec3)> {
+    let center = Vec3::from_array(room.center.map(|v| v as f32));
+    let [x, z] = room.river_flow(room.center[0]);
+    let downstream = Vec3::new(x, 0., z).try_normalize()?;
+    let bank = downstream.cross(Vec3::Y);
+    for distance in (0..room.radius.ceil() as i32 / 2).map(|d| d as f32) {
+        for across in [0., 2., -2., 4., -4.] {
+            let source = center + downstream * distance + bank * across;
+            let x = f64::from(source.x.floor()) + 0.5;
+            let z = f64::from(source.z.floor()) + 0.5;
+            let column = terrain.cave_structure_at(x, z);
+            let Some([wx, wy, wz]) = column.fluid_outlet(x, z) else {
+                continue;
+            };
+            let lower = terrain.cave_structure_at(wx as f64 + 0.5, wz as f64 + 0.5);
+            if lower.floor > wy as f64 - 4.5 {
+                continue;
+            }
+            let mouth = Vec3::new(wx as f32 + 0.5, wy as f32 + 0.5, wz as f32 + 0.5);
+            let target = mouth - Vec3::Y * 1.4;
+            for offset in [5., -5., 2., -2.] {
+                for reach in [13., 10., 7.] {
+                    let mut eye = mouth + downstream * reach + bank * offset;
+                    let bank = terrain.cave_structure_at(f64::from(eye.x), f64::from(eye.z));
+                    eye.y = bank.water.map_or(bank.floor, |w| w.level.max(bank.floor)) as f32 + 2.3;
+                    if eye.y > mouth.y + 1. {
+                        continue;
+                    }
+                    if (0..=10).all(|step| {
+                        let p = eye
+                            .lerp(target, step as f32 / 10.)
+                            .to_array()
+                            .map(f64::from);
+                        terrain.sample(p).density > 0.2
+                    }) {
+                        return Some((eye, target));
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Frame the bank and its opposite terrace along an open reach of the stream.
+/// Reject intersecting camera paths using generated terrain, including arches.
+fn gallery_view(
+    terrain: &TerraGenerator,
+    room: CaveStructure,
+    stage: usize,
+) -> Option<(Vec3, Vec3)> {
+    if room.kind == CaveEcology::Lush
+        && stage.is_multiple_of(2)
+        && let Some(framing) = falls_view(terrain, room)
+    {
+        return Some(framing);
+    }
+    let center = Vec3::from_array(room.center.map(|v| v as f32));
+    let [x, z] = room.river_flow(room.center[0]);
+    let flow = Vec3::new(x, 0., z).try_normalize()?;
+    let bank = flow.cross(Vec3::Y);
+    let sign = if stage.is_multiple_of(2) { 1.0 } else { -1.0 };
+    for lateral in [0.15, -0.13, 0.03, 0.24, -0.28] {
+        for distance in [0.58, 0.45, 0.32] {
+            let mut eye = center + (flow * distance + bank * lateral) * sign * room.radius as f32;
+            let mut target =
+                center - (flow * 0.22 + bank * lateral * 0.32) * sign * room.radius as f32;
+            let column = |p: Vec3| terrain.cave_structure_at(f64::from(p.x), f64::from(p.z));
+            let local = column(eye);
+            let far = column(target);
+            eye.y = local
+                .water
+                .map_or(local.floor, |w| w.level.max(local.floor)) as f32
+                + 3.5;
+            target.y = far.water.map_or(far.floor, |w| w.level.max(far.floor)) as f32 + 2.8;
+            if !local.active() || !far.active() || eye.y > local.ceiling as f32 - 2. {
+                continue;
+            }
+            let visible = (0..=12).all(|step| {
+                let point = eye.lerp(target, step as f32 / 12.);
+                let sample = terrain.sample(point.to_array().map(f64::from));
+                sample.density > 1.0
+                    && (step > 2 || sample.material == terra_voxel::MaterialId::Air as u16)
+            });
+            if visible {
+                return Some((eye, target));
+            }
+        }
+    }
+    None
 }
 
 fn advance(world: &mut World, state: &mut Inspection) -> Result<(), String> {
@@ -236,6 +372,38 @@ fn advance(world: &mut World, state: &mut Inspection) -> Result<(), String> {
             + 2.0;
         eye.y = local.floor as f32 + 3.0;
     }
+    if state.salt_gallery
+        && let Some(([x, z], _)) = room.salt_skylight(room.center[1])
+    {
+        let portal = Vec3::new(x as f32, center.y, z as f32);
+        let inward = (portal - center).normalize_or_zero();
+        let side = inward.cross(Vec3::Y);
+        let offset = if state.stage == 0 {
+            -inward * 0.48 + side * 0.21
+        } else {
+            -inward * 0.27 - side * 0.49
+        };
+        let direction = room
+            .gallery_axis()
+            .map(|(_, axis)| Vec3::new(axis[0] as f32, 0., axis[1] as f32));
+        eye = if let Some(along) = direction {
+            let bank = along.cross(Vec3::Y);
+            if state.stage == 0 {
+                center + (-along * 0.93 - bank * 0.17) * room.radius as f32
+            } else {
+                center + (-along * 0.56 + bank * 0.12) * room.radius as f32
+            }
+        } else {
+            center + offset * room.radius as f32
+        };
+        let bank = terrain.cave_structure_at(f64::from(eye.x), f64::from(eye.z));
+        eye.y = bank.floor as f32 + if state.stage == 0 { 4.0 } else { 2.2 };
+        if let Some(water) = bank.water {
+            eye.y = eye.y.max(water.level as f32 + 2.0);
+        }
+        target = portal;
+        target.y = room.floor as f32 + (room.ceiling - room.floor) as f32 * 0.40;
+    }
     if state.shell {
         eye = center + Vec3::new(-0.14, 0.0, 0.12) * room.radius as f32;
         let local = terrain.cave_structure_at(f64::from(eye.x), f64::from(eye.z));
@@ -254,6 +422,24 @@ fn advance(world: &mut World, state: &mut Inspection) -> Result<(), String> {
         && let Some(water) = local.water
     {
         eye.y = eye.y.max(water.level as f32 + 2.0);
+    }
+    if room.dynamic_water
+        && terrain.config().cave_structure_revision >= 12
+        && matches!(room.kind, CaveEcology::Lush | CaveEcology::Waterfall)
+        && state.connector.is_none()
+    {
+        if state
+            .gallery_view
+            .is_none_or(|(stage, _, _)| stage != state.stage)
+        {
+            let (framed_eye, framed_target) =
+                gallery_view(terrain, room, state.stage).unwrap_or((eye, target));
+            state.gallery_view = Some((state.stage, framed_eye, framed_target));
+        }
+        if let Some((_, framed_eye, framed_target)) = state.gallery_view {
+            eye = framed_eye;
+            target = framed_target;
+        }
     }
     if let Some(view) = &state.connector {
         eye = view.eye;
@@ -337,7 +523,9 @@ fn advance(world: &mut World, state: &mut Inspection) -> Result<(), String> {
         }
     }
     let mut counts = [0; 7];
+    let mut salt_props = 0;
     for &material in chunks.loaded.values().flat_map(|s| s.data.blocks()) {
+        salt_props += usize::from((459..=463).contains(&material));
         if (50..=56).contains(&material) {
             counts[(material - 50) as usize] += 1;
         }
@@ -345,9 +533,13 @@ fn advance(world: &mut World, state: &mut Inspection) -> Result<(), String> {
     let water = world.resource::<terra_render::WaterStatus>();
     let spray = water.spray_particles;
     let water = water.visible_tiles;
-    info!(stage=state.stage,kind=?room.kind,?counts,water_tiles=water,spray_particles=spray,loaded=chunks.loaded.len(),"Natural cave capture");
+    if state.salt_gallery {
+        info!(cave = ?world.resource::<terra_render::CaveState>(), "Salt gallery light sample");
+    }
+    info!(stage=state.stage,kind=?room.kind,?counts,salt_props,water_tiles=water,spray_particles=spray,loaded=chunks.loaded.len(),"Natural cave capture");
     if state.connector.is_none()
-        && (room.kind == CaveEcology::Salt && counts[1] == 0
+        && (room.kind == CaveEcology::Salt && counts[1] + salt_props == 0
+            || state.salt_gallery && (salt_props == 0 || water == 0)
             || room.kind == CaveEcology::Waterfall && water == 0)
     {
         return Err("Missing cave mineral/water geometry".into());

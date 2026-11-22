@@ -199,7 +199,7 @@ fn storage_layout_initialization_and_forward_bindings_match_both_shader_stages()
                 (73 + index * 4 + channel) as f32
             }))
         }),
-        particle: Vec4::new(137.0, 138.0, 139.0, 140.0),
+        gallery_aperture: Vec4::new(137.0, 138.0, 139.0, 140.0),
     };
     let bytes = encode(&data).unwrap();
     assert_eq!(bytes.len(), 560);

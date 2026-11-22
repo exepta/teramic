@@ -16,9 +16,9 @@
       ],
       "roughness": 0.88,
       "emission": [
-        0.28,
-        0.14,
-        0.035
+        0.85,
+        0.4,
+        0.09
       ]
     }
   },
@@ -40,8 +40,14 @@
       0.57,
       0.22
     ],
-    "range": 4,
-    "intensity": 300,
-    "shadows": false
+    "range": 7,
+    "intensity": 680,
+    "shadows": false,
+    "falloff": "soft_core",
+    "offset": [
+      0.45,
+      0.56,
+      0.47
+    ]
   }
 }

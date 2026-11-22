@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": 438,
   "name": "Dried Tar Road",
-  "description": "A cured tar film bonded to its compacted path. Its thickness preserves the amount poured.",
+  "description": "A cured tar film bonded to its compacted path. The finished surface sits flush with neighboring blocks.",
   "creative_category": "building",
   "render_kind": "boxes",
   "bevel_width": 0,

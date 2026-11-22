@@ -45,6 +45,12 @@ pub(super) fn distance_squared(p: SectionPos, center: SectionPos) -> i128 {
         .map(|v| i128::from(v) * i128::from(v))
         .sum()
 }
+#[derive(Default)]
+pub(super) struct PreviousInterest {
+    centers: Vec<SectionPos>,
+    dragons: Vec<SectionPos>,
+    range: Option<[i64; 2]>,
+}
 pub(super) fn refresh_interest(
     focus: Res<ChunkFocus>,
     foci: Option<Res<ChunkFoci>>,
@@ -52,7 +58,7 @@ pub(super) fn refresh_interest(
     mut chunks: ResMut<ChunkStore>,
     mut jobs: ResMut<PendingSections>,
     mut generation: ResMut<WorldGeneration>,
-    (mut previous, mut previous_range): (Local<Vec<SectionPos>>, Local<Option<[i64; 2]>>),
+    mut previous: Local<PreviousInterest>,
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("streaming.interest");
     let settings = *environment.settings;
@@ -78,11 +84,16 @@ pub(super) fn refresh_interest(
     centers.sort_unstable_by_key(|p| (p.x, p.y, p.z));
     centers.dedup();
     let range = [settings.radius, settings.vertical_radius];
-    if *previous == centers && *previous_range == Some(range) && !chunks.wanted.is_empty() {
+    if previous.centers == centers
+        && previous.range == Some(range)
+        && previous.dragons == chunks.dragon_foci
+        && !chunks.wanted.is_empty()
+    {
         return;
     }
-    *previous = centers.clone();
-    *previous_range = Some(range);
+    previous.centers.clone_from(&centers);
+    previous.range = Some(range);
+    previous.dragons.clone_from(&chunks.dragon_foci);
     chunks.cave_views = if settings.meshes && environment.terrain.0.config().caves {
         centers
             .iter()
@@ -92,6 +103,8 @@ pub(super) fn refresh_interest(
         Vec::new()
     };
     let mut wanted = HashSet::new();
+    let mut galleries = HashSet::new();
+    chunks.gallery_view_distance = 0.;
     for &center in &centers {
         extend_wanted_sections(
             &mut wanted,
@@ -116,17 +129,42 @@ pub(super) fn refresh_interest(
             surface_height,
             settings,
         );
+        if settings.meshes && environment.terrain.0.config().cave_structure_revision >= 10 {
+            let far = extend_gallery_shell(
+                &mut wanted,
+                &mut galleries,
+                center,
+                settings.radius,
+                &environment.terrain.0,
+            );
+            chunks.gallery_view_distance = chunks.gallery_view_distance.max(far);
+        }
     }
-    chunks.surface_ranges.retain(|[x, z], _| {
-        centers.iter().any(|center| {
-            (*x - center.x).abs() <= settings.radius && (*z - center.z).abs() <= settings.radius
-        })
-    });
+    chunks.surface_views = (!previous.dragons.is_empty() || !galleries.is_empty())
+        .then(|| (centers.clone(), settings.radius));
+    // A 5×3×5 envelope fits two outstretched wings plus the steering lookahead.
+    // It follows the animal instead of keeping its entire territory resident.
+    for &center in previous.dragons.iter() {
+        extend_wanted_sections(&mut wanted, center, 2, 1);
+    }
+    {
+        let chunks = &mut *chunks;
+        chunks.surface_ranges.retain(|key @ [x, z], _| {
+            centers.iter().any(|center| {
+                (*x - center.x).abs() <= settings.radius && (*z - center.z).abs() <= settings.radius
+            }) || galleries.contains(key)
+                && chunks.columns.get(key).is_some_and(|c| c.gallery_skyline)
+        });
+    }
     chunks.columns.retain(|coordinate, _| {
         let [x, z] = *coordinate;
         let keep = centers.iter().any(|center| {
             (x - center.x).abs() <= settings.radius && (z - center.z).abs() <= settings.radius
-        });
+        }) || galleries.contains(coordinate)
+            || previous
+                .dragons
+                .iter()
+                .any(|c| (x - c.x).abs() <= 2 && (z - c.z).abs() <= 2);
         if !keep {
             environment.columns_changed.write(PreparedColumnChanged {
                 coordinate: *coordinate,
@@ -134,6 +172,7 @@ pub(super) fn refresh_interest(
         }
         keep
     });
+    chunks.gallery_columns = galleries;
     for (&coordinate, column) in &chunks.columns {
         extend_cave_sections_for_column(&mut wanted, coordinate, column, &chunks.cave_views);
     }
@@ -172,6 +211,12 @@ pub(super) fn refresh_interest(
             centers
                 .iter()
                 .map(|&c| distance_squared(p, c))
+                .chain(
+                    previous
+                        .dragons
+                        .iter()
+                        .map(|&c| distance_squared(p, c) + 32),
+                )
                 .min()
                 .unwrap_or(0),
             p.y,
@@ -188,6 +233,59 @@ pub(super) fn refresh_interest(
         requested = chunks.wanted.len(),
         "Chunk interest changed"
     );
+}
+
+/// Outside the normal view square, only request sections cut by this gallery.
+/// It closes at its actual end wall. Flight over sealed chambers and headless
+/// simulation retain their ordinary radius and worker budgets.
+fn extend_gallery_shell(
+    wanted: &mut HashSet<SectionPos>,
+    galleries: &mut HashSet<[i64; 2]>,
+    center: SectionPos,
+    radius: i64,
+    terrain: &crate::TerraGenerator,
+) -> f32 {
+    let eye = [center.x, center.y, center.z].map(|c| (c * 16 + 8) as f64);
+    let room = terrain.cave_structure_at(eye[0], eye[2]);
+    let Some((length, [dx, dz])) = room.gallery_axis() else {
+        return 0.;
+    };
+    if !room.active()
+        || eye[1] < room.floor - 12.
+        || eye[1] > room.ceiling + 10.
+        || eye[1] > terrain.surface_height(eye[0], eye[2]) + 1.
+    {
+        return 0.;
+    }
+    let width = room.radius * 1.50;
+    let extents = [
+        length * dx.abs() + width * dz.abs() + 20.,
+        length * dz.abs() + width * dx.abs() + 20.,
+    ];
+    let range = |c: f64, e: f64| {
+        ((c - e).floor() as i64).div_euclid(16)..=((c + e).ceil() as i64).div_euclid(16)
+    };
+    let mut far = 0.0f64;
+    for z in range(room.center[2], extents[1]) {
+        for x in range(room.center[0], extents[0]) {
+            let Some([lo, hi]) = room.gallery_shell_span(x, z) else {
+                continue;
+            };
+            if (x - center.x).abs().max((z - center.z).abs()) > radius {
+                galleries.insert([x, z]);
+                for y in lo..=hi {
+                    wanted.insert(SectionPos::new(x, y, z));
+                }
+            }
+            let d = [
+                (x - center.x) as f64,
+                (hi - center.y).abs().max((lo - center.y).abs()) as f64,
+                (z - center.z) as f64,
+            ];
+            far = far.max(16. * (d.iter().map(|v| v * v).sum::<f64>()).sqrt() + 32.);
+        }
+    }
+    far as f32
 }
 
 pub(super) fn cave_sections_for_column(
@@ -261,6 +359,49 @@ fn extend_cave_interest(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn short_view_loads_the_occupied_hall_shell_but_not_the_land_above_its_distant_end() {
+        let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
+            cave_structure_revision: 11,
+            ..Default::default()
+        })
+        .unwrap();
+        let (focus, room) = (-32..=0)
+            .flat_map(|x| (-32..=0).map(move |z| (x, z)))
+            .find_map(|(x, z)| {
+                let c = terrain
+                    .cave_chamber_center(f64::from(x * 192 + 96), f64::from(z * 192 + 96))?;
+                let eye = global_to_section(c.map(|v| v.floor() as i64)).0;
+                let room =
+                    terrain.cave_structure_at((eye.x * 16 + 8) as f64, (eye.z * 16 + 8) as f64);
+                (room.active() && room.gallery_axis().is_some_and(|(length, _)| length > 110.))
+                    .then_some((eye, room))
+            })
+            .unwrap();
+        let mut sections = HashSet::new();
+        let mut columns = HashSet::new();
+        let far = extend_gallery_shell(&mut sections, &mut columns, focus, 3, &terrain);
+        assert!(far > 112. && !sections.is_empty());
+        assert!(
+            columns.len() < 180,
+            "a single gallery, not the entire expanded view square"
+        );
+        for [x, z] in columns {
+            assert!((x - focus.x).abs().max((z - focus.z).abs()) > 3);
+            let [lo, hi] = room.gallery_shell_span(x, z).unwrap();
+            assert!(
+                sections.contains(&SectionPos::new(x, lo, z))
+                    && sections.contains(&SectionPos::new(x, hi, z))
+            );
+            assert!(!sections.contains(&SectionPos::new(x, hi + 1, z)));
+        }
+        let high = focus.offset([0, 30, 0]).unwrap();
+        assert_eq!(
+            extend_gallery_shell(&mut HashSet::new(), &mut HashSet::new(), high, 3, &terrain),
+            0.
+        );
+    }
 
     #[test]
     fn direct_cave_interest_preserves_publication_order_union_and_existing_sections() {
@@ -488,6 +629,18 @@ mod tests {
                 .count(),
             1
         );
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .track_dragon_flight([[496., 78., 20.]]);
+        app.update();
+        let chunks = app.world().resource::<ChunkStore>();
+        assert_eq!(chunks.wanted.len(), 1 + 5 * 3 * 5);
+        assert!(!chunks.wanted.contains(&SectionPos::new(15, 4, 1)));
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .track_dragon_flight([]);
+        app.update();
+        assert_eq!(app.world().resource::<ChunkStore>().wanted.len(), 1);
     }
 
     #[test]

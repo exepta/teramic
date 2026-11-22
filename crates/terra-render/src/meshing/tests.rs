@@ -17,6 +17,8 @@ fn adjacent_partial_segments_render_once_even_without_exposed_cube_interfaces() 
         below: 0,
         above: 0,
         hanging: false,
+        joined: false,
+        fan: [0; 2],
     };
     let b = terra_voxel::meshing::BlockSegment {
         cell: [4, 4, 5],

@@ -4,3 +4,12 @@
     <div class="mob-health-track"><div class="mob-health-fill" [style]="bar.fill"></div><p class="mob-health-value" [style]="bar.font">{{ bar.label }}</p></div>
   </div>
 }
+
+@for (boss of localizedUi.mobHealthHud.boss; track boss.id) {
+  <div class="dragon-boss-bar" [style]="boss.frame_size">
+    <img class="dragon-boss-frame" src="tilt-ui://assets/boss-frame.png" alt="" />
+    <img class="dragon-boss-face" [src]="boss.portrait" alt="" />
+    <div class="dragon-boss-health" [style]="boss.fill_clip"><img class="dragon-boss-fill" src="tilt-ui://assets/boss-health-fill.png" [style]="boss.fill_size" alt="" /></div>
+    <p class="dragon-boss-name" [style]="boss.title_size">{{ boss.title }}</p>
+  </div>
+}

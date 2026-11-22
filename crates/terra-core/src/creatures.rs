@@ -2,9 +2,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 pub mod breeding;
+pub mod dragon_eggs;
+pub mod dragon_life;
 pub mod sex;
 pub use sex::CreatureSex;
 pub mod definitions;
+pub mod dragon_pose;
+pub mod dragons;
 pub mod drops;
 pub mod ecology;
 pub mod gloom;
@@ -57,9 +61,12 @@ pub enum CreatureKind {
     BloodWisp,
     ThornBrute,
     SandWorm,
+    DarkDragon,
+    EarthDragon,
+    WaterDragon,
 }
 impl CreatureKind {
-    pub const ALL: [Self; 31] = [
+    pub const ALL: [Self; 34] = [
         Self::Sheep,
         Self::Cow,
         Self::Pig,
@@ -91,11 +98,27 @@ impl CreatureKind {
         Self::BloodWisp,
         Self::ThornBrute,
         Self::SandWorm,
+        Self::DarkDragon,
+        Self::EarthDragon,
+        Self::WaterDragon,
     ];
+    pub const fn is_dragon(self) -> bool {
+        matches!(
+            self,
+            Self::DarkDragon | Self::EarthDragon | Self::WaterDragon
+        )
+    }
     pub const fn is_flying(self) -> bool {
         matches!(
             self,
-            Self::Bee | Self::Butterfly | Self::SpiritGloom | Self::Raven | Self::BloodWisp
+            Self::Bee
+                | Self::Butterfly
+                | Self::SpiritGloom
+                | Self::Raven
+                | Self::BloodWisp
+                | Self::DarkDragon
+                | Self::EarthDragon
+                | Self::WaterDragon
         )
     }
     pub const fn variant_count(self) -> u8 {
@@ -112,6 +135,7 @@ impl CreatureKind {
             | Self::ThornBrute
             | Self::SandWorm => 1,
             Self::Skeleton => 3,
+            Self::DarkDragon | Self::WaterDragon => 6,
             _ => 4,
         }
     }
@@ -154,6 +178,9 @@ impl CreatureKind {
                 | Self::BloodWisp
                 | Self::ThornBrute
                 | Self::SandWorm
+                | Self::DarkDragon
+                | Self::EarthDragon
+                | Self::WaterDragon
         )
     }
     pub fn health(self) -> f32 {
@@ -283,6 +310,9 @@ pub enum CreatureBehavior {
     Retreat,
     /// A locked, aimed sandworm projectile; the existing need goal carries its aim.
     Spit,
+    DragonVolley,
+    DragonWard,
+    DragonSurge,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -303,6 +333,10 @@ pub struct NeedGoal {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct CreatureNeeds {
+    /// Stored with the egg registry and sent with the family snapshot. Historical
+    /// region records embed CreatureNeeds and keep their original binary layout.
+    #[serde(skip)]
+    pub dragon: Option<dragon_life::DragonLife>,
     pub food: f32,
     pub water: f32,
     pub goal: Option<NeedGoal>,
@@ -328,7 +362,10 @@ impl CreatureNeeds {
                 !kind.is_aquatic()
                     && (goal.kind != NeedKind::Tree || kind == CreatureKind::Bear)
                     && (goal.kind != NeedKind::Shelter || kind.is_spider())
-                    && (goal.kind != NeedKind::AttackAim || kind == CreatureKind::SandWorm)
+                    && (goal.kind != NeedKind::AttackAim
+                        || kind == CreatureKind::SandWorm
+                        || kind.is_spider()
+                        || kind.is_dragon())
                     && goal.position.iter().all(|v| v.unsigned_abs() <= 999_000)
             })
     }
@@ -377,10 +414,20 @@ impl Creature {
             return spiders::occupied_size(self);
         }
         let scale = self.aquatic_scale();
-        let maximum = self.kind.size();
+        let maximum = dragons::occupied_size(self.kind, self.variant);
         std::array::from_fn(|i| maximum[i] * f64::from(scale[i]) * self.growth_scale())
     }
+    pub fn dragon_stage(&self) -> dragon_life::DragonStage {
+        dragon_life::DragonStage::at(
+            self.needs
+                .dragon
+                .map_or_else(|| f64::from(self.growth()) * 12., |life| life.months),
+        )
+    }
     pub fn growth(&self) -> f32 {
+        if let Some(life) = self.needs.dragon {
+            return (life.months / 12.) as f32;
+        }
         if breeding::is_birth_id(self.id) {
             (self.age / breeding::GROWTH_SECONDS).clamp(0.0, 1.0) as f32
         } else {
@@ -391,9 +438,20 @@ impl Creature {
         CreatureSex::from_spawn_id(self.id)
     }
     pub fn juvenile(&self) -> bool {
-        breeding::is_birth_id(self.id) && self.age < breeding::GROWTH_SECONDS
+        breeding::is_birth_id(self.id)
+            && self
+                .needs
+                .dragon
+                .map_or_else(|| self.growth() < 1.0, |life| life.months < 12.)
     }
     pub fn growth_scale(&self) -> f64 {
+        if self.kind.is_dragon() && breeding::is_birth_id(self.id) {
+            return self
+                .needs
+                .dragon
+                .unwrap_or_else(|| dragon_life::DragonLife::legacy(self))
+                .scale();
+        }
         let growth = f64::from(self.growth());
         0.45 + 0.55 * growth * growth * (3.0 - 2.0 * growth)
     }
@@ -467,6 +525,7 @@ impl Creature {
             && self.age.is_finite()
             && self.age >= 0.0
             && self.variant < self.kind.variant_count()
+            && self.needs.dragon.is_none_or(|life| self.kind.is_dragon() && breeding::is_birth_id(self.id) && life.valid())
             && self.needs.valid(self.kind)
             && (self.health > 0.0 || self.behavior == CreatureBehavior::Dead)
     }

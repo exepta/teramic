@@ -42,7 +42,7 @@ mod reference_tests;
 #[cfg(test)]
 mod section_tests;
 pub mod sections;
-mod seed;
+pub(crate) mod seed;
 mod spirit_blossom;
 pub mod structures;
 mod surface;

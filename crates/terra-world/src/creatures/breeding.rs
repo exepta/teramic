@@ -14,7 +14,8 @@ pub const BIRTH_BUDGET: usize = 2;
 const CANDIDATE_BUDGET: usize = 64;
 
 fn suitable(animal: &Creature, family: AnimalFamily) -> bool {
-    family.willing(animal)
+    !animal.kind.is_dragon()
+        && family.willing(animal)
         && !matches!(
             animal.behavior,
             CreatureBehavior::Sleep | CreatureBehavior::Dead | CreatureBehavior::Flee
@@ -22,13 +23,33 @@ fn suitable(animal: &Creature, family: AnimalFamily) -> bool {
         && animal.velocity[1].abs() < 0.15
 }
 
-fn spawn_position(
+pub(super) fn spawn_position(
     population: &CreaturePopulation,
     habitat: &Habitat,
     child: &Creature,
 ) -> Option<[f64; 3]> {
+    // Probe beside the shell using the adult footprint of this particular coat.
+    let mut adult = child.clone();
+    adult.age = breeding::GROWTH_SECONDS;
+    if let Some(life) = adult.needs.dragon.as_mut() {
+        life.months = 12.;
+    }
+    let adult_size = adult.size();
+    let stride = if child.kind.is_dragon() {
+        [adult_size[0], adult_size[2]].map(|width| (width * 0.5 + 0.501) / 1.5)
+    } else {
+        [1.0; 2]
+    };
+    let size = child.size();
+    let clearance = if child.kind.is_dragon() {
+        size
+    } else {
+        adult_size
+    };
     for [x, z] in [
         [0.0, 0.0],
+        [0.7, 0.0],
+        [-0.7, 0.0],
         [1.5, 0.0],
         [-1.5, 0.0],
         [0.0, 1.5],
@@ -43,20 +64,16 @@ fn spawn_position(
         [0.0, -2.5],
     ] {
         let probe = [
-            child.position[0] + x,
+            child.position[0] + x * stride[0],
             child.position[1] + 0.5,
-            child.position[2] + z,
+            child.position[2] + z * stride[1],
         ];
-        let Some(position) = habitat.ground(probe, child.kind) else {
+        let Some(position) = habitat.ground_sized(probe, clearance, child.yaw.into()) else {
             continue;
         };
-        // Reserve adult-sized dry clearance so the youngster has room to grow.
-        let mut adult = child.clone();
-        adult.age = breeding::GROWTH_SECONDS;
-        if !habitat.clear(position, adult.size(), false) || habitat.wet(position) {
+        if habitat.wet(position) {
             continue;
         }
-        let size = child.size();
         if population.animals.values().any(|other| {
             if other.health <= 0.0 {
                 return false;
@@ -241,7 +258,8 @@ pub fn step(
 /// Growth never expands a body through newly placed walls or a lowered ceiling.
 pub fn constrain_growth(animal: &mut Creature, previous_age: f64, habitat: &Habitat) -> f64 {
     let elapsed = (animal.age - previous_age).clamp(0.0, 0.25);
-    if breeding::is_birth_id(animal.id)
+    if animal.needs.dragon.is_none()
+        && breeding::is_birth_id(animal.id)
         && previous_age < breeding::GROWTH_SECONDS
         && animal.age > previous_age
         && !habitat.clear_swimmer_rotated(animal.position, animal.size(), f64::from(animal.yaw))

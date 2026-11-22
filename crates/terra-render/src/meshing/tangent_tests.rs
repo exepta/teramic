@@ -24,6 +24,30 @@ fn assert_frame(tangent: [f32; 4], normal: [f32; 3]) {
 }
 
 #[test]
+fn mixed_preview_keeps_indexed_vertices_after_the_last_authored_tangent() {
+    let batch = MeshBatch {
+        positions: vec![[0.; 3]; 6],
+        normals: vec![[0., 1., 0.]; 6],
+        uvs: vec![[0.; 2]; 6],
+        tangents: vec![[0., 0., 1., -1.]; 3],
+        colors: vec![[0.5; 4]; 3],
+        indices: vec![0, 1, 2, 3, 4, 5],
+        ..Default::default()
+    };
+    let mesh = crate::previews::batch_mesh(&batch);
+    assert!(mesh.attributes().all(|(_, attribute)| attribute.len() == 6));
+    let Some(bevy::mesh::VertexAttributeValues::Float32x4(tangents)) =
+        mesh.attribute(bevy::mesh::Mesh::ATTRIBUTE_TANGENT)
+    else {
+        panic!("missing tangents")
+    };
+    assert_eq!(&tangents[..3], &batch.tangents);
+    for &frame in &tangents[3..] {
+        assert_frame(frame, [0., 1., 0.]);
+    }
+}
+
+#[test]
 fn authored_tangents_rotate_and_mixed_material_batches_keep_every_vertex_aligned() {
     let mut batches = BTreeMap::new();
     append(

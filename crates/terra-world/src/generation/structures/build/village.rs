@@ -143,7 +143,10 @@ pub(super) fn plan(terrain: &TerraGenerator, region: [i64; 2], seed: u32) -> Opt
         StructureKind::Kingdom
         | StructureKind::Outpost
         | StructureKind::Cemetery
-        | StructureKind::GraveDungeon => return None,
+        | StructureKind::GraveDungeon
+        | StructureKind::DarkDragonLair
+        | StructureKind::EarthDragonLair
+        | StructureKind::WaterDragonLair => return None,
     }
     builder.finish()
 }

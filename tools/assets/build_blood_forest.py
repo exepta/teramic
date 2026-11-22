@@ -135,11 +135,20 @@ def sculpt_prop(mesh,index):
             a=i*math.tau/7
             mesh.branch([.5,.55,.5],[.5+math.cos(a)*.43,.025,.5+math.sin(a)*.43],.085,'wood',end_radius=.025)
     elif index==17:
-        mesh.box([.375,.06,.39],[.585,.22,.55],'bone')
-        mesh.box([.405,.025,.365],[.555,.09,.49],'ivory')
-        for x in (.40,.50):mesh.box([x,.125,.365],[x+.065,.19,.40],'shadow')
-        mesh.box([.46,.07,.35],[.49,.115,.39],'shadow')
-        for i in range(4):mesh.branch([.18+i*.17,.06,.2],[.21+i*.17,.15,.8],.025,'bone')
+        # Long bones crisscross in three narrowing layers below the skull.
+        for layer, count in [(0,3),(1,2),(2,1)]:
+            for j in range(count):
+                offset=(j-(count-1)*.5)*.20
+                a=(.04,1.49,.68)[layer]+j*.03
+                x=.51-math.sin(a)*offset; z=.51+math.cos(a)*offset
+                r=.35-.046*layer; dx=math.cos(a)*r; dz=math.sin(a)*r
+                lo=[x-dx,.046+layer*.088,z-dz]; hi=[x+dx,.08+layer*.088,z+dz]
+                mesh.branch(lo,hi,.038,'bone')
+                for tip in (lo,hi): mesh.blob(tip,[.056,.048,.055],'ivory')
+        mesh.box([.35,.26,.4],[.63,.51,.62],'bone')
+        mesh.box([.39,.24,.36],[.60,.35,.51],'ivory')
+        for x in (.37,.53):mesh.box([x,.38,.374],[x+.08,.46,.415],'shadow')
+        mesh.box([.461,.312,.357],[.509,.375,.396],'shadow')
     elif index==18:
         for i in range(7):
             a=i*math.tau/7

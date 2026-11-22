@@ -26,6 +26,66 @@ mod loaded_remesh_tests {
     use super::*;
 
     #[test]
+    fn a_connector_cutting_a_mineral_root_removes_the_entire_generated_spike() {
+        use super::super::CaveEcology;
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            cave_structure_revision: 10,
+            landscape_revision: 0,
+            rivers: false,
+            spirit_blossom_revision: 1,
+            trees: false,
+            ..Default::default()
+        })
+        .unwrap();
+        let generator = SectionGenerator::new(terrain);
+        // Use an actual R10 room descriptor so decoration revision, seed and
+        // geology agree, while forcing a short corridor through its floor.
+        let mut found = false;
+        'scan: for rz in -12..12 {
+            for rx in -12..12 {
+                let Some(center) = generator
+                    .terrain
+                    .cave_chamber_center(f64::from(rx) * 192. + 96., f64::from(rz) * 192. + 96.)
+                else {
+                    continue;
+                };
+                let room = generator.terrain.cave_structure_at(center[0], center[2]);
+                if room.kind != CaveEcology::Dripstone || !room.active() {
+                    continue;
+                }
+                let [cx, _, cz] = center.map(|n| n.floor() as i64);
+                for x in cx - 14..=cx + 14 {
+                    for z in cz - 14..=cz + 14 {
+                        let mut column = generator
+                            .terrain
+                            .surface_column(x as f64 + 0.5, z as f64 + 0.5);
+                        let root = (column.cave.floor - 0.5).floor() as i64;
+                        let tip = [x, root + 2, z];
+                        if generator.terrain_block(tip, column) != 52
+                            || generator.terrain_block([x, root + 1, z], column) != 52
+                        {
+                            continue;
+                        }
+                        // Excise the root and first voxel but preserve the spike above.
+                        column.cave_cavity = Some([root as f64 - 1., root as f64 + 2.]);
+                        if generator.unchecked_terrain_block(tip, column) == 52
+                            && generator.unchecked_terrain_block([x, root + 1, z], column) == 0
+                            && generator.terrain_block(tip, column) == 0
+                        {
+                            found = true;
+                            break 'scan;
+                        }
+                    }
+                }
+            }
+        }
+        assert!(
+            found,
+            "a real R10 stalagmite must disappear when its support enters a passage"
+        );
+    }
+
+    #[test]
     fn real_cave_foliage_requires_a_contiguous_ceiling_instead_of_per_voxel_noise_islands() {
         use noise::NoiseFn;
         let mut config = terra_core::WorldConfig {
@@ -332,14 +392,16 @@ impl SectionGenerator {
             }
             let cell = [index % 16, index / 16 % 16, index / 256];
             let global = std::array::from_fn(|axis| origin[axis] + cell[axis] as i64);
-            let surface = column.columns[cell[0] + 1 + (cell[2] + 1) * size];
-            let profile = self.segment_profile(global, material, surface, edits);
+            let profile =
+                self.mesh_segment_profile(global, material, edits, column, start, &padded);
             mesh.segments.push(terra_voxel::meshing::BlockSegment {
                 material,
                 cell: cell.map(|v| v as u8),
                 below: profile.below,
                 above: profile.above,
                 hanging: profile.hanging,
+                joined: profile.joined,
+                fan: profile.fan,
             });
         }
         if self.terrain.config().cave_structure_revision == 0 {
@@ -605,14 +667,16 @@ impl SectionGenerator {
                             origin[1] + y as i64,
                             origin[2] + z as i64,
                         ];
-                        let surface = columns[x + padding + (z + padding) * size];
-                        let profile = self.segment_profile(global, material, surface, edits);
+                        let profile = self
+                            .mesh_segment_profile(global, material, edits, column, start, &padded);
                         mesh.segments.push(terra_voxel::meshing::BlockSegment {
                             material,
                             cell,
                             below: profile.below,
                             above: profile.above,
                             hanging: profile.hanging,
+                            joined: profile.joined,
+                            fan: profile.fan,
                         });
                     }
                 }
@@ -937,7 +1001,10 @@ impl SectionGenerator {
                         .intervals
                         .into_iter()
                         .flatten()
-                        .any(|water| (water.level.ceil() as i64 - 1).div_euclid(16) == position.y)
+                        .any(|water| {
+                            water.level > (position.y * 16) as f64
+                                && water.bed < (position.y * 16 + 16) as f64
+                        })
                     {
                         continue;
                     }
@@ -948,10 +1015,18 @@ impl SectionGenerator {
                         if (0..size as i64).contains(&lx) && (0..size as i64).contains(&lz) {
                             columns[lx as usize + size * lz as usize]
                         } else {
-                            self.terrain.surface_column(
-                                (global[0] + dx) as f64 + 0.5,
-                                (global[1] + dz) as f64 + 0.5,
-                            )
+                            let [nx, nz] = [global[0] + dx, global[1] + dz];
+                            let mut outside = self
+                                .terrain
+                                .surface_column(nx as f64 + 0.5, nz as f64 + 0.5);
+                            for site in column
+                                .structures
+                                .iter()
+                                .filter(|site| site.summary.kind.dragon().is_some())
+                            {
+                                site.clip_water(&mut outside, nx, nz);
+                            }
+                            outside
                         }
                     });
                     fluid_wake.extend(crate::water::natural_outlets(
@@ -966,10 +1041,14 @@ impl SectionGenerator {
                                     padded[local[0] as usize
                                         + size * (local[1] as usize + size * local[2] as usize)]
                                 } else {
-                                    let surface = self
-                                        .terrain
-                                        .surface_column(p[0] as f64 + 0.5, p[2] as f64 + 0.5);
-                                    self.terrain_block(p, surface)
+                                    // Unpadded server jobs and vertical boundary probes
+                                    // must see the same lair lining as the adjacent job.
+                                    structure_at(p).unwrap_or_else(|| {
+                                        let surface = self
+                                            .terrain
+                                            .surface_column(p[0] as f64 + 0.5, p[2] as f64 + 0.5);
+                                        self.terrain_block(p, surface)
+                                    })
                                 }
                             })
                         },
@@ -988,23 +1067,51 @@ impl SectionGenerator {
             fluid_wake,
         })
     }
-    /// Cached horizontal data keeps remote profile refreshes off the main thread.
+    fn mesh_segment_profile(
+        &self,
+        global: [i64; 3],
+        material: u16,
+        edits: &BlockOverrides,
+        column: &PreparedColumn,
+        start: [i64; 3],
+        padded: &[u16],
+    ) -> crate::segments::Profile {
+        let size = column.size;
+        crate::segments::profile(global, material, |p| {
+            let [x, y, z] = std::array::from_fn(|a| (p[a] - start[a]) as usize);
+            if y < size {
+                Some(padded[x + size * (y + size * z)])
+            } else {
+                Some(edits.get(&p).copied().unwrap_or_else(|| {
+                    self.segment_terrain_block(p, material, column.columns[x + size * z])
+                }))
+            }
+        })
+    }
+
+    /// Render refreshes reuse their column cache while sampling across section boundaries.
     pub fn segment_profile(
         &self,
         global: [i64; 3],
         material: u16,
-        column: SurfaceColumn,
         edits: &BlockOverrides,
+        mut column_at: impl FnMut([i64; 2]) -> SurfaceColumn,
     ) -> crate::segments::Profile {
         crate::segments::profile(global, material, |p| {
-            Some(
-                edits
-                    .get(&p)
-                    .copied()
-                    .unwrap_or_else(|| self.terrain_block(p, column)),
-            )
+            Some(edits.get(&p).copied().unwrap_or_else(|| {
+                self.segment_terrain_block(p, material, column_at([p[0], p[2]]))
+            }))
         })
     }
+
+    fn segment_terrain_block(&self, p: [i64; 3], material: u16, column: SurfaceColumn) -> u16 {
+        if crate::segments::is_crystal(material) {
+            self.unchecked_terrain_block(p, column)
+        } else {
+            self.terrain_block(p, column)
+        }
+    }
+
     pub fn block_at(&self, global: [i64; 3]) -> Result<u16, SectionGenerationError> {
         if global
             .iter()
@@ -1050,6 +1157,23 @@ impl SectionGenerator {
     }
     fn terrain_block(&self, global: [i64; 3], column: SurfaceColumn) -> u16 {
         let material = self.unchecked_terrain_block(global, column);
+        // Validate after all cave, connector, roof and surface clipping, against
+        // unfiltered terrain. This also repairs isolated growth in old seeds.
+        if crate::segments::is_crystal(material)
+            && crate::segments::mineral_support(global, material, |p| {
+                Some(self.unchecked_terrain_block(p, column))
+            }) != Some(true)
+        {
+            return 0;
+        }
+        if let Some(dy) = crate::segments::fixed_mineral_root(material)
+            && !crate::segments::is_crystal(material)
+            && !crate::segments::root_block(
+                self.unchecked_terrain_block([global[0], global[1] + dy, global[2]], column),
+            )
+        {
+            return 0;
+        }
         if matches!(material, 54 | 55)
             && crate::segments::hanging_support(global, |p| {
                 Some(self.unchecked_terrain_block(p, column))

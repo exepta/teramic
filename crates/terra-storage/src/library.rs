@@ -32,7 +32,7 @@ impl WorldEntry {
 pub fn world_directory() -> PathBuf {
     std::env::var_os("TERRA_WORLD_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../worlds"))
+        .unwrap_or_else(|| terra_core::installation_root().join("worlds"))
 }
 #[derive(Clone, Debug)]
 pub struct WorldLibrary {
@@ -137,10 +137,10 @@ impl WorldLibrary {
             world.landscape_revision = WorldConfig::CURRENT_LANDSCAPE_REVISION;
             world.biome_definitions = Some(biome_definitions.clone());
             world.ocean_revision = 1;
-            world.cave_structure_revision = 8;
-            world.structures_revision = 10;
+            world.cave_structure_revision = WorldConfig::CURRENT_CAVE_STRUCTURE_REVISION;
+            world.structures_revision = terra_core::WorldConfig::CURRENT_STRUCTURES_REVISION;
             world.structure_border_gap = template.kingdom_rules.realm_min_border_gap;
-            world.ravine_revision = 1;
+            world.ravine_revision = WorldConfig::CURRENT_RAVINE_REVISION;
             world.river_terrain_revision = WorldConfig::CURRENT_RIVER_TERRAIN_REVISION;
             if world.ores.revision == 0 {
                 world.ores.enabled = true;
@@ -338,7 +338,10 @@ mod tests {
             Some(BiomeDefinitions::default())
         );
         assert!(!entry.manifest.world.rivers);
-        assert_eq!(entry.manifest.world.structures_revision, 10);
+        assert_eq!(
+            entry.manifest.world.structures_revision,
+            WorldConfig::CURRENT_STRUCTURES_REVISION
+        );
         assert_eq!(entry.manifest.world.ecology_revision, 11);
         assert_eq!(entry.manifest.world.river_terrain_revision, 7);
         assert_eq!(library.list().unwrap().0.len(), 1);
@@ -380,7 +383,10 @@ mod tests {
         let mut entry = library
             .create("Custom policy", Some(20202), GameMode::Survival, &template)
             .unwrap();
-        assert_eq!(entry.manifest.world.structures_revision, 10);
+        assert_eq!(
+            entry.manifest.world.structures_revision,
+            WorldConfig::CURRENT_STRUCTURES_REVISION
+        );
         assert_eq!(entry.manifest.world.structure_border_gap, 6);
         assert_eq!(entry.manifest.world.kingdom_rules, template.kingdom_rules);
         entry.manifest.world.kingdom_rules.realm_min_border_gap = 80;

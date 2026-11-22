@@ -85,17 +85,13 @@ pub fn step(
             let entering = a.behavior != Behavior::Attack;
             a.behavior = Behavior::Attack;
             a.velocity = [0.0; 3];
-            if entering || a.timer <= 0.0 {
-                a.timer = combat.cooldown;
-            }
             if let Some(nav) = nav.as_deref_mut() {
                 nav.intend(a, IntentReason::Attack, Some(target));
             }
             // One authority hit at the end of the visible wind-up. Stepping
             // away or breaking sight cancels the swing instead of banking an
             // instant hit for the next approach.
-            let impact = combat.melee_impact_remaining();
-            if !entering && previous_timer > impact && a.timer <= impact {
+            if combat.melee_contact(entering, previous_timer, &mut a.timer) {
                 let multiplier = if a.kind == Kind::Skeleton {
                     [1.0, 1.3, 1.7][usize::from(a.variant.min(2))]
                 } else {

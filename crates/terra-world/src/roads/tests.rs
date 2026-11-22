@@ -188,7 +188,8 @@ fn a_bucket_spreads_slowly_conserves_fine_units_and_drives_the_actual_drying_mat
     path_square(&mut chunks);
     assert!(pour(&mut chunks, &mut journal, CENTER).unwrap());
     assert_eq!(mass(&journal), 64);
-    let step = advance_from(&mut chunks, &mut journal, &mut 0, false).unwrap();
+    let cells = wet_tar_cells(&chunks, &journal);
+    let step = advance_from(&mut chunks, &mut journal, &mut 0, false, cells).unwrap();
     assert!(step.flowed >= 4 && step.flowed <= 5);
     assert_eq!(mass(&journal), 64);
     assert!(
@@ -456,7 +457,7 @@ fn preparation_and_pouring_require_the_visible_top_face() {
 }
 
 #[test]
-fn actual_collision_and_picking_follow_tar_volume_for_both_materials_and_late_drying_stages() {
+fn actual_collision_and_picking_stay_flush_for_every_tar_volume_and_drying_stage() {
     let (mut chunks, mut journal) = fixture();
     let properties = BlockPropertiesCatalog::default();
     for p in [CENTER, [-1, 2, -1]] {
@@ -469,7 +470,7 @@ fn actual_collision_and_picking_follow_tar_volume_for_both_materials_and_late_dr
                 };
                 for &age in ages {
                     set_coating(&mut chunks, &mut journal, p, material, amount, age).unwrap();
-                    let expected = p[1] as f64 + 15.0 / 16.0 + f64::from(amount) / 128.0;
+                    let expected = p[1] as f64 + 1.0;
                     let mut boxes = Vec::new();
                     assert!(crate::interaction_shapes::visit_collision_boxes(
                         &chunks,

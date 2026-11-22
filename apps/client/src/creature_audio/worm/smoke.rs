@@ -112,7 +112,8 @@ fn run(
         );
         info!(
             ?consumed,
-            clips = FIRST + COUNT,
+            worm_clips = BANK_LEN,
+            clips = FIRST + BANK_LEN,
             "Sandworm audio passed: observed breach roar, granular digging, landing, bite, spit, hurt and death through the real shared sink"
         );
         exit.write(AppExit::Success);

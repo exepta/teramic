@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": 452,
+  "name": "Amber Geode",
+  "description": "Golden crystals cast a warm light across the earth dragon\u2019s nest.",
+  "creative_category": "decoration",
+  "hardness": 1.2,
+  "resistance": 3,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/amber_geode.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.1,
+        0,
+        0.09
+      ],
+      "maximum": [
+        0.88,
+        0.42,
+        0.86
+      ]
+    },
+    {
+      "minimum": [
+        0.38,
+        0.42,
+        0.37
+      ],
+      "maximum": [
+        0.71,
+        0.91,
+        0.71
+      ]
+    }
+  ],
+  "light": {
+    "color": [
+      1,
+      0.52,
+      0.08
+    ],
+    "intensity": 920,
+    "range": 12,
+    "falloff": "soft_core",
+    "flicker": 0.016,
+    "cave_intensity": 0.93,
+    "shadows": false,
+    "offset": [
+      0.5,
+      0.57,
+      0.5
+    ]
+  }
+}

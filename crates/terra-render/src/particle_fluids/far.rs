@@ -38,6 +38,7 @@ struct View<'w> {
     budget: Option<ResMut<'w, crate::MeshUploadStatus>>,
     water: Option<Res<'w, crate::water::material::WaterAssets>>,
     terrain: Option<Res<'w, terra_world::streaming::WorldTerrain>>,
+    chunks: Option<Res<'w, terra_world::streaming::ChunkStore>>,
     journal: Option<Res<'w, terra_world::edits::EditJournal>>,
     time: Option<Res<'w, Time>>,
 }
@@ -133,8 +134,16 @@ fn upload(
             && !patch.indices.is_empty()
         {
             let triangles = patch.indices.len() / 3;
-            let mut geometry =
-                published_water_mesh(patch, origin, view.terrain.as_deref().map(|t| &t.0));
+            let prepared = view
+                .chunks
+                .as_deref()
+                .and_then(|chunks| chunks.prepared_column([position.x, position.z]));
+            let mut geometry = published_water_mesh(
+                patch,
+                origin,
+                view.terrain.as_deref().map(|t| &t.0),
+                prepared.as_deref(),
+            );
             if view
                 .journal
                 .as_ref()
@@ -253,6 +262,7 @@ fn published_water_mesh(
     patch: &terra_world::water::WaterPatch,
     origin: [i64; 3],
     terrain: Option<&terra_world::TerraGenerator>,
+    prepared: Option<&terra_world::PreparedColumn>,
 ) -> Mesh {
     use crate::water::{
         biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_BLOOD_WEIGHT, WaterTint},
@@ -290,19 +300,15 @@ fn published_water_mesh(
         }
     }
     let tint = terrain.map(|t| WaterTint::new(t, origin));
-    let colors: Vec<_> = patch
+    let (colors, blood): (Vec<_>, Vec<_>) = patch
         .positions
         .iter()
         .map(|&p| {
-            tint.as_ref()
-                .map_or([0.025, 0.20, 0.16, 0.], |t| t.payload(p))
+            tint.as_ref().map_or(([0.025, 0.20, 0.16, 0.0], 0.0), |t| {
+                t.optics(origin, p, prepared)
+            })
         })
-        .collect();
-    let blood: Vec<_> = patch
-        .positions
-        .iter()
-        .map(|&p| tint.as_ref().map_or(0., |t| t.blood_at(p)))
-        .collect();
+        .unzip();
     let waves = if patch.wave_weights.len() == count {
         patch.wave_weights.clone()
     } else {
@@ -633,7 +639,7 @@ mod tests {
             wave_weights: vec![0.5; 4],
             indices: vec![0, 1, 2, 0, 2, 3],
         };
-        let mesh = published_water_mesh(&patch, [-32, 0, 16], None);
+        let mesh = published_water_mesh(&patch, [-32, 0, 16], None, None);
         assert_eq!(
             mesh.count_vertices(),
             4,

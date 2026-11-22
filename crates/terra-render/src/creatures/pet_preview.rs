@@ -104,7 +104,10 @@ fn update(
     for (part, offset, mesh) in parts {
         if matches!(
             part,
-            model::Part::Eyelids | model::Part::Proboscis | model::Part::Silk
+            model::Part::Eyelids
+                | model::Part::Proboscis
+                | model::Part::Silk
+                | model::Part::WebShot
         ) {
             continue;
         }

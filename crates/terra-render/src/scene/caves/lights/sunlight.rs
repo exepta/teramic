@@ -299,7 +299,7 @@ impl Columns<'_> {
     }
 }
 
-fn known_top(
+pub(in crate::scene::caves) fn known_top(
     chunks: &ChunkStore,
     journal: &EditJournal,
     column: [i64; 2],

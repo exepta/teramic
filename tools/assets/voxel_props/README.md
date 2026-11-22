@@ -12,9 +12,9 @@ coplanar faces with the same material. Thin twigs remain face-connected. Small
 flower centres retain at least one cell. Only the outer surface is exported;
 the cells do not become runtime entities, blocks or individual colliders.
 
-The 18 exported models change from **21,471 to 18,408 vertices** and from
-**23,193 to 9,204 triangles**. The largest model has **1,404 triangles**. The
-combined GLBs shrink from **1,373,556 to 1,056,808 bytes**. Per-model counts are
+The 18 exported models change from **21,471 to 18,968 vertices** and from
+**23,193 to 9,484 triangles**. The largest model has **1,404 triangles**. The
+combined GLBs shrink from **1,373,556 to 1,087,052 bytes**. Per-model counts are
 in [report.json](report.json). Stepped diagonal roots need more faces than the
 old smooth tubes, while most flowers and lanterns become substantially smaller.
 

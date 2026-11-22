@@ -1,11 +1,12 @@
 //! Observed monster actions drive bounded positional cues, never a periodic roar.
 #[path = "worm/smoke.rs"]
 mod smoke;
-mod synthesis;
 use bevy::prelude::*;
 use terra_core::creatures::{Creature, CreatureBehavior as B, sandworm as pose};
 
-pub(super) const COUNT: usize = 8;
+pub(super) const COUNT: usize = 9;
+const TAKES: usize = 3;
+pub(super) const BANK_LEN: usize = COUNT * TAKES;
 pub(super) const FIRST: usize = super::clips::PATHS.len() + 18 + super::ambience::DERIVED;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(usize)]
@@ -30,6 +31,7 @@ impl Sound {
         Self::Hurt,
         Self::Death,
         Self::Breath,
+        Self::Rumble,
     ];
     fn name(self) -> &'static str {
         match self {
@@ -44,12 +46,8 @@ impl Sound {
             Self::Rumble => "rumble",
         }
     }
-    pub(super) fn clip(self) -> usize {
-        if self == Self::Rumble {
-            super::ambience::WORM_RUMBLE
-        } else {
-            FIRST + self as usize
-        }
+    pub(super) fn clip(self, take: usize) -> usize {
+        FIRST + take * COUNT + self as usize
     }
     pub(super) fn radius(self) -> f32 {
         match self {
@@ -96,14 +94,7 @@ impl Sound {
 pub(super) struct Emission {
     pub sound: Sound,
     pub level: f32,
-}
-impl From<Sound> for Emission {
-    fn from(sound: Sound) -> Self {
-        Self {
-            sound,
-            level: sound.level(),
-        }
-    }
+    pub take: usize,
 }
 
 pub(super) fn mouth(animal: &Creature, root: Vec3) -> Vec3 {
@@ -140,6 +131,7 @@ pub(super) struct Cadence {
     next_dig: f32,
     next_breath: f32,
     next_hurt: f32,
+    takes: [usize; COUNT],
 }
 impl Cadence {
     fn baseline(&mut self, animal: &Creature, now: f32, head: bool, progress: f32) {
@@ -158,6 +150,7 @@ impl Cadence {
             next_dig: now + 0.2,
             next_breath: now + 1.6,
             next_hurt: now,
+            takes: std::array::from_fn(|i| (animal.id as usize).wrapping_add(i) % TAKES),
         };
     }
     pub(super) fn update(&mut self, animal: &Creature, now: f32) -> Option<Emission> {
@@ -269,30 +262,26 @@ impl Cadence {
         } else {
             return None;
         };
-        Some(if sound == Sound::Rumble {
-            Emission {
-                sound,
-                level: 0.26 + pose::warning(animal) * 0.12,
-            }
+        let take = self.takes[sound as usize];
+        self.takes[sound as usize] = (take + 1) % TAKES;
+        let level = if sound == Sound::Rumble {
+            0.26 + pose::warning(animal) * 0.12
         } else {
-            sound.into()
-        })
+            sound.level()
+        };
+        Some(Emission { sound, level, take })
     }
 }
 
-pub(super) fn append(bank: &mut Vec<Vec<f32>>) {
+pub(super) fn append(bank: &mut Vec<Vec<f32>>, root: &std::path::Path) -> Result<(), String> {
     debug_assert_eq!(bank.len(), FIRST);
-    let sounds = [
-        synthesis::roar(false, false),
-        synthesis::sand(&bank[16], false),
-        synthesis::sand(&bank[17], true),
-        synthesis::bite(&bank[18], &bank[54]),
-        synthesis::spit(&bank[9]),
-        synthesis::roar(false, true),
-        synthesis::roar(true, false),
-        synthesis::breath(),
-    ];
-    bank.extend(sounds);
+    for take in 0..TAKES {
+        for sound in Sound::ALL {
+            let path = format!("sandworm/{}-{}.wav", sound.name(), take + 1);
+            bank.push(super::clips::recording(root, &path)?);
+        }
+    }
+    Ok(())
 }
 pub(super) fn install(app: &mut App) {
     smoke::install(app);
@@ -311,8 +300,8 @@ pub(super) fn export(bank: &[Vec<f32>]) -> Result<(), String> {
     };
     let directory = std::path::PathBuf::from(directory);
     std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
-    for sound in Sound::ALL {
-        let clip = &bank[sound.clip()];
+    for (take, sound) in (0..TAKES).flat_map(|take| Sound::ALL.map(|sound| (take, sound))) {
+        let clip = &bank[sound.clip(take)];
         let bytes = (clip.len() * 2) as u32;
         let mut wave = Vec::with_capacity(bytes as usize + 44);
         wave.extend_from_slice(b"RIFF");
@@ -330,8 +319,12 @@ pub(super) fn export(bank: &[Vec<f32>]) -> Result<(), String> {
         for sample in clip {
             wave.extend_from_slice(&((sample.clamp(-1., 1.) * 32767.) as i16).to_le_bytes());
         }
-        std::fs::write(directory.join(format!("worm-{}.wav", sound.name())), wave)
-            .map_err(|error| error.to_string())?;
+        let suffix = ["", "-2", "-3"][take];
+        std::fs::write(
+            directory.join(format!("worm-{}{suffix}.wav", sound.name())),
+            wave,
+        )
+        .map_err(|error| error.to_string())?;
     }
     Ok(())
 }

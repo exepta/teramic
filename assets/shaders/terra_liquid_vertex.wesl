@@ -31,10 +31,10 @@ struct WetMaterialIndices { weather: u32, detail: u32, };
 @group(constants::MATERIAL_BIND_GROUP) @binding(101) var<storage, read> terra_weather: TerraWeather;
 }
 
-fn gel_position(world: vec4<f32>, seconds: f32, flow: vec2<f32>, depth: f32, galle: bool) -> vec4<f32> {
+fn gel_position(world: vec4<f32>, seconds: f32, flow: vec2<f32>, depth: f32) -> vec4<f32> {
     let direction = select(vec2<f32>(0.77, 0.64), flow / max(length(flow), 0.001), dot(flow, flow) > 0.01);
     let across = vec2<f32>(-direction.y, direction.x);
-    let time = seconds * select(0.65, 0.95, galle);
+    let time = seconds * 0.65;
     let fold = sin(dot(world.xz, direction) * 5.3 - time) * cos(dot(world.xz, across) * 4.1 + sin(time * 0.43));
     return world + vec4<f32>(0.0, fold * min(depth * 0.10, 0.018), 0.0, 0.0);
 }
@@ -66,8 +66,8 @@ fn vertex(vertex_input: Vertex,
     out.world_position = mesh_functions::mesh_position_local_to_world(model, vec4<f32>(local, 1.0));
 @if(LIQUID_MOTION) {
 @if(VERTEX_UVS_B) {
-    if input.uv_b.y < -2.5 {
-        out.world_position = gel_position(out.world_position, seconds, liquid_data.yz, liquid_data.w, input.uv_b.y < -3.5);
+    if input.uv_b.y < -2.5 && input.uv_b.y > -3.5 {
+        out.world_position = gel_position(out.world_position, seconds, liquid_data.yz, liquid_data.w);
     }
 }
 }
@@ -95,8 +95,8 @@ fn vertex(vertex_input: Vertex,
     out.previous_world_position = mesh_functions::mesh_position_local_to_world(previous_model, vec4<f32>(previous_local, 1.0));
 @if(LIQUID_MOTION) {
 @if(VERTEX_UVS_B) {
-    if input.uv_b.y < -2.5 {
-        out.previous_world_position = gel_position(out.previous_world_position, seconds - delta_seconds, liquid_data.yz, liquid_data.w, input.uv_b.y < -3.5);
+    if input.uv_b.y < -2.5 && input.uv_b.y > -3.5 {
+        out.previous_world_position = gel_position(out.previous_world_position, seconds - delta_seconds, liquid_data.yz, liquid_data.w);
     }
 }
 }

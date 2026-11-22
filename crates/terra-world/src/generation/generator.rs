@@ -77,7 +77,18 @@ impl TerraGenerator {
             }
         }
         let height = column.height;
-        let depth = height - y;
+        // The exposed bed and banks of a desert ravine collect surface sand.
+        // A salt hall passing underneath must not colour that open-air ground.
+        let depth = if self.config.ravine_revision >= 2
+            && column.surface_material == terra_voxel::MaterialId::Sand
+            && let Some([floor, ceiling]) = column.cave_cavity
+            && ceiling >= height + 2.0
+            && y >= floor - 2.0
+        {
+            floor - y
+        } else {
+            height - y
+        };
         let (mut density, formation) = self.cave_density_with_column(position, column);
         let mut material = self.column_material(column, depth, density);
         // Spirit terrain can move portals into cave-ecology decoration sites,
@@ -89,8 +100,13 @@ impl TerraGenerator {
                 .or(column.cave_cavity)
                 .is_some_and(|[floor, ceiling]| y > floor && y < ceiling);
         if !reserved_air {
-            if self.config.cave_structure_revision >= 3 && self.config.caves && depth > 5.0 {
-                if let Some(decoration) = self.cave_ecology_material(position, column, density) {
+            if self.config.cave_structure_revision >= 3 {
+                // A shallow chamber ceiling is clipped by the terrain roof. Its
+                // uncut geometric outline must not paint the ground above it.
+                if self.config.caves
+                    && (depth > 5.0 || depth >= 1.0 && column.cave.salt_window_wall(y))
+                    && let Some(decoration) = self.cave_ecology_material(position, column, density)
+                {
                     material = decoration;
                     density = density.min(-0.5);
                 }
@@ -358,8 +374,7 @@ impl TerrainGenerator for TerraGenerator {
         }
         let column = self.surface_column(position[0], position[2]);
         let mut sample = self.sample_with_column(position, column);
-        if (matches!(sample.material, 3 | 308)
-            || self.config.cave_structure_revision >= 4 && matches!(sample.material, 13 | 57 | 58))
+        if self.ore_host(sample.material)
             && sample.density <= 0.0
             && self.config.ores.enabled
             && let Some(ore) = self.ore_at(position.map(|value| value.floor() as i64), column)

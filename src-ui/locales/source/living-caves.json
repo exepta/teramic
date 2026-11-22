@@ -1,0 +1,172 @@
+[
+  {
+    "source": "Lush Cave Stone",
+    "en": "Lush Cave Stone",
+    "de": "Grünes Höhlengestein"
+  },
+  {
+    "source": "Jointed grey stone from underground galleries.",
+    "en": "Jointed grey stone from underground galleries.",
+    "de": "Graues, zerklüftetes Gestein aus unterirdischen Galerien."
+  },
+  {
+    "source": "Overgrown Cave Stone",
+    "en": "Overgrown Cave Stone",
+    "de": "Überwucherter Höhlenstein"
+  },
+  {
+    "source": "Trailing leaves and moss follow the joints in this rock.",
+    "en": "Trailing leaves and moss follow the joints in this rock.",
+    "de": "Ranken und Moos wachsen in den Fugen dieses Steins."
+  },
+  {
+    "source": "Rooted Cave Dirt",
+    "en": "Rooted Cave Dirt",
+    "de": "Durchwurzelte Höhlenerde"
+  },
+  {
+    "source": "Layers of cave soil bound by thick roots.",
+    "en": "Layers of cave soil bound by thick roots.",
+    "de": "Dicke Wurzeln halten die Schichten dieser Höhlenerde zusammen."
+  },
+  {
+    "source": "Cave Grass",
+    "en": "Cave Grass",
+    "de": "Höhlengras"
+  },
+  {
+    "source": "Soft grass thrives on the moist banks of underground streams.",
+    "en": "Soft grass thrives on the moist banks of underground streams.",
+    "de": "Weiches Gras gedeiht an feuchten unterirdischen Bachufern."
+  },
+  {
+    "source": "Cave Moss",
+    "en": "Cave Moss",
+    "de": "Höhlenmoos"
+  },
+  {
+    "source": "A deep mat of green cave moss.",
+    "en": "A deep mat of green cave moss.",
+    "de": "Ein dichtes Polster aus grünem Höhlenmoos."
+  },
+  {
+    "source": "Glow Moss",
+    "en": "Glow Moss",
+    "de": "Leuchtmoos"
+  },
+  {
+    "source": "Warm flecks glow among the moss leaves.",
+    "en": "Warm flecks glow among the moss leaves.",
+    "de": "Zwischen den Moosblättchen leuchten goldene Punkte."
+  },
+  {
+    "source": "Clear Cave Ice",
+    "en": "Clear Cave Ice",
+    "de": "Klares Höhleneis"
+  },
+  {
+    "source": "Clear glacier ice veined with frozen air bubbles.",
+    "en": "Clear glacier ice veined with frozen air bubbles.",
+    "de": "Klares Gletschereis mit eingeschlossenen Luftblasen."
+  },
+  {
+    "source": "Packed Cave Ice",
+    "en": "Packed Cave Ice",
+    "de": "Verdichtetes Höhleneis"
+  },
+  {
+    "source": "Dense blue ice pressed into layers.",
+    "en": "Dense blue ice pressed into layers.",
+    "de": "Dichtes blaues Eis aus zusammengepressten Schichten."
+  },
+  {
+    "source": "Frosted Cave Ice",
+    "en": "Frosted Cave Ice",
+    "de": "Bereiftes Höhleneis"
+  },
+  {
+    "source": "A white crust of rime covers the blue ice.",
+    "en": "A white crust of rime covers the blue ice.",
+    "de": "Eine weiße Raureifkruste bedeckt das blaue Eis."
+  },
+  {
+    "source": "Frozen Stone",
+    "en": "Frozen Stone",
+    "de": "Vereistes Gestein"
+  },
+  {
+    "source": "Frost fills the joints in this dark stone.",
+    "en": "Frost fills the joints in this dark stone.",
+    "de": "Frost füllt die Fugen dieses dunklen Gesteins."
+  },
+  {
+    "source": "Snow-Dusted Stone",
+    "en": "Snow-Dusted Stone",
+    "de": "Schneebedecktes Gestein"
+  },
+  {
+    "source": "Powder snow rests on a shelf of frozen stone.",
+    "en": "Powder snow rests on a shelf of frozen stone.",
+    "de": "Pulverschnee liegt auf einem Absatz aus gefrorenem Stein."
+  },
+  {
+    "source": "Blue Crystal Block",
+    "en": "Blue Crystal Block",
+    "de": "Blauer Kristallblock"
+  },
+  {
+    "source": "A seam of deep blue crystalline ice.",
+    "en": "A seam of deep blue crystalline ice.",
+    "de": "Eine Ader aus tiefblauem kristallinem Eis."
+  },
+  {
+    "source": "Glow Vine",
+    "en": "Glow Vine",
+    "de": "Leuchtranke"
+  },
+  {
+    "source": "Hanging cave vines carry golden buds.",
+    "en": "Hanging cave vines carry golden buds.",
+    "de": "Goldene Knospen wachsen an herabhängenden Höhlenranken."
+  },
+  {
+    "source": "Frost Vine",
+    "en": "Frost Vine",
+    "de": "Frostranke"
+  },
+  {
+    "source": "Slender frost filaments hang from the cave roof.",
+    "en": "Slender frost filaments hang from the cave roof.",
+    "de": "Feine Reiffäden hängen von der Höhlendecke."
+  },
+  {
+    "source": "Frost Cluster",
+    "en": "Frost Cluster",
+    "de": "Reifbüschel"
+  },
+  {
+    "source": "Short blades of rime grow on glacial ledges.",
+    "en": "Short blades of rime grow on glacial ledges.",
+    "de": "Kurze Reifklingen wachsen auf vereisten Vorsprüngen."
+  },
+  {
+    "source": "Glacial Crystal Cluster",
+    "en": "Glacial Crystal Cluster",
+    "de": "Gletscherkristallgruppe"
+  },
+  {
+    "source": "A fan of pale blue glacial crystals.",
+    "en": "A fan of pale blue glacial crystals.",
+    "de": "Ein Fächer aus hellblauen Gletscherkristallen."
+  },
+  {
+    "source": "Cave Wildflowers",
+    "en": "Cave Wildflowers",
+    "de": "Höhlenblumen"
+  },
+  {
+    "source": "Pink, white and violet flowers grow on lit moss beds.",
+    "en": "Pink, white and violet flowers grow on lit moss beds.",
+    "de": "Rosa, weiße und violette Blüten wachsen auf hellen Moospolstern."
+  }
+]

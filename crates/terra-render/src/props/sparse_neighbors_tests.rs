@@ -74,7 +74,8 @@ fn sparse_web_invalidation_keeps_other_waiters_and_deduplicates_affected_owners(
     let changes: Vec<_> = std::iter::repeat_n(SectionPos::new(0, -2, 2), 100).collect();
     queue.invalidate_web_neighbors(changes.into_iter());
     assert_eq!(queue.changed, HashSet::from([prior, near]));
-    assert_eq!(queue.waiting_support, HashSet::from([prior, near]));
+    assert_eq!(queue.waiting_support, HashSet::from([prior]));
+    assert_eq!(queue.support_changes, HashSet::from([near]));
     assert_eq!(queue.web_owners, HashSet::from([near, far]));
     assert!(
         neighbor_owners(&HashSet::new(), [near].into_iter(), [2, 1, 2])
@@ -86,4 +87,37 @@ fn sparse_web_invalidation_keeps_other_waiters_and_deduplicates_affected_owners(
             .positions
             .is_empty()
     );
+}
+
+#[test]
+fn unchanged_stream_bookkeeping_cannot_restart_a_large_lod_sweep() {
+    let mut chunks = ChunkStore::default();
+    let mut queue = PropQueue::default();
+    for x in 0..673 {
+        let position = SectionPos::new(x, 0, -1);
+        let section = terra_world::streaming::LoadedSection {
+            data: terra_voxel::BlockSection::empty(position).unwrap(),
+            mesh: None,
+            mesh_epoch: 3,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        };
+        chunks.loaded.insert(position, section);
+        queue.loaded_epochs.insert(position, 3);
+        queue.vegetated.insert(position);
+    }
+    for _ in 0..20 {
+        let mut changes = PropChanges::default();
+        queue.reconcile_untracked(&chunks, &mut changes);
+        assert!(!changes.any());
+    }
+    let edited = SectionPos::new(1, 0, -1);
+    let removed = SectionPos::new(86, 0, -1);
+    chunks.loaded.get_mut(&edited).unwrap().mesh_epoch += 1;
+    chunks.loaded.remove(&removed);
+    let mut changes = PropChanges::default();
+    queue.reconcile_untracked(&chunks, &mut changes);
+    assert_eq!(changes.published, vec![edited]);
+    assert_eq!(changes.removed, vec![removed]);
 }

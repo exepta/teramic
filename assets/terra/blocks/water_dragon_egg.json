@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": 451,
+  "name": "Water Dragon Egg",
+  "description": "Collect the egg, then place it on a straw block with room around it to hatch it.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 1,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/water_dragon_egg.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.24,
+        0.0,
+        0.24
+      ],
+      "maximum": [
+        0.76,
+        0.13,
+        0.76
+      ]
+    },
+    {
+      "minimum": [
+        0.16,
+        0.13,
+        0.16
+      ],
+      "maximum": [
+        0.84,
+        0.63,
+        0.84
+      ]
+    },
+    {
+      "minimum": [
+        0.23,
+        0.63,
+        0.23
+      ],
+      "maximum": [
+        0.77,
+        0.82,
+        0.77
+      ]
+    },
+    {
+      "minimum": [
+        0.33,
+        0.82,
+        0.33
+      ],
+      "maximum": [
+        0.67,
+        0.975,
+        0.67
+      ]
+    }
+  ]
+}

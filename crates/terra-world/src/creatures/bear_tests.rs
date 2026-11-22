@@ -496,3 +496,33 @@ fn a_ready_strike_rechecks_reach_after_removed_support_causes_a_drop() {
     assert_eq!(a.position[1], 2.0);
     assert!(distance(a.position, player) > 1.9_f64.powi(2));
 }
+
+#[test]
+fn leaving_melee_range_cancels_a_bear_strike_and_reentry_telegraphs_a_fresh_one() {
+    let (terrain, chunks, journal) = fixture();
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut a = bear();
+    let prey = PreyIndex::default();
+    let advance = |bear: &mut Creature, offset: f64| {
+        let mut player = bear.position;
+        player[2] -= offset;
+        step(bear, &h, &[player], &prey, 0.1, false, false)
+    };
+    for _ in 0..4 {
+        assert!(matches!(advance(&mut a, 1.0), Effect::None));
+    }
+    assert!(matches!(advance(&mut a, 3.5), Effect::None));
+    assert_eq!(a.behavior, Behavior::Hunt);
+    for _ in 0..5 {
+        assert!(matches!(advance(&mut a, 1.0), Effect::None));
+        assert_eq!(a.behavior, Behavior::Attack);
+    }
+    let hits = (0..5)
+        .filter(|_| matches!(advance(&mut a, 1.0), Effect::StrikePlayer { .. }))
+        .count();
+    assert_eq!(hits, 1);
+}

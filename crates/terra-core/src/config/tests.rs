@@ -216,13 +216,13 @@ fn ocean_contract_is_saved_without_retroactively_freezing_old_worlds() {
     assert_eq!(legacy.cave_structure_revision, 0);
     let fresh = crate::WorldConfig::default();
     assert_eq!(fresh.ocean_revision, 1);
-    assert_eq!(fresh.cave_structure_revision, 8);
+    assert_eq!(fresh.cave_structure_revision, 13);
     assert_eq!(
         crate::WorldConfig::from_toml(&toml::to_string(&fresh).unwrap()).unwrap(),
         fresh
     );
     assert!(crate::WorldConfig::from_toml("ocean_revision = 2").is_err());
-    for revision in 0..=8 {
+    for revision in 0..=13 {
         assert_eq!(
             crate::WorldConfig::from_toml(&format!("cave_structure_revision={revision}"))
                 .unwrap()
@@ -230,7 +230,7 @@ fn ocean_contract_is_saved_without_retroactively_freezing_old_worlds() {
             revision
         );
     }
-    assert!(crate::WorldConfig::from_toml("cave_structure_revision=9").is_err());
+    assert!(crate::WorldConfig::from_toml("cave_structure_revision=14").is_err());
 }
 
 #[test]
@@ -238,7 +238,7 @@ fn structures_contract_is_explicit_for_fresh_worlds_and_absent_in_legacy_manifes
     let legacy = WorldConfig::from_toml("seed=42042").unwrap();
     assert_eq!(legacy.structures_revision, 0);
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.structures_revision, 10);
+    assert_eq!(fresh.structures_revision, 15);
     assert_eq!(
         WorldConfig::from_toml(&toml::to_string(&fresh).unwrap()).unwrap(),
         fresh
@@ -257,12 +257,17 @@ fn structures_contract_is_explicit_for_fresh_worlds_and_absent_in_legacy_manifes
     assert!(WorldConfig::from_toml("structures_revision=8").is_ok());
     assert!(WorldConfig::from_toml("structures_revision=9").is_ok());
     assert!(WorldConfig::from_toml("structures_revision=10").is_ok());
-    assert!(WorldConfig::from_toml("structures_revision=11").is_err());
+    assert!(WorldConfig::from_toml("structures_revision=11").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=12").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=13").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=14").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=15").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=16").is_err());
     assert_eq!(
         WorldConfig::from_toml(include_str!("../../../../configs/world.toml"))
             .unwrap()
             .structures_revision,
-        10
+        15
     );
 }
 
@@ -272,6 +277,10 @@ fn saved_geology_policy_keeps_legacy_worlds_and_rejects_future_versions() {
     assert_eq!(legacy.geology_revision, 0);
     let new = crate::WorldConfig::default();
     assert_eq!(new.geology_revision, 4);
+    let bundled =
+        crate::WorldConfig::from_toml(include_str!("../../../../configs/world.toml")).unwrap();
+    assert_eq!(bundled.geology_revision, new.geology_revision);
+    assert_eq!(bundled.cave_structure_revision, new.cave_structure_revision);
     assert_eq!(
         crate::WorldConfig::from_toml(&toml::to_string(&new).unwrap()).unwrap(),
         new

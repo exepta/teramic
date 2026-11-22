@@ -237,9 +237,11 @@ pub(super) fn update_water_settings(
         environment,
         wake_positions,
         wake_motions,
-        // Body ownership is decided from saved water provenance, never from
-        // the camera cube. Acid or a nearby poured puddle cannot cut a lake.
-        particle: Vec4::ZERO,
+        gallery_aperture: cave.as_ref().map_or(Vec4::ZERO, |cave| {
+            let diffuse_sky = daylight.as_ref().map_or(1., |d| d.daylight)
+                * visual.as_ref().map_or(1., |w| 1. - w.clouds * 0.5);
+            cave.gallery_aperture(diffuse_sky)
+        }),
     };
     if payload.0 != data {
         payload.0 = data;

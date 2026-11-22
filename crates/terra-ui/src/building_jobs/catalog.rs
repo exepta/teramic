@@ -43,10 +43,11 @@ fn preview(id: &str) -> String {
     file.map_or_else(
         || "tilt-icon:home@64".into(),
         |file| {
-            format!(
-                "{}/../../src-ui/assets/buildings/{file}",
-                env!("CARGO_MANIFEST_DIR")
-            )
+            terra_core::installation_root()
+                .join("src-ui/assets/buildings")
+                .join(file)
+                .to_string_lossy()
+                .into_owned()
         },
     )
 }

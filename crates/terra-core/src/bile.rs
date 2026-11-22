@@ -2,16 +2,17 @@
 pub const FLUID: u16 = 439;
 pub const BLOCK: u16 = 440;
 pub const RANGE: u64 = 4;
-pub const FLOW_SECONDS: f64 = 0.2;
+pub const FLOW_SECONDS: f64 = 2.0 * crate::fluid_surface::WATER_STEP_SECONDS;
 pub const DAMAGE: f32 = 6.0;
 pub const DAMAGE_INTERVAL: f64 = 0.75;
 
 /// Fine-volume marker in the existing age byte; lower bits hold a temporary
-/// source's remaining 0.2-second steps. Zero means a bucket-owned permanent source.
+/// source's remaining steps. Old saves used a 5 Hz timer. Zero means a bucket-owned permanent source.
 pub const FINE: u8 = 0x80;
-pub const LIFETIME_MASK: u8 = 0x7f;
+pub const TIMER_8HZ: u8 = 0x40;
+pub const LIFETIME_MASK: u8 = 0x3f;
 pub const CAPACITY: u8 = 64;
-pub const SPIT_STEPS: u8 = 25;
+pub const SPIT_STEPS: u8 = 40;
 pub const fn fine_volume(volume: u8, age: u8) -> u8 {
     if age & FINE != 0 {
         volume

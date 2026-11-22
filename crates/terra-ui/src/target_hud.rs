@@ -526,7 +526,53 @@ fn family_stats(
     animal: &terra_core::creatures::Creature,
     family: Option<&terra_core::creatures::breeding::FamilyView>,
 ) {
-    if animal.juvenile() {
+    if let Some(life) = animal.needs.dragon {
+        rows.push(StatRow {
+            id: "dragon-stage".into(),
+            label: animal.dragon_stage().label().into(),
+            text: if life.months >= 12. {
+                "Ab 12 Monaten".into()
+            } else {
+                format!("{:.1} Monate", life.months)
+            },
+            value: animal.growth() * 100.,
+            bar: true,
+        });
+        for (id, label, value) in [
+            ("dragon-affection", "Bindung", life.affection),
+            ("dragon-training", "Training", life.training),
+            (
+                "dragon-food",
+                "Sättigung",
+                100. * animal.needs.food / animal.kind.food().max(1.),
+            ),
+            (
+                "dragon-water",
+                "Wasser",
+                100. * animal.needs.water / animal.kind.water().max(1.),
+            ),
+        ] {
+            rows.push(StatRow {
+                id: id.into(),
+                label: label.into(),
+                text: format!("{value:.0}%"),
+                value,
+                bar: true,
+            });
+        }
+        rows.push(StatRow {
+            id: "dragon-shelter".into(),
+            label: "Unterkunft".into(),
+            text: if life.sheltered {
+                "Geschützt"
+            } else {
+                "Im Freien"
+            }
+            .into(),
+            value: 0.,
+            bar: false,
+        });
+    } else if animal.juvenile() {
         rows.push(StatRow {
             id: "animal-growth".into(),
             label: "Wachstum".into(),
@@ -621,7 +667,9 @@ fn update(scene: Scene, mut view: ResMut<TargetView>, mut next: Local<f32>) {
         v.mob = true;
         v.stats.push(animal_sex(a));
         v.title = a.title();
-        if a.juvenile() {
+        if a.needs.dragon.is_some() {
+            v.title = format!("{} · {}", v.title, a.dragon_stage().label());
+        } else if a.juvenile() {
             v.title = format!("Jungtier: {}", v.title);
         }
         v.health = a.health / a.kind.health() * 100.0;
@@ -676,6 +724,10 @@ fn update(scene: Scene, mut view: ResMut<TargetView>, mut next: Local<f32>) {
             B::Tremor => "Tremor",
             B::Emerge => "Emerge",
             B::Retreat => "Retreat",
+            B::DragonVolley => "Wirft eine Salve",
+            B::DragonWard => "Baut einen Schild auf",
+            B::DragonSurge => "Bündelt Elementarkraft",
+            B::Spit if a.kind.is_dragon() => "Speit Elementaratem",
             B::Spit => "Spuckt Galle",
             _ if a.kind.water() > 0.0 && a.needs.water < a.kind.water() * 0.35 => "Durstig",
             _ if a.kind.food() > 0.0 && a.needs.food < a.kind.food() * 0.35 => "Hungrig",

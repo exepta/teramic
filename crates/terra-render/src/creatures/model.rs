@@ -6,6 +6,7 @@ mod aquatic;
 mod bear;
 mod bee;
 mod clownfish;
+pub(super) mod dragon;
 mod eyes;
 mod forest;
 mod horse;
@@ -22,6 +23,8 @@ mod voxel;
 #[derive(Clone, Copy, Debug)]
 pub(super) enum Part {
     Body,
+    Dragon(dragon::Joint),
+    DragonLight(dragon::Joint),
     SpiritGlow,
     SpiritArm(f32),
     SpiritOrbit(f32),
@@ -37,6 +40,7 @@ pub(super) enum Part {
     Jaw,
     SpiderLeg { side: f32, index: u8 },
     SpiderEyes,
+    WebShot,
     Silk,
     StalkerArm(f32),
     StalkerForearm(f32),
@@ -45,6 +49,8 @@ pub(super) enum Part {
     SkeletonEyes,
     ThornGlow { head: bool },
     VillagerArm(f32),
+    VillagerSleeve(f32),
+    VillagerThigh(f32),
     MilitaryWeapon(f32),
     MilitaryTabard,
     WormSegment(u8),
@@ -86,6 +92,7 @@ pub(super) fn parts_variant(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, 
         Kind::BloodWisp => forest::wisp(),
         Kind::ThornBrute => forest::brute(),
         Kind::SandWorm => sandworm::parts(),
+        Kind::DarkDragon | Kind::EarthDragon | Kind::WaterDragon => dragon::parts(kind, variant),
         Kind::Fish => clownfish::parts(),
         Kind::Cow | Kind::Pig | Kind::Sheep => mammal::parts(kind),
         Kind::Bear => bear::parts(),
@@ -235,17 +242,22 @@ mod tests {
         for kind in Kind::ALL {
             let parts = parts(kind).unwrap();
             let (part_limit, extent_limit, vertex_limit) = match kind {
+                // Each paw has its own ankle pivot; the outer breath stream is a separate material.
+                // The dark dragon also has three emissive overlays (heart and wing rims).
+                Kind::EarthDragon | Kind::WaterDragon => (31, 24.0, 65_000),
+                Kind::DarkDragon => (34, 24.0, 65_000),
                 Kind::SandWorm => (58, 23.0, 24_000),
                 Kind::Stalker => (11, 3.0, 64_000),
                 // Residents use the same cached, detailed reference meshes as
                 // their profession variants; the dedicated role test enforces
                 // this budget independently for every civilian silhouette.
-                Kind::Villager => (6, 2.5, 50_000),
+                Kind::Villager => (10, 2.5, 50_000),
                 Kind::BloodStalker => (12, 2.5, 16_000),
-                _ if kind.is_spider() => (12, 2.5, 16_000),
+                Kind::SmallSpider => (12, 2.5, 16_000),
+                Kind::MediumSpider | Kind::LargeSpider => (13, 2.5, 16_000),
                 _ => (8, 2.5, 16_000),
             };
-            assert!(parts.len() <= part_limit, "{kind:?}");
+            assert!(parts.len() <= part_limit, "{kind:?}: {} parts", parts.len());
             let mut total = 0;
             let mut triangles = 0;
             for (part, offset, mesh) in parts {
@@ -283,7 +295,7 @@ mod tests {
                                 | Part::WormMandible(_)
                                 | Part::Jaw
                         );
-                    if !faceted_worm {
+                    if !faceted_worm && !kind.is_dragon() && !matches!(part, Part::WebShot) {
                         // Voxel sculptures have axis-aligned faces. The worm's
                         // plates, hooked fangs and projected waves are faceted.
                         assert!(

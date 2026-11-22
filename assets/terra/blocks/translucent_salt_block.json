@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": 458,
+  "name": "Translucent Salt Crystal Block",
+  "description": "Light passes through its pale cubic salt crystals.",
+  "creative_category": "terrain",
+  "hardness": 1.0,
+  "resistance": 8.0,
+  "required_tool": "pickaxe",
+  "mining_level": 1,
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0,
+  "face_materials": [
+    "Cleavage",
+    "Cleavage",
+    "Cleavage",
+    "Bedding",
+    "Cleavage",
+    "Cleavage"
+  ],
+  "materials": {
+    "Cleavage": {
+      "base_color": [
+        1,
+        1,
+        1,
+        0.78
+      ],
+      "roughness": 0.24,
+      "reflectance": 0.41,
+      "normal_texture": "textures/salt_cave/clear_side_normal.png"
+    },
+    "Bedding": {
+      "base_color": [
+        1,
+        1,
+        1,
+        0.78
+      ],
+      "roughness": 0.24,
+      "reflectance": 0.41,
+      "normal_texture": "textures/salt_cave/clear_top_normal.png"
+    }
+  },
+  "textures": {
+    "Cleavage": "textures/salt_cave/clear_side.png",
+    "Bedding": "textures/salt_cave/clear_top.png"
+  }
+}

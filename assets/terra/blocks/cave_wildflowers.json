@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 487,
+  "name": "Cave Wildflowers",
+  "description": "Pink, white and violet flowers grow on lit moss beds.",
+  "creative_category": "nature",
+  "struct_block": true,
+  "hardness": 0.35,
+  "resistance": 1,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/cave_wildflowers.glb",
+  "textures": {},
+  "collision_boxes": []
+}

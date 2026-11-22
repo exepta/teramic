@@ -18,7 +18,7 @@
       ],
       "roughness": 0.94,
       "reflectance": 0.12,
-      "normal_texture": "textures/block_palette/stone_normal.png"
+      "normal_texture": "textures/salt_cave/accent_side_normal.png"
     },
     "Salt crystals": {
       "texture_pattern": "mineral",
@@ -45,6 +45,6 @@
   "required_tool": "pickaxe",
   "mining_level": 1,
   "textures": {
-    "Host rock": "textures/block_palette/stone.png"
+    "Host rock": "textures/salt_cave/accent_side.png"
   }
 }

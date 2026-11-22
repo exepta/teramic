@@ -69,9 +69,11 @@ F68 mit Asphalt-Herstellung, Straßenformen und Rückbau steht in
 
 ### Welt Und Darstellung
 
-- [ ] **F36 Natuerliche Hoehlenraeume:** Bestehende Kammer-/Connector-Engine um unregelmaessige, geologisch lesbare Raeume, Terrassen und wechselnde Querschnitte erweitern. Natuerliche Uebergaenge statt auffaelliger Kugelraeume erzeugen; historische Welten durch versionierte Generierung erhalten.
 
 - [ ] **F15 Schaeden An Weltobjekten:** Brand-/Lebenspunktschaeden fuer geeignete Objekte ergaenzen. Treffer, Feuer, Zustand, Zerstoerung und Drops an vorhandene autoritative Welt-/Inventarpfade anbinden.
+- [ ] **F85 Feuer und Drachenatem.** Brennbare Weltblöcke entzünden, Feuer ausbreiten und ausbrennen lassen. Feuerangriffe von Drachen sollen am Einschlag brennende Stellen hinterlassen.
+- [ ] **F86 Feuer mit Wasser löschen.** Platziertes und fließendes Wasser soll Feuer bei Kontakt löschen und die Ausbreitung an dieser Stelle beenden.
+- [ ] **F87 Lava.** Lava als eigene leuchtende, zähflüssige Flüssigkeit mit Quellen, Fluss und Hitzeschaden umsetzen.
 
 - [ ] **F24 Entfernte 3D-Karte:** Budgetierte entfernte 3D-Rekonstruktion mit getrennten Boden-/Kronenhoehen oder echten Mesh-LODs ergaenzen. Vorhandene gespeicherte Kartendaten nutzen; Hoehlenkarten bleiben flach.
 
@@ -115,6 +117,6 @@ F68 mit Asphalt-Herstellung, Straßenformen und Rückbau steht in
 
 ## 7. Release-Pipelines
 
-- [ ] **F83 Pull-Request-Prüfung einrichten.** Auf einem frischen GitHub-Actions-Runner die in der README festgelegte TiltUI-Revision am von Cargo erwarteten Pfad auschecken und die Toolchain aus `rust-toolchain.toml` verwenden. Formatierung, Clippy und Workspace-Tests mit `Cargo.lock` ausführen.
-- [ ] **F84 Release-Pakete aus einem Versionstag bauen.** Client, Dedicated Server und Gebäudeeditor für die unterstützten Zielplattformen im Release-Profil bauen. Die jeweils benötigten Assets, Standardkonfigurationen und Lizenzen beilegen. Pakete versionieren und SHA-256-Prüfsummen erzeugen.
+- [x] **F83 Pull-Request-Prüfung einrichten.** Auf einem frischen GitHub-Actions-Runner die in der README festgelegte TiltUI-Revision am von Cargo erwarteten Pfad auschecken und die Toolchain aus `rust-toolchain.toml` verwenden. Formatierung, Clippy und Workspace-Tests mit `Cargo.lock` ausführen.
+- [x] **F84 Release-Pakete aus einem Versionstag bauen.** Client, Dedicated Server und Gebäudeeditor für die unterstützten Zielplattformen im Release-Profil bauen. Die jeweils benötigten Assets, Standardkonfigurationen und Lizenzen beilegen. Pakete versionieren und SHA-256-Prüfsummen erzeugen.
 - [ ] **A08 Release-Kandidaten abnehmen und veröffentlichen.** Pakete in einem leeren Verzeichnis entpacken und starten. Eine Welt laden, einen Client mit dem paketierten Server verbinden und im Editor ein Gebäude öffnen. Nach erfolgreicher Abnahme die geprüften Pakete samt Prüfsummen und Versionshinweisen als GitHub Release veröffentlichen.

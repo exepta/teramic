@@ -22,11 +22,18 @@ pub fn item_placement(
         let position = crate::segments::extension(hit.position, material, |p| chunks.block_at(p))?;
         return Some((position, chunks.block_at(position)?));
     }
-    block_placement_with_snow(
+    let placed = block_placement_with_snow(
         chunks,
         hit,
         material != terra_voxel::MaterialId::SnowLayer as u16,
-    )
+    )?;
+    if let Some(dy) = crate::segments::fixed_mineral_root(material) {
+        let [x, y, z] = placed.0;
+        if !crate::segments::root_block(chunks.block_at([x, y + dy, z])?) {
+            return None;
+        }
+    }
+    Some(placed)
 }
 
 pub fn item_placement_with_state(

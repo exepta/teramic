@@ -44,7 +44,8 @@ pub fn near(
     };
     let size = animal.size();
     let (sin, cos) = f64::from(yaw).sin_cos();
-    let center = [origin[0] - sin * 3.0, origin[2] - cos * 3.0];
+    let ahead = if mob.kind.is_dragon() { 15.0 } else { 3.0 };
+    let center = [origin[0] - sin * ahead, origin[2] - cos * ahead];
     let mut offsets: Vec<_> = (-4_i32..=4)
         .flat_map(|z| (-4_i32..=4).map(move |x| [x, z]))
         .collect();

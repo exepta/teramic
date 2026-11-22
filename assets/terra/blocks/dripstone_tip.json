@@ -6,16 +6,31 @@
   "creative_category": "decoration",
   "render_kind": "segment",
   "struct_block": true,
-  "collision_boxes": [{"minimum": [0.075, 0.0, 0.075], "maximum": [0.925, 1.0, 0.925]}],
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.075,
+        0.0,
+        0.075
+      ],
+      "maximum": [
+        0.925,
+        1.0,
+        0.925
+      ]
+    }
+  ],
   "materials": {
     "Living surface": {
       "base_color": [
-        0.63,
-        0.43,
-        0.28,
+        1,
+        0.98,
+        0.93,
         1
       ],
-      "roughness": 0.88
+      "roughness": 0.53,
+      "reflectance": 0.28,
+      "normal_texture": "textures/dripstone_cave/dripstone_side_normal.png"
     }
   },
   "face_materials": [
@@ -29,5 +44,8 @@
   "hardness": 0.45,
   "resistance": 1,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Living surface": "textures/dripstone_cave/dripstone_side.png"
+  }
 }

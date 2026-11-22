@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 483,
+  "name": "Glow Vine",
+  "description": "Hanging cave vines carry golden buds.",
+  "creative_category": "nature",
+  "struct_block": true,
+  "hardness": 0.35,
+  "resistance": 1,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/glow_vine.glb",
+  "textures": {
+    "leaf": "textures/living_caves/turf_side.png",
+    "moss": "textures/living_caves/moss_side.png"
+  },
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      1,
+      0.69,
+      0.19
+    ],
+    "range": 7,
+    "intensity": 640,
+    "falloff": "soft_core",
+    "shadows": false,
+    "offset": [
+      0.5,
+      0.48,
+      0.5
+    ]
+  }
+}

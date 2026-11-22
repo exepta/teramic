@@ -88,7 +88,15 @@ fn advance_with_supply(
     let retained =
         u8::from(!cell.source && can_fall && (source_fed || source_feeds(sampler, journal, p)));
     if can_fall && below.source && !cell.source {
-        let moved = cell.amount.saturating_sub(retained).min(2);
+        let moved = terra_core::fluid_surface::discharge(
+            cell.amount,
+            0,
+            FLUID_CAPACITY,
+            false,
+            true,
+            retained,
+            1,
+        );
         cell.amount -= moved;
         pools::preflight(journal, &[(p, cell)])?;
         step.absorbed += u64::from(moved);
@@ -127,17 +135,15 @@ fn advance_with_supply(
             continue;
         }
         let space = capacity(sampler, journal, q).saturating_sub(other.amount);
-        let pressure = if falling {
-            cell.amount.saturating_sub(retained)
-        } else if cell.source {
-            cell.amount.saturating_sub(other.amount)
-        } else {
-            cell.amount.saturating_sub(other.amount) / 2
-        };
-        let moved = pressure
-            .min(space)
-            .min(if falling { 2 } else { 1 })
-            .min(cell.amount);
+        let moved = terra_core::fluid_surface::discharge(
+            cell.amount,
+            other.amount,
+            space,
+            cell.source,
+            falling,
+            retained,
+            1,
+        );
         if moved == 0 {
             continue;
         }

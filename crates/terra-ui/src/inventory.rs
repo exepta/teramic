@@ -501,6 +501,7 @@ pub(crate) fn preview_key(item: ItemKind) -> String {
         | ItemKind::Bone
         | ItemKind::Bitumen
         | ItemKind::GloomEssence
+        | ItemKind::DragonLoot(_)
         | ItemKind::LightSplitter
         | ItemKind::RoadAggregate => {
             format!("Item preview {}", item.identifier())
@@ -1394,6 +1395,7 @@ impl InventorySelection<'_> {
                 | ItemKind::Bone
                 | ItemKind::Bitumen
                 | ItemKind::GloomEssence
+                | ItemKind::DragonLoot(_)
                 | ItemKind::LightSplitter
                 | ItemKind::RoadAggregate => None,
             })
@@ -2223,6 +2225,7 @@ fn item_id(item: ItemKind) -> String {
         | ItemKind::Bone
         | ItemKind::Bitumen
         | ItemKind::GloomEssence
+        | ItemKind::DragonLoot(_)
         | ItemKind::LightSplitter
         | ItemKind::RoadAggregate => {
             format!("item-{}", item.identifier().trim_start_matches("teramic::"))

@@ -11,6 +11,38 @@ fn generator(seed: u64, revision: u8) -> TerraGenerator {
 }
 
 #[test]
+fn revision_eleven_changes_real_connector_sections_continuously_across_chunks() {
+    let previous = generator(42042, 10);
+    let current = generator(42042, 11);
+    let mut opened = 0;
+    let mut narrowed = 0;
+    for x in (-105..91).step_by(5) {
+        for z in (-105..91).step_by(5) {
+            let (x, z) = (f64::from(x) + 0.5, f64::from(z) + 0.5);
+            let a = previous.cave_shape(x, z);
+            let b = current.cave_shape(x, z);
+            assert_eq!(a.connector_limit, b.connector_limit);
+            for y in [-70.5, -41.5, -22.5] {
+                let before = previous.tunnel_density_with_shape([x, y, z], &a) > 0.;
+                let after = current.tunnel_density_with_shape([x, y, z], &b) > 0.;
+                opened += usize::from(after && !before);
+                narrowed += usize::from(before && !after);
+            }
+        }
+    }
+    assert!(
+        opened > 5 && narrowed > 5,
+        "{opened} new, {narrowed} closed"
+    );
+    for seam in [-192., -16., 0., 192.] {
+        let a = current.cave_shape(seam - 0.0001, 27.);
+        let b = current.cave_shape(seam + 0.0001, 27.);
+        assert!((a.tunnel_width - b.tunnel_width).abs() < 0.0001);
+        assert!((a.fissure - b.fissure).abs() < 0.0001);
+    }
+}
+
+#[test]
 fn legacy_cave_revisions_zero_through_six_keep_their_original_connector_fields() {
     for revision in 0..=6 {
         let terrain = generator(42042, revision);

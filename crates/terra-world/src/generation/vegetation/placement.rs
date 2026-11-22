@@ -86,7 +86,8 @@ fn candidates(terrain: &TerraGenerator, start: [i64; 3], size: usize, vertical: 
             let suitable_ground = match species {
                 TreeSpecies::Bloodwood => matches!(
                     column.surface_material,
-                    terra_voxel::MaterialId::BloodGrass
+                    terra_voxel::MaterialId::BloodDirt
+                        | terra_voxel::MaterialId::BloodGrass
                         | terra_voxel::MaterialId::BloodMoss
                         | terra_voxel::MaterialId::CrimsonMycelium
                 ),

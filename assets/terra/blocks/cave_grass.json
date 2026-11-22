@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": 474,
+  "name": "Cave Grass",
+  "description": "Soft grass thrives on the moist banks of underground streams.",
+  "creative_category": "terrain",
+  "hardness": 1.0,
+  "resistance": 8.0,
+  "required_tool": "pickaxe",
+  "mining_level": 1,
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0,
+  "face_materials": [
+    "Cleavage",
+    "Cleavage",
+    "Cleavage",
+    "Bedding",
+    "Cleavage",
+    "Cleavage"
+  ],
+  "materials": {
+    "Cleavage": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.14,
+      "normal_texture": "textures/living_caves/turf_side_normal.png"
+    },
+    "Bedding": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.14,
+      "normal_texture": "textures/living_caves/turf_top_normal.png"
+    }
+  },
+  "textures": {
+    "Cleavage": "textures/living_caves/turf_side.png",
+    "Bedding": "textures/living_caves/turf_top.png"
+  }
+}

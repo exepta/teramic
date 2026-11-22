@@ -1,0 +1,12 @@
+{
+  "item": {
+    "dragon_loot": "cooked_meat"
+  },
+  "name": "Roast Dragon Meat",
+  "description": "A hearty cut of roasted earth dragon meat.",
+  "food": {
+    "nutrition": 40,
+    "saturation": 13,
+    "eat_seconds": 1.8
+  }
+}

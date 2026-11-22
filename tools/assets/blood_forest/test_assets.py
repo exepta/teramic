@@ -3,7 +3,9 @@ import unittest,json,math,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from model_polish.gltf import Document
-from build_blood_forest import NAMES
+from build_blood_forest import NAMES, SIZE as BIOME_SIZE
+from biome_surfaces.foliage import SIZE as FOLIAGE_SIZE
+from build_block_palette import SIZE as PALETTE_SIZE, FAMILIES
 BLOCKS=Path(__file__).resolve().parents[3]/'assets/terra/blocks'
 class BloodAssets(unittest.TestCase):
     def test_complete_stable_catalog_and_individual_textures(self):
@@ -13,9 +15,10 @@ class BloodAssets(unittest.TestCase):
             if i<412:
                 for tex in spec['textures'].values():
                     data=(BLOCKS/tex).read_bytes()
-                    size=512 if tex.startswith('textures/foliage/') else 256
+                    size = {'foliage': FOLIAGE_SIZE, 'block_palette': PALETTE_SIZE}.get(
+                        Path(tex).parent.name, BIOME_SIZE)
                     self.assertEqual((int.from_bytes(data[16:20],'big'),int.from_bytes(data[20:24],'big')),(size,size))
-                self.assertEqual(spec['bevel_width'],0)
+                self.assertEqual(spec['bevel_width'], .025 if i in FAMILIES['blood'] else 0)
                 self.assertEqual(len(spec['face_materials']),6)
     def test_real_glbs_have_unit_bounds_correct_normals_and_no_degenerate_faces(self):
         for slug,_ in NAMES:

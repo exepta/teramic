@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": 484,
+  "name": "Frost Vine",
+  "description": "Slender frost filaments hang from the cave roof.",
+  "creative_category": "nature",
+  "struct_block": true,
+  "hardness": 0.35,
+  "resistance": 1,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/frost_vine.glb",
+  "textures": {
+    "rime": "textures/living_caves/rime_side.png",
+    "snow": "textures/living_caves/dust_side.png"
+  },
+  "collision_boxes": []
+}

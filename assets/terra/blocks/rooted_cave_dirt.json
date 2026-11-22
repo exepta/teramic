@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": 473,
+  "name": "Rooted Cave Dirt",
+  "description": "Layers of cave soil bound by thick roots.",
+  "creative_category": "terrain",
+  "hardness": 1.0,
+  "resistance": 8.0,
+  "required_tool": "pickaxe",
+  "mining_level": 1,
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0,
+  "face_materials": [
+    "Cleavage",
+    "Cleavage",
+    "Cleavage",
+    "Bedding",
+    "Cleavage",
+    "Cleavage"
+  ],
+  "materials": {
+    "Cleavage": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.14,
+      "normal_texture": "textures/living_caves/roots_side_normal.png"
+    },
+    "Bedding": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.14,
+      "normal_texture": "textures/living_caves/roots_top_normal.png"
+    }
+  },
+  "textures": {
+    "Cleavage": "textures/living_caves/roots_side.png",
+    "Bedding": "textures/living_caves/roots_top.png"
+  }
+}

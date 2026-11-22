@@ -43,6 +43,10 @@ fn base(mode: WorldMode, role: connection::NetworkRole) -> App {
     config.world.caves = false;
     config.world.trees = false;
     config.world.water = false;
+    configured_app(mode, role, config)
+}
+
+fn configured_app(mode: WorldMode, role: connection::NetworkRole, config: GameConfig) -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, TransformPlugin))
         .add_plugins(TerraCorePlugin(config))
@@ -60,10 +64,16 @@ fn server() -> App {
     server_bound(([127, 0, 0, 1], 0).into())
 }
 fn server_bound(bind: std::net::SocketAddr) -> App {
-    let mut app = base(
-        WorldMode::DedicatedServer,
-        connection::NetworkRole::DedicatedServer,
-    );
+    start_server(
+        base(
+            WorldMode::DedicatedServer,
+            connection::NetworkRole::DedicatedServer,
+        ),
+        bind,
+    )
+}
+
+fn start_server(mut app: App, bind: std::net::SocketAddr) -> App {
     app.insert_resource(server::ServerEndpoint {
         bind,
         advertised: None,
@@ -792,6 +802,8 @@ mod consumption_tests;
 mod container_tests;
 #[path = "creature_tests.rs"]
 mod creature_tests;
+#[path = "dragon_udp_tests.rs"]
+mod dragon_udp_tests;
 #[path = "effect_tests.rs"]
 mod effect_tests;
 #[path = "equipment_tests.rs"]

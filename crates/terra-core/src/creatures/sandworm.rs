@@ -54,8 +54,8 @@ pub fn spit_offset(time: f32) -> [f32; 3] {
     ]
 }
 
-pub fn phase_progress(behavior: B, timer: f32) -> f32 {
-    let duration = match behavior {
+pub fn phase_duration(behavior: B) -> Option<f32> {
+    Some(match behavior {
         B::Leap => LEAP_SECONDS,
         B::Tremor => WARNING_SECONDS,
         B::Emerge => EMERGE_SECONDS,
@@ -63,7 +63,13 @@ pub fn phase_progress(behavior: B, timer: f32) -> f32 {
         B::Retreat => RETREAT_SECONDS,
         B::Spit => SPIT_SECONDS,
         B::Hunt => CHARGE_SECONDS,
-        _ => return 0.0,
+        _ => return None,
+    })
+}
+
+pub fn phase_progress(behavior: B, timer: f32) -> f32 {
+    let Some(duration) = phase_duration(behavior) else {
+        return 0.;
     };
     if timer.is_finite() {
         (1.0 - timer / duration).clamp(0.0, 1.0)
@@ -311,13 +317,23 @@ fn raw_spine_pose(behavior: B, progress: f32, segment: usize) -> SegmentPose {
             } else {
                 0.0
             };
-            let prepare = (1.0 - ((progress - (SPIT_PHASE - 0.07)) / 0.09).abs()).clamp(0.0, 1.0);
+            let pulse = |center: f32, radius: f32| smooth(1. - (progress - center).abs() / radius);
+            // Lift the head and gather the neck before committing its weight.
+            // The release and grab reach the original authoritative contact points.
+            let (draw, recoil) = if behavior == B::Attack {
+                (
+                    pulse(0.062, 0.058) + 0.8 * pulse(SPIT_PHASE - 0.105, 0.10),
+                    pulse(BITE_PHASE + 0.12, 0.11) * 0.36,
+                )
+            } else {
+                (0., pulse(0.11, 0.11))
+            };
             let neck = ((segment as f32 - 15.0) / 9.0).clamp(0.0, 1.0).powi(2);
-            rest.center[1] -= 5.35 * neck * bite;
+            rest.center[1] += (0.36 * draw - 5.35 * bite + 0.20 * recoil) * neck;
             // Preserve the real bite's ground target while the resting head
             // now leans slightly forward from the vertical shoulder.
-            rest.center[2] -= 0.55 * neck * bite;
-            rest.pitch += -(0.42 + REARED_PITCH) * neck * bite + 0.10 * neck * prepare;
+            rest.center[2] += (0.56 * draw - 0.55 * bite + 0.43 * recoil) * neck;
+            rest.pitch += (-(0.42 + REARED_PITCH) * bite + 0.15 * draw + 0.12 * recoil) * neck;
             rest
         }
         B::Dead => {
@@ -429,17 +445,27 @@ pub fn pose(a: &Creature, segment: usize) -> SegmentPose {
     spine_pose_at(
         a.behavior,
         phase_progress(a.behavior, a.timer),
-        a.age as f32,
+        muscle_clock(a.age),
         segment,
     )
 }
 
+/// Local time for the travelling 2.7-rad/s muscle wave on long-lived worms.
+pub fn muscle_clock(age: f64) -> f32 {
+    age.rem_euclid(std::f64::consts::TAU / 2.7) as f32
+}
+
 pub fn spine_pose_at(behavior: B, progress: f32, clock: f32, segment: usize) -> SegmentPose {
     let mut pose = spine_pose(behavior, progress, segment);
-    if segment < BODY_SEGMENTS && clock.is_finite() {
-        let phase = segment as f32 * 0.62;
-        pose.center[1] +=
-            ((clock * 2.7 - phase).sin() - (-phase).sin()) * 0.025 * segment_radius(segment);
+    if segment < HEAD_SEGMENT - 1 && clock.is_finite() {
+        // Compression travels along the flanks. Taper it to zero at the
+        // collar so the head and last annulus have one exact attachment.
+        let end = (HEAD_SEGMENT - 1 - segment) as f32;
+        let weight = smooth(end / 4.) * segment_radius(segment);
+        let wave = clock * 2.7 - segment as f32 * 0.62;
+        let flex = if behavior == B::Leap { 0.085 } else { 0.16 };
+        pose.center[0] += wave.sin() * weight * flex;
+        pose.center[1] += wave.cos() * weight * 0.035;
     }
     pose
 }

@@ -552,9 +552,12 @@ fn per_kind_generation_switches_preserve_other_seeded_sites_in_every_contract() 
                 StructureKind::Village | StructureKind::Kingdom | StructureKind::Outpost => {
                     config.structures.villages = false
                 }
-                StructureKind::Ruin | StructureKind::Cemetery | StructureKind::GraveDungeon => {
-                    config.structures.ruins = false
-                }
+                StructureKind::Ruin
+                | StructureKind::Cemetery
+                | StructureKind::GraveDungeon
+                | StructureKind::DarkDragonLair
+                | StructureKind::EarthDragonLair
+                | StructureKind::WaterDragonLair => config.structures.ruins = false,
                 StructureKind::Mine => config.structures.mines = false,
             }
             let filtered = TerraGenerator::new(config).unwrap();

@@ -50,6 +50,45 @@ pub fn visual_center(animal: &Creature) -> [f64; 3] {
     ]
 }
 
+/// Silk expands from a tight knot into a net along a locked, shallow arc.
+/// Both the collision sweep and the rendered knot use this same clock.
+pub const WEB_WINDUP: f32 = 0.52;
+pub const WEB_CAST_TIME: f32 = WEB_WINDUP + 1.2;
+
+pub struct WebShot {
+    pub origin: bevy_math::DVec3,
+    pub target: bevy_math::DVec3,
+    pub flight_time: f32,
+}
+
+impl WebShot {
+    pub fn of(a: &Creature) -> Option<Self> {
+        use bevy_math::DVec3;
+        let aim = a
+            .needs
+            .goal
+            .filter(|g| a.kind.is_spider() && g.kind == super::NeedKind::AttackAim)?;
+        let center = DVec3::from_array(visual_center(a));
+        let target = DVec3::from_array(aim.position.map(|v| v as f64 + 0.5));
+        let direction = (target - center).normalize_or_zero();
+        let origin = center + direction * (a.kind.size()[2] * 0.48 * a.growth_scale());
+        let distance = origin.distance(target);
+        if !(0.01..=20.).contains(&distance) {
+            return None;
+        }
+        Some(Self {
+            origin,
+            target,
+            flight_time: (distance / 16.5) as f32,
+        })
+    }
+
+    pub fn at(&self, elapsed: f32) -> bevy_math::DVec3 {
+        let t = f64::from((elapsed / self.flight_time).clamp(0., 1.));
+        self.origin.lerp(self.target, t) + bevy_math::DVec3::Y * (1.6 * t * (1. - t))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

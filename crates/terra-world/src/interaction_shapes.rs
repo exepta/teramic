@@ -171,7 +171,8 @@ fn visit_boxes_with_state(
             let lo = i as f32 * 0.25;
             let hi = lo + 0.25;
             let r = f64::from(
-                crate::segments::radius(profile, lo).max(crate::segments::radius(profile, hi)),
+                crate::segments::radius(material, profile, lo)
+                    .max(crate::segments::radius(material, profile, hi)),
             );
             visit(ShapeBox {
                 hinged: false,
@@ -191,17 +192,32 @@ fn visit_boxes_with_state(
     }
     let selected =
         override_state.unwrap_or_else(|| journal.object_state(position).unwrap_or_default());
-    if material == terra_core::bile::FLUID
-        || terra_core::roads::is_tar(material) && selected.liquid.is_some()
-    {
-        let height = if material == terra_core::bile::FLUID {
-            selected.liquid.map_or_else(
-                || terra_core::bile::height(selected.facing + 1),
-                |s| terra_core::bile::state_height(s.volume, s.age),
-            )
-        } else {
-            terra_core::roads::tar_fine_height(selected.liquid.unwrap().volume)
+    if terra_core::roads::is_tar(material) {
+        let volume = selected
+            .liquid
+            .map_or(terra_core::roads::tar_amount(selected.facing) * 8, |s| {
+                s.volume
+            });
+        let film = crate::roads::coating(position, material, volume, journal, &mut block_at);
+        let soil = ShapeBox {
+            minimum: [0.; 3],
+            maximum: [1., f64::from(terra_core::roads::PATH_HEIGHT), 1.],
+            hinged: false,
         };
+        for mut bounds in [soil, film] {
+            for (i, &offset) in position.iter().enumerate() {
+                bounds.minimum[i] += offset as f64;
+                bounds.maximum[i] += offset as f64;
+            }
+            visit(bounds);
+        }
+        return true;
+    }
+    if material == terra_core::bile::FLUID {
+        let height = selected.liquid.map_or_else(
+            || terra_core::bile::height(selected.facing + 1),
+            |s| terra_core::bile::state_height(s.volume, s.age),
+        );
         visit(ShapeBox {
             minimum: position.map(|p| p as f64),
             maximum: [

@@ -132,6 +132,13 @@ fn setup(world: &mut World) {
 
 fn pin(world: &mut World) {
     let stage = world.resource::<Inspection>().captured;
+    if stage >= 5 {
+        let mut replica = world.resource_mut::<ReplicatedCreatures>();
+        let a = &mut replica.creatures.get_mut(&2).unwrap().current;
+        a.kind = CreatureKind::DarkDragon;
+        a.health = a.kind.health() * 0.5;
+        replica.boss = (stage == 5).then_some(2);
+    }
     let bounds = stage == 1;
     if world
         .resource::<terra_core::DebugSettings>()
@@ -161,8 +168,11 @@ fn pin(world: &mut World) {
         .query_filtered::<&mut Transform, With<terra_player::TerraCamera>>()
         .iter_mut(world)
     {
-        *camera =
-            Transform::from_xyz(8.0, 33.0, 11.0).looking_at(Vec3::new(8.0, 33.0, 18.0), Vec3::Y);
+        *camera = if stage >= 5 {
+            Transform::from_xyz(-8.0, 39.0, -4.0).looking_at(Vec3::new(8.0, 36.2, 18.0), Vec3::Y)
+        } else {
+            Transform::from_xyz(8.0, 33.0, 11.0).looking_at(Vec3::new(8.0, 33.0, 18.0), Vec3::Y)
+        };
     }
     world.resource_mut::<terra_world::streaming::ChunkFocus>().0 = [8.0, 33.0, 18.0];
     if stage >= 2 && !world.resource::<Inspection>().wall {
@@ -220,10 +230,10 @@ fn run(world: &mut World) {
         world.write_message(AppExit::error());
         return;
     }
-    if stage >= 5 {
+    if stage >= 7 {
         if inspection.since.elapsed() > Duration::from_millis(600) {
             info!(
-                "Native mob health HUD passed: actual projected friendly/hostile bars, aim, wall occlusion, Always and None; five nonblank captures"
+                "Native mob health HUD passed: actual projected friendly/hostile bars, aim, wall occlusion, Always and None; boss encounter half-health and disengagement; seven nonblank captures"
             );
             world.write_message(AppExit::Success);
         }
@@ -260,6 +270,9 @@ fn run(world: &mut World) {
         world.write_message(AppExit::error());
         return;
     }
+    if hud.boss.is_empty() == (stage == 5) {
+        return;
+    }
     let nodes: Vec<_> = world
         .query::<(
             &tilt_ui::ElementClasses,
@@ -277,7 +290,7 @@ fn run(world: &mut World) {
     {
         return;
     }
-    let fills: Vec<_> = world
+    let mut fills: Vec<_> = world
         .query::<(
             &tilt_ui::ElementClasses,
             &ComputedNode,
@@ -299,6 +312,30 @@ fn run(world: &mut World) {
     {
         return;
     }
+    let top_bars: Vec<_> = world
+        .query::<(
+            &tilt_ui::ElementClasses,
+            &ComputedNode,
+            &bevy::ui::UiGlobalTransform,
+        )>()
+        .iter(world)
+        .filter(|(c, _, _)| c.classes.iter().any(|c| c == "dragon-boss-health"))
+        .map(|(_, n, t)| Rect::from_center_size(t.translation, n.size()))
+        .collect();
+    if stage == 5 {
+        let [bounds] = top_bars.as_slice() else {
+            return;
+        };
+        if bounds.size().x < 40.0 || bounds.size().y < 8.0 {
+            return;
+        }
+        fills.push(FillRoi {
+            bounds: *bounds,
+            hostile: true,
+        });
+    } else if !top_bars.is_empty() {
+        return;
+    }
     if world
         .query::<&terra_render::creatures::CreatureAvatar>()
         .iter(world)
@@ -314,7 +351,15 @@ fn run(world: &mut World) {
         world.write_message(AppExit::error());
         return;
     }
-    let name = ["looking-at", "in-view", "occluded", "always", "none"][stage];
+    let name = [
+        "looking-at",
+        "in-view",
+        "occluded",
+        "always",
+        "none",
+        "boss-half",
+        "boss-ended",
+    ][stage];
     info!(
         stage,
         bars = expected,

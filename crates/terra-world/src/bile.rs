@@ -6,12 +6,17 @@ use crate::{
     },
 };
 use bevy::prelude::*;
+use std::collections::{HashMap, VecDeque};
 use terra_core::{bile, block_properties::BlockPropertiesCatalog};
 use terra_voxel::global_to_section;
 
+mod surface;
+pub use surface::BileSurface;
+pub(crate) use surface::height_at;
+
 pub const CELL_BUDGET: usize = 512;
 pub const MAX_CELLS: usize = 16_384;
-const SIDES: [[i64; 3]; 4] = [[1, 0, 0], [0, 0, 1], [-1, 0, 0], [0, 0, -1]];
+const SIDES: [[i64; 3]; 4] = [[-1, 0, 0], [0, 0, -1], [1, 0, 0], [0, 0, 1]];
 
 pub fn liquid(chunks: &ChunkStore, journal: &EditJournal, p: [i64; 3]) -> Option<LiquidState> {
     (chunks.block_at(p) == Some(bile::FLUID))
@@ -23,10 +28,14 @@ fn can_occupy(chunks: &ChunkStore, journal: &EditJournal, p: [i64; 3]) -> bool {
     p.iter().all(|v| v.unsigned_abs() <= 990_000)
         && (-128..=356).contains(&p[1])
         && matches!(chunks.block_at(p), Some(0 | bile::FLUID))
-        && journal.fluid(p).is_none_or(|f| f.amount == 0)
-        && chunks
-            .surface_column_at(p[0], p[2])
-            .is_none_or(|c| crate::water::fluid::from_columns(c.water_columns(), p[1]).amount == 0)
+        && journal.fluid(p).map_or_else(
+            || {
+                chunks.surface_column_at(p[0], p[2]).is_none_or(|c| {
+                    crate::water::fluid::from_columns(c.water_columns(), p[1]).amount == 0
+                })
+            },
+            |cell| cell.amount == 0,
+        )
 }
 
 fn preflight(chunks: &ChunkStore, journal: &EditJournal, p: [i64; 3]) -> Result<(), String> {
@@ -127,7 +136,11 @@ fn deposit(
         Some(LiquidState {
             origin: target,
             volume: bile::CAPACITY,
-            age: bile::FINE | lifetime,
+            age: if lifetime == 0 {
+                bile::FINE
+            } else {
+                bile::FINE | bile::TIMER_8HZ | lifetime
+            },
             source: true,
         }),
     )
@@ -136,6 +149,12 @@ fn refined(mut state: LiquidState) -> LiquidState {
     state.volume = bile::fine_volume(state.volume, state.age);
     if state.age & bile::FINE == 0 {
         state.age = bile::FINE;
+    } else if state.source
+        && state.age & bile::TIMER_8HZ == 0
+        && state.age & bile::LIFETIME_MASK != 0
+    {
+        let old_ticks = state.age & bile::LIFETIME_MASK;
+        state.age = bile::FINE | bile::TIMER_8HZ | (old_ticks * 8).div_ceil(5);
     }
     state
 }
@@ -180,19 +199,59 @@ pub struct BileStep {
     pub removed: usize,
 }
 
+/// Find actual wet paths from reservoirs. Saved cells over an unloaded boundary
+/// participate in the proof without waking or generating their section.
+fn connected_supplies(journal: &EditJournal) -> (usize, HashMap<[i64; 3], [i64; 3]>) {
+    let wet: HashMap<_, _> = journal
+        .object_states()
+        .filter_map(|(p, id, s)| (id == bile::FLUID).then_some((p, s.liquid?)))
+        .collect();
+    let mut sources: Vec<_> = wet
+        .iter()
+        .filter_map(|(&p, s)| s.source.then_some(p))
+        .collect();
+    sources.sort_unstable();
+    let mut supply = HashMap::new();
+    let mut next: VecDeque<_> = sources.into_iter().map(|p| (p, p)).collect();
+    for &(p, origin) in &next {
+        supply.insert(p, origin);
+    }
+    while let Some((p, origin)) = next.pop_front() {
+        for d in SIDES.into_iter().chain([[0, -1, 0]]) {
+            let q = std::array::from_fn(|i| p[i] + d[i]);
+            if !wet.contains_key(&q) || !in_range(q, origin) || supply.contains_key(&q) {
+                continue;
+            }
+            supply.insert(q, origin);
+            next.push_back((q, origin));
+        }
+    }
+    (wet.len(), supply)
+}
+
+fn bile_cells(journal: &EditJournal) -> Vec<([i64; 3], LiquidState)> {
+    journal
+        .object_sections()
+        .flat_map(|p| journal.object_states_in_section(p))
+        .filter_map(|(p, id, s)| (id == bile::FLUID).then_some((p, s.liquid?)))
+        .collect()
+}
+
 pub fn advance(chunks: &mut ChunkStore, journal: &mut EditJournal) -> Result<BileStep, String> {
-    advance_from(chunks, journal, &mut 0)
+    let cells = bile_cells(journal);
+    advance_from(chunks, journal, &mut 0, 1, cells)
 }
 
 fn advance_from(
     chunks: &mut ChunkStore,
     journal: &mut EditJournal,
     cursor: &mut usize,
+    elapsed_ticks: u8,
+    all: Vec<([i64; 3], LiquidState)>,
 ) -> Result<BileStep, String> {
-    let all: Vec<_> = journal
-        .object_states()
-        .filter_map(|(p, id, s)| (id == bile::FLUID).then_some((p, s.liquid?)))
-        .collect();
+    if all.is_empty() {
+        return Ok(BileStep::default());
+    }
     let mut cells: Vec<_> = all
         .iter()
         .copied()
@@ -204,13 +263,12 @@ fn advance_from(
         cells.rotate_left(*cursor % length);
     }
     let mut result = BileStep::default();
-    // Every timed source ages once per authority step, including unloaded cells;
-    // the flow cursor. A busy acid region cannot extend a five-second attack.
+    // Timed sources expire even when unloaded or outside this step’s flow budget.
     for &(p, old) in &all {
         let mut state = refined(old);
         let left = state.age & bile::LIFETIME_MASK;
         if state.source && left > 0 {
-            if left == 1 {
+            if left <= elapsed_ticks {
                 if chunks.block_at(p).is_some() {
                     set(chunks, journal, p, None)?;
                 } else {
@@ -218,7 +276,7 @@ fn advance_from(
                 }
                 result.removed += 1;
             } else {
-                state.age = bile::FINE | (left - 1);
+                state.age = bile::FINE | bile::TIMER_8HZ | (left - elapsed_ticks);
                 if chunks.block_at(p).is_some() {
                     set(chunks, journal, p, Some(state))?;
                 } else {
@@ -234,10 +292,7 @@ fn advance_from(
             }
         }
     }
-    let mut count = journal
-        .object_states()
-        .filter(|(_, id, _)| *id == bile::FLUID)
-        .count();
+    let (mut count, mut supply) = connected_supplies(journal);
     for (p, _) in cells.into_iter().take(CELL_BUDGET) {
         result.visited += 1;
         let Some(raw) = liquid(chunks, journal, p) else {
@@ -245,15 +300,10 @@ fn advance_from(
         };
         let mut state = refined(raw);
         if !state.source {
-            if chunks.block_at(state.origin).is_none()
-                && journal
-                    .block(state.origin)
-                    .is_none_or(|id| id == bile::FLUID)
-            {
-                continue;
-            }
-            if !liquid(chunks, journal, state.origin).is_some_and(|s| s.source) {
-                state.volume = state.volume.saturating_sub(4);
+            if let Some(&origin) = supply.get(&p) {
+                state.origin = origin;
+            } else {
+                state.volume = state.volume.saturating_sub(8);
                 if state.volume == 0 {
                     set(chunks, journal, p, None)?;
                     count = count.saturating_sub(1);
@@ -268,10 +318,28 @@ fn advance_from(
         if chunks.block_at(down).is_none() {
             continue;
         }
+        let below = liquid(chunks, journal, down).map(refined);
+        if !state.source && below.is_some_and(|cell| cell.source) {
+            // A falling jet rejoins a reservoir at its surface. Keep the
+            // narrow, supplied inlet just as the water solver does.
+            let absorbed = terra_core::fluid_surface::discharge(
+                state.volume,
+                0,
+                bile::CAPACITY,
+                false,
+                true,
+                8,
+                8,
+            );
+            if absorbed > 0 {
+                state.volume -= absorbed;
+                set(chunks, journal, p, Some(state))?;
+            }
+            continue;
+        }
         let falling = can_occupy(chunks, journal, down)
             && in_range(down, state.origin)
-            && liquid(chunks, journal, down)
-                .is_none_or(|s| !s.source && refined(s).volume < bile::CAPACITY);
+            && below.is_none_or(|s| !s.source && s.volume < bile::CAPACITY);
         let directions: Vec<_> = if falling {
             vec![[0, -1, 0]]
         } else {
@@ -287,11 +355,16 @@ fn advance_from(
                 continue;
             }
             let other = old.map_or(0, |s| s.volume);
-            let transfer = if falling {
-                state.volume.min(bile::CAPACITY - other).min(16)
-            } else {
-                (state.volume.saturating_sub(other) / 2).min(8)
-            };
+            let retained = if falling && !state.source { 8 } else { 0 };
+            let transfer = terra_core::fluid_surface::discharge(
+                state.volume,
+                other,
+                bile::CAPACITY - other,
+                state.source,
+                falling,
+                retained,
+                8,
+            );
             if transfer == 0 {
                 continue;
             }
@@ -301,9 +374,10 @@ fn advance_from(
                 volume: other + transfer,
                 age: bile::FINE,
                 source: false,
-                ..old.unwrap_or(state)
+                origin: supply.get(&q).copied().unwrap_or(state.origin),
             };
             set(chunks, journal, q, Some(target))?;
+            supply.insert(q, target.origin);
             if old.is_none() {
                 count += 1;
                 result.spread += 1;
@@ -315,8 +389,8 @@ fn advance_from(
                     count = count.saturating_sub(1);
                     break;
                 }
+                set(chunks, journal, p, Some(state))?;
             }
-            set(chunks, journal, p, Some(state))?;
         }
     }
     *cursor = if length == 0 {
@@ -338,8 +412,17 @@ pub fn tick(
     if !access.authoritative() || now < work.0 {
         return;
     }
-    work.0 = now + bile::FLOW_SECONDS;
-    if let Err(error) = advance_from(&mut chunks, &mut journal, &mut work.1) {
+    if work.0 == 0.0 {
+        work.0 = now;
+    }
+    let ticks = ((now - work.0) / bile::FLOW_SECONDS).floor() + 1.0;
+    work.0 += ticks * bile::FLOW_SECONDS;
+    let elapsed_ticks = ticks.min(f64::from(bile::SPIT_STEPS)) as u8;
+    let cells = bile_cells(&journal);
+    if cells.is_empty() {
+        return;
+    }
+    if let Err(error) = advance_from(&mut chunks, &mut journal, &mut work.1, elapsed_ticks, cells) {
         tracing::error!(%error,"Acid flow rejected");
     }
 }
@@ -362,17 +445,18 @@ pub fn hitbox_contact(
         return false;
     }
     let corners = body.corners();
-    let low = std::array::from_fn::<_, 3, _>(|i| {
-        (corners.iter().map(|p| p[i]).fold(f64::INFINITY, f64::min) - 0.025).floor() as i64
+    let minimum = std::array::from_fn::<_, 3, _>(|i| {
+        corners.iter().map(|p| p[i]).fold(f64::INFINITY, f64::min) - 0.015
     });
-    let high = std::array::from_fn::<_, 3, _>(|i| {
-        (corners
+    let maximum = std::array::from_fn::<_, 3, _>(|i| {
+        corners
             .iter()
             .map(|p| p[i])
             .fold(f64::NEG_INFINITY, f64::max)
-            + 0.025)
-            .floor() as i64
+            + 0.015
     });
+    let low = minimum.map(|v| v.floor() as i64);
+    let high = maximum.map(|v| v.floor() as i64);
     for z in low[2]..=high[2] {
         for y in low[1]..=high[1] {
             for x in low[0]..=high[0] {
@@ -383,8 +467,25 @@ pub fn hitbox_contact(
                 let height = if id == bile::BLOCK {
                     1.0
                 } else if id == bile::FLUID {
-                    liquid(chunks, journal, p)
-                        .map_or(1.0, |s| f64::from(bile::state_height(s.volume, s.age)))
+                    let samples = |axis: usize| {
+                        let base = p[axis] as f64;
+                        let low = minimum[axis].clamp(base + 1e-6, base + 1. - 1e-6);
+                        let high = maximum[axis].clamp(base + 1e-6, base + 1. - 1e-6);
+                        [low, (low + high) * 0.5, high]
+                    };
+                    let probe_y = body.center[1].clamp(y as f64 + 1e-6, y as f64 + 1. - 1e-6);
+                    let mut top = None::<f64>;
+                    for px in samples(0) {
+                        for pz in samples(2) {
+                            if let Some(h) = height_at(chunks, journal, [px, probe_y, pz]) {
+                                top = Some(top.map_or(h, |old| old.max(h)));
+                            }
+                        }
+                    }
+                    let Some(top) = top else {
+                        continue;
+                    };
+                    top - y as f64
                 } else {
                     continue;
                 };

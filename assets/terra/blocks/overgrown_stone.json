@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": 472,
+  "name": "Overgrown Cave Stone",
+  "description": "Trailing leaves and moss follow the joints in this rock.",
+  "creative_category": "terrain",
+  "hardness": 1.0,
+  "resistance": 8.0,
+  "required_tool": "pickaxe",
+  "mining_level": 1,
+  "render_kind": "cube",
+  "surface": "rock",
+  "bevel_width": 0,
+  "face_materials": [
+    "Cleavage",
+    "Cleavage",
+    "Cleavage",
+    "Bedding",
+    "Cleavage",
+    "Cleavage"
+  ],
+  "materials": {
+    "Cleavage": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.83,
+      "reflectance": 0.17,
+      "normal_texture": "textures/living_caves/overgrown_side_normal.png"
+    },
+    "Bedding": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.83,
+      "reflectance": 0.17,
+      "normal_texture": "textures/living_caves/overgrown_top_normal.png"
+    }
+  },
+  "textures": {
+    "Cleavage": "textures/living_caves/overgrown_side.png",
+    "Bedding": "textures/living_caves/overgrown_top.png"
+  }
+}

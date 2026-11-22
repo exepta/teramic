@@ -114,10 +114,12 @@ pub struct WorldConfig {
     pub blood_forest_revision: u8,
     /// Natural population cap within 150 m of each player; owned animals are excluded.
     pub natural_mob_limit: u16,
+    /// Loaded days on a straw nest before a dragon egg can hatch.
+    pub dragon_incubation_days: u8,
     /// New saved terrain contract; absent in existing worlds means no retrogen.
     #[serde(default)]
     pub bounded_world: bool,
-    /// Absent in saved worlds retains their original narrow ravines.
+    /// Revision 2 grades both ravine banks. Earlier saves retain their own cross-sections.
     #[serde(default)]
     pub ravine_revision: u8,
     /// Saved hydrology: 1 eroded banks, 2 connected rivers with distinct outlets,
@@ -193,8 +195,11 @@ pub struct WorldConfig {
     pub ores: crate::OreGeneration,
 }
 impl WorldConfig {
+    pub const CURRENT_STRUCTURES_REVISION: u8 = 15;
+    pub const CURRENT_CAVE_STRUCTURE_REVISION: u8 = 13;
     pub const CURRENT_LANDSCAPE_REVISION: u8 = 9;
     pub const CURRENT_RIVER_TERRAIN_REVISION: u8 = 7;
+    pub const CURRENT_RAVINE_REVISION: u8 = 2;
 
     /// Prepared terrain is independent of live calendar, population and game rules.
     pub fn same_terrain(&self, other: &Self) -> bool {
@@ -204,6 +209,7 @@ impl WorldConfig {
             spirit_blossom_revision,
             blood_forest_revision,
             natural_mob_limit: _,
+            dragon_incubation_days: _,
             time: _,
             seasons: _,
             game_rules: _,
@@ -284,8 +290,9 @@ impl Default for WorldConfig {
             spirit_blossom_revision: 2,
             blood_forest_revision: 1,
             natural_mob_limit: 256,
+            dragon_incubation_days: 5,
             bounded_world: true,
-            ravine_revision: 1,
+            ravine_revision: Self::CURRENT_RAVINE_REVISION,
             river_terrain_revision: Self::CURRENT_RIVER_TERRAIN_REVISION,
             time: crate::WorldTimeConfig::default(),
             seasons: crate::SeasonConfig::default(),
@@ -304,8 +311,8 @@ impl Default for WorldConfig {
             landscape_revision: Self::CURRENT_LANDSCAPE_REVISION,
             biome_definitions: None,
             ocean_revision: 1,
-            cave_structure_revision: 8,
-            structures_revision: 10,
+            cave_structure_revision: Self::CURRENT_CAVE_STRUCTURE_REVISION,
+            structures_revision: Self::CURRENT_STRUCTURES_REVISION,
             structure_border_gap: default_structure_border_gap(),
             structures: StructureSettings::default(),
             preferred_spawn_biome: None,
@@ -334,7 +341,7 @@ impl Config for WorldConfig {
             "Unsupported world.blood_forest_revision",
         )?;
         ensure(
-            self.structures_revision <= 10,
+            self.structures_revision <= Self::CURRENT_STRUCTURES_REVISION,
             "Unsupported world.structures_revision",
         )?;
         ensure(self.game_rules.valid(), "Invalid world.game_rules")?;
@@ -344,7 +351,7 @@ impl Config for WorldConfig {
             "Invalid world.structure_border_gap",
         )?;
         ensure(
-            self.cave_structure_revision <= 8,
+            self.cave_structure_revision <= Self::CURRENT_CAVE_STRUCTURE_REVISION,
             "Unsupported world.cave_structure_revision",
         )?;
         ensure(
@@ -354,7 +361,7 @@ impl Config for WorldConfig {
         self.cave_biomes.validate()?;
         ensure(self.ocean_revision <= 1, "Unsupported world.ocean_revision")?;
         ensure(
-            self.ravine_revision <= 1,
+            self.ravine_revision <= Self::CURRENT_RAVINE_REVISION,
             "Unsupported world.ravine_revision",
         )?;
         ensure(
@@ -387,6 +394,10 @@ impl Config for WorldConfig {
         ensure(
             self.seasons.valid(),
             "world.seasons requires lengths in 1..=3650 days and a finite positive transition_days no longer than any season",
+        )?;
+        ensure(
+            (3..=7).contains(&self.dragon_incubation_days),
+            "world.dragon_incubation_days must be in 3..=7",
         )?;
         ensure(
             self.time.valid(),

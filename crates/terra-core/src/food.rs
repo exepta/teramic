@@ -61,7 +61,15 @@ impl ItemFood {
     }
 }
 
-const SOURCES: [(&str, &str); 18] = [
+const SOURCES: [(&str, &str); 20] = [
+    (
+        "items/dragon_raw_meat.json",
+        include_str!("../../../assets/terra/items/dragon_raw_meat.json"),
+    ),
+    (
+        "items/dragon_cooked_meat.json",
+        include_str!("../../../assets/terra/items/dragon_cooked_meat.json"),
+    ),
     (
         "items/blood_berry.json",
         include_str!("../../../assets/terra/items/blood_berry.json"),

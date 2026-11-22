@@ -45,7 +45,13 @@ impl TerraGenerator {
         c: SurfaceColumn,
         density: f64,
     ) -> Option<MaterialId> {
-        if !self.config().cave_biomes.enabled || p[1] < -119.0 || density < -2.2 {
+        let gallery_shell = c.cave.salt_gallery_shell(p[1]);
+        let karst_shell = c.cave.dripstone_shell(p[1]);
+        let living_shell = c.cave.living_shell(p[1]);
+        if !self.config().cave_biomes.enabled
+            || p[1] < -119.0
+            || (density < -2.2 && !gallery_shell && !karst_shell && !living_shell)
+        {
             return None;
         }
         let [x, y, z] = p;
@@ -55,9 +61,35 @@ impl TerraGenerator {
             let patch = self
                 .valleys
                 .get([x * 0.072 + 213.0, y * 0.095, z * 0.072 - 89.0]);
+            if living_shell {
+                let exposed = density >= -1.0;
+                let floor = exposed && self.cave_density_with_column([x, y + 1.0, z], c).0 > 0.0;
+                let ceiling =
+                    exposed && !floor && self.cave_density_with_column([x, y - 1.0, z], c).0 > 0.0;
+                return Some(c.cave.living_rock(y, patch, floor, ceiling));
+            }
+            if karst_shell {
+                let shore = c.cave.center[1] - c.cave.height * 0.72;
+                return Some(if y < shore + 1.0 && patch < -0.18 {
+                    MaterialId::CaveMud
+                } else if y < shore + 1.5 || patch < -0.40 {
+                    MaterialId::WetCaveStone
+                } else if patch < -0.16 && y < shore + 11.0 {
+                    MaterialId::MossyCaveStone
+                } else if patch > 0.32 && (y * 0.28 + x * 0.05 + z * 0.03).sin() > 0.08 {
+                    MaterialId::CaveCalcite
+                } else if patch > 0.11 || (y - c.cave.ceiling).abs() < 1.3 && patch > -0.12 {
+                    MaterialId::Dripstone
+                } else {
+                    MaterialId::WetCaveStone
+                });
+            }
             if self.config().cave_structure_revision >= 4 {
                 let surface = self.config().cave_biomes.salt_surfaces;
                 let covered = 1.0 - surface[0] / surface.iter().sum::<f64>();
+                if gallery_shell {
+                    return Some(c.cave.salt_gallery_rock(y, patch, covered));
+                }
                 if covered > 0.0 && w[1] > 0.01 && patch > 0.65 - covered * f64::from(w[1]) * 1.4 {
                     return Some(if (y * 0.16 + x * 0.012 + z * 0.02).sin() > 0.55 {
                         MaterialId::PinkSaltStone
@@ -95,6 +127,10 @@ impl TerraGenerator {
         if let Some(material) = c.cave.room_feature(p, density, w[2]) {
             let coverage = self.config().cave_biomes.salt_surfaces;
             let cluster = coverage[2] + coverage[3];
+            if self.config().cave_structure_revision >= 9 && c.cave.kind == super::CaveEcology::Salt
+            {
+                return (cluster > 0.0).then_some(material);
+            }
             if self.config().cave_structure_revision < 4
                 || material != MaterialId::SaltCrystal
                 || (w[1] > 0.5
@@ -104,6 +140,14 @@ impl TerraGenerator {
             {
                 return Some(material);
             }
+        }
+        if living_shell
+            || gallery_shell
+            || self.config().cave_structure_revision >= 11
+                && c.cave.kind == super::CaveEcology::Dripstone
+                && room_at(c, y)
+        {
+            return None;
         }
         if !self.config().cave_biomes.connectors.biome_decorations && !room_at(c, y) {
             return None;

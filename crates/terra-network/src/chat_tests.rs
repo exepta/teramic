@@ -683,6 +683,81 @@ fn time_coordinates_player_roster_and_local_clear_use_real_transport() {
 }
 
 #[test]
+fn underground_locate_token_lands_inside_the_generated_cave_over_udp() {
+    use terra_world::generation::CaveEcology;
+    // Install the test landscape before the streaming and spawn plugins select
+    // their initial sections, as on a dedicated server starting a new world.
+    let mut config = GameConfig::default();
+    config.server.game_mode = terra_core::GameMode::Creative;
+    config.server.simulation_distance = 1;
+    config.world.water = false;
+    config.world.trees = false;
+    let mut host = start_server(
+        configured_app(
+            WorldMode::DedicatedServer,
+            connection::NetworkRole::DedicatedServer,
+            config,
+        ),
+        ([127, 0, 0, 1], 0).into(),
+    );
+    let terrain = host
+        .world()
+        .resource::<terra_world::streaming::WorldTerrain>()
+        .0
+        .clone();
+    let mut player = walking_client(
+        host.world()
+            .resource::<server::ServerRuntime>()
+            .issue_token(303)
+            .unwrap(),
+    );
+    wait(&mut host, &mut [&mut player], |_, players| {
+        players[0]
+            .world()
+            .resource::<ClientSession>()
+            .confirmed_state()
+            .is_some()
+    });
+    command(
+        &mut player,
+        ChatCommand::Send("/locate biome lush_cave".into()),
+    );
+    wait(&mut host, &mut [&mut player], |_, players| {
+        players[0]
+            .world()
+            .resource::<ClientChat>()
+            .entries
+            .iter()
+            .any(|entry| entry.locate.is_some())
+    });
+    let found = player
+        .world()
+        .resource::<ClientChat>()
+        .entries
+        .iter()
+        .find_map(|entry| entry.locate.clone())
+        .unwrap();
+    assert_eq!(found.name, "Lush Cave");
+    let [x, y, z] = found.position;
+    let room = terrain.cave_structure_at(x as f64 + 0.5, z as f64 + 0.5);
+    assert!(room.active() && room.kind == CaveEcology::Lush && room.ceiling > y as f64 + 2.);
+    command(&mut player, ChatCommand::Teleport(found.token.unwrap()));
+    wait(&mut host, &mut [&mut player], |_, players| {
+        players[0]
+            .world()
+            .resource::<ClientSession>()
+            .confirmed_state()
+            .is_some_and(|s| {
+                s.generation == 1
+                    && (s.position[0] - (x as f32 + 0.5)).abs() < 0.1
+                    && (s.position[1] - (y as f32 + terra_physics::character::PLAYER_HALF_HEIGHT))
+                        .abs()
+                        < 0.1
+            })
+    });
+}
+
+#[test]
 fn real_udp_chat_broadcast_locate_and_permission_checked_teleport() {
     let mut host = server();
     let runtime = host.world().resource::<server::ServerRuntime>();

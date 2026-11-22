@@ -1865,7 +1865,10 @@ fn world_create_keeps_kingdom_and_outpost_switches_independent_and_persists_off(
     let id = app.world().resource::<WorldMenu>().selected.unwrap();
     let library = app.world().resource::<MenuPaths>().worlds.clone();
     let saved = library.load(id).unwrap();
-    assert_eq!(saved.manifest.world.structures_revision, 10);
+    assert_eq!(
+        saved.manifest.world.structures_revision,
+        terra_core::WorldConfig::CURRENT_STRUCTURES_REVISION
+    );
     assert!(saved.manifest.world.structures.outposts);
     assert!(!saved.manifest.world.structures.kingdoms && !saved.manifest.world.structures.villages);
     cleanup(app);
@@ -1939,7 +1942,10 @@ fn world_creation_tabs_preserve_and_persist_every_kingdom_policy_field() {
     let saved = library.load(id).unwrap();
     assert_eq!(saved.manifest.world.kingdom_rules, rules);
     assert_eq!(saved.manifest.world.structure_border_gap, 24);
-    assert_eq!(saved.manifest.world.structures_revision, 10);
+    assert_eq!(
+        saved.manifest.world.structures_revision,
+        terra_core::WorldConfig::CURRENT_STRUCTURES_REVISION
+    );
     let reopened = terra_storage::WorldLibrary { root: library.root }
         .load(id)
         .unwrap();

@@ -71,6 +71,34 @@ pub(super) fn search(
     size: [f64; 3],
     allowed: &impl Fn([f64; 3]) -> bool,
 ) -> Search {
+    let mut route = plan(h, start, target, size, allowed);
+    // Keep the authored turn onto each stair and the grid approach into
+    // narrow openings. Across open ground a shortcut must leave enough
+    // room for the whole body to turn from the previous heading.
+    if (target[1] - start[1]).abs() > 0.01
+        || route.points.iter().any(|p| (p[1] - start[1]).abs() > 0.01)
+    {
+        return route;
+    }
+    let diameter = size[0].hypot(size[2]);
+    let turning_body = [diameter, size[1], diameter];
+    super::smooth_route(start, &mut route.points, |from, to| {
+        (from[1] - to[1]).abs() < 0.01
+            && edge(h, from, to, size, &|p| {
+                (p[1] - from[1]).abs() < 0.01 && allowed(p) && h.clear(p, turning_body, false)
+            })
+            .is_some()
+    });
+    route
+}
+
+fn plan(
+    h: &Habitat,
+    start: [f64; 3],
+    target: [f64; 3],
+    size: [f64; 3],
+    allowed: &impl Fn([f64; 3]) -> bool,
+) -> Search {
     // When the goal is directly above a broad lower room, every useful first
     // step can increase its heuristic distance. Search once from the smaller
     // upper surface instead of spending a second budget or fabricating an

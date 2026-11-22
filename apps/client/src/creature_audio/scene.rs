@@ -24,6 +24,7 @@ struct Timing {
     eat: f32,
     behavior: Behavior,
     worm: super::worm::Cadence,
+    dragon: super::dragons::Cadence,
 }
 #[derive(Resource, Default)]
 pub(super) struct Soundscape {
@@ -277,12 +278,14 @@ pub(super) fn update(
         .values()
         .filter_map(|track| {
             let position = if track.current.kind == Kind::SandWorm {
-                super::worm::mouth(&presented_worm(track), track.position())
+                super::worm::mouth(&presented_action(track), track.position())
             } else {
                 track.position() + Vec3::Y * (track.current.size()[1] as f32 * 0.55)
             };
             let d = listener.distance(position);
-            (d < if track.current.kind == Kind::SandWorm {
+            (d < if track.current.kind.is_dragon() {
+                112.0
+            } else if track.current.kind == Kind::SandWorm {
                 64.0
             } else if track.current.kind.is_aquatic() && track.current.kind != Kind::Fish {
                 if submerged { 14.0 } else { 2.0 }
@@ -295,8 +298,8 @@ pub(super) fn update(
         })
         .collect();
     nearby.sort_by(|a, b| {
-        (b.2.current.kind == Kind::SandWorm)
-            .cmp(&(a.2.current.kind == Kind::SandWorm))
+        (b.2.current.kind.is_dragon() || b.2.current.kind == Kind::SandWorm)
+            .cmp(&(a.2.current.kind.is_dragon() || a.2.current.kind == Kind::SandWorm))
             .then(a.0.total_cmp(&b.0))
     });
     let controls = sounds.controls.clone();
@@ -312,17 +315,27 @@ pub(super) fn update(
             eat: now,
             behavior: Behavior::Rest,
             worm: Default::default(),
+            dragon: Default::default(),
         });
         let speed = Vec3::from_array(animal.velocity).length();
         let mut radius = 24.0;
         let mut ground_borne = false;
         let cue = if animal.kind == Kind::SandWorm {
-            let presented = presented_worm(track);
+            let presented = presented_action(track);
             timing.worm.update(&presented, now).map(|emission| {
                 radius = emission.sound.radius();
                 ground_borne = emission.sound.ground_borne();
                 position = emission.sound.position(&presented, track.position());
-                (emission.sound.clip(), emission.level)
+                (emission.sound.clip(emission.take), emission.level)
+            })
+        } else if animal.kind.is_dragon() {
+            let presented = presented_action(track);
+            timing.dragon.update(&presented, now).map(|sound| {
+                radius = sound.radius();
+                if sound == super::dragons::Sound::Land {
+                    position = track.position() + Vec3::Y * 0.4;
+                }
+                (sound.clip(animal.kind), sound.level())
             })
         } else if animal.kind == Kind::Stalker {
             stalker_cue(animal, timing, now)
@@ -411,7 +424,10 @@ pub(super) fn update(
                 sound,
                 gains: [gain * (0.7 - pan * 0.3), gain * (0.7 + pan * 0.3)],
                 pitch: 0.96 + (animal.id % 9) as f32 * 0.01,
-                reverb: if animal.kind.is_spider() || animal.kind == Kind::Stalker {
+                reverb: if animal.kind.is_dragon()
+                    || animal.kind.is_spider()
+                    || animal.kind == Kind::Stalker
+                {
                     sounds.room.cave * 0.45
                 } else {
                     0.0
@@ -422,7 +438,9 @@ pub(super) fn update(
     }
 }
 
-fn presented_worm(track: &terra_network::client::CreatureTrack) -> terra_core::creatures::Creature {
+fn presented_action(
+    track: &terra_network::client::CreatureTrack,
+) -> terra_core::creatures::Creature {
     let mut animal = track.current.clone();
     let since = track
         .received
