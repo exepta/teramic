@@ -184,12 +184,12 @@ fn palette(weights: [f32; 4], phase: f32, variation: f32) -> ([f32; 3], f32) {
     let night = (0.5 + (phase * std::f32::consts::TAU).cos() * 1.2).clamp(0.0, 1.0);
     let density = weights[0] * 0.95
         + weights[1] * (0.48 + night * 0.40)
-        + weights[2] * 0.27
+        + weights[2] * (0.24 + 0.16 * night)
         + weights[3] * 0.28;
     let palettes = [
-        Vec3::new(0.25, 0.87, 1.0).lerp(Vec3::new(0.91, 0.46, 1.0), variation),
-        Vec3::new(0.55, 0.36, 1.0).lerp(Vec3::new(1.0, 0.81, 0.28), variation),
-        Vec3::new(1.0, 0.16, 0.09).lerp(Vec3::new(0.81, 0.25, 0.63), variation),
+        Vec3::new(0.16, 0.91, 1.0).lerp(Vec3::new(0.84, 0.69, 1.0), variation),
+        Vec3::new(0.80, 0.60, 0.98).lerp(Vec3::new(1.0, 0.78, 0.34), variation),
+        Vec3::new(0.93, 0.07, 0.13).lerp(Vec3::new(1.0, 0.35, 0.18), variation),
         Vec3::new(1.0, 0.53, 0.76).lerp(Vec3::new(1.0, 0.85, 0.42), variation),
     ];
     let sum = weights.iter().sum::<f32>().max(0.001);
@@ -231,10 +231,13 @@ fn gather(air: &Air, center: Vec3, time: f32, phase: f32, limit: usize) -> Vec<M
                 continue;
             };
             let ground = (c.height as f32 - 0.5).floor();
-            if c.water_level.is_some_and(|y| y as f32 > ground + 0.5)
-                || c.cave.open_to_sky()
-                || (ground - center.y).abs() > 12.0
-            {
+            let pool = c.water_level.filter(|y| *y as f32 > ground + 0.5);
+            if pool.is_some() && c.biome.weights.spirit_blossom < 0.55 {
+                continue;
+            }
+            // Some wisps skim open pools. Anchor them to the actual water plane.
+            let ground = pool.map_or(ground, |level| level.ceil() as f32);
+            if c.cave.open_to_sky() || (ground - center.y).abs() > 12.0 {
                 continue;
             }
             // Existing roofs and missing chunks stop the local emitter. Foliage
@@ -267,7 +270,10 @@ fn gather(air: &Air, center: Vec3, time: f32, phase: f32, limit: usize) -> Vec<M
                 let radius = 0.40 + random(n ^ 0xaa93) * 0.65;
                 let position = Vec3::new(
                     px + angle.cos() * radius,
-                    ground + 1.10 + age * 3.2 + angle.sin() * 0.20,
+                    ground
+                        + 1.10
+                        + age * (if pool.is_some() { 1.2 } else { 3.2 })
+                        + angle.sin() * 0.20,
                     pz + angle.sin() * radius,
                 );
                 let fade = edge_fade(position.distance(center))
@@ -278,11 +284,32 @@ fn gather(air: &Air, center: Vec3, time: f32, phase: f32, limit: usize) -> Vec<M
                 if alpha < 0.003 || !clear_air(air, position, 0.22) {
                     continue;
                 }
+                let size = 0.14 + random(n ^ 0x179f) * 0.10;
                 motes.push(Mote {
                     position,
-                    size: 0.14 + random(n ^ 0x179f) * 0.10,
+                    size,
                     color: [color[0], color[1], color[2], alpha],
                 });
+                // Widely spaced luminous heads leave two small fading sparks
+                // along their path, using the same billboard and quality budget.
+                if copy == 0 && w.spirit_blossom > 0.45 {
+                    let backward = Vec3::new(angle.sin() * radius, -0.5, -angle.cos() * radius);
+                    for (lag, scale) in [(0.20, 0.57), (0.36, 0.32)] {
+                        let tail = position + lag * backward;
+                        if clear_air(air, tail, size * scale) {
+                            motes.push(Mote {
+                                position: tail,
+                                size: scale * size,
+                                color: [
+                                    color[0],
+                                    color[1],
+                                    color[2],
+                                    alpha * scale * w.spirit_blossom as f32,
+                                ],
+                            });
+                        }
+                    }
+                }
             }
         }
     }

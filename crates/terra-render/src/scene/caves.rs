@@ -10,10 +10,7 @@ use bevy::{
 };
 use terra_core::GraphicsConfig;
 use terra_player::TerraCamera;
-use terra_world::{
-    edits::EditJournal,
-    streaming::{ChunkStore, WorldTerrain},
-};
+use terra_world::{edits::EditJournal, streaming::ChunkStore};
 
 // Retain Phase 111's darker caves, with 12.5% more background readability.
 const CAVE_EXPOSURE: f32 = 6.451_563;
@@ -23,11 +20,10 @@ pub(crate) fn sky_visibility(blend: f32) -> f32 {
     open * open * (3.0 - 2.0 * open)
 }
 
-#[derive(Resource, Default, Debug)]
+#[derive(Resource, Default, Debug, Clone, Copy, PartialEq)]
 pub struct CaveState {
     pub blend: f32,
-    target: f32,
-    next_probe: f32,
+    roof_coverage: f32,
     ceiling: f32,
     target_ceiling: f32,
     entrance_mist: f32,
@@ -36,16 +32,36 @@ pub struct CaveState {
     pub(crate) salt_skylight: f32,
     salt_target: f32,
     salt_window: Vec4,
+    opening_anchor: Option<(i64, i64)>,
+    pub(crate) indirect_skylight: f32,
     beam_depths: Vec4,
     beam_radii: Vec4,
     beam_cross_radii: Vec4,
 }
 
 impl CaveState {
+    fn exposure_ev(&self, daylight_ev: f32) -> f32 {
+        daylight_ev + (CAVE_EXPOSURE - daylight_ev) * self.blend
+    }
+
+    pub(super) fn skylight_gain(&self, daylight_ev: f32) -> f32 {
+        (self.exposure_ev(daylight_ev) - daylight_ev).exp2()
+    }
+
+    pub(crate) fn bounced_illuminance(&self, daylight_ev: f32) -> f32 {
+        // Aperture measurements are outdoor lux. Apply the same eye-adaptation
+        // compensation as direct sunlight before adding them to the room fill.
+        9_000. * self.indirect_skylight * self.blend * self.skylight_gain(daylight_ev)
+    }
+
     /// Gallery dust is an atmospheric effect. The clear air in a dragon lair
     /// still admits physical sunlight and light from its crystals and torches.
     fn gallery_air(&self) -> f32 {
         1.0 - self.lair_blend
+    }
+
+    pub(crate) fn outdoor_mist(&self) -> f32 {
+        (1.0 - self.blend.max(self.lair_blend)).powi(2)
     }
 
     fn air_parameters(&self, haze: f32, sunlight: f32, submersion: f32) -> Vec4 {
@@ -54,7 +70,9 @@ impl CaveState {
             if haze > 0.0 { self.blend * air } else { 0.0 },
             haze,
             self.entrance_mist * self.blend * air,
-            self.salt_skylight * sunlight * (1.0 - submersion),
+            // Artificial lair bounds can encompass an open crater and dozens of
+            // metres of outdoor air. Only dust inside a measured cave scatters a beam.
+            self.salt_skylight * sunlight * air * self.roof_coverage * f32::from(!self.inside_lair),
         )
     }
 
@@ -79,6 +97,7 @@ impl CaveState {
             self.salt_skylight = 0.;
         }
         self.salt_window = opening.window;
+        self.opening_anchor = Some(opening.anchor);
         self.salt_target = opening.transmission;
         self.beam_depths = opening.depths;
         self.beam_radii = opening.radii;
@@ -90,6 +109,17 @@ impl CaveState {
     pub(crate) fn gallery_aperture(&self, daylight: f32) -> Vec4 {
         let factor = (self.salt_skylight * daylight).clamp(0., 1.);
         self.salt_window.with_w(self.salt_window.w * factor.sqrt())
+    }
+
+    fn observe_roof(&mut self, roof: terra_world::enclosure::Enclosure) -> bool {
+        // Partial coverage is a lower bound until the rest of the roof streams in.
+        if roof.complete || roof.cave > self.roof_coverage {
+            self.roof_coverage = roof.cave;
+            self.target_ceiling = roof.ceiling;
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -128,6 +158,7 @@ pub(crate) fn install(app: &mut App) {
             Update,
             probe
                 .after(terra_player::PlayerSet::Movement)
+                .after(super::daylight::update)
                 .before(crate::water::environment::update),
         )
         .add_systems(PostUpdate, exposure);
@@ -141,52 +172,103 @@ type GalleryEnvironment<'w> = (
     Res<'w, super::daylight::Daylight>,
     Option<Res<'w, crate::weather::WeatherVisual>>,
 );
+fn probe_terrain(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    eye: Vec3,
+    day: &super::daylight::Daylight,
+    state: &mut CaveState,
+) {
+    let p = eye.to_array().map(f64::from);
+    let cell = eye.floor().as_i64vec3().to_array();
+    let Some(column) = chunks.surface_column_at(cell[0], cell[2]) else {
+        // The camera moved into a streaming column. Retain its last measured
+        // enclosure until actual terrain arrives.
+        return;
+    };
+    let lair_top = chunks
+        .prepared_column([cell[0].div_euclid(16), cell[2].div_euclid(16)])
+        .and_then(|prepared| prepared.dragon_lair_top(cell));
+    state.inside_lair = lair_top.is_some();
+    // A ravine or daylight shaft is open terrain. Use its visible floor
+    // when testing burial and haze; the old uncut hill may be far overhead.
+    let mut outdoor_height = column.height;
+    if let Some([floor, ceiling]) = column.cave_cavity.or(column.river_cavity)
+        && ceiling >= column.height
+    {
+        outdoor_height = floor;
+    }
+    if column.cave.open_to_sky() && column.lava_level.is_none() && column.water_level.is_none() {
+        outdoor_height = outdoor_height.min(column.cave.floor);
+    }
+    if outdoor_height < column.height && cell[1] as f64 >= outdoor_height - 1. {
+        // A player-built roof can seal a natural shaft. Keep the full roof
+        // probe whenever even one overhead voxel is solid or still streaming.
+        let sky_clear = (cell[1] + 1..=column.height.ceil() as i64 + 1).all(|y| {
+            let at = [cell[0], y, cell[2]];
+            journal
+                .block(at)
+                .or_else(|| chunks.block_at(at))
+                .is_some_and(|id| {
+                    terra_voxel::MaterialId::from_raw(id).is_some_and(|m| !m.is_opaque())
+                })
+        });
+        if !sky_clear {
+            outdoor_height = column.height;
+        }
+    }
+    let height = lair_top.map_or(outdoor_height, |top| outdoor_height.max(top as f64));
+    let enclosure = terra_world::enclosure::sample(p, height, |p| {
+        chunks.block_at(p).map(|b| journal.block(p).unwrap_or(b))
+    });
+    let accepted = state.observe_roof(enclosure);
+    if accepted {
+        state.entrance_mist = entrance_density(
+            column.biome.weights.spirit_blossom as f32,
+            (height - p[1]) as f32,
+            enclosure.cave,
+        );
+    } else if state.salt_target == 0. {
+        return;
+    }
+    // A lowered dune, open river cut or crater can sit below the original
+    // heightfield without having a ceiling. Its exposed air is not a cave
+    // aperture. An authored skylight can legitimately span the whole roof fan.
+    if enclosure.complete
+        && enclosure.cave == 0.
+        && column.cave.skylight(f64::from(eye.y)).is_none()
+    {
+        state.set_opening(None);
+        return;
+    }
+    // A partial roof fan cannot remove a measured ceiling. A newly blocked
+    // window can still extinguish its direct beam on this probe.
+    let opening = skylight::measure(
+        chunks,
+        journal,
+        eye,
+        state.opening_anchor,
+        day.sun,
+        lair_top,
+    );
+    state.set_opening(opening);
+}
+
 fn probe(
     time: Res<Time>,
-    terrain: Res<WorldTerrain>,
     chunks: Res<ChunkStore>,
     journal: Res<EditJournal>,
     (underwater, graphics, day, weather): GalleryEnvironment,
-    mut state: ResMut<CaveState>,
+    mut published: ResMut<CaveState>,
+    mut next_probe: Local<f32>,
     mut cameras: Query<(&Transform, &Projection, &mut shader::CaveSettings), With<TerraCamera>>,
 ) {
-    for (transform, projection, mut settings) in &mut cameras {
-        if time.elapsed_secs() >= state.next_probe {
-            state.next_probe = time.elapsed_secs() + 0.18;
-            let p = transform.translation.to_array().map(f64::from);
-            let cell = transform.translation.floor().as_i64vec3().to_array();
-            if let Some(column) =
-                chunks.prepared_column([cell[0].div_euclid(16), cell[2].div_euclid(16)])
-            {
-                state.inside_lair = column.in_dragon_lair(cell);
-            }
-            let height = terrain.0.surface_height(p[0], p[2]);
-            let enclosure = terra_world::enclosure::sample(p, height, |p| {
-                chunks.block_at(p).map(|b| journal.block(p).unwrap_or(b))
-            });
-            // Missing roof chunks are not an opening to the sky.
-            if enclosure.complete || enclosure.cave >= state.target {
-                state.target = enclosure.cave;
-                state.target_ceiling = enclosure.ceiling;
-                let column = chunks.surface_column_at(p[0].floor() as i64, p[2].floor() as i64);
-                let spirit = column.map_or(0.0, |c| c.biome.weights.spirit_blossom as f32);
-                let eye = transform.translation;
-                let opening = skylight::measure(&chunks, &journal, eye, state.salt_window, day.sun);
-                state.set_opening(opening);
-                if state.salt_target > 0. && eye.y < state.salt_window.y {
-                    let fraction = aperture_irradiance(state.salt_window, eye) * state.salt_target;
-                    let ev_range = (day.exposure - CAVE_EXPOSURE).max(1.);
-                    let adapted = (-fraction.max(0.012).log2() / ev_range).clamp(0., 1.);
-                    // A nearby roof or bridge only shades the eye locally. The
-                    // bright opening still occupies part of its field of view.
-                    let influence = (state.salt_target * day.daylight).clamp(0., 1.);
-                    state.target += (adapted - state.target) * influence;
-                }
-                state.entrance_mist =
-                    entrance_density(spirit, (height - p[1]) as f32, enclosure.cave);
-            } else {
-                state.set_opening(None);
-            }
+    let mut state = *published;
+    for (transform, projection, mut uniform) in &mut cameras {
+        let mut settings = *uniform;
+        if time.elapsed_secs() >= *next_probe {
+            *next_probe = time.elapsed_secs() + 0.18;
+            probe_terrain(&chunks, &journal, transform.translation, &day, &mut state);
         }
         state.ceiling = adapt(state.ceiling, state.target_ceiling, time.delta_secs());
         state.lair_blend = adapt(
@@ -194,14 +276,16 @@ fn probe(
             f32::from(u8::from(state.inside_lair)),
             time.delta_secs(),
         );
-        let sky = adapt(state.salt_skylight, state.salt_target, time.delta_secs());
-        if sky != state.salt_skylight {
-            state.salt_skylight = sky;
-        }
-        let blend = adapt(state.blend, state.target, time.delta_secs());
-        if blend != state.blend {
-            state.blend = blend;
-        }
+        state.salt_skylight = adapt(state.salt_skylight, state.salt_target, time.delta_secs());
+        let clouds = weather.as_ref().map_or(1., |w| 1. - w.clouds * 0.5);
+        let irradiance = aperture_irradiance(
+            state.gallery_aperture(day.daylight * clouds),
+            transform.translation,
+        );
+        state.indirect_skylight = adapt(state.indirect_skylight, irradiance, time.delta_secs());
+        // Crossing a sunbeam inside the same room should light the stone it
+        // strikes. Only an actual change of roof cover adapts the whole view.
+        state.blend = adapt(state.blend, state.roof_coverage, time.delta_secs());
         let matrix = match projection {
             Projection::Perspective(p) => p.get_clip_from_view().inverse(),
             Projection::Orthographic(p) => p.get_clip_from_view().inverse(),
@@ -217,30 +301,31 @@ fn probe(
         };
         // The analytic beam only runs at a confirmed opening. Even the low
         // preset can show direct shafts while volumetric room haze stays off.
-        let clouds = weather.as_ref().map_or(1., |w| 1. - w.clouds * 0.5);
         let parameters = state.air_parameters(haze, day.daylight * clouds, underwater.blend);
-        if settings.gallery_dust != state.gallery_air() {
-            settings.gallery_dust = state.gallery_air();
+        settings.gallery_dust = state.gallery_air();
+        if parameters.w > 0.0 || underwater.blend > 0.001 {
+            settings.sun_direction = day.sun.extend(day.twilight);
         }
         if parameters.w > 0.0 {
             settings.salt_window = state.salt_window;
-            settings.sun_direction = day.sun.extend(day.twilight);
             settings.beam_depths = state.beam_depths;
             settings.beam_radii = state.beam_radii;
             settings.beam_cross_radii = state.beam_cross_radii;
         }
-        if settings.view_from_clip != matrix || settings.parameters != parameters {
-            settings.view_from_clip = matrix;
-            settings.parameters = parameters;
-        }
+        settings.view_from_clip = matrix;
+        settings.parameters = parameters;
+        uniform.set_if_neq(settings);
     }
+    // Water, fog and grading observe this resource. A periodic terrain probe
+    // without a change in room lighting must not invalidate their uniforms.
+    published.set_if_neq(state);
 }
 type LitCameras<'w, 's> = Query<
     'w,
     's,
     (
         &'static mut Exposure,
-        &'static mut bevy::light::AtmosphereEnvironmentMapLight,
+        Option<&'static mut bevy::light::AtmosphereEnvironmentMapLight>,
         Option<&'static mut bevy::light::GeneratedEnvironmentMapLight>,
         Option<&'static mut bevy::light::EnvironmentMapLight>,
         Option<&'static mut bevy::pbr::AtmosphereSettings>,
@@ -271,12 +356,11 @@ fn exposure(
         .is_some_and(|s| s.game_mode == terra_core::GameMode::Spectator)
     {
         for mut fill in &mut ambient {
-            fill.brightness += (100.0_f32.max(fill.brightness) - fill.brightness) * cave.blend;
-            fill.color = fill.color.mix(&Color::srgb(0.94, 0.95, 1.0), cave.blend);
+            fill.brightness = fill.brightness.max(100.0 * cave.blend);
         }
     }
-    let cave_exposure = day.exposure + (CAVE_EXPOSURE - day.exposure) * cave.blend;
-    let solar_compensation = 2.0_f32.powf(cave_exposure - day.exposure);
+    let cave_exposure = cave.exposure_ev(day.exposure);
+    let solar_compensation = cave.skylight_gain(day.exposure);
     // Keep sunlit entrances at their outdoor luminance as eyes adapt to the
     // room; local lamps retain the increased cave readability. No sunlight
     // change outside, and no accumulating per-frame multiplication.
@@ -299,7 +383,7 @@ fn exposure(
             light.shadow_maps_enabled = shadows;
         }
     }
-    for (mut exposure, mut environment, generated, filtered, atmosphere) in &mut cameras {
+    for (mut exposure, environment, generated, filtered, atmosphere) in &mut cameras {
         let brightness = graphics.as_ref().map_or(1.0, |g| g.brightness).log2();
         let target = cave_exposure - brightness;
         if exposure.ev100 != target {
@@ -308,9 +392,11 @@ fn exposure(
         // Compensate eye adaptation: otherwise lowering EV while linearly
         // fading the sky briefly makes the entrance brighter/bluer than outside.
         let sky = sky_visibility(cave.blend);
-        let reflected = cave.salt_skylight * (1.0 - sky) * 0.27;
+        let reflected = cave.indirect_skylight * (1.0 - sky) * 0.27;
         let intensity = 1.05 * (sky + reflected) * solar_compensation;
-        if environment.intensity != intensity {
+        if let Some(mut environment) = environment
+            && environment.intensity != intensity
+        {
             environment.intensity = intensity;
         }
         // Bevy 0.19 copies intensity only when creating these components. The
@@ -363,9 +449,83 @@ pub(crate) fn apply(
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
-    fn a_sunlit_dragon_lair_keeps_its_skylight_without_the_gallery_veil() {
+    fn settled_air_keeps_view_uniforms_until_light_or_medium_changes() {
+        let mut app = App::new();
+        app.init_resource::<Time>()
+            .init_resource::<ChunkStore>()
+            .init_resource::<EditJournal>()
+            .init_resource::<terra_core::GameConfig>()
+            .insert_resource(terra_world::streaming::WorldTerrain(
+                terra_world::TerraGenerator::new(default()).unwrap(),
+            ))
+            .init_resource::<super::super::daylight::Daylight>()
+            .init_resource::<crate::weather::WeatherVisual>()
+            .init_resource::<CaveState>()
+            .init_resource::<crate::water::UnderwaterState>()
+            .add_systems(Update, (probe, crate::water::environment::update).chain());
+        let camera = app
+            .world_mut()
+            .spawn((
+                TerraCamera,
+                Transform::from_xyz(1., 80., 1.),
+                Projection::default(),
+                shader::CaveSettings::default(),
+                DistanceFog::default(),
+                ColorGrading::default(),
+                AmbientLight::default(),
+            ))
+            .id();
+        let ticks = |app: &App| {
+            let world = app.world();
+            let entity = world.entity(camera);
+            [
+                world
+                    .get_resource_ref::<CaveState>()
+                    .unwrap()
+                    .last_changed(),
+                world
+                    .get_resource_ref::<crate::water::UnderwaterState>()
+                    .unwrap()
+                    .last_changed(),
+                entity
+                    .get_ref::<shader::CaveSettings>()
+                    .unwrap()
+                    .last_changed(),
+                entity.get_ref::<DistanceFog>().unwrap().last_changed(),
+                entity.get_ref::<ColorGrading>().unwrap().last_changed(),
+                entity.get_ref::<AmbientLight>().unwrap().last_changed(),
+            ]
+        };
+        app.update();
+        let settled = ticks(&app);
+        for frame in 1..=5 {
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(std::time::Duration::from_millis(220));
+            app.world_mut()
+                .resource_mut::<crate::weather::WeatherVisual>()
+                .wind
+                .x = frame as f32;
+            app.update();
+            assert_eq!(ticks(&app), settled);
+        }
+        let old_brightness = app.world().get::<AmbientLight>(camera).unwrap().brightness;
+        app.world_mut()
+            .resource_mut::<crate::weather::WeatherVisual>()
+            .flash = 1.;
+        app.update();
+        assert_eq!(
+            app.world().get::<AmbientLight>(camera).unwrap().brightness,
+            old_brightness * 3.
+        );
+        assert_ne!(ticks(&app)[5], settled[5]);
+    }
+    #[test]
+    fn a_sunlit_dragon_lair_lights_its_surfaces_without_projecting_a_beam_outdoors() {
         let mut room = CaveState {
+            roof_coverage: 1.,
             blend: 1.,
             entrance_mist: 1.,
             salt_skylight: 1.,
@@ -377,7 +537,13 @@ mod tests {
         room.lair_blend = 1.;
         let clear = room.air_parameters(0.004, 1., 0.);
         assert_eq!([clear.x, clear.z, room.gallery_air()], [0.; 3]);
-        assert_eq!(clear.w, natural.w);
+        assert_eq!(clear.w, 0.);
+        room.lair_blend = 0.;
+        room.inside_lair = true;
+        assert_eq!(room.air_parameters(0.004, 1., 0.).w, 0.);
+        room.inside_lair = false;
+        room.roof_coverage = 0.;
+        assert_eq!(room.air_parameters(0.004, 1., 0.).w, 0.);
         assert!(aperture_irradiance(room.gallery_aperture(1.), Vec3::new(20., 34., 15.)) > 0.);
     }
 
@@ -419,6 +585,7 @@ mod tests {
         assert_eq!(room.salt_target, 0.);
         assert_eq!(room.gallery_aperture(1.).w, 0.);
         let window = || skylight::Opening {
+            anchor: (48, 40),
             window: new,
             depths: Vec4::splat(8.),
             radii: Vec4::ONE,
@@ -449,6 +616,78 @@ mod tests {
         assert_eq!(entrance_density(0.0, 8.0, 0.5), 0.0);
         assert_eq!(entrance_density(1.0, 40.0, 1.0), 0.0);
         assert!(entrance_density(1.0, 8.0, 0.5) > 0.8);
+    }
+
+    #[test]
+    fn streamed_roof_samples_do_not_alternate_full_dark_and_skylight_exposure() {
+        use terra_world::enclosure::Enclosure;
+        let mut room = CaveState::default();
+        let roof = Enclosure {
+            cave: 1.,
+            ceiling: 13.,
+            complete: true,
+        };
+        assert!(room.observe_roof(roof));
+        for coverage in [0.7, 0.45, 1., 0.8] {
+            assert!(!room.observe_roof(Enclosure {
+                cave: coverage,
+                complete: false,
+                ..roof
+            }));
+            assert_eq!(room.roof_coverage, 1.);
+        }
+        assert!(room.observe_roof(Enclosure {
+            cave: 0.,
+            complete: true,
+            ..roof
+        }));
+        assert_eq!(room.roof_coverage, 0.);
+    }
+
+    #[test]
+    fn seeing_a_sliver_of_sky_from_a_covered_room_does_not_flash_its_exposure_or_fill() {
+        let day = super::super::SURFACE_EXPOSURE;
+        let mut room = CaveState {
+            blend: 1.,
+            roof_coverage: 1.,
+            ..default()
+        };
+        for transmission in [0., 0.25, 0.75, 0.25, 0.] {
+            room.salt_skylight = transmission;
+            room.indirect_skylight = 0.02 * transmission;
+            assert!((room.exposure_ev(day) - CAVE_EXPOSURE).abs() < 1e-5);
+            assert!(room.bounced_illuminance(day) < 1.);
+        }
+        room.blend = 0.;
+        assert_eq!(room.exposure_ev(day), day);
+        assert_eq!(room.skylight_gain(day), 1.);
+    }
+
+    #[test]
+    fn daylight_ticks_keep_the_adapted_exposure_between_render_stages() {
+        let mut app = App::new();
+        app.init_resource::<terra_core::WorldClock>()
+            .init_resource::<terra_core::GameConfig>()
+            .init_resource::<super::super::daylight::Daylight>()
+            .insert_resource(CaveState {
+                blend: 1.,
+                ..default()
+            })
+            .add_systems(Update, super::super::daylight::update)
+            .add_systems(PostUpdate, exposure);
+        let eye = app
+            .world_mut()
+            .spawn((TerraCamera, Exposure::default(), AmbientLight::default()))
+            .id();
+        app.update();
+        for phase in [0.1, 0.45, 0.52, 0.8] {
+            app.world_mut()
+                .resource_mut::<terra_core::WorldClock>()
+                .phase = phase;
+            app.world_mut().run_schedule(Update);
+            assert!((app.world().get::<Exposure>(eye).unwrap().ev100 - CAVE_EXPOSURE).abs() < 1e-5);
+            app.world_mut().run_schedule(PostUpdate);
+        }
     }
 
     #[test]

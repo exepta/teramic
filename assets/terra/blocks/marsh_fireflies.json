@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 692,
+  "name": "Firefly Grass",
+  "description": "Tiny amber lights hang among the grasses.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.46,
+  "resistance": 0.62,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/marsh_fireflies.glb",
+  "struct_block": true,
+  "collision_boxes": [],
+  "textures": {}
+}

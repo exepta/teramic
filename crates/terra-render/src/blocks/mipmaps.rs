@@ -4,12 +4,61 @@ use bevy::{
     render::render_resource::{TextureDimension, TextureFormat},
 };
 
+/// The meadow cap is painted from a sunlit reference. Keep the individual
+/// brush marks in a common green range before PBR lighting and biome tinting.
+pub(super) fn meadow_turf(mut image: Image) -> Result<Image, String> {
+    if image.texture_descriptor.format != TextureFormat::Rgba8UnormSrgb {
+        image = image
+            .convert(TextureFormat::Rgba8UnormSrgb)
+            .ok_or("Cannot convert meadow turf paint to sRGB")?;
+    }
+    for texel in image
+        .data
+        .as_mut()
+        .ok_or("Missing meadow turf paint")?
+        .chunks_exact_mut(4)
+    {
+        let [r, g, b] = [texel[0], texel[1], texel[2]].map(f32::from);
+        let light = 0.25 * r + 0.65 * g + 0.10 * b - 143.0;
+        texel[0] = (116.0 + light * 0.48 + (r - g + 22.0) * 0.12).round() as u8;
+        texel[1] = (153.0 + light * 0.58).round() as u8;
+        texel[2] = (56.0 + light * 0.32 + (b - g + 116.0) * 0.07).round() as u8;
+    }
+    generate(image)
+}
+
 /// Authored atlases retain their glTF wrap/filter settings, including clamp edges.
 pub(crate) fn generate_authored(image: Image) -> Result<Image, String> {
     let sampler = image.sampler.clone();
     let mut image = generate(image)?;
     image.sampler = sampler;
     Ok(image)
+}
+
+/// Checks the exact image uploaded for the pigment, including filtered mip levels.
+pub(super) fn opaque_tiled_paint(image: &Image) -> bool {
+    let texture = &image.texture_descriptor;
+    if !matches!(
+        texture.format,
+        TextureFormat::Rgba8UnormSrgb | TextureFormat::Rgba8Unorm
+    ) || texture.dimension != TextureDimension::D2
+        || texture.size.depth_or_array_layers != 1
+        || image.texture_view_descriptor.is_some()
+        || !matches!(&image.sampler, ImageSampler::Descriptor(s)
+            if s.address_mode_u == ImageAddressMode::Repeat && s.address_mode_v == ImageAddressMode::Repeat)
+    {
+        return false;
+    }
+    let Some(data) = &image.data else {
+        return false;
+    };
+    let pixels: u64 = (0..texture.mip_level_count)
+        .filter_map(|level| texture.mip_level_size(level))
+        .map(|size| u64::from(size.width) * u64::from(size.height))
+        .sum();
+    pixels > 0
+        && pixels.checked_mul(4) == Some(data.len() as u64)
+        && data.chunks_exact(4).all(|texel| texel[3] == 255)
 }
 
 /// PNG loaders provide one level. Build the shared terrain texture's remaining
@@ -136,6 +185,23 @@ mod tests {
     use super::*;
     use bevy::{asset::RenderAssetUsages, render::render_resource::Extent3d};
 
+    #[test]
+    fn opaque_pigment_requires_complete_opaque_mips_and_a_tiled_sampler() {
+        let mut paint = generate(image(2, 2, [30, 100, 52, 255].repeat(4))).unwrap();
+        assert!(opaque_tiled_paint(&paint));
+        let last = paint.data.as_mut().unwrap().last_mut().unwrap();
+        *last = 254;
+        assert!(!opaque_tiled_paint(&paint));
+        *paint.data.as_mut().unwrap().last_mut().unwrap() = 255;
+        let mut missing = paint.clone();
+        missing.data.as_mut().unwrap().truncate(16);
+        assert!(!opaque_tiled_paint(&missing));
+        if let ImageSampler::Descriptor(sampler) = &mut paint.sampler {
+            sampler.address_mode_u = ImageAddressMode::ClampToBorder;
+        }
+        assert!(!opaque_tiled_paint(&paint));
+    }
+
     fn image(width: u32, height: u32, data: Vec<u8>) -> Image {
         Image::new(
             Extent3d {
@@ -148,6 +214,21 @@ mod tests {
             TextureFormat::Rgba8UnormSrgb,
             RenderAssetUsages::default(),
         )
+    }
+
+    #[test]
+    fn meadow_turf_keeps_ochre_tips_and_shadowed_blades_in_one_living_palette() {
+        let source = image(2, 1, vec![74, 119, 14, 255, 194, 185, 56, 255]);
+        let paint = meadow_turf(source).unwrap();
+        assert_eq!(paint.texture_descriptor.mip_level_count, 2);
+        let pixels = paint.data.unwrap();
+        for texel in pixels.chunks_exact(4) {
+            assert!(u16::from(texel[1]) * 100 > u16::from(texel[0]) * 112);
+            assert!(texel[0] > texel[2]);
+            assert_eq!(texel[3], 255);
+        }
+        let green_contrast = pixels[5] - pixels[1];
+        assert!((25..52).contains(&green_contrast));
     }
 
     #[test]

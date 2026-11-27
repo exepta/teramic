@@ -15,6 +15,7 @@ fn chat_action(In(event): In<HtmlEvent>, elements: Query<&ElementId>, store: Res
     let Ok(id) = elements.get(event.target) else { return; };
     match id.0.as_str() {
         "chat-send" => { actions.write(crate::ChatAction::Send); }
+        "chat-help-dismiss" => { actions.write(crate::ChatAction::DismissHelp); }
         "chat-suggestion" => {
             if let Some(intent) = store.get_store::<ChatIntent>() {
                 actions.write(crate::ChatAction::Suggest(intent.suggestion.clone()));

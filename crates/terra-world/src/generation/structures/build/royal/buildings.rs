@@ -282,6 +282,10 @@ impl Royal<'_, '_> {
         }
     }
     pub(super) fn farm(&mut self, x: i64, z: i64, w: i64, d: i64) {
+        let [left, _, north] = self.point([x - w / 2, 0, z - d / 2]);
+        if !self.builder.allows_field(left, north, w, d) {
+            return;
+        }
         if self.adapted() {
             self.terraced_farm(x, z, w, d);
             return;
@@ -368,6 +372,10 @@ impl Royal<'_, '_> {
         );
     }
     pub(super) fn windmill(&mut self, x: i64, z: i64, y: i64) {
+        let [left, _, north] = self.point([x - 8, 0, z - 6]);
+        if !self.builder.allows_field(left, north, 16, 12) {
+            return;
+        }
         self.tower(x, z, y, 4, 11, true);
         self.fill([x, y + 8, z + 4], [x, y + 8, z + 6], 36);
         for step in 1..=7 {

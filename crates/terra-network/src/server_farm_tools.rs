@@ -14,10 +14,10 @@ use terra_world::{
     streaming::{BlockEditRequest, PropRemoveRequest, commit_block_edit, commit_prop_removal},
     targeting::WorldTarget,
 };
-#[path = "server_farm_tools/bile.rs"]
-mod bile;
 #[path = "server_farm_tools/buckets.rs"]
 mod buckets;
+#[path = "server_farm_tools/liquids.rs"]
+mod liquids;
 #[path = "server_farm_tools/roads.rs"]
 mod roads;
 
@@ -47,7 +47,11 @@ fn held(command: EditCommand, peer: &Peer, world: &ControlWorld) -> Option<ToolK
         || tool.class() == Some(terra_core::block_properties::ToolClass::Shovel)
         || matches!(
             tool,
-            ToolKind::Bucket | ToolKind::WaterBucket | ToolKind::TarBucket | ToolKind::BileBucket
+            ToolKind::Bucket
+                | ToolKind::WaterBucket
+                | ToolKind::TarBucket
+                | ToolKind::BileBucket
+                | ToolKind::LavaBucket
         ))
     .then_some(tool)
 }
@@ -57,9 +61,10 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         return EditOutcome::Invalid;
     };
     let permission = match action {
-        FarmingAction::Refill | FarmingAction::FillBucket | FarmingAction::FillBileBucket => {
-            terra_core::kingdom::KingdomPermission::Inventories
-        }
+        FarmingAction::Refill
+        | FarmingAction::FillBucket
+        | FarmingAction::FillBileBucket
+        | FarmingAction::FillLavaBucket => terra_core::kingdom::KingdomPermission::Inventories,
         FarmingAction::Harvest => terra_core::kingdom::KingdomPermission::Break,
         _ => terra_core::kingdom::KingdomPermission::Build,
     };
@@ -79,8 +84,13 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
     let Some(tool) = held(command, peer, world) else {
         return EditOutcome::Conflict;
     };
-    if tool == ToolKind::BileBucket || action == FarmingAction::FillBileBucket {
-        return bile::check(command, peer, world, tool);
+    if matches!(tool, ToolKind::BileBucket | ToolKind::LavaBucket)
+        || matches!(
+            action,
+            FarmingAction::FillBileBucket | FarmingAction::FillLavaBucket
+        )
+    {
+        return liquids::check(command, peer, world, tool);
     }
     if matches!(tool, ToolKind::Bucket | ToolKind::WaterBucket) {
         return buckets::check(command, peer, world, tool);
@@ -206,7 +216,9 @@ pub(super) fn check(command: EditCommand, peer: &Peer, world: &ControlWorld) -> 
         | FarmingAction::MakePath
         | FarmingAction::PourTar
         | FarmingAction::FillBileBucket
-        | FarmingAction::EmptyBileBucket => return EditOutcome::Invalid,
+        | FarmingAction::EmptyBileBucket
+        | FarmingAction::FillLavaBucket
+        | FarmingAction::EmptyLavaBucket => return EditOutcome::Invalid,
     }
     EditOutcome::Applied
 }
@@ -298,16 +310,16 @@ pub(super) fn apply(
         return outcome;
     }
     let tool = held(command, peer, world).unwrap();
-    if tool == ToolKind::BileBucket
+    if matches!(tool, ToolKind::BileBucket | ToolKind::LavaBucket)
         || matches!(
             command.action,
             EditAction::Farm {
-                action: FarmingAction::FillBileBucket,
+                action: FarmingAction::FillBileBucket | FarmingAction::FillLavaBucket,
                 ..
             }
         )
     {
-        return bile::apply(command, peer, sender, world, tool);
+        return liquids::apply(command, peer, sender, world, tool);
     }
     if matches!(tool, ToolKind::Bucket | ToolKind::WaterBucket) {
         return buckets::apply(command, peer, sender, world, tool);
@@ -395,7 +407,9 @@ pub(super) fn apply(
         | FarmingAction::MakePath
         | FarmingAction::PourTar
         | FarmingAction::FillBileBucket
-        | FarmingAction::EmptyBileBucket => {
+        | FarmingAction::EmptyBileBucket
+        | FarmingAction::FillLavaBucket
+        | FarmingAction::EmptyLavaBucket => {
             unreachable!("bucket transfers handled above")
         }
         FarmingAction::Till => {

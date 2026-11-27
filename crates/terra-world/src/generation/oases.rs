@@ -1,6 +1,9 @@
 use super::{TerraGenerator, biomes::smoothstep, seed::layer_seed};
 use std::{collections::HashMap, sync::Mutex};
 
+mod springs;
+use springs::{Spring, SpringSample};
+
 const SPACING: f64 = 256.0;
 pub(super) const BANK_REACH: f64 = 18.0;
 
@@ -14,6 +17,7 @@ struct Oasis {
     level: f64,
     depth: f64,
     phase: f64,
+    spring: Option<Spring>,
 }
 
 #[cfg(test)]
@@ -143,6 +147,87 @@ mod tests {
     }
 
     #[test]
+    fn desert_revision_fourteen_generates_closed_oases_in_all_three_chunk_area_bands() {
+        let terrain = TerraGenerator::new(WorldConfig {
+            ecology_revision: 14,
+            landscape_revision: 9,
+            rivers: false,
+            ..Default::default()
+        })
+        .unwrap();
+        let mut visited = [false; 3];
+        // Real seed-selected basins. Sample at the exact candidate centre,
+        // then rasterise their actual waterline against the 16x16 chunk area.
+        'scan: for cz in -36_i64..=36 {
+            for cx in -36_i64..=36 {
+                let seed = layer_seed(
+                    terrain.config().seed.0
+                        ^ (cx as u64).wrapping_mul(0x9e3779b97f4a7c15)
+                        ^ (cz as u64).wrapping_mul(0xbf58476d1ce4e5b9),
+                    93,
+                );
+                let band = match seed % 10 {
+                    0..=4 => 0,
+                    5..=7 => 1,
+                    _ => 2,
+                };
+                if visited[band] {
+                    continue;
+                }
+                let x = (cx * 384 + 160 + i64::from((seed >> 4) % 64)) as f64;
+                let z = (cz * 384 + 160 + i64::from((seed >> 12) % 64)) as f64;
+                let Some(center) = terrain.oasis_at(x, z) else {
+                    continue;
+                };
+                assert_eq!(terrain.biome_at(x, z).weights.cliffted_desert, 0.0);
+                let center_water = terrain.water_column(x, z).expect("wet basin centre");
+                assert!(center_water.depth > 2.0);
+                let owner = SectionPos::new(
+                    (x as i64).div_euclid(16),
+                    (center_water.level as i64).div_euclid(16),
+                    (z as i64).div_euclid(16),
+                );
+                let patch = SectionGenerator::new(terrain.clone())
+                    .build(owner, 0, &Default::default(), true)
+                    .unwrap()
+                    .water
+                    .expect("rendered oasis surface");
+                let y = (center_water.level - (owner.y * 16) as f64) as f32;
+                assert!(patch.positions.iter().any(|p| (p[1] - y).abs() < 0.001));
+                let mut wet = 0;
+                let extent = (center.radius * 1.25).ceil() as i32;
+                for dz in -extent..=extent {
+                    for dx in -extent..=extent {
+                        let px = x + f64::from(dx) + 0.5;
+                        let pz = z + f64::from(dz) + 0.5;
+                        if let Some(s) = terrain.oasis_at(px, pz) {
+                            let bed = (s.carve_desert(center.level + 4.0) - 0.5).floor() + 1.0;
+                            if s.distance <= s.radius && bed < s.level {
+                                wet += 1;
+                            }
+                        }
+                    }
+                }
+                let area = f64::from(wet) / 256.0;
+                let (lo, hi) = [(8.0, 12.0), (22.0, 40.0), (60.0, 120.0)][band];
+                assert!(
+                    area >= lo - 0.10 && area <= hi + 0.10,
+                    "area {area}, band {lo}..{hi}"
+                );
+                eprintln!(
+                    "Oasis {x:.0},{z:.0}: {area:.2} chunks, level {}",
+                    center.level
+                );
+                visited[band] = true;
+                if visited == [true; 3] {
+                    break 'scan;
+                }
+            }
+        }
+        assert_eq!(visited, [true; 3]);
+    }
+
+    #[test]
     fn disabled_water_has_no_oasis_carving_or_sources() {
         // These three basins belong to the original isolated-oasis terrain.
         let config = WorldConfig {
@@ -209,9 +294,36 @@ pub struct OasisSample {
     pub distance: f64,
     pub level: f64,
     pub depth: f64,
+    pub(crate) spring: Option<SpringSample>,
 }
 
 impl OasisSample {
+    // At the waterline the top solid voxel meets the integer lake level.
+    // The dry rim blends both up and down into the surrounding dune field.
+    pub(super) fn carve_desert(self, raw: f64) -> f64 {
+        let bank = self.level - 0.5;
+        let floor = if self.distance <= self.radius {
+            let t = self.distance / self.radius;
+            bank - self.depth * (1.0 - t * t)
+        } else {
+            let t = (self.distance - self.radius) / BANK_REACH;
+            let lip = bank + smoothstep(0.0, 0.38, t) * 2.0;
+            lip + smoothstep(0.22, 1.0, t) * (raw - lip)
+        };
+        self.spring
+            .map_or(floor, |spring| spring.terrain(floor, raw, self.level))
+    }
+
+    pub(crate) fn surface_water_level(self) -> Option<f64> {
+        self.spring
+            .and_then(|s| s.water_level(self.level))
+            .or_else(|| (self.distance <= self.radius).then_some(self.level))
+    }
+
+    pub(crate) fn spring_flow(self) -> Option<[f32; 2]> {
+        self.spring.and_then(|spring| spring.flow())
+    }
+
     pub fn moisture(self) -> f64 {
         1.0 - smoothstep(self.radius, self.radius + BANK_REACH, self.distance)
     }
@@ -244,6 +356,7 @@ impl Oasis {
             distance: u.hypot(v) / outline,
             level: self.level,
             depth: self.depth,
+            spring: self.spring.and_then(|spring| spring.sample(x, z)),
         }
     }
 }
@@ -254,25 +367,31 @@ impl TerraGenerator {
         if !self.config().water || !self.config().biomes || !x.is_finite() || !z.is_finite() {
             return None;
         }
-        let cell = [(x / SPACING).floor() as i64, (z / SPACING).floor() as i64];
+        let modern = self.desert_overhaul();
+        let spacing = if modern { 384.0 } else { SPACING };
+        let cell = [(x / spacing).floor() as i64, (z / spacing).floor() as i64];
         let seed = layer_seed(
             self.config().seed.0
                 ^ (cell[0] as u64).wrapping_mul(0x9e3779b97f4a7c15)
                 ^ (cell[1] as u64).wrapping_mul(0xbf58476d1ce4e5b9),
             93,
         );
-        if !seed.is_multiple_of(3) {
+        if !modern && !seed.is_multiple_of(3) {
             return None;
         }
+        let offset = if modern { 160.0 } else { 96.0 };
         let center = [
-            cell[0] as f64 * SPACING + 96.0 + f64::from((seed >> 4) % 64),
-            cell[1] as f64 * SPACING + 96.0 + f64::from((seed >> 12) % 64),
+            cell[0] as f64 * spacing + offset + f64::from((seed >> 4) % 64),
+            cell[1] as f64 * spacing + offset + f64::from((seed >> 12) % 64),
         ];
-        // The full influence remains inside its tile, so neighbors need no scans.
-        if (x - center[0]).abs().max((z - center[1]).abs()) > 58.0 {
-            return None;
-        }
-        if self.connected_hydrology() && self.connected_lake_conflicts(center, 58.0) {
+        let radius = desert_radius(seed);
+        // The longest axis, the outline variation and the bank fit this tile.
+        let reach = if modern {
+            (radius + BANK_REACH) * 1.24
+        } else {
+            58.0
+        };
+        if (x - center[0]).abs().max((z - center[1]).abs()) > reach {
             return None;
         }
         let cached = self
@@ -282,7 +401,14 @@ impl TerraGenerator {
             .ok()
             .and_then(|cache| cache.get(&cell).copied());
         let oasis = cached.unwrap_or_else(|| {
-            let oasis = self.build_oasis(center, seed);
+            let oasis =
+                if self.connected_hydrology() && self.connected_lake_conflicts(center, reach) {
+                    None
+                } else if modern {
+                    self.build_desert_oasis(center, seed, radius)
+                } else {
+                    self.build_oasis(center, seed)
+                };
             if let Ok(mut cache) = self.oases.0.lock() {
                 if cache.len() >= 512 {
                     cache.clear();
@@ -296,6 +422,51 @@ impl TerraGenerator {
         (sample.distance < sample.radius + BANK_REACH).then_some(sample)
     }
 
+    fn build_desert_oasis(&self, center: [f64; 2], seed: u32, radius: f64) -> Option<Oasis> {
+        let biome = self.climate_biome_at(center[0], center[1]);
+        if self.volcanic_watershed(biome) || biome.aridity().max(biome.weights.savanna) < 0.70 {
+            return None;
+        }
+        let height = self.watershed_ground(center[0], center[1], biome);
+        let mut oasis = Oasis {
+            center,
+            radius,
+            level: (height - 1.5).round(),
+            depth: 3.1 + radius * 0.038,
+            spring: None,
+            phase: f64::from(seed % 1024) * std::f64::consts::TAU / 1024.0,
+        };
+        if oasis.level < self.config().sea_level + 4.0 {
+            return None;
+        }
+        // A bounded grid checks the whole basin and shore for waterways and
+        // escarpments. The actual voxel floor is continuous between samples.
+        let extent = ((radius + 12.0) * 1.24 / 8.0).ceil() as i32;
+        for dz in -extent..=extent {
+            for dx in -extent..=extent {
+                let x = center[0] + f64::from(dx) * 8.0;
+                let z = center[1] + f64::from(dz) * 8.0;
+                if oasis.sample(x, z).distance > radius + 12.0 {
+                    continue;
+                }
+                let climate = self.climate_biome_at(x, z);
+                let ground = self.watershed_ground(x, z, climate);
+                if self.volcanic_watershed(climate)
+                    || climate.aridity().max(climate.weights.savanna) < 0.42
+                    || ground < self.config().sea_level + 2.0
+                    || (ground - height).abs() > 13.0 + radius * 0.14
+                    || self.river_at(x, z).is_some()
+                {
+                    return None;
+                }
+            }
+        }
+        if biome.weights.savanna >= 0.70 && !seed.is_multiple_of(3) {
+            oasis.spring = Spring::on_bank(self, oasis);
+        }
+        Some(oasis)
+    }
+
     fn build_oasis(&self, center: [f64; 2], seed: u32) -> Option<Oasis> {
         let biome = self.climate_biome_at(center[0], center[1]);
         if biome.aridity() < 0.55 {
@@ -306,6 +477,7 @@ impl TerraGenerator {
             radius: 15.0 + f64::from((seed >> 20) % 12),
             level: 0.0,
             depth: 2.7 + f64::from((seed >> 25) % 9) * 0.25,
+            spring: None,
             phase: f64::from(seed % 1024) * std::f64::consts::TAU / 1024.0,
         };
         let mut low = self.base_height_with_biome(center[0], center[1], biome);
@@ -333,4 +505,18 @@ impl TerraGenerator {
         oasis.level = low - 1.25;
         Some(oasis)
     }
+}
+
+// Area in horizontal 16×16 chunk equivalents, independent of aspect ratio.
+// Normalise the mean squared polar outline to keep even the endpoints in range.
+fn desert_radius(seed: u32) -> f64 {
+    let area_hash = layer_seed(u64::from(seed), 3071);
+    let (low, high) = match seed % 10 {
+        0..=4 => (8, 12),
+        5..=7 => (22, 40),
+        _ => (60, 120),
+    };
+    let area = f64::from(low + area_hash % (high - low + 1));
+    let mean_outline_squared = 1.0 + (0.065_f64.powi(2) + 0.035_f64.powi(2)) * 0.5;
+    (area * 256.0 / (std::f64::consts::PI * mean_outline_squared)).sqrt()
 }

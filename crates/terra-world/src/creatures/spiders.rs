@@ -644,13 +644,13 @@ fn shelter(h: &Habitat, a: &Creature) -> Option<bool> {
     let z = center[2].floor() as i64;
     for y in top..top + 16 {
         let material = h.block([x, y, z])?;
-        if matches!(material, 7..=9 | 132 | 133 | 310..=312 | 15 | 80 | 88 | 96) {
+        if matches!(material, 7..=9 | 132 | 133 | 310..=312 | 606..=607 | 15 | 80 | 88 | 96) {
             continue;
         }
         if terra_voxel::MaterialId::from_raw(material).is_some_and(|m| m.is_solid()) {
             return Some((1..=2).all(|dy| {
                 h.block([x, y + dy, z]).is_some_and(|m| {
-                    !matches!(m, 7..=9 | 132 | 133 | 310..=312 | 15 | 80 | 88 | 96)
+                    !matches!(m, 7..=9 | 132 | 133 | 310..=312 | 606..=607 | 15 | 80 | 88 | 96)
                         && terra_voxel::MaterialId::from_raw(m).is_some_and(|m| m.is_solid())
                 })
             }));

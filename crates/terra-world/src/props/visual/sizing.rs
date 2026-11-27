@@ -35,7 +35,7 @@ fn sizing(kind: PropKind, variant: u8) -> Result<&'static Sizing, String> {
             }
             if !minimum.is_finite()
                 || !maximum.is_finite()
-                || heights.iter().any(|height| *height <= 0.0)
+                || (!kind.reef_attachment() && heights.iter().any(|height| *height <= 0.0))
             {
                 return Err("Prop template has no finite rooted geometry".to_owned());
             }
@@ -63,7 +63,11 @@ fn sizing(kind: PropKind, variant: u8) -> Result<&'static Sizing, String> {
                 1.0
             };
             let scale = Vec3::new(horizontal_scale, vertical_scale, horizontal_scale);
-            let center = (minimum + maximum) * Vec3::new(0.5, 0.0, 0.5);
+            let center = if kind.reef_attachment() {
+                Vec3::ZERO
+            } else {
+                (minimum + maximum) * Vec3::new(0.5, 0.0, 0.5)
+            };
             Ok(Sizing {
                 center,
                 scale,

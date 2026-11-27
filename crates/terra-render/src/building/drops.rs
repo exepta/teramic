@@ -154,6 +154,8 @@ impl DropAssets<'_> {
             | ItemKind::Bitumen
             | ItemKind::GloomEssence
             | ItemKind::DragonLoot(_)
+            | ItemKind::RuneCore
+            | ItemKind::ForestCrystal
             | ItemKind::LightSplitter
             | ItemKind::RoadAggregate => {
                 crate::previews::forest_items::batches(item, templates.item_materials.opaque)

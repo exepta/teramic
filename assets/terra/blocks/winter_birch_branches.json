@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": 586,
+  "name": "Winter Birch Branches",
+  "description": "Rime traces each fork of the bare birch crown.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "cube",
+  "bevel_width": 0.0,
+  "hardness": 0.4,
+  "resistance": 0.6,
+  "foliage_cluster": {
+    "material": "spray"
+  },
+  "textures": {
+    "side": "textures/foliage/winter_birch_branches_side.png",
+    "top": "textures/foliage/winter_birch_branches_top.png",
+    "spray": "textures/foliage/winter_birch_branches_cluster.png"
+  },
+  "materials": {
+    "side": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.08
+    },
+    "top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.08
+    },
+    "spray": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.08
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "top",
+    "side",
+    "side"
+  ]
+}

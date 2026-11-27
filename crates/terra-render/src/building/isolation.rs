@@ -2,7 +2,7 @@
 use super::{BuildingStatus, BuildingWorld, mining_geometry};
 use crate::meshing::{
     DetailLevel, GeometryCache, RenderedSections,
-    builder::{MeshBatch, RenderOptions, compose_section_with_segments},
+    builder::{MeshBatch, RenderOptions, compose_section_with_leaf_detail},
 };
 use bevy::{
     ecs::system::SystemParam,
@@ -27,6 +27,7 @@ struct Key {
     appearance: u64,
     level: DetailLevel,
     micro: bool,
+    folded_leaves: Option<crate::meshing::lod::FoldedLeaves>,
     neighbors: [u16; 6],
 }
 struct Geometry {
@@ -120,6 +121,7 @@ fn requested(world: &BuildingWorld, scene: &Scene) -> Option<Key> {
         appearance: rendered.appearance_epoch,
         level: rendered.detail_level,
         micro: rendered.micro_detail,
+        folded_leaves: rendered.folded_leaves,
         neighbors,
     })
 }
@@ -324,7 +326,11 @@ pub(super) fn update(
         return;
     };
     let mut templates = source.as_ref().clone();
+    let folded = key
+        .folded_leaves
+        .unwrap_or(crate::meshing::lod::FoldedLeaves::FULL);
     if !key.micro {
+        templates.block_details.micro_geometry = false;
         for block in templates.blocks.values_mut() {
             block.surface = None;
         }
@@ -380,6 +386,7 @@ pub(super) fn update(
                     &templates,
                     key.section,
                     &options,
+                    folded,
                     cell,
                     key.half,
                 )?;
@@ -442,16 +449,19 @@ pub(super) fn update(
                     &templates,
                     key.section,
                     &options,
+                    folded,
                     cell,
                 )?
             } else {
-                compose_section_with_segments(
+                compose_section_with_leaf_detail(
                     &faces,
                     &templates,
                     key.section,
                     &options,
                     &geometry.mineral_growth,
                     &remaining_segments,
+                    folded,
+                    None,
                 )?
             };
             // The core and chips are closed even where their original neighbors hid faces.
@@ -474,13 +484,15 @@ pub(super) fn update(
                     &options,
                 )?);
             }
-            let mut block = compose_section_with_segments(
+            let mut block = compose_section_with_leaf_detail(
                 &mining_geometry::full_faces(cell, key.material),
                 &templates,
                 key.section,
                 &options,
                 &geometry.mineral_growth,
                 &selected_segments,
+                folded,
+                None,
             )?;
             if matches!(key.material, 30 | 37) || terra_world::segments::is_segment(key.material) {
                 return Ok(Geometry {
@@ -708,6 +720,7 @@ mod tests {
                 mesh_epoch: epoch,
                 appearance_epoch: appearance,
                 detail_level: DetailLevel::Near,
+                folded_leaves: None,
                 micro_detail: true,
             },
         );
@@ -861,6 +874,7 @@ mod tests {
                 mesh_epoch: 0,
                 appearance_epoch: 0,
                 detail_level: DetailLevel::Near,
+                folded_leaves: None,
                 micro_detail: true,
             },
         );

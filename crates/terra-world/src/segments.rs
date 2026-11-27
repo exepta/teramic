@@ -1,8 +1,10 @@
 //! Shared meter-cell geometry and support rules for plants and mineral growth.
 use terra_voxel::MaterialId;
 
+pub(crate) mod eelgrass;
 mod halite;
 mod mineral_fan;
+mod root;
 
 pub const MAX_CHAIN: i64 = 32;
 
@@ -332,39 +334,11 @@ pub fn visit(
         return;
     }
     if material == 50 {
-        // Every metre of a frond shares its root column. Including Y in this
-        // phase makes adjacent stalks miss each other, especially at sections.
-        let column_hash = (position[0] as u64).wrapping_mul(0x9e3779b97f4a7c15)
-            ^ (position[2] as u64).wrapping_mul(0xbf58476d1ce4e5b9);
-        let phase = (column_hash & 255) as f32 * 0.0245;
-        for stalk in 0..if coarse { 1 } else { 2 } {
-            let a = phase + stalk as f32 * 2.39996;
-            let center = [0.5 + a.cos() * 0.10, 0.5, 0.5 + a.sin() * 0.10];
-            voxel(center, [0.045, 1.0, 0.045], [0.63, 0.88, 0.45], &mut emit);
-            for leaf in 0..if coarse { 2 } else { 3 } {
-                let y = 0.13 + leaf as f32 * if coarse { 0.45 } else { 0.32 };
-                let a = a + if (leaf as i64 + position[1]).rem_euclid(2) == 0 {
-                    0.0
-                } else {
-                    std::f32::consts::PI
-                };
-                let width = 0.065 + ((h >> (leaf * 3)) & 3) as f32 * 0.01;
-                let root = [center[0], y, center[2]];
-                let tip = [
-                    center[0] + a.cos() * 0.24,
-                    y + 0.16,
-                    center[2] + a.sin() * 0.24,
-                ];
-                rod(root, tip, width, [0.79, 1.0, 0.62], &mut emit);
-            }
-        }
-    } else if matches!(material, 54 | 55) {
-        let root = material == 55;
-        let color = if root {
-            [0.47, 0.28, 0.15]
-        } else {
-            [0.34, 0.62, 0.20]
-        };
+        eelgrass::visit(h, profile, coarse, &mut emit);
+    } else if material == 55 {
+        root::visit(h, position[1], profile, &mut emit);
+    } else if material == 54 {
+        let color = [0.34, 0.62, 0.20];
         let phase = (h & 255) as f32 * 0.0245;
         let axis = |y: f32| {
             let t = position[1] as f32 + y;
@@ -374,43 +348,20 @@ pub fn visit(
                 0.5 + (t * 0.65 + phase).cos() * 0.13,
             ]
         };
-        rod(
-            axis(0.0),
-            axis(0.5),
-            if root { 0.22 } else { 0.055 },
-            color,
-            &mut emit,
-        );
-        rod(
-            axis(0.5),
-            axis(1.0),
-            if root { 0.22 } else { 0.055 },
-            color,
-            &mut emit,
-        );
+        rod(axis(0.0), axis(0.5), 0.055, color, &mut emit);
+        rod(axis(0.5), axis(1.0), 0.055, color, &mut emit);
         for i in 0..if coarse { 2 } else { 5 } {
             let a = i as f32 * 2.39996 + (h & 255) as f32 * 0.1;
             let y = 0.12 + i as f32 * 0.17;
-            if root {
-                rod(
-                    [0.5, y + 0.14, 0.5],
-                    [0.5 + a.cos() * 0.29, y, 0.5 + a.sin() * 0.29],
-                    0.045,
-                    color,
-                    &mut emit,
-                );
-            } else {
-                voxel(
-                    [axis(y)[0] + a.cos() * 0.20, y, axis(y)[2] + a.sin() * 0.20],
-                    [0.22, 0.10, 0.16],
-                    [0.50, 0.85, 0.31],
-                    &mut emit,
-                );
-            }
+            voxel(
+                [axis(y)[0] + a.cos() * 0.20, y, axis(y)[2] + a.sin() * 0.20],
+                [0.22, 0.10, 0.16],
+                [0.50, 0.85, 0.31],
+                &mut emit,
+            );
         }
     } else if material == 56 {
         // A larger crown and two young fruiting bodies share the same patch.
-        let phase = (h & 15) as f32 * 0.39;
         for (x, z, height, radius) in [
             (0.45, 0.47, 0.77, 0.28),
             (0.72, 0.68, 0.46, 0.18),
@@ -419,32 +370,21 @@ pub fn visit(
             if coarse && height < 0.30 {
                 continue;
             }
-            let y = height * 0.74;
-            voxel(
-                [x, y * 0.5, z],
-                [radius * 0.38, y, radius * 0.38],
-                [0.98, 0.79, 0.44],
-                &mut emit,
-            );
-            let point = |i: usize, r: f32, y: f32| {
-                let a = phase + i as f32 * std::f32::consts::FRAC_PI_4;
-                [x + a.cos() * radius * r, y, z + a.sin() * radius * r * 0.89]
-            };
-            for i in 0..8 {
-                let j = (i + 1) % 8;
-                let a = point(i, 1., y);
-                let b = point(j, 1., y);
-                let c = point(i, 0.58, height * 0.95);
-                let d = point(j, 0.58, height * 0.95);
-                let edge = if i % 3 == 0 {
-                    [1., 0.76, 0.25]
-                } else {
-                    [1., 0.57, 0.13]
-                };
-                emit([a, c, b], edge);
-                emit([c, d, b], edge);
-                emit([c, [x, height, z], d], [1., 0.83, 0.38]);
-                emit([a, b, [x, y - height * 0.075, z]], [1., 0.92, 0.62]);
+            let mut bottom = 0.0;
+            for (width, depth, top, color) in [
+                (0.39, 0.39, 0.68, [0.98, 0.79, 0.44]),
+                (1.72, 1.54, 0.74, [1., 0.92, 0.62]),
+                (2.0, 1.77, 0.88, [1., 0.57, 0.13]),
+                (1.36, 1.20, 1.00, [1., 0.76, 0.25]),
+            ] {
+                let top = top * height;
+                voxel(
+                    [x, (bottom + top) * 0.5, z],
+                    [width * radius, top - bottom, depth * radius],
+                    color,
+                    &mut emit,
+                );
+                bottom = top;
             }
         }
     }

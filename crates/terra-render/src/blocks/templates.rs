@@ -108,6 +108,8 @@ pub(crate) struct ItemMaterials {
 #[derive(Default, Clone)]
 pub(crate) struct TemplateSet {
     pub animated_chests: bool,
+    pub sculpted_blocks: HashMap<u16, super::sculpt::SculptedBlock>,
+    pub batched_wind_leaves: HashMap<u16, super::sculpt::SculptedBlock>,
     pub block_details: terra_core::BlockDetailConfig,
     pub blocks: HashMap<u16, BlockTemplate>,
     /// Explicit cube PBR normal maps need the same tangent frame as imported art.
@@ -120,6 +122,8 @@ pub(crate) struct TemplateSet {
     pub ore_materials: HashMap<u16, usize>,
     /// Authored complete sprays; far/low geometry keeps ordinary face materials.
     pub foliage_clusters: HashMap<u16, FoliageClusterMaterials>,
+    /// Linear albedo transfer from a full canopy face to its species' close-up atlas.
+    pub foliage_proxy_tints: HashMap<(usize, usize), [f32; 3]>,
     pub prop_materials: PropMaterials,
     pub item_materials: ItemMaterials,
     pub torch_palette: HashMap<usize, [f32; 4]>,
@@ -222,6 +226,21 @@ impl TemplateSet {
             .get(&40)
             .is_some_and(|b| b.model.iter().any(|p| p.material == slot))
     }
+    pub(crate) fn foliage_material(&self, slot: usize) -> bool {
+        self.foliage_clusters
+            .values()
+            .any(|c| c.slots().any(|s| s == slot))
+            || terra_voxel::MaterialId::FOLIAGE.into_iter().any(|id| {
+                self.blocks
+                    .get(&id)
+                    .is_some_and(|b| b.face_materials.contains(&slot))
+            })
+            || self
+                .sculpted_blocks
+                .get(&7)
+                .is_some_and(|b| b.core.face_materials.contains(&slot))
+    }
+
     pub(crate) fn water_material(&self, slot: usize) -> bool {
         [14, 27].into_iter().any(|id| {
             self.blocks

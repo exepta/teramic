@@ -23,11 +23,13 @@ pub(super) fn install(app: &mut App) {
 }
 impl Plugin for CalendarPlugin {
     fn build(&self, app: &mut App) {
+        crate::layout_classes::install(app);
         app.init_resource::<Calendar>()
             .add_systems(PostUpdate, bind.before(bevy::ui::UiSystems::Prepare))
             .add_systems(
                 PostUpdate,
                 center_cardinal_glyphs
+                    .run_if(crate::layout_classes::active_cardinals)
                     .after(bevy::ui::UiSystems::PostLayout)
                     .before(bevy::ui::UiSystems::Stack),
             );
@@ -38,18 +40,16 @@ impl Plugin for CalendarPlugin {
 }
 
 fn center_cardinal_glyphs(world: &mut World) {
-    let labels = world
-        .query::<(Entity, &tilt_ui::ElementClasses)>()
-        .iter(world)
-        .filter_map(|(entity, classes)| {
-            classes
-                .classes
-                .iter()
-                .any(|class| class == "map-cardinal")
-                .then_some(entity)
-        })
-        .collect::<Vec<_>>();
-    for label in labels {
+    world.resource_scope(|world, index: Mut<crate::layout_classes::LayoutClasses>| {
+        center(world, &index.cardinals);
+    });
+}
+
+fn center(world: &mut World, labels: &[Entity]) {
+    for &label in labels {
+        if world.get::<tilt_ui::ParkedUi>(label).is_some() {
+            continue;
+        }
         let mut pending = vec![label];
         while let Some(entity) = pending.pop() {
             if let Some(children) = world.get::<Children>(entity) {
@@ -130,6 +130,80 @@ fn bind(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dynamic_cardinals_center_current_glyphs_after_class_and_park_changes() {
+        use bevy::text::{GlyphAtlasInfo, PositionedGlyph, TextLayoutInfo};
+        use tilt_ui::{ElementClasses, ParkedUiBindings};
+        let mut app = App::new();
+        crate::layout_classes::install(&mut app);
+        app.add_systems(
+            PostUpdate,
+            center_cardinal_glyphs
+                .after(crate::layout_classes::track)
+                .run_if(crate::layout_classes::active_cardinals),
+        );
+        let label = app
+            .world_mut()
+            .spawn((Node::default(), ElementClasses::default()))
+            .id();
+        let layout = |scale: f32| TextLayoutInfo {
+            scale_factor: scale,
+            glyphs: vec![PositionedGlyph {
+                position: Vec2::splat(3.),
+                section_index: 0,
+                line_index: 0,
+                atlas_info: GlyphAtlasInfo {
+                    texture: Default::default(),
+                    rect: Rect::from_corners(Vec2::ZERO, Vec2::splat(7. * scale)),
+                    offset: Vec2::ZERO,
+                    is_alpha_mask: true,
+                },
+            }],
+            ..default()
+        };
+        let glyph = app
+            .world_mut()
+            .spawn((
+                Node::default(),
+                ComputedNode {
+                    size: Vec2::splat(20.),
+                    ..default()
+                },
+                layout(1.),
+                ChildOf(label),
+            ))
+            .id();
+        let pos = |app: &App| app.world().get::<TextLayoutInfo>(glyph).unwrap().glyphs[0].position;
+        let goal = |app: &App| {
+            -app.world()
+                .get::<ComputedNode>(glyph)
+                .unwrap()
+                .content_box()
+                .min
+        };
+        app.update();
+        assert_eq!(pos(&app), Vec2::splat(3.));
+        app.world_mut()
+            .get_mut::<ElementClasses>(label)
+            .unwrap()
+            .classes
+            .push("map-cardinal".into());
+        app.update();
+        assert_eq!(pos(&app), goal(&app));
+        let parked = ParkedUiBindings::take(app.world_mut(), label);
+        app.world_mut().entity_mut(glyph).insert(layout(2.));
+        app.world_mut().get_mut::<ComputedNode>(glyph).unwrap().size *= 2.;
+        app.update();
+        assert_eq!(pos(&app), Vec2::splat(3.));
+        parked.restore(app.world_mut());
+        app.update();
+        assert_eq!(pos(&app), goal(&app));
+        app.world_mut().entity_mut(label).remove::<ElementClasses>();
+        app.world_mut().entity_mut(glyph).insert(layout(1.));
+        app.update();
+        assert_eq!(pos(&app), Vec2::splat(3.));
+    }
 
     #[test]
     fn native_calendar_motion_preserves_shared_html_state_and_live_text_still_updates() {

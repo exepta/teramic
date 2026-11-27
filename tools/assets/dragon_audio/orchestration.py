@@ -9,10 +9,25 @@ def dark(bar):
     section, i = bar.section, bar.index
     bar.note("bass", root, 0, 11.8, 0.57, swell=0.82)
     if section == "procession":
+        bar.note("trombone", root + 12, 0, 4.4, 0.74)
+        for at in (6, 8, 10):
+            bar.note("bow", tenor - 12, at, 1.25, 0.52)
         if i in (0, 2):
             bar.note("gong", 46, 0, 15, 0.29)
         if i % 2:
             bar.note("viola", alto, 4, 7.7, 0.31, swell=1.37)
+        return
+    if section == "eclipse":
+        # A held choir above a displaced, shortening low-string figure.
+        bar.chorus((tenor, alto, soprano), 0.2, 8.3, 103, gallery=True)
+        bar.note("trombone", root + 12, 0, 5.4, 0.85)
+        for at in (0, 3, 6, 8, 9.5, 11):
+            bar.note("bow", tenor - 12 if at in (3, 8) else root + 12, at, 1, 0.66)
+        bar.note("violin", soprano + 12, 5.9, 5.5, 0.61, swell=1.45)
+        if i in (1, 4):
+            bar.rise(6, 6, 0.67)
+        if i in (0, 3, 5):
+            bar.note("gong", 45, 0, 13, 0.66)
         return
     if section == "vigil":
         bar.note("viola", alto, 0.15, 11.5, 0.36, swell=1.25)
@@ -73,6 +88,20 @@ def earth(bar):
     """Five-beat brass march. Slabs of low brass and answering upper strings."""
     root, tenor, alto, soprano = bar.voicing
     section, i = bar.section, bar.index
+    if section == "earthquake":
+        # The brass chorus marks five broad beats against a marching snare.
+        for at, key in ((0, root + 12), (4, tenor - 12), (6, root + 12)):
+            bar.note("low_stab", key, at, 1.55, 0.92)
+            bar.note("drum", 45, at, 3.3, 0.72)
+        bar.note("horn", alto, 0.08, 5.82, 0.71)
+        bar.note("horn", soprano, 6.06, 3.75, 0.79)
+        bar.chorus((tenor, alto, soprano), 0.21, 5.35, 111, gallery=True)
+        bar.note("tremolo", alto + 12, 1.8, 7.9, 0.48, swell=1.55)
+        for at, strength in ((2.75, 0.30), (3, 0.69), (7, 0.63), (8.5, 0.38), (9, 0.53)):
+            bar.note("snare", 48, at, 0.51, strength)
+        if i in (0, 3):
+            bar.note("cymbal", 48, 0, 10, 0.60)
+        return
     if section == "fault":
         bar.note("bass", root, 0, 9.7, 0.50)
         bar.note("viola", alto, 0.1, 9.4, 0.43, swell=1.28)
@@ -102,6 +131,9 @@ def earth(bar):
     bar.note("kettle", root + 12, 0, 4, 0.45)
     if section == "footfall":
         bar.note("viola", alto, 3, 6.6, 0.33, swell=1.35)
+        bar.note("horn", alto, 0.08, 3.4, 0.65)
+        bar.note("rim", 48, 6.75, 0.65, 0.41)
+        bar.note("snare", 48, 7, 1.1, 0.53)
         if i > 1:
             bar.note("horn_stab", tenor, 7, 1.6, 0.51)
         return
@@ -151,12 +183,29 @@ def water(bar):
     pitches = [tenor - 12, alto, soprano, tenor + 12, soprano, alto]
     for j, pos in enumerate(arpeggio):
         bar.note("harp", pitches[j % 6], pos, 4.5, (0.48 + 0.09 * sin(j * pi / 3)))
+    if section == "maelstrom":
+        # A rising wave in four crosses a three-beat horn answer.
+        for j, at in enumerate((0, 3, 6, 9)):
+            bar.note("cello", (root + 12, tenor, alto, soprano)[j], at, 2.8, 0.69)
+            bar.note("short_violin", (soprano, alto, tenor, alto)[j] + 12, at + 1.6, 1.1, 0.57)
+        for j, at in enumerate((0, 4, 8)):
+            bar.note("horn", (tenor, alto, soprano)[j], at + 0.12, 3.6, 0.71)
+        bar.chorus((alto, soprano, tenor + 12), 3.25, 8.25, 107, gallery=True)
+        if i in (1, 4):
+            bar.rise(4, 8, 0.70)
+        if i in (0, 2, 5):
+            bar.note("cymbal", 53, 0, 12, 0.57)
+        return
     if section == "depths":
         bar.note("solo", soprano + 12, 1, 10.3, 0.36, swell=1.40)
         if i in (1, 3, 5):
             bar.note("glock", alto + 24, 7, 8, 0.20)
         return
     if section in ("undertow", "foam"):
+        if section == "undertow":
+            bar.note("horn", tenor, 0.1, 6.1, 0.62)
+            bar.note("flute", alto + 12, 6.15, 5.0, 0.53, swell=1.47)
+            bar.note("kettle", root + 12, 9, 3.4, 0.55)
         bar.note("viola", alto, 0.3, 10.8, 0.41, swell=1.35)
         if i % 2 == 0:
             bar.note("glock", alto + 24, 6, 8, 0.32)
@@ -201,7 +250,32 @@ def water(bar):
 
 # Forceful syllables leave air between the two choirs. The countersubjects move
 # against the bass instead of retriggering a pad on every chord change.
+def fire(bar):
+    """Embers gather under a 3+3+2 brass figure; the middle eight clear to oboe and harp."""
+    root, tenor, alto, soprano = bar.voicing
+    if bar.section == "caldera":
+        for at, key in ((0, tenor), (3, alto), (6, soprano)):
+            bar.note("harp", key, at, 3.7, 0.43)
+        bar.note("tremolo", root + 12, 0, 7.8, 0.34, swell=1.28)
+        return
+    for at, key in ((0, root), (3, tenor-12), (6, root+7)):
+        bar.note("bow", key+12, at, 1.05, 0.65)
+        bar.note("drum", 44, at + 0.1, 2.2, 0.55)
+    if bar.section == "embers":
+        bar.note("soft_horn", alto, 2, 5.8, 0.42, swell=1.3)
+    else:
+        for i, key in enumerate((alto, soprano, tenor, alto)):
+            bar.note("short_violin", key+12, i*2+0.85, 0.86, 0.66)
+        bar.note("trombone", root+12, 0, 3.1, 0.60)
+        if bar.index % 4 == 3:
+            bar.rise(4, 4, 0.62)
+        if bar.section == "firestorm":
+            bar.note("horn_stab", soprano, 3.05, 1.85, 0.8)
+            bar.note("cymbal", 53, 6.0, 3.8, 0.49)
+
 CHANT = {
+    "fire": (((0, 1.85, 0), (3, 2.3, 1), (6, 1.55, 0)),
+             ((0, 2.8, 2), (3.15, 1.6, 3), (5.35, 2.35, 1)), (0, 3, 6)),
     "dark": (
         ((0, 2.8, 0), (4, 1.45, 1), (6, 4.25, 0)),
         ((1, 2.5, 2), (5, 3.5, 1), (9, 2.65, 3)),
@@ -224,7 +298,7 @@ def antiphon(bar, family):
     bass, tenor, alto, soprano = bar.voicing
     call, answer, tread = CHANT[family]
     i = bar.index
-    quiet = bar.section in ("vigil", "fault", "depths", "threshold", "bedrock", "foam")
+    quiet = bar.section in ("vigil", "fault", "depths", "threshold", "bedrock", "foam", "caldera")
     peak = bar.section in ("coronation", "summit", "crest")
     if quiet:
         # Keep the hush before the renewed attack. The choir's last unresolved
@@ -256,4 +330,4 @@ def antiphon(bar, family):
         bar.note("tremolo", alto + 12, bar.meter * 0.55, bar.meter * 0.43, 0.38, swell=1.55)
 
 
-ARRANGE = {"dark": dark, "earth": earth, "water": water}
+ARRANGE = {"dark": dark, "earth": earth, "water": water, "fire": fire}

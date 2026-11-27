@@ -22,78 +22,70 @@ fn tint(color: [f32; 3], brightness: f32) -> [f32; 3] {
 /// exposed when the next segment rolls through a bend.
 fn segment(index: u8) -> Result<(Part, Vec3, Mesh), String> {
     use terra_core::creatures::{CreatureBehavior, sandworm};
-    let sides: usize = match index {
-        0 | 1 => 9,
-        2 | 3 => 12,
-        _ => 18,
-    };
+    // Twelve right-angle corners leave a stepped, broad back and belly. Stacked
+    // courses give each articulated ring a raised leading shield and a dark seam.
+    let outline = [
+        (1.0, 0.52),
+        (0.61, 0.52),
+        (0.61, 1.0),
+        (-0.61, 1.0),
+        (-0.61, 0.52),
+        (-1.0, 0.52),
+        (-1.0, -0.52),
+        (-0.61, -0.52),
+        (-0.61, -1.0),
+        (0.61, -1.0),
+        (0.61, -0.52),
+        (1.0, -0.52),
+    ];
     let radius = sandworm::segment_radius(usize::from(index));
     let mut mesh = Facets::default();
-    // Axial position, radius, offset of the scalloped plate rim, groove depth.
-    let profile = [
-        (-0.80, 0.82, 0.00, 0.00),
-        (-0.58, 0.97, 0.08, 0.03),
-        (-0.26, 1.05, 0.12, 0.055),
-        (0.10, 1.09, 0.16, 0.075),
-        (0.19, 1.04, 0.16, 0.06),
-        (0.28, 0.88, 0.14, 0.02),
-        (0.42, 0.93, 0.08, 0.00),
-        (0.54, 0.86, 0.04, 0.00),
-        (0.80, 0.80, 0.00, 0.00),
+    let courses = [
+        (-0.84, 0.80),
+        (-0.44, 1.09),
+        (0.20, 0.94),
+        (0.45, 0.84),
+        (0.84, if index == 0 { 0.11 } else { 0.80 }),
     ];
-    let phase = f32::from(index) * 2.399_963;
-    let ring = |side: usize, (depth, r, rim, groove): (f32, f32, f32, f32)| {
-        let a = side as f32 * TAU / sides as f32 + phase;
-        let seam = if side.is_multiple_of(3) { 1.0 } else { 0.0 };
-        let z = depth + rim * (0.31 * (a * 3.0 + phase).sin() - seam * 0.80);
-        let taper = if index == 0 { (0.84 - z).min(1.0) } else { 1.0 };
-        let r = radius * taper * (r - seam * groove);
-        Vec3::new(a.cos() * 0.84 * r, a.sin() * 0.75 * r, z)
+    let position = |side: usize, z: f32, size: f32| {
+        let (x, y) = outline[side];
+        Vec3::new(x * radius * 0.84 * size, y * radius * 0.75 * size, z)
     };
-    for side in 0..sides {
-        let next = (side + 1) % sides;
-        let a = (side as f32 + 0.5) * TAU / sides as f32 + phase;
-        let ventral = ((-a.sin() - 0.18) / 0.82).clamp(0.0, 1.0);
-        let plate =
-            Vec3::from_array([0.73, 0.54, 0.38]).lerp(Vec3::from_array(CREAM), ventral * 0.8);
-        let wear = 0.99 + 0.09 * ((side / 3) as f32 * 1.77 + phase).cos();
-        for (band, pair) in profile.windows(2).enumerate() {
-            let color = match band {
-                0 => tint(PLATE, 0.97),
-                1..=4 => tint(plate.to_array(), wear * [0.86, 1.0, 1.10, 0.82][band - 1]),
-                5 => [0.45, 0.30, 0.20],
-                6 => [0.57, 0.40, 0.28],
-                _ => [0.43, 0.28, 0.19],
-            };
-            let face = [
-                ring(side, pair[0]),
-                ring(next, pair[0]),
-                ring(next, pair[1]),
-                ring(side, pair[1]),
-            ];
-            if side % 3 == 1 && band == 2 {
-                // A broad low keel is part of each shield, over the suture
-                // beneath it. Its edges use precisely the skin vertices.
-                let crest = face[0].lerp(face[2], 0.42) + radial(a) * (0.055 * radius);
-                mesh.faceted_quad(face, crest, color)?;
-            } else {
-                mesh.quad(face, color)?;
-            }
+    for side in 0..outline.len() {
+        let next = (side + 1) % outline.len();
+        let underside = outline[side].1 + outline[next].1 < -0.8;
+        let color = if underside { CREAM } else { SAND };
+        for (band, levels) in courses.windows(2).enumerate() {
+            let (z, r) = levels[0];
+            let (end, following) = levels[1];
+            let finish = if band >= 2 { PLATE } else { color };
+            mesh.quad(
+                [
+                    position(side, z, r),
+                    position(next, z, r),
+                    position(next, end, r),
+                    position(side, end, r),
+                ],
+                tint(finish, [0.88, 1.10, 0.94, 0.80][band]),
+            )?;
+            mesh.quad(
+                [
+                    position(side, end, r),
+                    position(next, end, r),
+                    position(next, end, following),
+                    position(side, end, following),
+                ],
+                tint(color, if band < 3 { 0.98 } else { 0.68 }),
+            )?;
         }
+        let (a, r) = courses[0];
+        let (b, q) = courses[courses.len() - 1];
         mesh.triangle(
-            [
-                Vec3::Z * -0.84,
-                ring(next, profile[0]),
-                ring(side, profile[0]),
-            ],
+            [Vec3::Z * a, position(next, a, r), position(side, a, r)],
             PLATE,
         )?;
         mesh.triangle(
-            [
-                Vec3::Z * 0.84,
-                ring(side, profile[8]),
-                ring(next, profile[8]),
-            ],
+            [Vec3::Z * b, position(side, b, q), position(next, b, q)],
             PLATE,
         )?;
     }
@@ -115,17 +107,17 @@ fn head_origin() -> Vec3 {
 const GUM: [f32; 3] = [0.66, 0.28, 0.21];
 
 fn head() -> Result<(Part, Vec3, Mesh), String> {
-    let mut mesh = Facets::default();
+    let mut mesh = Builder::with_cell_size(0.136);
     // Follow the inside of the pharynx out to the lip, then return down the
     // outside to the neck. The mouth has depth even between the moving jaws.
     let profile = [
-        (0.36, 0.18, [0.18, 0.054, 0.042]),
-        (0.30, 0.28, [0.35, 0.10, 0.10]),
-        (0.17, 0.38, [0.45, 0.16, 0.12]),
+        (0.45, 0.22, [0.18, 0.054, 0.042]),
+        (0.37, 0.31, [0.35, 0.10, 0.10]),
+        (0.20, 0.40, [0.45, 0.16, 0.12]),
         (0.02, 0.43, [0.33, 0.095, 0.073]),
-        (-0.14, 0.54, [0.57, 0.20, 0.15]),
-        (-0.32, 0.59, [0.54, 0.18, 0.12]),
-        (-0.52, 0.69, GUM),
+        (-0.14, 0.59, [0.57, 0.20, 0.15]),
+        (-0.32, 0.69, [0.54, 0.18, 0.12]),
+        (-0.52, 0.73, GUM),
         (-0.45, 0.77, [0.62, 0.39, 0.28]),
         (-0.13, 0.82, [0.65, 0.45, 0.31]),
         (0.19, 0.86, SAND),
@@ -150,7 +142,7 @@ fn head() -> Result<(Part, Vec3, Mesh), String> {
     for i in 0..SIDES {
         let n = (i + 1) % SIDES;
         mesh.triangle(
-            [Vec3::Z * 0.38, point(n, 0), point(i, 0)],
+            [Vec3::Z * 0.47, point(n, 0), point(i, 0)],
             [0.14, 0.045, 0.038],
         )?;
         for (band, (_, _, color)) in profile[..profile.len() - 1].iter().enumerate() {
@@ -176,7 +168,7 @@ fn head() -> Result<(Part, Vec3, Mesh), String> {
 /// A broad root, a forward-projecting bend and one inward-pointing tip.
 /// Five-sided cross sections retain the faceted ivory silhouette at any zoom.
 fn fang(
-    mesh: &mut Facets,
+    mesh: &mut Builder,
     angle: f32,
     root: Vec3,
     length: f32,
@@ -218,7 +210,7 @@ fn fang(
 }
 
 fn jaw() -> Result<(Part, Vec3, Mesh), String> {
-    let mut mesh = Facets::default();
+    let mut mesh = Builder::with_cell_size(0.051);
     for i in 0..9 {
         let a = (i as f32 + 0.4) * TAU / 9.0 + (i as f32 * 3.1).sin() * 0.035;
         fang(
@@ -245,7 +237,7 @@ pub(in crate::creatures) fn mandible_hinge(index: u8) -> (Vec3, Vec3) {
 /// neck at its hinge and folds forward near its centre, leaving a scalloped
 /// lip in profile and exposing the smaller teeth deeper inside the throat.
 fn mandible(index: u8) -> Result<(Part, Vec3, Mesh), String> {
-    let mut mesh = Facets::default();
+    let mut mesh = Builder::with_cell_size(0.112);
     let center_angle = FRAC_PI_2 + f32::from(index) * TAU / 3.0;
     let lobe = |u: f32| (1.0 - u * u) * (1.0 + 0.12 * u);
     let lip = |u: f32| -0.36 - 0.36 * lobe(u);
@@ -285,7 +277,12 @@ fn mandible(index: u8) -> Result<(Part, Vec3, Mesh), String> {
                 let relief = (u * 6.6 + 0.36).cos() * lobe(u);
                 let ridge = face[0].lerp(face[2], 0.48)
                     + radial(center_angle + u * 0.97) * (0.017 + 0.018 * relief);
-                mesh.faceted_quad(face, ridge, tint(color, 0.98 + 0.12 * relief))?;
+                for i in 0..4 {
+                    mesh.triangle(
+                        [face[i], face[(i + 1) % 4], ridge],
+                        tint(color, 0.98 + 0.12 * relief),
+                    )?;
+                }
             } else {
                 mesh.quad(face, tint(color, 0.97 + 0.035 * (i as f32 * 1.57).cos()))?;
             }

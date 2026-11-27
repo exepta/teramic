@@ -331,3 +331,29 @@ fn timer_turns_sweep_from_the_previous_fish_orientation() {
     );
     assert!(h.clear_rotated(fish.position, fish.size(), true, f64::from(fish.yaw)));
 }
+
+#[test]
+fn swimmers_visit_the_seagrass_band_even_in_a_deep_column() {
+    let (terrain, chunks, journal) = deep_pool();
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    for kind in [Kind::Squid, Kind::Fish, Kind::ReefShark] {
+        let mut a = tests::animal(kind, 0);
+        a.position[1] = 27.;
+        let column = chunks
+            .water_column_at_point(&terrain, &journal, center(&a))
+            .unwrap();
+        let mut near_bed = 0;
+        let mut open_water = 0;
+        for leg in 0..6 {
+            a.age = f64::from(leg) * 42.;
+            let y = depth_goal(&a, &habitat).unwrap();
+            near_bed += usize::from(y < column.bed + 2.5);
+            open_water += usize::from(y > column.bed + 5.);
+        }
+        assert_eq!((near_bed, open_water), (4, 2), "{kind:?}");
+    }
+}

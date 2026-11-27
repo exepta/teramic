@@ -1,0 +1,7 @@
+{
+  "id": "lava_worm", "title": "Lava Worm",
+  "health": 82, "food": 0, "water": 0, "size": [1.9, 2.65, 2.8],
+  "speed": 1.85, "group_size": 1, "sleeps": false,
+  "combat": {"damage": 6, "aggro_radius": 20, "reach": 2.9, "cooldown": 2.8},
+  "spawn": {"biomes": ["ashlands"]}
+}

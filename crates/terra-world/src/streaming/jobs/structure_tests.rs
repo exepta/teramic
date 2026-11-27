@@ -76,6 +76,70 @@ fn receiver() -> App {
     app
 }
 
+#[test]
+fn mushroom_park_pavilion_lanterns_survive_publication_and_support_reconciliation() {
+    use crate::streaming::support;
+    use terra_core::{BiomeDefinitions, block_properties::BlockPropertiesCatalog, lantern};
+    for revision in [12, 13] {
+        let generator = SectionGenerator::new(
+            TerraGenerator::new(WorldConfig {
+                seed: WorldSeed(42042),
+                ecology_revision: revision,
+                biome_definitions: Some(
+                    BiomeDefinitions::load_directory(terra_core::asset_directory().join("biome"))
+                        .unwrap(),
+                ),
+                ..Default::default()
+            })
+            .unwrap(),
+        );
+        let mut app = receiver();
+        app.init_resource::<BlockPropertiesCatalog>()
+            .add_systems(Update, support::tick.after(receive_jobs));
+        let mut lamps = Vec::new();
+        for x in [-68, -67] {
+            for z in [-14, -13] {
+                let prepared = Arc::new(generator.prepare_column([x, z], false).unwrap());
+                let owner = SectionPos::new(x, 3, z);
+                app.world_mut()
+                    .resource_mut::<ChunkStore>()
+                    .wanted
+                    .insert(owner);
+                lamps.extend(
+                    prepared
+                        .structure_objects(owner)
+                        .into_iter()
+                        .filter(|item| item.material == lantern::LANTERN),
+                );
+                publish(&mut app, &generator, prepared, &[owner]);
+            }
+        }
+        app.update();
+        let chunks = app.world().resource::<ChunkStore>();
+        let journal = app.world().resource::<EditJournal>();
+        assert_eq!(lamps.len(), 6, "missing fixture for ecology {revision}");
+        for lamp in lamps {
+            let p = lamp.position;
+            assert_eq!(chunks.block_at(p), Some(lantern::LANTERN));
+            assert_eq!(journal.object_state(p).unwrap().facing, lantern::HANGING);
+            assert!(crate::lanterns::supported(
+                chunks,
+                &Default::default(),
+                p,
+                lantern::LANTERN,
+                lantern::HANGING
+            ));
+        }
+        assert!(
+            journal
+                .gameplay()
+                .drops
+                .iter()
+                .all(|drop| drop.stack.item != terra_core::ItemKind::Block(lantern::LANTERN))
+        );
+    }
+}
+
 fn publish(
     app: &mut App,
     generator: &SectionGenerator,

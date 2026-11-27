@@ -77,6 +77,9 @@ impl TerraGenerator {
     }
 
     pub(super) fn surface_ecology(&self, biome: BiomeSample, height: f64) -> BiomeSample {
+        if self.highland_overhaul() {
+            return biome.with_highland_band(height, super::highlands::SNOWLINE, 122.0);
+        }
         if self.config().landscape_revision >= 5 {
             return biome;
         }
@@ -88,7 +91,7 @@ impl TerraGenerator {
         let profiles = self.biome_definitions();
         let mut weights = biome.weights.values();
         let land = 1.0 - weights[0];
-        let mut bridge = [0.0; 10];
+        let mut bridge = [0.0; 16];
         for kind in BiomeKind::ALL.into_iter().skip(1) {
             let p = profiles.get(kind).terrain;
             let suitability = smoothstep(p.min_height, p.min_height + 5.0, height)
@@ -104,6 +107,12 @@ impl TerraGenerator {
                 BiomeKind::CherryForest => biome.weights.cherry_forest,
                 BiomeKind::SpiritBlossom => biome.weights.spirit_blossom,
                 BiomeKind::BloodForest => biome.weights.blood_forest,
+                BiomeKind::Ashlands => biome.weights.ashlands,
+                BiomeKind::Savanna => biome.weights.savanna,
+                BiomeKind::Swamp => biome.weights.swamp,
+                BiomeKind::PetrifiedForest => biome.weights.petrified_forest,
+                BiomeKind::CrystalHighlands => biome.weights.crystal_highlands,
+                BiomeKind::MistyCoast => biome.weights.misty_coast,
                 BiomeKind::Ocean => 0.0,
             };
             bridge[kind as usize] = suitability * affinity;
@@ -129,7 +138,20 @@ impl TerraGenerator {
                 .into_iter()
                 .skip(1)
                 .filter(|kind| {
-                    (*kind != BiomeKind::BloodForest || self.config().blood_forest_revision > 0)
+                    *kind != BiomeKind::MistyCoast
+                        && (*kind != BiomeKind::Ashlands
+                            || (self.config().ecology_revision >= 16
+                                && self.config().landscape_revision >= 9))
+                        && (*kind != BiomeKind::CrystalHighlands
+                            || (self.config().ecology_revision >= 21
+                                && self.config().landscape_revision >= 9))
+                        && (*kind != BiomeKind::PetrifiedForest
+                            || (self.config().ecology_revision >= 19
+                                && self.config().landscape_revision >= 9))
+                        && (*kind != BiomeKind::Swamp || self.config().ecology_revision >= 18)
+                        && (*kind != BiomeKind::Savanna || self.config().ecology_revision >= 17)
+                        && (*kind != BiomeKind::BloodForest
+                            || self.config().blood_forest_revision > 0)
                         && (*kind != BiomeKind::SpiritBlossom
                             || self.config().spirit_blossom_revision > 0)
                 })
@@ -144,31 +166,8 @@ impl TerraGenerator {
                 .unwrap_or(BiomeKind::Plains);
             weights[kind as usize] = land;
         }
-        let [
-            ocean,
-            plains,
-            forest,
-            desert,
-            highland,
-            mushroom_park,
-            cliffted_desert,
-            cherry_forest,
-            spirit_blossom,
-            blood_forest,
-        ] = weights;
         BiomeSample {
-            weights: BiomeWeights {
-                ocean,
-                plains,
-                forest,
-                desert,
-                highland,
-                mushroom_park,
-                cliffted_desert,
-                cherry_forest,
-                spirit_blossom,
-                blood_forest,
-            },
+            weights: BiomeWeights::from_values(weights),
             ..biome
         }
     }

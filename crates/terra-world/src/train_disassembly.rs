@@ -49,7 +49,7 @@ pub(crate) fn facing(material: u16, value: u8, turns: u8) -> Result<u8, TrainErr
             Ok(next)
         };
     }
-    if material == terra_core::lantern::LANTERN || material == 40 {
+    if material == terra_core::lantern::LANTERN || terra_core::block_shapes::is_torch(material) {
         if (4..=7).contains(&value) {
             let normal = terra_core::block_shapes::torch_normal(value).map(|v| v as i64);
             let next = turn(normal, turns).map(|v| v as i32);

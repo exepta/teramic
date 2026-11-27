@@ -64,13 +64,14 @@ env -u TERRA_ROADS_INSPECT -u TERRA_PARTIAL_WATER_SMOKE -u TERRA_FOG_BLOCK_INSPE
 printf '%s\n' "$status" > "$run_dir/exit-status"
 python3 - "$run_dir" "$status" <<'PY'
 from pathlib import Path
-import hashlib,json,re,struct,sys
+import hashlib,json,os,re,struct,sys
 root=Path(sys.argv[1]);errors=[];captures=[]
 if int(sys.argv[2]):errors.append('Client exit '+sys.argv[2])
 log=re.sub(r'\x1b\[[0-9;]*m','',(root/'native.log').read_text(errors='replace'))
 if 'Reference palette gallery passed:' not in log:errors.append('Missing gallery success marker')
 if re.search(r'\bERROR\b|panicked at|Validation Error|Shader processing error|DeviceLost',log):errors.append('Runtime/GPU error in native log')
-for i in range(4):
+sculpt='TERRA_SCULPT_INSPECT' in os.environ
+for i in range(6 if sculpt else 4):
     p=root/'captures'/f'reference-palette-{i}.png'
     try:
         data=p.read_bytes()
@@ -79,9 +80,20 @@ for i in range(4):
     except (OSError,AssertionError) as e:errors.append(f'{p.name}: {type(e).__name__}: {e}')
 normal_paths=set(re.findall(r'texture=textures/block_palette/([a-z_]+_normal.png)',log))
 if len(normal_paths)!=22:errors.append(f'Expected 22 linear PBR normal textures, found {len(normal_paths)}')
+if sculpt:
+    loaded = {name: (int(levels), int(bindings)) for name, levels, bindings in re.findall(
+        r'texture=textures/sculpted/(\w+\.png) mip_levels=(\d+) rebound_materials=(\d+)', log)}
+    for surface in ('grass_top', 'grass_side', 'soil', 'rock', 'gravel', 'leaves'):
+        for suffix in ('.png', '_normal.png'):
+            name = surface + suffix
+            path = Path('assets/terra/blocks/textures/sculpted') / name
+            width, height = struct.unpack('>II', path.read_bytes()[16:24])
+            mips, bindings = loaded.get(name, (0, 0))
+            if mips != max(width, height).bit_length() or bindings == 0:
+                errors.append(f'{name}: incomplete mip chain or missing material binding')
 report=dict(status='failed' if errors else 'passed',errors=errors,captures=captures,normal_map_count=len(normal_paths),
             client_sha256=hashlib.file_digest((root/'terra-client').open('rb'),'sha256').hexdigest(),
-            scope='Actual native section models/materials, generated PBR maps, shader, placed shrubs and rooted dead bushes; four camera views.')
+            scope=('Four individual natural blocks, a cross-section-boundary row and fantasy blocks; six native camera views.' if sculpt else 'Actual native section models/materials, generated PBR maps, shader, placed shrubs and rooted dead bushes; four camera views.'))
 (root/'verification.json').write_text(json.dumps(report,indent=2)+'\n')
 print(f"Reference palette {report['status']}: {root/'verification.json'}")
 for error in errors:print(error,file=sys.stderr)

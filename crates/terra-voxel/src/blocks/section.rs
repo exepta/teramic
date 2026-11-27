@@ -1,6 +1,10 @@
 use super::{SECTION_VOLUME, SectionPos, block_index};
 use crate::MaterialId;
+use std::borrow::Cow;
 use thiserror::Error;
+
+static AIR: [u16; SECTION_VOLUME] = [MaterialId::Air as u16; SECTION_VOLUME];
+static STONE: [u16; SECTION_VOLUME] = [MaterialId::Stone as u16; SECTION_VOLUME];
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum BlockError {
@@ -20,7 +24,7 @@ pub enum BlockError {
 pub struct BlockSection {
     position: SectionPos,
     revision: u64,
-    blocks: Vec<u16>,
+    blocks: Cow<'static, [u16]>,
     solid_count: usize,
     // Conservative material index: collisions only cause extra scans, never
     // missed blocks. Counts keep removals exact without rescanning 4096 cells.
@@ -28,7 +32,19 @@ pub struct BlockSection {
 }
 impl BlockSection {
     pub fn empty(position: SectionPos) -> Result<Self, BlockError> {
-        Self::from_blocks(position, 0, vec![MaterialId::Air as u16; SECTION_VOLUME])
+        Self::empty_at_revision(position, 0)
+    }
+    pub fn empty_at_revision(position: SectionPos, revision: u64) -> Result<Self, BlockError> {
+        position.global_block([15; 3])?;
+        let mut material_buckets = [0; 256];
+        material_buckets[0] = SECTION_VOLUME as u16;
+        Ok(Self {
+            position,
+            revision,
+            blocks: Cow::Borrowed(&AIR),
+            solid_count: 0,
+            material_buckets,
+        })
     }
     pub fn from_blocks(
         position: SectionPos,
@@ -45,6 +61,15 @@ impl BlockSection {
             solid_count += usize::from(block != MaterialId::Air as u16);
             material_buckets[usize::from(block) % 256] += 1;
         }
+        let blocks = if solid_count == 0 {
+            Cow::Borrowed(&AIR[..])
+        } else if material_buckets[MaterialId::Stone as usize] == SECTION_VOLUME as u16
+            && blocks.iter().all(|&id| id == MaterialId::Stone as u16)
+        {
+            Cow::Borrowed(&STONE[..])
+        } else {
+            Cow::Owned(blocks)
+        };
         Ok(Self {
             position,
             revision,
@@ -87,7 +112,11 @@ impl BlockSection {
         self.solid_count += usize::from(material != MaterialId::Air as u16);
         self.material_buckets[usize::from(old) % 256] -= 1;
         self.material_buckets[usize::from(material) % 256] += 1;
-        self.blocks[index] = material;
+        if self.solid_count == 0 {
+            self.blocks = Cow::Borrowed(&AIR);
+        } else {
+            self.blocks.to_mut()[index] = material;
+        }
         self.revision = revision;
         Ok(true)
     }

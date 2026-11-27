@@ -200,7 +200,10 @@ mod tests {
             ..Default::default()
         })
         .unwrap();
-        for (slug, kind) in crate::protocol::commands::CAVE_BIOMES {
+        for &(slug, target) in crate::protocol::commands::BIOMES {
+            let super::LocateTarget::Cave(kind) = target else {
+                continue;
+            };
             let target = super::super::parse_command(&format!("/locate biome {slug}"))
                 .unwrap()
                 .unwrap();

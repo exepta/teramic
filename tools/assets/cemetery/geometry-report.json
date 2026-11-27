@@ -401,50 +401,50 @@
   {
     "id": 381,
     "slug": "dead_grass",
-    "vertices": 468,
-    "triangles": 260,
+    "vertices": 1092,
+    "triangles": 546,
     "collision_boxes": 0
   },
   {
     "id": 382,
     "slug": "thorn_bush",
-    "vertices": 1080,
-    "triangles": 612,
+    "vertices": 1064,
+    "triangles": 532,
     "collision_boxes": 0
   },
   {
     "id": 383,
     "slug": "hanging_ivy",
-    "vertices": 1260,
-    "triangles": 588,
+    "vertices": 1088,
+    "triangles": 544,
     "collision_boxes": 0
   },
   {
     "id": 384,
     "slug": "grave_moss",
-    "vertices": 1008,
-    "triangles": 432,
+    "vertices": 344,
+    "triangles": 172,
     "collision_boxes": 0
   },
   {
     "id": 385,
     "slug": "dark_mushrooms",
-    "vertices": 2652,
-    "triangles": 1188,
+    "vertices": 1060,
+    "triangles": 530,
     "collision_boxes": 0
   },
   {
     "id": 386,
     "slug": "glowing_purple_mushrooms",
-    "vertices": 2652,
-    "triangles": 1188,
+    "vertices": 1300,
+    "triangles": 650,
     "collision_boxes": 0
   },
   {
     "id": 387,
     "slug": "blossoming_vines",
-    "vertices": 7980,
-    "triangles": 3468,
+    "vertices": 1388,
+    "triangles": 694,
     "collision_boxes": 0
   },
   {
@@ -499,15 +499,15 @@
   {
     "id": 395,
     "slug": "soul_crystal_small",
-    "vertices": 360,
-    "triangles": 200,
+    "vertices": 460,
+    "triangles": 230,
     "collision_boxes": 5
   },
   {
     "id": 396,
     "slug": "soul_crystal_large",
-    "vertices": 360,
-    "triangles": 200,
+    "vertices": 648,
+    "triangles": 324,
     "collision_boxes": 5
   },
   {

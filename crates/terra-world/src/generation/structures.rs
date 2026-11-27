@@ -46,6 +46,7 @@ pub enum StructureKind {
     DarkDragonLair,
     EarthDragonLair,
     WaterDragonLair,
+    FireDragonLair,
 }
 impl StructureKind {
     fn enabled(self, settings: terra_core::StructureSettings) -> bool {
@@ -55,7 +56,10 @@ impl StructureKind {
             Self::Outpost => settings.outposts,
             Self::Ruin | Self::Cemetery | Self::GraveDungeon => settings.ruins,
             Self::Mine => settings.mines,
-            Self::DarkDragonLair | Self::EarthDragonLair | Self::WaterDragonLair => settings.ruins,
+            Self::DarkDragonLair
+            | Self::EarthDragonLair
+            | Self::FireDragonLair
+            | Self::WaterDragonLair => settings.ruins,
         }
     }
 }
@@ -164,6 +168,7 @@ pub(crate) struct StructurePatch {
 }
 #[derive(Debug)]
 pub(crate) struct Site {
+    pub tidal_nest: bool,
     pub summary: SiteSummary,
     pub sections: BTreeMap<SectionPos, StructurePatch>,
     pub settlement: Option<Arc<VillageSettlement>>,
@@ -172,6 +177,11 @@ impl Site {
     /// A reservoir is planned against natural stone. Carving away its bed or
     /// replacing its wet cells invalidates that reservoir at this column only.
     pub(crate) fn displaces_water(&self, x: i64, z: i64, water: crate::water::WaterColumn) -> bool {
+        // The guardian and its coral nursery share the ocean reservoir.
+        // Solid reef blocks occlude fluid individually in the normal cell sampler.
+        if self.tidal_nest {
+            return false;
+        }
         let [lo, hi] = self.summary.bounds;
         if x < lo[0] || x > hi[0] || z < lo[2] || z > hi[2] {
             return false;

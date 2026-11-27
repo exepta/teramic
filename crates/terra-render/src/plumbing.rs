@@ -88,11 +88,11 @@ impl Geometry {
     }
     fn water_mesh(&self, terrain: &terra_world::TerraGenerator) -> Mesh {
         use crate::water::{
-            biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_BLOOD_WEIGHT, WaterTint},
+            biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_MEDIUM_WEIGHTS, WaterTint},
             material::ATTRIBUTE_WAVE_WEIGHT,
         };
         let mut tints = std::collections::HashMap::new();
-        let (colors, blood): (Vec<_>, Vec<_>) = self
+        let (colors, medium_weights): (Vec<_>, Vec<_>) = self
             .positions
             .iter()
             .map(|p| {
@@ -105,7 +105,7 @@ impl Geometry {
                     .entry(origin)
                     .or_insert_with(|| WaterTint::new(terrain, origin));
                 let local = [p[0] - origin[0] as f32, 0., p[2] - origin[2] as f32];
-                (tint.payload(local), tint.blood_at(local))
+                (tint.payload(local), tint.medium_at(local))
             })
             .unzip();
         self.mesh()
@@ -128,7 +128,7 @@ impl Geometry {
                     .collect::<Vec<_>>(),
             )
             .with_inserted_attribute(ATTRIBUTE_BIOME_TINT, colors)
-            .with_inserted_attribute(ATTRIBUTE_BLOOD_WEIGHT, blood)
+            .with_inserted_attribute(ATTRIBUTE_MEDIUM_WEIGHTS, medium_weights)
             .with_inserted_attribute(ATTRIBUTE_WAVE_WEIGHT, vec![0.; self.positions.len()])
     }
     fn mesh(&self) -> Mesh {

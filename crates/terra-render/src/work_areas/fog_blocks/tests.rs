@@ -47,11 +47,11 @@ fn put(chunks: &mut ChunkStore, p: Position, raw: u16) {
 fn actual_placed_sources_are_found_removed_and_buried_under_real_floor_blocks() {
     let (mut chunks, journal) = fixture();
     let mut index = Index::default();
-    index.refresh(&chunks, &journal);
+    index.refresh(Vec3::ZERO, &chunks, &journal);
     assert!(index.nearby(Vec3::ZERO).is_empty());
     put(&mut chunks, [-2, 1, -2], terra_core::fog_blocks::MATERIAL);
     put(&mut chunks, [-2, 2, -2], MaterialId::Grass as u16);
-    index.refresh(&chunks, &journal);
+    index.refresh(Vec3::ZERO, &chunks, &journal);
     assert_eq!(index.nearby(Vec3::ZERO), vec![[-2, 1, -2]]);
     assert_eq!(source_height(&chunks, &journal, [-2, 1, -2]), Some(3.045));
     let field = Field::sample(Vec3::ZERO, &index.nearby(Vec3::ZERO), &chunks, &journal);
@@ -60,13 +60,13 @@ fn actual_placed_sources_are_found_removed_and_buried_under_real_floor_blocks() 
     let i = 19 + 19 * SIZE;
     assert_eq!(field.heights[i], 3.045);
     put(&mut chunks, [-2, 1, -2], 0);
-    index.refresh(&chunks, &journal);
+    index.refresh(Vec3::ZERO, &chunks, &journal);
     assert!(index.nearby(Vec3::ZERO).is_empty());
     // Unloaded source chunks cannot keep emitting a stale cached circle.
     put(&mut chunks, [1, 1, 1], terra_core::fog_blocks::MATERIAL);
-    index.refresh(&chunks, &journal);
+    index.refresh(Vec3::ZERO, &chunks, &journal);
     chunks.loaded.remove(&SectionPos::new(0, 0, 0));
-    index.refresh(&chunks, &journal);
+    index.refresh(Vec3::ZERO, &chunks, &journal);
     assert!(index.nearby(Vec3::ZERO).is_empty());
 }
 #[test]
@@ -92,7 +92,7 @@ fn source_budget_and_height_encoding_are_bounded_without_generating_chunks() {
     }
     let loaded = chunks.loaded.len();
     let mut index = Index::default();
-    index.refresh(&chunks, &journal);
+    index.refresh(Vec3::ZERO, &chunks, &journal);
     let nearby = index.nearby(Vec3::ZERO);
     assert_eq!(nearby.len(), MAX_SOURCES);
     let field = Field::sample(Vec3::ZERO, &nearby, &chunks, &journal);
@@ -178,4 +178,45 @@ fn a_roof_above_the_emitter_does_not_steal_the_indoor_ground_layer() {
             );
         }
     }
+}
+
+#[test]
+fn moving_source_window_recovers_distant_additions_and_removals_on_return() {
+    let (mut chunks, mut journal) = fixture();
+    let left = [-32, 1, 0];
+    let right = [192, 1, 0];
+    let east = Vec3::new(160.5, 1.0, 0.0);
+    // Exceed the source-window volume, as in a streamed world with distant terrain.
+    let occupied = [left, right].map(|cell| global_to_section(cell).0);
+    for section in occupied
+        .into_iter()
+        .chain((1000..1300).map(|x| SectionPos::new(x, 0, 0)))
+    {
+        chunks
+            .loaded
+            .entry(section)
+            .or_insert_with(|| LoadedSection {
+                data: BlockSection::empty(section).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            });
+    }
+    put(&mut chunks, left, terra_core::fog_blocks::MATERIAL);
+    put(&mut chunks, right, 0);
+    let mut index = Index::default();
+    index.refresh(Vec3::ZERO, &chunks, &journal);
+    assert_eq!(index.nearby(Vec3::ZERO), [left]);
+    journal
+        .record(right, terra_core::fog_blocks::MATERIAL)
+        .unwrap();
+    index.refresh(east, &chunks, &journal);
+    assert_eq!(index.nearby(east), [right]);
+    journal.record(left, 0).unwrap();
+    index.refresh(Vec3::ZERO, &chunks, &journal);
+    assert!(index.nearby(Vec3::ZERO).is_empty());
+    index.refresh(east, &chunks, &journal);
+    assert_eq!(index.nearby(east), [right]);
 }

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": 628,
+  "name": "Ember Crystals",
+  "description": "Amber prisms rise through the volcanic crust.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.25,
+  "resistance": 2.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/ember_crystals.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      1.0,
+      0.28,
+      0.06
+    ],
+    "intensity": 85,
+    "range": 4.0,
+    "shadows": false
+  }
+}

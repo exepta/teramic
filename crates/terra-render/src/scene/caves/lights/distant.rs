@@ -93,7 +93,7 @@ fn candidates(
                 journal,
                 cell,
                 light,
-                location(cell, material == 40, |p| {
+                location(cell, terra_core::block_shapes::is_torch(material), |p| {
                     chunks.block_at(p).map(|id| journal.block(p).unwrap_or(id))
                 }),
             );

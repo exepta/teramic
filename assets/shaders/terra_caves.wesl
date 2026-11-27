@@ -16,6 +16,8 @@ struct CaveSettings {
     beam_radii: vec4<f32>,
     beam_cross_radii: vec4<f32>,
     gallery_dust: f32,
+    lava_depth: f32,
+    sediment: f32,
 }
 @group(0) @binding(0) var scene_color: texture_2d<f32>;
 @group(0) @binding(1) var scene_sampler: sampler;
@@ -69,7 +71,11 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let view_position = view.xyz / max(abs(view.w), 0.000001);
     let world = (cave.world_from_view * vec4<f32>(view_position, 1.0)).xyz;
     let distance = length(view_position);
-    let wet_distance = min(distance, 64.0);
+    let origin = cave.world_from_view[3].xyz;
+    let ray = (cave.world_from_view * vec4<f32>(view_position / max(distance, 0.0001), 0.0)).xyz;
+    // An upward ray exits the water even if the opaque prepass hits a cliff beyond it.
+    let exit_distance = select(80.0, max(cave.underwater.y, 0.0) / max(ray.y, 0.001), ray.y > 0.001);
+    let wet_distance = min(min(distance, 80.0), exit_distance);
     let wet = water;
     // Never lift black to blue: unlit tunnels stay dark and emitters keep their hue.
     // The density is zero in low/narrow caves and fades in only in large chambers.
@@ -81,8 +87,7 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
         // Integrate scattered skylight only along the visible part of a view ray.
         // Projection onto the aperture follows the sun and widens with angular diffusion.
         if cave.parameters.w > 0.001 && cave.salt_window.w > 0.0 {
-            let origin = cave.world_from_view[3].xyz;
-            let ray = normalize(world - origin);
+
             let altitude = cave.sun_direction.y;
             let travel = min(distance, 100.0);
             let height = cave.salt_window.y - origin.y;
@@ -143,22 +148,61 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
             result = mix(result, mist, opacity);
         }
         if wet > 0.001 {
-            // Wavelength-dependent absorption keeps nearby reef pigments clear.
-            let absorption = exp(-vec3<f32>(0.035, 0.012, 0.009) * wet_distance * wet);
+            // Short paths retain warm pigments. Across the basin red falls off first.
+            let absorption = exp(-vec3<f32>(0.043, 0.015, 0.008) * wet_distance * wet);
             result *= absorption;
-            let medium = 1.0 - exp(-wet_distance * 0.065 * wet);
+            let medium = 1.0 - exp(-wet_distance * mix(0.042, 0.76, cave.sediment) * wet);
             result = mix(result, cave.scattering.rgb, medium);
         }
     } else if wet > 0.001 {
-        // Transmissive water does not write the opaque prepass. Its distant
-        // backfaces can therefore return near-black sky outside the screen-space
-        // reflection buffer. Close that missing medium, never opaque cave walls.
-        let direction = normalize((cave.world_from_view * vec4<f32>(view_position, 0.0)).xyz);
-        let upper = smoothstep(-0.30, 0.90, direction.y);
-        let depth_light = 0.35 + 0.65 * exp(-min(cave.underwater.y, 96.0) * 0.028);
-        let marine = cave.scattering.rgb * depth_light * (0.82 + upper * 0.52);
-        let medium = water * 0.86;
-        result = mix(result, marine, medium);
+        let upper = smoothstep(-0.25, 0.9, ray.y);
+        let depth_light = 0.36 + 0.64 * exp(-min(cave.underwater.y, 96.0) * 0.03);
+        let marine = cave.scattering.rgb * depth_light * (0.8 + upper * 0.65);
+        result = mix(result, marine, water * 0.86);
+    }
+    if wet > 0.001 && cave.scattering.w > 0.001 && cave.sun_direction.y > 0.03 {
+        let time = cave.underwater.z;
+        // Project refracted daylight back to the waves in world coordinates.
+        // Nearby rocks and reeds intercept the ray at their actual scene depth.
+        let slope = cave.sun_direction.xz * 0.65;
+        let height = origin.y + cave.underwater.y;
+        let sun = cave.scattering.w * smoothstep(0.03, 0.4, cave.sun_direction.y) * wet;
+        let sample_distance = min(wet_distance, 36.0);
+        var shafts = 0.0;
+        for (var i = 0; i < 3; i += 1) {
+            let p = origin + ray * (sample_distance * (f32(i) + 0.5) / 3.0);
+            let d = max(height - p.y, 0.0);
+            let uv = p.xz + d * slope;
+            let ribbon = sin(dot(uv, vec2<f32>(0.37, 0.18)) + sin(uv.y * 0.27 + time * 0.18));
+            let group = sin(dot(uv, vec2<f32>(0.13, -0.17)) - time * 0.12);
+            shafts += smoothstep(0.62, 1.0, ribbon) * smoothstep(-0.35, 0.86, group) * exp(-d * 0.064);
+        }
+        result += vec3<f32>(0.26, 0.76, 0.84) * (sun * shafts / 3.0)
+            * (1.0 - exp(-sample_distance * 0.08)) * 0.21;
+        if depth > 0.000001 && world.y < height && distance < 34.0 {
+            let d = height - world.y;
+            let floor_uv = world.xz + d * slope;
+            let lens = sin(dot(floor_uv, vec2<f32>(2.4, 1.2)) + time * 0.54 + sin(floor_uv.y * 1.8))
+                + sin(dot(floor_uv, vec2<f32>(-1.3, 2.1)) - time * 0.47 + sin(floor_uv.x * 1.3));
+            let filaments = 1.0 - smoothstep(0.03, 0.23, abs(lens));
+            let light = sun * exp(-d * 0.065) * (1.0 - smoothstep(18.0, 34.0, distance));
+            result *= vec3<f32>(1.0) + vec3<f32>(0.38, 0.55, 0.50) * filaments * light;
+        }
+    }
+    if cave.lava_depth > 0.0 {
+        // Molten rock absorbs visible light within a fraction of a metre.
+        // Untouched sky pixels receive the same self-lit medium as distant rock.
+        let path = select(4.0, min(distance, 4.0), depth > 0.000001);
+        let transmission = exp(-vec3<f32>(2.8, 5.1, 7.4) * (0.24 + path));
+        let p = origin + ray * min(path, 1.3);
+        let time = cave.underwater.z;
+        let eddy = sin(dot(p, vec3<f32>(1.37, 0.52, -1.22)) + time * 0.38
+            + sin(dot(p, vec3<f32>(0.83, -1.3, 1.19)) - time * 0.24));
+        let surface_light = exp(-min(cave.lava_depth, 3.0) * 0.75);
+        let heat = clamp(surface_light * (0.56 + 0.38 * smoothstep(-0.85, 0.85, ray.y))
+            + 0.085 * eddy, 0.0, 1.0);
+        let melt = mix(vec3<f32>(0.26, 0.015, 0.0015), vec3<f32>(0.91, 0.19, 0.014), heat);
+        result = mix(melt, result, transmission);
     }
     // Local furnace smoke reuses this depth pass. It is a smooth participating
     // medium around the viewer, never visible logical cell faces or a flat overlay.

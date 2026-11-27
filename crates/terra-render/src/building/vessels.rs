@@ -14,6 +14,7 @@ struct Assets {
     material: Handle<StandardMaterial>,
     tar: Handle<StandardMaterial>,
     bile: Handle<StandardMaterial>,
+    lava: Handle<StandardMaterial>,
 }
 
 #[derive(Component)]
@@ -39,6 +40,13 @@ fn setup(
             base_color: Color::srgba(0.16, 0.57, 0.78, 0.82),
             perceptual_roughness: 0.18,
             alpha_mode: AlphaMode::Blend,
+            cull_mode: None,
+            ..default()
+        }),
+        lava: materials.add(StandardMaterial {
+            base_color: Color::srgb(1.0, 0.32, 0.035),
+            emissive: LinearRgba::rgb(1.1, 0.18, 0.01),
+            perceptual_roughness: 0.48,
             cull_mode: None,
             ..default()
         }),
@@ -116,6 +124,7 @@ pub(super) fn is_vessel(item: ItemKind) -> bool {
                 | terra_core::ToolKind::WaterBucket
                 | terra_core::ToolKind::TarBucket
                 | terra_core::ToolKind::BileBucket
+                | terra_core::ToolKind::LavaBucket
         )
     ) || farm_kind(item) == Some(FarmToolKind::WateringCan)
 }
@@ -125,7 +134,8 @@ pub(super) fn base(item: ItemKind) -> ItemKind {
         ItemKind::Tool(
             terra_core::ToolKind::WaterBucket
             | terra_core::ToolKind::TarBucket
-            | terra_core::ToolKind::BileBucket,
+            | terra_core::ToolKind::BileBucket
+            | terra_core::ToolKind::LavaBucket,
         ) => ItemKind::Tool(terra_core::ToolKind::Bucket),
         ItemKind::WaterBottle => ItemKind::GlassBottle,
         _ => item.preview_item(),
@@ -142,6 +152,7 @@ fn default_fill(item: ItemKind) -> f32 {
                 terra_core::ToolKind::WaterBucket
                     | terra_core::ToolKind::TarBucket
                     | terra_core::ToolKind::BileBucket
+                    | terra_core::ToolKind::LavaBucket
             )
     ) {
         1.
@@ -160,6 +171,7 @@ fn profile(item: ItemKind) -> Option<(Vec3, f32, f32)> {
                 | terra_core::ToolKind::WaterBucket
                 | terra_core::ToolKind::TarBucket
                 | terra_core::ToolKind::BileBucket
+                | terra_core::ToolKind::LavaBucket
         )
     ) {
         Some((Vec3::new(0.5, 0.18, 0.5), 0.22, 0.4075))
@@ -253,6 +265,8 @@ fn update(
         let active = motion.is_some_and(|motion| motion.pouring);
         let material = if held.item == ItemKind::Tool(terra_core::ToolKind::TarBucket) {
             &assets.tar
+        } else if held.item == ItemKind::Tool(terra_core::ToolKind::LavaBucket) {
+            &assets.lava
         } else if held.item == ItemKind::Tool(terra_core::ToolKind::BileBucket) {
             &assets.bile
         } else {

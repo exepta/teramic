@@ -67,6 +67,16 @@ pub(super) fn build(builder: &mut Builder<'_>, plot: &Plot) {
     } else {
         (74, 82)
     };
+    let slate = super::super::plains::active(builder, plot.center[0], plot.center[1])
+        && matches!(
+            plot.role,
+            BuildingRole::House | BuildingRole::Medic | BuildingRole::Smith
+        );
+    let wall = if slate {
+        terra_voxel::MaterialId::WhiteClay as u16
+    } else {
+        wall
+    };
     let mut model = Placed { builder, plot };
     let clear_height = h
         + w / 2
@@ -123,7 +133,9 @@ pub(super) fn build(builder: &mut Builder<'_>, plot: &Plot) {
             let rise = (x + 1).min(w + 1 - x).max(0);
             let y = h + rise;
             for z in -1..=d + 1 {
-                if x * 2 == w {
+                if slate && z >= 0 && z <= d && x >= 0 && x <= w {
+                    model.set([x, y, z], terra_voxel::MaterialId::BlueSlateShingles as u16);
+                } else if x * 2 == w {
                     model.state([x, y, z], slab, 0);
                 } else {
                     model.state([x, y, z], stairs, if x * 2 < w { 1 } else { 3 });

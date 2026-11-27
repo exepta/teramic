@@ -20,6 +20,92 @@ struct Stage {
     furthest_source_m: f32,
 }
 
+#[derive(Resource, Default)]
+struct ExposureTrace {
+    start: Option<f32>,
+    samples: Vec<(f32, f32, f32)>,
+}
+
+/// Measure adaptation on entry, then hold the same underground camera for eight
+/// more seconds after the initial six-second transition.
+pub(super) fn natural_exposure_ready(world: &mut World, scene: Scene) -> Result<bool, String> {
+    let now = world.resource::<Time>().elapsed_secs();
+    let blend = world.resource::<terra_render::CaveState>().blend;
+    let (exposure, ambient) = world
+        .query_filtered::<(&bevy::camera::Exposure, &AmbientLight), With<TerraCamera>>()
+        .single(world)
+        .map_err(|e| e.to_string())?;
+    let (ev, fill) = (exposure.ev100, ambient.brightness);
+    if !ev.is_finite() || !fill.is_finite() || !blend.is_finite() {
+        return Err("Nonfinite underground lighting".into());
+    }
+    let mut trace = world.get_resource_or_init::<ExposureTrace>();
+    let elapsed = now
+        - *trace.start.get_or_insert_with(|| {
+            info!(
+                ev,
+                fill, blend, "Started stationary underground lighting sample"
+            );
+            now
+        });
+    trace.samples.push((elapsed, ev, fill));
+    if elapsed < 14.0 {
+        return Ok(false);
+    }
+    let settled = &trace.samples[trace.samples.partition_point(|s| s.0 < 6.0)..];
+    if settled.len() < 16 {
+        return Ok(false);
+    }
+    let first = trace.samples[0].1;
+    let movement: f32 = trace
+        .samples
+        .windows(2)
+        .map(|w| (w[1].1 - w[0].1).abs())
+        .sum();
+    let reversal = movement - (ev - first).abs();
+    let (mut min_ev, mut max_ev) = (ev, ev);
+    let (mut min_fill, mut max_fill) = (fill, fill);
+    for &(_, ev, fill) in settled {
+        min_ev = min_ev.min(ev);
+        max_ev = max_ev.max(ev);
+        min_fill = min_fill.min(fill);
+        max_fill = max_fill.max(fill);
+    }
+    info!(
+        frames = trace.samples.len(),
+        seconds = elapsed,
+        first_ev = first,
+        final_ev = ev,
+        reversed_ev = reversal,
+        cave_blend = blend,
+        settled_frames = settled.len(),
+        settled_secs = elapsed - settled[0].0,
+        min_ev,
+        max_ev,
+        min_fill,
+        max_fill,
+        "Natural underground lighting at rest"
+    );
+    // Nests use a covered alcove. The broad natural gallery also sees daylight
+    // through side passages, so its camera can be partly adapted to the sky.
+    let minimum_cover = if matches!(scene, Scene::DragonLair(_)) {
+        0.9
+    } else {
+        0.5
+    };
+    if blend < minimum_cover {
+        return Err(format!(
+            "Close camera is not under sufficient cover (blend {blend:.3})"
+        ));
+    }
+    if reversal > 0.22 || max_ev - min_ev > 0.02 || max_fill - min_fill > 0.5 {
+        return Err(format!(
+            "Stationary light varied: reversal {reversal:.3} EV, settled {min_ev:.4}–{max_ev:.4} EV, fill {min_fill:.3}–{max_fill:.3}"
+        ));
+    }
+    Ok(true)
+}
+
 pub(super) fn observe(world: &mut World) {
     let smoke = world.resource::<BiomeSmoke>();
     if !matches!(smoke.scene, Scene::Grave(_)) || smoke.views.is_none() || smoke.stage > 2 {

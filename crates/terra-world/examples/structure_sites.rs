@@ -101,6 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         (StructureKind::GraveDungeon, _) => 8,
                         (
                             StructureKind::DarkDragonLair
+                            | StructureKind::FireDragonLair
                             | StructureKind::EarthDragonLair
                             | StructureKind::WaterDragonLair,
                             _,

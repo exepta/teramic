@@ -297,6 +297,7 @@ pub(crate) struct ChunkFade {
     seconds: f32,
     outgoing: bool,
     materials: Vec<FadingMaterial>,
+    leaf_casters: Vec<Entity>,
     retired_meshes: Vec<Handle<Mesh>>,
     mode: ChunkAnimation,
     original: Transform,
@@ -378,12 +379,23 @@ fn start(
         return false;
     }
     let mut materials = Vec::new();
+    let mut leaf_casters = Vec::new();
     for entity in mesh_entities(world, root) {
         restore_queued_shadow(world, entity);
         if world
             .get::<crate::meshing::shadows::ShadowProxy>(entity)
             .is_some()
         {
+            if world
+                .get::<crate::meshing::shadows::LeafShadowProxy>(entity)
+                .is_some()
+                && world.get::<bevy::light::NotShadowCaster>(entity).is_none()
+            {
+                world
+                    .entity_mut(entity)
+                    .insert(bevy::light::NotShadowCaster);
+                leaf_casters.push(entity);
+            }
             continue;
         }
         let restore_shadow = world.get::<bevy::light::NotShadowCaster>(entity).is_none();
@@ -433,6 +445,7 @@ fn start(
         seconds: duration(mode),
         outgoing,
         materials,
+        leaf_casters,
         retired_meshes,
         mode,
         original,
@@ -611,6 +624,11 @@ fn finish(world: &mut World, root: Entity, fade: ChunkFade) {
 
 fn cleanup(world: &mut World, root: Entity, fade: ChunkFade, completed: bool) {
     let _scope = terra_core::profiling::ScopeTimer::new("transitions.cleanup");
+    for entity in fade.leaf_casters {
+        if let Ok(mut caster) = world.get_entity_mut(entity) {
+            caster.remove::<bevy::light::NotShadowCaster>();
+        }
+    }
     if let Some(mut pending) = world.get_resource_mut::<TransitionDraws>() {
         for material in &fade.materials {
             pending.pending.remove(&material.entity());
@@ -661,7 +679,7 @@ fn animated_transform(original: Transform, mode: ChunkAnimation, progress: f32) 
     result
 }
 
-fn animate(world: &mut World) {
+pub(crate) fn animate(world: &mut World) {
     let _scope = terra_core::profiling::ScopeTimer::new("transitions.animate");
     let dt = world.resource::<Time>().delta_secs().min(1.0 / 30.0);
     let disabled = world.resource::<GameConfig>().client.chunk_animation == ChunkAnimation::None;
@@ -1121,6 +1139,7 @@ mod tests {
                     seconds: 1.0,
                     outgoing: false,
                     materials: Vec::new(),
+                    leaf_casters: Vec::new(),
                     retired_meshes: Vec::new(),
                     mode: ChunkAnimation::Fade,
                     original: Transform::default(),
@@ -1356,6 +1375,7 @@ mod tests {
             base: StandardMaterial::default(),
             extension: crate::water::material::WaterExtension {
                 native_depth_filter: false,
+                regional_seas: false,
                 tint: Vec4::ONE,
                 settings: Vec4::ZERO,
                 effects: Vec4::ZERO,
@@ -1391,10 +1411,20 @@ mod tests {
                 RenderLayers::layer(crate::meshing::shadows::LAYER),
             ))
             .id();
+        let leaf_proxy = world
+            .spawn((
+                ChildOf(root),
+                Mesh3d::default(),
+                MeshMaterial3d(material.clone()),
+                crate::meshing::shadows::ShadowProxy,
+                crate::meshing::shadows::LeafShadowProxy,
+            ))
+            .id();
         assert!(start(&mut world, root, ChunkAnimation::Fade, false, vec![]));
         let pending = &world.resource::<TransitionDraws>().pending;
         assert!(pending.contains(&color));
         assert!(!pending.contains(&proxy));
+        assert!(!pending.contains(&leaf_proxy));
         assert_eq!(world.get::<ChunkFade>(root).unwrap().materials.len(), 1);
         assert_eq!(
             world
@@ -1404,6 +1434,18 @@ mod tests {
             material
         );
         assert!(world.get::<bevy::light::NotShadowCaster>(proxy).is_none());
+        assert!(
+            world
+                .get::<bevy::light::NotShadowCaster>(leaf_proxy)
+                .is_some()
+        );
+        let fade = world.entity_mut(root).take::<ChunkFade>().unwrap();
+        finish(&mut world, root, fade);
+        assert!(
+            world
+                .get::<bevy::light::NotShadowCaster>(leaf_proxy)
+                .is_none()
+        );
     }
 
     fn two_batch_fade() -> (World, Entity, [Entity; 2], Handle<StandardMaterial>) {

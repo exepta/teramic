@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 688,
+  "name": "Marsh Glowcaps",
+  "description": "Clusters of small mushroom caps shine turquoise in the shade.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.46,
+  "resistance": 0.62,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/swamp_glowcaps.glb",
+  "struct_block": true,
+  "collision_boxes": [],
+  "textures": {}
+}

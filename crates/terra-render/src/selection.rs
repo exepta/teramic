@@ -31,7 +31,11 @@ fn block_bounds(position: [i64; 3], material: Option<u16>, journal: &EditJournal
 fn show_outline(material: u16) -> bool {
     !matches!(
         terra_voxel::MaterialId::from_raw(material),
-        Some(terra_voxel::MaterialId::SolidWater | terra_voxel::MaterialId::FluidWater)
+        Some(
+            terra_voxel::MaterialId::SolidWater
+                | terra_voxel::MaterialId::FluidWater
+                | terra_voxel::MaterialId::Lava
+        )
     )
 }
 fn show_prop_outline(kind: terra_world::props::PropKind, growth: Option<f32>) -> bool {
@@ -95,7 +99,7 @@ pub(crate) fn draw_selection(
                     );
                     return;
                 }
-                if terra_world::interaction_shapes::visit_boxes(
+                if terra_world::interaction_shapes::visit_selection_boxes(
                     &chunks,
                     &journal,
                     &properties,
@@ -248,9 +252,9 @@ mod tests {
         }
     }
     #[test]
-    fn neither_water_kind_draws_an_outline_but_ordinary_blocks_do() {
+    fn water_and_lava_hide_the_outline_but_ordinary_blocks_show_it() {
         for id in 1..=terra_voxel::MaterialId::LAST {
-            assert_eq!(super::show_outline(id), id != 14 && id != 27);
+            assert_eq!(super::show_outline(id), !matches!(id, 14 | 27 | 613));
         }
     }
 }

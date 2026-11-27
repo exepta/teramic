@@ -553,7 +553,7 @@ fn chest_previews_describe_the_real_wood_wildcard_for_every_plank_species() {
         .iter()
         .find(|recipe| recipe.output.item == ItemKind::Block(29))
         .unwrap();
-    for plank in [16, 17, 18, 135] {
+    for plank in [16, 17, 18, 135, 645, 681] {
         assert!(
             recipe
                 .ingredients()
@@ -570,9 +570,9 @@ fn chest_previews_describe_the_real_wood_wildcard_for_every_plank_species() {
         let cells: Vec<_> = view.recipe_grid.iter().filter(|slot| !slot.empty).collect();
         assert_eq!(cells.len(), 8);
         assert!(cells.iter().all(|slot| slot.name == "Any wood planks"
-            && slot.description.contains("Cherry")
+            && slot.description.contains("wood")
             && !slot.missing));
-        assert_eq!(view.recipe_alternatives.len(), 4);
+        assert_eq!(view.recipe_alternatives.len(), WOOD_PREVIEWS.len());
         for (row, (name, material)) in view.recipe_alternatives.iter().zip(WOOD_PREVIEWS) {
             assert!(row.name.contains(name));
             assert!(row.summary.contains(name));
@@ -629,7 +629,7 @@ fn furnace_fuel_tabs_show_registered_times_and_never_change_inventory_or_recipe_
 }
 
 #[test]
-fn four_wood_previews_change_only_the_preview_and_preserve_wildcard_availability() {
+fn wood_previews_change_only_the_preview_and_preserve_wildcard_availability() {
     let mut app = browser_app();
     app.world_mut()
         .resource_mut::<ClientSession>()
@@ -642,7 +642,7 @@ fn four_wood_previews_change_only_the_preview_and_preserve_wildcard_availability
         command(&mut app, CraftingAction::PreviewWood(index));
         let view = app.world().resource::<CraftingView>();
         assert!(view.any_wood);
-        assert_eq!(view.wood_options.len(), 4);
+        assert_eq!(view.wood_options.len(), WOOD_PREVIEWS.len());
         assert_eq!(view.wood_options[index].name, *name);
         assert!(view.wood_options[index].selected);
         assert!(
@@ -785,7 +785,7 @@ fn wood_alternatives_are_distinct_interactive_previews_with_bounded_navigation()
             .map(|row| &row.id)
             .collect::<std::collections::HashSet<_>>()
             .len(),
-        4
+        WOOD_PREVIEWS.len()
     );
     command(
         &mut app,
@@ -794,14 +794,25 @@ fn wood_alternatives_are_distinct_interactive_previews_with_bounded_navigation()
             wood: row.wood,
         },
     );
-    assert_eq!(app.world().resource::<CraftingView>().recipe_page, "3 / 4");
+    let options = WOOD_PREVIEWS.len();
+    assert_eq!(
+        app.world().resource::<CraftingView>().recipe_page,
+        format!("3 / {options}")
+    );
     assert!(app.world().resource::<CraftingView>().wood_options[2].selected);
-    command(&mut app, CraftingAction::Alternative(1));
-    command(&mut app, CraftingAction::Alternative(1));
-    assert_eq!(app.world().resource::<CraftingView>().recipe_page, "4 / 4");
+    for _ in 3..options {
+        command(&mut app, CraftingAction::Alternative(1));
+    }
+    assert_eq!(
+        app.world().resource::<CraftingView>().recipe_page,
+        format!("{options} / {options}")
+    );
     assert!(!app.world().resource::<CraftingView>().recipe_next);
     command(&mut app, CraftingAction::Alternative(-1));
-    assert_eq!(app.world().resource::<CraftingView>().recipe_page, "3 / 4");
+    assert_eq!(
+        app.world().resource::<CraftingView>().recipe_page,
+        format!("{} / {options}", options - 1)
+    );
     assert_eq!(app.world().resource::<ClientSession>().inventory, before);
     assert_eq!(app.world().resource::<CraftingState>().cells, reserved);
     assert!(app.world().resource::<pointer::InventoryQueue>().is_empty());

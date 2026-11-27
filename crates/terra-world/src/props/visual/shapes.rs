@@ -36,6 +36,9 @@ pub(super) fn raw_template(
     if let Some(species) = kind.sapling() {
         return super::saplings::template(species, level, palette);
     }
+    if kind == PropKind::Coconut {
+        return Ok(super::fruit::coconut(variant as u8, palette));
+    }
     if kind == PropKind::SpiderWeb {
         return super::webs::template(variant as u8, level, palette);
     }
@@ -123,6 +126,8 @@ pub(super) fn raw_template(
         | PropKind::BranchingCoral
         | PropKind::TubeCoral
         | PropKind::PlateCoral
+        | PropKind::ReefFan
+        | PropKind::HangingPearlKelp
         | PropKind::SeaAnemone
         | PropKind::SmallStones
         | PropKind::Wheat
@@ -136,6 +141,8 @@ pub(super) fn raw_template(
         | PropKind::BirchSapling
         | PropKind::CherrySapling
         | PropKind::AppleSapling
+        | PropKind::AcaciaSapling
+        | PropKind::Coconut
         | PropKind::AppleFruit => {}
         PropKind::SmallPlant if variant >= 128 => {
             voxel(

@@ -3,16 +3,16 @@ use super::*;
 use terra_core::{Inventory, ItemKind};
 use terra_world::edits::BlockObjectState;
 
-fn held(app: &mut App, peer: &Peer) {
+fn held(app: &mut App, peer: &Peer, torch: u16) {
     let mut inventory = Inventory::default();
-    inventory.insert(ItemKind::Block(40), 2);
+    inventory.insert(ItemKind::Block(torch), 2);
     app.world_mut()
         .resource_mut::<EditJournal>()
         .gameplay_mut()
         .inventories
         .insert(peer.uuid, inventory);
 }
-fn command(app: &App, peer: &Peer, position: [i64; 3]) -> EditCommand {
+fn command(app: &App, peer: &Peer, position: [i64; 3], torch: u16) -> EditCommand {
     let journal = app.world().resource::<EditJournal>();
     EditCommand {
         request: 1,
@@ -25,14 +25,17 @@ fn command(app: &App, peer: &Peer, position: [i64; 3]) -> EditCommand {
         action: EditAction::Block {
             position,
             expected: 0,
-            material: 40,
+            material: torch,
         },
     }
 }
 
 #[test]
 fn survival_torches_mount_on_each_wall_and_floor_with_preview_matching_authority() {
-    for anchor in [[7, 6, 7], [-1, 6, -1]] {
+    for (anchor, torch) in [
+        ([7, 6, 7], 40),
+        ([-1, 6, -1], terra_core::block_shapes::VIOLET_TORCH),
+    ] {
         for (normal, expected_facing) in [
             ([1, 0, 0], 4),
             ([-1, 0, 0], 5),
@@ -53,7 +56,7 @@ fn survival_torches_mount_on_each_wall_and_floor_with_preview_matching_authority
                     .resource::<EditJournal>()
                     .has_extended_kinetics()
             );
-            held(&mut app, &peer);
+            held(&mut app, &peer, torch);
             let center = Vec3::from_array(anchor.map(|value| value as f32)) + Vec3::splat(0.5);
             let eye = center
                 + Vec3::from_array(normal.map(|value| value as f32)) * 4.0
@@ -84,7 +87,7 @@ fn survival_torches_mount_on_each_wall_and_floor_with_preview_matching_authority
                 app.world().resource::<ChunkStore>(),
                 app.world().resource::<EditJournal>(),
                 hit,
-                ItemKind::Block(40),
+                ItemKind::Block(torch),
                 (
                     eye.to_array().map(f64::from),
                     direction.to_array().map(f64::from),
@@ -94,13 +97,13 @@ fn survival_torches_mount_on_each_wall_and_floor_with_preview_matching_authority
             )
             .unwrap();
             assert_eq!(preview.states[0].1.unwrap().facing, expected_facing);
-            let request = command(&app, &peer, position);
+            let request = command(&app, &peer, position, torch);
             let inventory_revision = request.source.unwrap().revision;
             assert_eq!(apply(&mut app, &peer, request, false), EditOutcome::Applied);
             let journal = app.world().resource::<EditJournal>();
             assert_eq!(
                 app.world().resource::<ChunkStore>().block_at(position),
-                Some(40)
+                Some(torch)
             );
             assert_eq!(
                 journal.object_state(position).unwrap().facing,
@@ -118,7 +121,7 @@ fn survival_torches_mount_on_each_wall_and_floor_with_preview_matching_authority
                 expected_facing
             ));
             assert_eq!(
-                journal.gameplay().inventories[&peer.uuid].count(ItemKind::Block(40)),
+                journal.gameplay().inventories[&peer.uuid].count(ItemKind::Block(torch)),
                 1
             );
             assert_eq!(
@@ -146,7 +149,7 @@ fn survival_torch_requests_reject_ceiling_and_partial_support_without_consuming_
             material,
             (material == 82).then_some(BlockObjectState::default()),
         );
-        held(&mut app, &peer);
+        held(&mut app, &peer, 40);
         let center = Vec3::from_array(anchor.map(|value| value as f32))
             + Vec3::new(0.5, if material == 82 { 0.25 } else { 0.5 }, 0.5);
         let eye = center
@@ -160,7 +163,7 @@ fn survival_torch_requests_reject_ceiling_and_partial_support_without_consuming_
         let position = std::array::from_fn(|axis| anchor[axis] + i64::from(normal[axis]));
         let before =
             app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid].clone();
-        let request = command(&app, &peer, position);
+        let request = command(&app, &peer, position, 40);
         assert_eq!(apply(&mut app, &peer, request, false), EditOutcome::Invalid);
         assert_eq!(
             app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid],

@@ -2,14 +2,18 @@ use self::voxel::Builder;
 use bevy::prelude::*;
 use terra_core::creatures::CreatureKind as Kind;
 
+pub(super) const ELEPHANT_HEAD: Vec3 = Vec3::new(0., 2.29, -0.80);
+
 mod aquatic;
 mod bear;
 mod bee;
 mod clownfish;
 pub(super) mod dragon;
+mod elephant;
 mod eyes;
 mod forest;
 mod horse;
+mod lava_worm;
 mod mammal;
 pub(super) mod sandworm;
 mod shape;
@@ -17,15 +21,20 @@ pub(super) mod soldier;
 mod spider;
 mod spirit;
 mod stalker;
+pub(super) mod stone_golem;
 mod villager;
 mod voxel;
 
 #[derive(Clone, Copy, Debug)]
 pub(super) enum Part {
     Body,
+    Golem(stone_golem::Joint, bool),
     Dragon(dragon::Joint),
     DragonLight(dragon::Joint),
     SpiritGlow,
+    ElephantEar(f32),
+    ElephantTrunk,
+    LavaJaw(u8),
     SpiritArm(f32),
     SpiritOrbit(f32),
     Head,
@@ -53,6 +62,7 @@ pub(super) enum Part {
     VillagerThigh(f32),
     MilitaryWeapon(f32),
     MilitaryTabard,
+    LavaRing { index: u8, glowing: bool },
     WormSegment(u8),
     WormMound,
     WormDust,
@@ -91,12 +101,18 @@ pub(super) fn parts_variant(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, 
         Kind::BloodStalker => forest::stalker(),
         Kind::BloodWisp => forest::wisp(),
         Kind::ThornBrute => forest::brute(),
+        Kind::StoneGolem => stone_golem::parts(variant),
         Kind::SandWorm => sandworm::parts(),
-        Kind::DarkDragon | Kind::EarthDragon | Kind::WaterDragon => dragon::parts(kind, variant),
+        Kind::LavaWorm => lava_worm::parts(),
+        Kind::DarkDragon | Kind::EarthDragon | Kind::FireDragon | Kind::WaterDragon => {
+            dragon::parts(kind, variant)
+        }
         Kind::Fish => clownfish::parts(),
         Kind::Cow | Kind::Pig | Kind::Sheep => mammal::parts(kind),
         Kind::Bear => bear::parts(),
         Kind::Horse => horse::parts(variant),
+        Kind::Zebra => horse::zebra(),
+        Kind::Elephant => elephant::parts(),
         Kind::Squid => aquatic::squid(),
         Kind::MoonJelly
         | Kind::FireJelly
@@ -243,11 +259,17 @@ mod tests {
             let parts = parts(kind).unwrap();
             let (part_limit, extent_limit, vertex_limit) = match kind {
                 // Each paw has its own ankle pivot; the outer breath stream is a separate material.
-                // The dark dragon also has three emissive overlays (heart and wing rims).
+                // Each dragon also has two independently animated cheek crests.
                 Kind::EarthDragon | Kind::WaterDragon => (31, 24.0, 65_000),
-                Kind::DarkDragon => (34, 24.0, 65_000),
+                Kind::FireDragon => (35, 24.0, 65_000),
+                Kind::DarkDragon => (37, 24.0, 65_000),
                 Kind::SandWorm => (58, 23.0, 24_000),
+                // Fifteen tapered basalt rings carry separate lava seams.
+                Kind::LavaWorm => (40, 2.5, 32_000),
+                Kind::Elephant => (10, 3.2, 18_000),
                 Kind::Stalker => (11, 3.0, 64_000),
+                // Ten stones, five inlays, an awakening seal and two impact meshes.
+                Kind::StoneGolem => (18, 4.05, 60_000),
                 // Residents use the same cached, detailed reference meshes as
                 // their profession variants; the dedicated role test enforces
                 // this budget independently for every civilian silhouette.
@@ -286,18 +308,9 @@ mod tests {
                         (normal.length_squared() - 1.0).abs() < 0.001,
                         "{kind:?}: {normal}"
                     );
-                    let faceted_worm = kind == Kind::SandWorm
-                        && matches!(
-                            part,
-                            Part::WormRipple(_)
-                                | Part::WormSegment(_)
-                                | Part::Head
-                                | Part::WormMandible(_)
-                                | Part::Jaw
-                        );
-                    if !faceted_worm && !kind.is_dragon() && !matches!(part, Part::WebShot) {
-                        // Voxel sculptures have axis-aligned faces. The worm's
-                        // plates, hooked fangs and projected waves are faceted.
+                    if !matches!(part, Part::WormRipple(_) | Part::WebShot) {
+                        // Water-like surface ripples and web projectiles are effect geometry.
+                        // Every animal's articulated anatomy is a voxel surface.
                         assert!(
                             normal.abs().max_element() > 0.99999
                                 && normal.abs().element_sum() < 1.00001,

@@ -4,6 +4,8 @@ use terra_core::creatures::{intentions::IntentReason, taming::CompanionMode};
 #[cfg(test)]
 mod tests;
 
+const FLOOR_TOLERANCE: f64 = 0.5;
+
 pub fn step(
     animal: &mut Creature,
     habitat: &Habitat,
@@ -49,7 +51,9 @@ pub fn step(
             && (p[1] - animal.position[1]).abs() < 6.0
     }) {
         let gap = (owner[0] - animal.position[0]).hypot(owner[2] - animal.position[2]);
-        if gap > 2.0 {
+        let different_floor =
+            !animal.kind.is_spider() && (owner[1] - animal.position[1]).abs() > FLOOR_TOLERANCE;
+        if gap > 2.0 || different_floor {
             follow(animal, habitat, owner, dt, search, navigation);
             return;
         }
@@ -110,14 +114,21 @@ fn follow(
         return;
     }
     let before = animal.position;
-    let move_to = |target: [f64; 3]| {
+    let move_to = |target: [f64; 3], direct: bool| {
         let dx = target[0] - before[0];
         let dz = target[2] - before[2];
-        let length = dx.hypot(dz).max(0.001);
-        let remaining = ((owner[0] - before[0]).hypot(owner[2] - before[2]) - 1.75).max(0.0);
-        let amount = (speed * animal.movement_scale() * f64::from(dt))
-            .min(length)
-            .min(remaining);
+        let length = dx.hypot(dz);
+        if length < 0.001 {
+            return None;
+        }
+        // A stair detour may start directly under the owner and lead away
+        // from them. Reserve personal space on the final approach only.
+        let remaining = if direct && (owner[1] - before[1]).abs() <= FLOOR_TOLERANCE {
+            (length - 1.75).max(0.0)
+        } else {
+            length
+        };
+        let amount = (speed * animal.movement_scale() * f64::from(dt)).min(remaining);
         let next = [
             before[0] + dx / length * amount,
             before[1],
@@ -133,14 +144,14 @@ fn follow(
         .is_some_and(|nav| nav.following_ground_route(animal.id));
     let mut next = if detouring {
         navigation::ground_waypoint(animal, habitat, owner, false, navigation.as_deref_mut())
-            .and_then(move_to)
+            .and_then(|point| move_to(point, false))
     } else {
-        move_to(owner)
+        move_to(owner, true)
     };
     if next.is_none() {
         next =
             navigation::ground_waypoint(animal, habitat, owner, search, navigation.as_deref_mut())
-                .and_then(move_to);
+                .and_then(|point| move_to(point, false));
     } else if !detouring && let Some(nav) = navigation {
         nav.ground_unblocked(animal.id);
     }

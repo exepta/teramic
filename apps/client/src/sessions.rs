@@ -1,7 +1,7 @@
 use bevy::{
     app::AppExit,
     prelude::*,
-    tasks::{AsyncComputeTaskPool, Task, futures_lite::future},
+    tasks::{IoTaskPool, Task, futures_lite::future},
 };
 use std::{
     collections::HashMap,
@@ -203,12 +203,12 @@ fn update_streaming_limit(world: &mut World) {
         world.resource_mut::<StreamingRadiusLimit>().0 = None;
         return;
     }
+    world.resource_mut::<ViewWarmup>().next = Instant::now() + Duration::from_millis(750);
     if world.resource::<WorldGeneration>().status == GenerationStatus::Ready
-        && world.resource::<terra_render::RenderStatus>().ready
         && world.resource::<terra_render::WaterStatus>().initial_ready
+        && presented_sections(world).all(|(_, presented)| presented)
     {
         world.resource_mut::<StreamingRadiusLimit>().0 = Some(current + 1);
-        world.resource_mut::<ViewWarmup>().next = Instant::now() + Duration::from_millis(750);
     }
 }
 pub(crate) fn install(app: &mut App) {
@@ -312,7 +312,7 @@ fn update(world: &mut World) {
         {
             let host = world.remove_resource::<IntegratedServer>();
             world.resource_mut::<SessionJobs>().stop = Some(
-                AsyncComputeTaskPool::get()
+                IoTaskPool::get()
                     .spawn(async move { host.map_or(Ok(()), IntegratedServer::finish) }),
             );
         }
@@ -371,12 +371,11 @@ fn start_request(world: &mut World, request: SessionRequest) -> Result<(), Strin
             .ok_or("Only local worlds can be saved from this client")?;
         let receiver = host.request_save()?;
         world.resource_mut::<SessionInfo>().saving = true;
-        world.resource_mut::<SessionJobs>().save =
-            Some(AsyncComputeTaskPool::get().spawn(async move {
-                receiver
-                    .recv_timeout(Duration::from_secs(30))
-                    .map_err(|e| e.to_string())?
-            }));
+        world.resource_mut::<SessionJobs>().save = Some(IoTaskPool::get().spawn(async move {
+            receiver
+                .recv_timeout(Duration::from_secs(30))
+                .map_err(|e| e.to_string())?
+        }));
         return Ok(());
     }
     if matches!(request, SessionRequest::Leave | SessionRequest::Quit) {
@@ -440,7 +439,9 @@ fn start_request(world: &mut World, request: SessionRequest) -> Result<(), Strin
         SessionRequest::PlayWorld(id) => {
             let library = world.resource::<MenuPaths>().worlds.clone();
             let mut config = world.resource::<GameConfig>().clone();
-            AsyncComputeTaskPool::get().spawn(async move {
+            // The host generates terrain and saves on the async compute pool.
+            // Keep this blocking startup handshake off those workers.
+            IoTaskPool::get().spawn(async move {
                 let entry = library.mark_played(id)?;
                 entry.compatible()?;
                 config.world = entry.manifest.world;
@@ -480,7 +481,7 @@ fn start_request(world: &mut World, request: SessionRequest) -> Result<(), Strin
                 .find(|s| s.id == id)
                 .ok_or("Server is no longer available")?
                 .clone();
-            AsyncComputeTaskPool::get().spawn(async move {
+            IoTaskPool::get().spawn(async move {
                 server.validate().map_err(|e| e.to_string())?;
                 let addresses = (server.address.as_str(), server.port)
                     .to_socket_addrs()
@@ -504,7 +505,7 @@ fn start_request(world: &mut World, request: SessionRequest) -> Result<(), Strin
                 })
             })
         }
-        SessionRequest::JoinAddress(address) => AsyncComputeTaskPool::get().spawn(async move {
+        SessionRequest::JoinAddress(address) => IoTaskPool::get().spawn(async move {
             let status = terra_network::browser::query_status(address)?;
             let token = terra_network::browser::join(address, &profile)?;
             Ok(PreparedSession {
@@ -581,19 +582,14 @@ fn update_loading(world: &mut World) {
         fail(world, format!("Vegetation rendering failed: {error}"));
         return;
     }
-    let chunks = world.resource::<terra_world::streaming::ChunkStore>();
-    let visibility = world.get_resource::<terra_render::TerrainVisibility>();
-    let (completed, total) = chunk_counts(chunks.wanted_sections().map(|position| {
-        let ready = render.section_ready(position, chunks.loaded.get(&position), visibility);
-        (position, ready)
-    }));
+    let (completed, total) = chunk_counts(presented_sections(world));
     if total > 0
         && completed == total
         && generation.status == GenerationStatus::Ready
-        && render.ready
         && props.ready
         && world.resource::<terra_render::WaterStatus>().initial_ready
     {
+        world.resource_mut::<MenuState>().status.clear();
         world.insert_resource(LoadingProgress {
             fraction: Some(1.0),
             detail: format!("{completed} / {total} chunks"),
@@ -602,12 +598,26 @@ fn update_loading(world: &mut World) {
         world.resource_mut::<SessionJobs>().reveal_elapsed = Some(Duration::ZERO);
         return;
     }
-    world.resource_mut::<MenuState>().status = "Loading chunks ...".into();
+    let status = if total == 0 || completed < total {
+        "Loading chunks ..."
+    } else if !props.ready {
+        "Preparing world objects ..."
+    } else if !world.resource::<terra_render::WaterStatus>().initial_ready {
+        "Preparing water surfaces ..."
+    } else {
+        "Preparing terrain ..."
+    };
+    world.resource_mut::<MenuState>().status = status.into();
     world.insert_resource(LoadingProgress {
-        fraction: (total > 0).then(|| completed as f32 / total as f32),
+        fraction: pending_chunk_fraction(completed, total),
         detail: format!("{completed} / {total} chunks"),
         reveal: 0.0,
     });
+}
+
+fn pending_chunk_fraction(completed: usize, total: usize) -> Option<f32> {
+    // The UI rounds to whole percentages. Reserve 100% for the confirmed reveal.
+    (total > 0).then(|| (completed as f32 / total as f32).min(0.99))
 }
 
 fn reveal_fraction(elapsed: Duration) -> f32 {
@@ -615,6 +625,19 @@ fn reveal_fraction(elapsed: Duration) -> f32 {
     let progress = ((elapsed.as_secs_f32() - 0.12) / 0.9).clamp(0.0, 1.0);
     progress * progress * (3.0 - 2.0 * progress)
 }
+
+fn presented_sections(world: &World) -> impl Iterator<Item = (terra_voxel::SectionPos, bool)> + '_ {
+    let chunks = world.resource::<terra_world::streaming::ChunkStore>();
+    let rendered = world.resource::<terra_render::RenderedSections>();
+    let visibility = world.get_resource::<terra_render::TerrainVisibility>();
+    chunks.wanted_sections().map(move |position| {
+        (
+            position,
+            rendered.section_presented(position, chunks.loaded.get(&position), visibility),
+        )
+    })
+}
+
 fn chunk_counts(
     sections: impl IntoIterator<Item = (terra_voxel::SectionPos, bool)>,
 ) -> (usize, usize) {
@@ -709,7 +732,8 @@ mod tests {
             next: Instant::now(),
         });
         world.init_resource::<WorldGeneration>();
-        world.init_resource::<terra_render::RenderStatus>();
+        world.init_resource::<terra_world::streaming::ChunkStore>();
+        world.init_resource::<terra_render::RenderedSections>();
         world.init_resource::<terra_render::WaterStatus>();
         world.resource_mut::<MenuState>().page = MenuPage::Loading;
         world.resource_mut::<MenuState>().session_active = true;
@@ -721,7 +745,7 @@ mod tests {
         update_streaming_limit(&mut world);
         assert_eq!(world.resource::<StreamingRadiusLimit>().0, Some(15));
         world.resource_mut::<WorldGeneration>().status = GenerationStatus::Ready;
-        world.resource_mut::<terra_render::RenderStatus>().ready = true;
+        world.resource_mut::<ViewWarmup>().next = Instant::now();
         world
             .resource_mut::<terra_render::WaterStatus>()
             .initial_ready = true;
@@ -966,6 +990,17 @@ mod tests {
             (3, 3)
         );
         assert_eq!(chunk_counts([]), (0, 0));
+    }
+
+    #[test]
+    fn pending_chunk_progress_reserves_one_hundred_percent_for_the_reveal() {
+        use super::pending_chunk_fraction;
+        assert_eq!(pending_chunk_fraction(0, 0), None);
+        assert_eq!(pending_chunk_fraction(1, 2), Some(0.5));
+        for completed in [960, 961] {
+            let fraction = pending_chunk_fraction(completed, 961).unwrap();
+            assert_eq!(format!("{:.0}%", fraction * 100.0), "99%");
+        }
     }
 
     #[test]

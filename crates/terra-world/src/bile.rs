@@ -31,7 +31,7 @@ fn can_occupy(chunks: &ChunkStore, journal: &EditJournal, p: [i64; 3]) -> bool {
         && journal.fluid(p).map_or_else(
             || {
                 chunks.surface_column_at(p[0], p[2]).is_none_or(|c| {
-                    crate::water::fluid::from_columns(c.water_columns(), p[1]).amount == 0
+                    crate::water::falls::sampled(c.water_columns(), p, journal).amount == 0
                 })
             },
             |cell| cell.amount == 0,

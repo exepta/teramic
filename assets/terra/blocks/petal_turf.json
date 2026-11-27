@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": 596,
+  "name": "Petal Meadow Turf",
+  "description": "Cherry petals are caught in the sunlit grass.",
+  "creative_category": "nature",
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0.0,
+  "hardness": 0.6,
+  "resistance": 2.0,
+  "face_materials": [
+    "side",
+    "side",
+    "bottom",
+    "top",
+    "side",
+    "side"
+  ],
+  "textures": {
+    "side": "textures/sakura/petal_turf_side.png",
+    "top": "textures/sakura/petal_turf_top.png",
+    "bottom": "textures/sakura/petal_turf_bottom.png"
+  },
+  "materials": {
+    "side": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.92,
+      "reflectance": 0.09
+    },
+    "top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.92,
+      "reflectance": 0.09
+    },
+    "bottom": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.92,
+      "reflectance": 0.09
+    }
+  }
+}

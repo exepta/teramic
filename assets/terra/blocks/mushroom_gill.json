@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 488,
+  "name": "Parasol Gills",
+  "description": "Pleated ivory tissue beneath a giant cap.",
+  "creative_category": "nature",
+  "hardness": 0.65,
+  "resistance": 1.2,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "gills": {
+      "roughness": 0.91,
+      "normal_texture": "textures/mushroom_park/gill_side_normal.png"
+    }
+  },
+  "textures": {
+    "gills": "textures/mushroom_park/gill_side.png"
+  },
+  "face_materials": [
+    "gills",
+    "gills",
+    "gills",
+    "gills",
+    "gills",
+    "gills"
+  ],
+  "surface": "mushroom"
+}

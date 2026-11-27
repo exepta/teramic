@@ -21,7 +21,9 @@ pub(super) fn held_light(peer: &Peer, journal: &EditJournal) -> bool {
         .is_some_and(|stack| {
             matches!(
                 stack.item,
-                ItemKind::Block(40 | terra_core::lantern::LANTERN)
+                ItemKind::Block(
+                    40 | terra_core::block_shapes::VIOLET_TORCH | terra_core::lantern::LANTERN
+                )
             )
         })
 }

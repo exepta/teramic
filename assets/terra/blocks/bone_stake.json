@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 500,
+  "name": "Bone Stake",
+  "description": "An old grave marker bound in strips of crimson cloth.",
+  "creative_category": "nature",
+  "hardness": 0.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/bone_stake.glb",
+  "textures": {},
+  "struct_block": true,
+  "collision_boxes": []
+}

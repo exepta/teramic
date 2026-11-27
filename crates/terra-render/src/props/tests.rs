@@ -107,14 +107,13 @@ fn botanical_detail_is_deterministic_with_bounded_lod_cost() {
             (
                 PropKind::Bush,
                 if variant >= 128 {
-                    // Each joint joins two rings with quads. Each branch has
-                    // a capped tip; the far model drops roots and fine forks.
-                    let rings =
-                        |sides: usize, spans: usize, tips: usize| sides * (4 * spans + tips);
+                    // Square wood sections have four quads per span and one
+                    // quad per capped tip. Distant bushes omit roots and forks.
+                    let wood_vertices = |spans: usize, tips: usize| 16 * spans + 4 * tips;
                     [
-                        rings(8usize, 5 + 3 + 5 * 3 + 5 * 2, 1 + 3 + 5 + 5),
-                        rings(8, 5 + 3 + 5 * 3, 1 + 3 + 5),
-                        rings(4, 5 + 3 * 3, 1 + 3),
+                        wood_vertices(5 + 3 + 5 * 3 + 5 * 2, 1 + 3 + 5 + 5),
+                        wood_vertices(5 + 3 + 5 * 3, 1 + 3 + 5),
+                        wood_vertices(5 + 3 * 3, 1 + 3),
                     ]
                 } else {
                     [
@@ -140,7 +139,8 @@ fn botanical_detail_is_deterministic_with_bounded_lod_cost() {
                         .iter()
                         .map(|batch| batch.positions.len())
                         .sum::<usize>(),
-                    budget
+                    budget,
+                    "{kind:?} variant {variant} at {level:?}"
                 );
                 assert_eq!(first.len(), second.len());
                 for (first, second) in first.iter().zip(&second) {

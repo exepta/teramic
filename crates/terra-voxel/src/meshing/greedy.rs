@@ -7,33 +7,87 @@ use block_mesh::{
 };
 type Shape = ConstShape3u32<18, 18, 18>;
 #[derive(Clone, Copy, PartialEq, Eq)]
-struct MeshVoxel(u16);
+struct MeshVoxel {
+    id: u16,
+    visibility: VoxelVisibility,
+}
+
+// Face culling treats unknown IDs as solid; ambient occlusion only uses
+// registered materials. Share the catalog lookup between both hot loops.
+const MATERIAL_COUNT: usize = MaterialId::LAST as usize + 1;
+static OCCLUSION: [Option<bool>; MATERIAL_COUNT] = {
+    let mut table = [None; MATERIAL_COUNT];
+    let mut i = 0;
+    while i < table.len() {
+        if let Some(material) = MaterialId::from_raw(i as u16) {
+            table[i] = Some(!matches!(material, MaterialId::Lava) && material.is_opaque());
+        }
+        i += 1;
+    }
+    table
+};
+
+fn known_occlusion(id: u16) -> Option<bool> {
+    OCCLUSION.get(id as usize).copied().flatten()
+}
+
+/// Perforated foliage and the sloping lava surface can expose a touching solid.
+pub fn occludes_face(id: u16) -> bool {
+    known_occlusion(id).unwrap_or(true)
+}
+
 impl Voxel for MeshVoxel {
     fn get_visibility(&self) -> VoxelVisibility {
-        match self.0 {
-            0 | 27 => VoxelVisibility::Empty,
-            // Alpha-masked leaf cubes do not hide solid faces behind their
-            // cutouts. Adjacent leaf cubes still cull their shared interface.
-            id if MaterialId::from_raw(id).is_some_and(|m| !m.is_opaque()) => {
-                VoxelVisibility::Translucent
-            }
-            _ => VoxelVisibility::Opaque,
-        }
+        self.visibility
     }
 }
 impl MergeVoxel for MeshVoxel {
     type MergeValue = u16;
     fn merge_value(&self) -> u16 {
-        self.0
+        self.id
     }
 }
 /// Greedy meshing merges only coplanar faces of the same material.
 /// Neighbor padding hides internal faces even before the adjacent section is loaded.
 pub fn mesh_section(blocks: &[u16]) -> Result<BlockMesh, MeshError> {
+    build_section_mesh::<true>(blocks)
+}
+
+/// Canonical greedy faces for material-aware renderers that build their own vertices.
+pub fn mesh_section_faces(blocks: &[u16]) -> Result<BlockMesh, MeshError> {
+    build_section_mesh::<false>(blocks)
+}
+
+fn build_section_mesh<const EXPAND: bool>(blocks: &[u16]) -> Result<BlockMesh, MeshError> {
     if blocks.len() != PADDED_VOLUME {
         return Err(MeshError::InvalidPadding(blocks.len()));
     }
-    let voxels: Vec<_> = blocks.iter().copied().map(MeshVoxel).collect();
+    let mut has_leaves = false;
+    let mut has_other_cutouts = false;
+    let mut has_water = false;
+    let voxels: Vec<_> = blocks
+        .iter()
+        .copied()
+        .map(|id| {
+            let visibility = match id {
+                0 => VoxelVisibility::Empty,
+                27 => {
+                    has_water = true;
+                    VoxelVisibility::Empty
+                }
+                id if occludes_face(id) => VoxelVisibility::Opaque,
+                id => {
+                    if MaterialId::FOLIAGE.contains(&id) {
+                        has_leaves = true;
+                    } else {
+                        has_other_cutouts = true;
+                    }
+                    VoxelVisibility::Translucent
+                }
+            };
+            MeshVoxel { id, visibility }
+        })
+        .collect();
     let config = RIGHT_HANDED_Y_UP_CONFIG;
     let mut buffer = GreedyQuadsBuffer::new(PADDED_VOLUME);
     greedy_quads(
@@ -44,10 +98,37 @@ pub fn mesh_section(blocks: &[u16]) -> Result<BlockMesh, MeshError> {
         &config.faces,
         &mut buffer,
     );
+    if has_leaves && has_other_cutouts {
+        // The greedy library drops both faces between any two translucent
+        // cells. Retain the canopy boundary behind panes and partial models.
+        // Touching leaves across a section boundary share the same crown.
+        for (i, voxel) in voxels.iter().enumerate() {
+            if voxel.visibility != VoxelVisibility::Translucent
+                || MaterialId::FOLIAGE.contains(&voxel.id)
+            {
+                continue;
+            }
+            let cell = Shape::delinearize(i as u32);
+            for (group, face) in buffer.quads.groups.iter_mut().zip(config.faces) {
+                let normal = face.signed_normal();
+                let leaf: [i32; 3] = std::array::from_fn(|axis| cell[axis] as i32 - normal[axis]);
+                if !leaf.iter().all(|n| (1..=16).contains(n)) {
+                    continue;
+                }
+                let leaf = leaf.map(|n| n as u32);
+                if MaterialId::FOLIAGE.contains(&blocks[Shape::linearize(leaf) as usize]) {
+                    group.push(UnorientedQuad {
+                        minimum: leaf,
+                        width: 1,
+                        height: 1,
+                    });
+                }
+            }
+        }
+    }
     let count = buffer.quads.num_quads();
-    let has_masked_neighbors = blocks
-        .iter()
-        .any(|&id| id != 0 && MaterialId::from_raw(id).is_some_and(|m| !m.is_opaque()));
+    let expanded = if EXPAND { count } else { 0 };
+    let has_masked_neighbors = has_leaves || has_other_cutouts || has_water;
     let mut mesh = BlockMesh {
         segments: Vec::new(),
         occluders: if count == 0 {
@@ -55,7 +136,7 @@ pub fn mesh_section(blocks: &[u16]) -> Result<BlockMesh, MeshError> {
         } else {
             let mut bits = vec![0_u64; PADDED_VOLUME.div_ceil(64)];
             for (i, &id) in blocks.iter().enumerate() {
-                if MaterialId::from_raw(id).is_some_and(MaterialId::is_opaque) {
+                if known_occlusion(id) == Some(true) {
                     bits[i / 64] |= 1 << (i % 64);
                 }
             }
@@ -63,11 +144,11 @@ pub fn mesh_section(blocks: &[u16]) -> Result<BlockMesh, MeshError> {
         },
         mineral_growth: Vec::new(),
         faces: Vec::with_capacity(count),
-        positions: Vec::with_capacity(count * 4),
-        normals: Vec::with_capacity(count * 4),
-        materials: Vec::with_capacity(count * 4),
-        uvs: Vec::with_capacity(count * 4),
-        indices: Vec::with_capacity(count * 6),
+        positions: Vec::with_capacity(expanded * 4),
+        normals: Vec::with_capacity(expanded * 4),
+        materials: Vec::with_capacity(expanded * 4),
+        uvs: Vec::with_capacity(expanded * 4),
+        indices: Vec::with_capacity(expanded * 6),
     };
     for (group, face) in buffer.quads.groups.iter().zip(config.faces.iter()) {
         for quad in group {
@@ -83,7 +164,6 @@ pub fn mesh_section(blocks: &[u16]) -> Result<BlockMesh, MeshError> {
                 .unwrap_or(0);
             let side = n_axis * 2 + usize::from(normal[n_axis] > 0.0);
             let emit = |quad: UnorientedQuad, occupied_neighbor| {
-                let start = mesh.positions.len() as u32;
                 mesh.faces.push(BlockFace {
                     minimum: quad.minimum.map(|v| v - 1),
                     width: quad.width,
@@ -99,6 +179,10 @@ pub fn mesh_section(blocks: &[u16]) -> Result<BlockMesh, MeshError> {
                         15
                     },
                 });
+                if !EXPAND {
+                    return;
+                }
+                let start = mesh.positions.len() as u32;
                 mesh.positions.extend(
                     face.quad_mesh_positions(&quad, 1.0)
                         .map(|p| p.map(|v| v - 1.0)),
@@ -121,8 +205,8 @@ pub fn mesh_section(blocks: &[u16]) -> Result<BlockMesh, MeshError> {
                         emit(cell, false);
                     }
                 }
-            } else if has_masked_neighbors
-                && MaterialId::from_raw(material).is_none_or(MaterialId::is_opaque)
+            } else if has_masked_neighbors && occludes_face(material)
+                || (has_other_cutouts || has_water) && MaterialId::FOLIAGE.contains(&material)
             {
                 split_contacts(blocks, *quad, u_axis, v_axis, side, emit);
             } else {
@@ -155,7 +239,7 @@ fn glass_edges(blocks: &[u16], position: [u32; 3], u_axis: usize, v_axis: usize)
     edges
 }
 
-/// Split only mixed air/leaf interfaces. The flag fits existing BlockFace
+/// Split only mixed air/translucent interfaces. The flag fits existing BlockFace
 /// padding; normal terrain keeps both its original quads and its cache size.
 fn split_contacts(
     blocks: &[u16],

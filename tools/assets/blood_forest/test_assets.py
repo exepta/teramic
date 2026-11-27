@@ -4,6 +4,7 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from model_polish.gltf import Document
 from build_blood_forest import NAMES, SIZE as BIOME_SIZE
+from blood_forest.sanctuary import CATALOG
 from biome_surfaces.foliage import SIZE as FOLIAGE_SIZE
 from build_block_palette import SIZE as PALETTE_SIZE, FAMILIES
 BLOCKS=Path(__file__).resolve().parents[3]/'assets/terra/blocks'
@@ -21,7 +22,8 @@ class BloodAssets(unittest.TestCase):
                 self.assertEqual(spec['bevel_width'], .025 if i in FAMILIES['blood'] else 0)
                 self.assertEqual(len(spec['face_materials']),6)
     def test_real_glbs_have_unit_bounds_correct_normals_and_no_degenerate_faces(self):
-        for slug,_ in NAMES:
+        model_slugs = [slug for slug, _ in NAMES] + [slug for slug, _, _ in CATALOG[4:]]
+        for slug in model_slugs:
             doc=Document(BLOCKS/'models'/(slug+'.glb'))
             for mesh in doc.doc['meshes']:
                 for p in mesh['primitives']:
@@ -38,4 +40,18 @@ class BloodAssets(unittest.TestCase):
         for slug in ('blood_grass','blood_moss','crimson_mycelium','bloodwood_log'):
             spec=json.loads((BLOCKS/(slug+'.json')).read_text())
             self.assertNotEqual(spec['face_materials'][0],spec['face_materials'][3])
+
+    def test_shrine_materials_have_authored_shapes_textures_and_registered_light(self):
+        for index, (slug, name, _) in enumerate(CATALOG):
+            spec = json.loads((BLOCKS / (slug + '.json')).read_text())
+            self.assertEqual((spec['id'], spec['name']), (492 + index, name))
+            if index < 4:
+                self.assertTrue((BLOCKS / spec['textures'][slug]).is_file())
+                self.assertEqual(len(spec['face_materials']), 6)
+            else:
+                self.assertTrue((BLOCKS / spec['model']).is_file())
+            if index in (5, 6, 9, 10):
+                self.assertGreater(spec['light']['range'], 5)
+                data = Document(BLOCKS / spec['model']).doc
+                self.assertTrue(any(max(m.get('emissiveFactor', [0])) > 0 for m in data['materials']))
 if __name__=='__main__':unittest.main()

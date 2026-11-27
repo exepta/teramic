@@ -34,6 +34,7 @@ pub(crate) struct ChatState {
     visible_until: f64,
     completion: Option<Completion>,
     selected: usize,
+    reveal_selection: bool,
     last_ping: u64,
     sleeping: bool,
     sleep_opened: bool,
@@ -62,6 +63,7 @@ pub enum ChatAction {
     Teleport(u64),
     Suggest(String),
     HelpPage(usize),
+    DismissHelp,
 }
 
 #[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -403,6 +405,7 @@ fn update(world: &mut World) {
         state.history_index = None;
         state.completion = None;
         state.selected = 0;
+        state.reveal_selection = true;
         world.write_message(CaptureRequest(false));
     } else if open {
         if key_escape {
@@ -438,6 +441,7 @@ fn update(world: &mut World) {
                     state.history_index = None;
                     state.completion = None;
                     state.selected = 0;
+                    state.reveal_selection = true;
                 }
             }
             ChatAction::Suggest(value) => {
@@ -447,6 +451,7 @@ fn update(world: &mut World) {
                     state.history_index = None;
                     state.completion = None;
                     state.selected = 0;
+                    state.reveal_selection = true;
                     state.focus_pending = true;
                 }
             }
@@ -519,6 +524,12 @@ fn update(world: &mut World) {
                     }
                 }
             }
+            ChatAction::DismissHelp => {
+                if let Some(mut chat) = world.get_resource_mut::<ClientChat>() {
+                    chat.dismiss_help();
+                }
+                world.resource_mut::<ChatState>().focus_pending = true;
+            }
         }
     }
     if open && !key_enter && !key_escape && history_direction != 0 {
@@ -530,6 +541,7 @@ fn update(world: &mut World) {
             if count > 0 {
                 state.selected =
                     (state.selected as i32 + history_direction).rem_euclid(count as i32) as usize;
+                state.reveal_selection = true;
             }
         } else {
             browse_history(&mut state, history_direction);
@@ -751,6 +763,7 @@ fn browse_history(state: &mut ChatState, direction: i32) {
     state.history_index = (index < length).then_some(index);
     state.completion = None;
     state.selected = 0;
+    state.reveal_selection = true;
     state.focus_pending = true;
 }
 
@@ -814,6 +827,7 @@ fn complete(state: &mut ChatState, reverse: bool, players: &[String]) {
     state.draft = candidates[index].clone();
     state.history_index = None;
     state.selected = index;
+    state.reveal_selection = true;
     state.completion = Some(Completion {
         prefix,
         index,
@@ -824,6 +838,7 @@ fn complete(state: &mut ChatState, reverse: bool, players: &[String]) {
 
 fn focus_and_scroll(
     mut state: ResMut<ChatState>,
+    view: Res<ChatView>,
     mut focus: Option<ResMut<InputFocus>>,
     inputs: Query<(Entity, &ElementId), With<tilt_ui::EditableText>>,
     mut lists: Query<(&ElementId, &ComputedNode, &mut bevy::ui::ScrollPosition)>,
@@ -845,8 +860,15 @@ fn focus_and_scroll(
         }
         state.scroll_frames -= 1;
     }
-    for (id, node, mut scroll) in &mut lists {
-        if id.0 == "chat-suggestions" {
+    // A keyboard navigation or new draft reveals its selection once. Between those
+    // events, TiltUI owns the position for wheel, touchpad and thumb dragging.
+    if !view.has_suggestions {
+        state.reveal_selection = false;
+    } else if state.reveal_selection {
+        for (id, node, mut scroll) in &mut lists {
+            if id.0 != "chat-suggestions" || node.size().y <= 0.0 {
+                continue;
+            }
             let height = node.size().y * node.inverse_scale_factor;
             let top = state.selected as f32 * 26.0;
             if top < scroll.0.y {
@@ -855,6 +877,8 @@ fn focus_and_scroll(
             if top + 32.0 > scroll.0.y + height {
                 scroll.0.y = (top + 32.0 - height).max(0.0);
             }
+            state.reveal_selection = false;
+            break;
         }
     }
 }

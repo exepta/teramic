@@ -560,12 +560,16 @@ fn section_remaining(
     section.cells().any(|(i, wood)| {
         event.cell_position(section.position, i).is_some_and(|p| {
             world.journal.as_ref().is_none_or(|j| j.block(p).is_none())
-                && world.chunks.block_at(p)
-                    == Some(if wood {
-                        event.wood_material
-                    } else {
-                        event.leaves_material
-                    })
+                && world.chunks.block_at(p).is_some_and(|m| {
+                    terra_voxel::MaterialId::same_tree_material(
+                        if wood {
+                            event.wood_material
+                        } else {
+                            event.leaves_material
+                        },
+                        m,
+                    )
+                })
         })
     })
 }
@@ -682,7 +686,7 @@ fn floor(chunks: &terra_world::streaming::ChunkStore, center: Vec3, base: f32) -
         chunks
             .block_at([x, y, z])
             .filter(
-                |m| !matches!(m, 0 | 7..=9 | 132 | 133 | 195 | 310..=312 | 14 | 27 | 40 | 50..=56),
+                |m| !matches!(m, 0 | 7..=9 | 132 | 133 | 195 | 310..=312 | 606..=607 | 644 | 647 | 682 | 537..=540 | 585..=586 | 14 | 27 | 40 | 50..=56),
             )
             .map(|_| y as f32 + 1.0)
     })

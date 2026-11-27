@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 554,
+  "name": "Giant Kelp",
+  "description": "Long leafy stems form connected kelp forests.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 0.7,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/giant_kelp.glb",
+  "collision_boxes": [],
+  "textures": {}
+}

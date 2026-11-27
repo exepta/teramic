@@ -30,6 +30,9 @@ pub(super) struct BiomeMistMaterial {
     #[texture(7)]
     #[sampler(8)]
     pub terrain: Handle<Image>,
+    /// Available outdoor air and daylight for regional banks.
+    #[uniform(9)]
+    pub outdoors: Vec4,
 }
 impl Material for BiomeMistMaterial {
     fn vertex_shader() -> ShaderRef {

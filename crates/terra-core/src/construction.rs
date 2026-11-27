@@ -43,7 +43,10 @@ pub fn is_stair(material: u16) -> bool {
 }
 /// Saved sand fences and in-world tar coatings are not inventory building items.
 pub fn obtainable(material: u16) -> bool {
-    material != 95 && material != crate::bile::FLUID && !crate::roads::is_tar(material)
+    material != 95
+        && material != crate::bile::FLUID
+        && material != terra_voxel::MaterialId::Lava as u16
+        && !crate::roads::is_tar(material)
 }
 
 pub const DOUBLE_SLAB: u8 = 9;

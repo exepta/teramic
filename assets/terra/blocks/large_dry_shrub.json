@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 715,
+  "name": "Large Dry Shrub",
+  "description": "Rust-red stems branch above the dust.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.3,
+  "resistance": 2.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/large_dry_shrub.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

@@ -13,7 +13,7 @@ from pathlib import Path
 import struct
 import subprocess
 
-BIOMES=('plains','forest','desert','highlands','mushroom-park','cliffted-desert','cherry-forest','spirit-blossom','blood-forest','ocean')
+BIOMES=('plains','forest','desert','highlands','mushroom-park','cliffted-desert','cherry-forest','spirit-blossom','blood-forest','ocean','ashlands','savanna','swamp','petrified-forest','crystal-highlands','misty-coast')
 ROOT=Path(__file__).resolve().parents[2]
 
 def png_size(path):
@@ -44,7 +44,7 @@ def main():
     parser.add_argument('--captures',type=Path,required=True)
     parser.add_argument('--output',type=Path,default=ROOT/'src-ui/assets')
     parser.add_argument('--client',type=Path,default=ROOT/'target/debug/terra-client')
-    parser.add_argument('--only',choices=BIOMES,nargs='+',default=BIOMES)
+    parser.add_argument('--only',choices=BIOMES,nargs='+',default=tuple(biome for biome in BIOMES if biome != 'cliffted-desert'))
     args=parser.parse_args();capture_dir=args.captures.resolve();capture_dir.mkdir(parents=True,exist_ok=True)
     if args.capture and args.config_dir is None:
         parser.error('--capture requires an isolated --config-dir')

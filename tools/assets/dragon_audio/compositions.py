@@ -32,6 +32,7 @@ VOICINGS = {
     "Dsus": "D2 A3 D4 G4",
     "Eb": "Eb2 Bb3 Eb4 G4",
     "Fm": "F2 Ab3 C4 F4",
+    "Cm": "C2 G3 C4 Eb4",
     "Db": "Db2 Ab3 Db4 F4",
     "Eb/G": "G2 Bb3 Eb4 G4",
     "C7": "C2 Bb3 C4 E4",
@@ -61,14 +62,14 @@ VOICINGS = {
 DARK = [
     Section(
         "procession",
-        84,
-        (0.72, 0.86),
-        "cello",
+        91,
+        (0.82, 1.03),
+        "horn",
         """
-Dm      D3/6 -/2 A3/3 Bb3
-Eb/D    A3/4 Eb3/4 D3/3 -
-Dm      -/3 D3/3 F3/2 E3 D3/3
-A7      C#3/6 A2/4 -/2
+Dm      D4/3 A4/3 Bb4 A4/2 F4/2 E4
+Eb/D    Eb4/4 Bb3/2 - G4/2 F4 Eb4/2
+Gm/D    D4/2 G4 Bb4/3 A4/3 G4/3
+A7      E4/5 - C#4/3 A3 C#4 E4
 """,
     ),
     Section(
@@ -130,6 +131,20 @@ A7      C#5/6 A4/3 G4/3
 """,
     ),
     Section(
+        "eclipse",
+        98,
+        (1.02, 1.23),
+        "horn",
+        """
+Eb/D    Eb4/3 Bb4/3 G4/4 F4 Eb4
+Dm      D4/3 A4/3 Bb4 C5/2 A4/2 F4
+Gm      G4/2 A4 Bb4/4 D5/3 C5 Bb4
+Bb      F4/3 D5/3 F5/3 Eb5 D5 C5
+Edim    Bb4/3 G4/3 E4/2 G4 Bb4/3
+A7      C#5/5 E5 A4/3 -/3
+""",
+    ),
+    Section(
         "threshold",
         73,
         (0.77, 0.38),
@@ -148,12 +163,12 @@ EARTH = [
         "footfall",
         114,
         (0.78, 0.90),
-        "low_stab",
+        "trombone",
         """
-Fm      F3/2 - C3 F3/2 - Ab3 G3 F3
-Db/F    Db3/3 F3/2 Ab3/2 -/3
-Eb/F    Eb3/2 - Bb2 Eb3/2 F3 G3/2 -
-C7      C3/3 -/2 G3/2 E3/2 -
+Fm      F3/2 C4/3 - F3 Ab3/2 C4
+Db/F    Db4/3 Ab3/2 F3/2 - Ab3 C4
+Eb/F    Bb3/2 Eb4/3 G3/2 Bb3/2 G3
+C7      C4/3 G3/2 E3/2 -/2 G3
 """,
     ),
     Section(
@@ -217,6 +232,20 @@ C7      E4/4 G4/2 C5/2 -/2
 """,
     ),
     Section(
+        "earthquake",
+        149,
+        (1.04, 1.23),
+        "trumpet",
+        """
+Fm      F4/2 C5/3 - Ab4 C5/2 F5
+Db      Db5/3 Ab4/2 F4/2 Ab4 Bb4 C5
+Eb      Bb4/2 Eb5/3 G4/2 Bb4/2 Eb5
+Ab      C5/3 Eb5/2 Ab5/3 G5 Eb5
+Bbm     Db5/4 F5/3 Db5 C5 Bb4
+C7      G4/2 C5/3 E5/3 -/2
+""",
+    ),
+    Section(
         "bedrock",
         119,
         (0.73, 0.56),
@@ -233,12 +262,12 @@ WATER = [
         "undertow",
         100,
         (0.67, 0.81),
-        "oboe",
+        "violin",
         """
-Em9     B4/5 A4 G4/3 F#4/2 E4
-A/E     C#5/3 B4/2 A4 E4/4 -/2
-Em9     G4/3 B4/3 F#5/4 E5/2
-Bm      D5/6 F#4/3 -/3
+Em9     E4/2 G4 B4/3 F#5/4 E5/2
+A/E     C#5/3 E5/3 A4/2 B4 C#5/3
+Em9     B4/3 G4/2 B4 E5/3 G5/3
+B7      F#5/5 D#5 B4/3 -/2 F#4
 """,
     ),
     Section(
@@ -302,6 +331,20 @@ B7      F#5/6 D#5/4 B4/2
 """,
     ),
     Section(
+        "maelstrom",
+        137,
+        (1.03, 1.25),
+        "violin",
+        """
+Cmaj7   E5/2 G5 B5/3 G5/3 E5/3
+D/F#    F#5/3 A5/3 D6/3 C6 B5 A5
+Em      G5/4 E5/2 B4 G4 B4 E5/3
+A       C#5/3 E5/3 A5/4 E5/2
+Cmaj7   G5/3 E5/3 B4/2 C5 D5/3
+B7      D#5/3 F#5/3 B5/4 -/2
+""",
+    ),
+    Section(
         "foam",
         104,
         (0.70, 0.38),
@@ -316,4 +359,47 @@ B7      F#4/6 D#4/4 -/2
 ]
 
 # Meter in eighth notes and the number of conducting beats per bar.
-SCORES = {"dark": (12, 3, DARK), "earth": (10, 5, EARTH), "water": (12, 4, WATER)}
+FIRE = [
+    Section("embers", 89, (0.53, 0.82), "cello", """
+Fm     F3/3 Ab3 G3/2 F3/2
+Db/F   F3/2 Db4/3 C4 Ab3/2
+Eb     G3/3 Bb3 Eb4/2 G4/2
+C7     E4/3 Db4 C4/2 -/2
+Fm     C4 F4 G4 Ab4 Ab4/2 G4/2
+Bbm    F4/3 Db4 Bb3/3 C4
+Gm     D4/2 Bb3 G3 D4/2 F4/2
+C7     E4/3 G4/2 E4 C4/2
+"""),
+    Section("ignition", 115, (0.82, 1.08), "trumpet", """
+Fm     F4/2 C5/2 Ab4 G4 F4/2
+Eb/G   G4/3 Bb4 C5/2 Bb4/2
+Db     Ab4 F4 Db4 F4 Ab4/3 G4
+C7     E4/2 C5/2 Bb4/2 G4/2
+Fm/C   Ab4/3 C5 Eb5/2 C5/2
+Bbm    Db5/2 Bb4 F4 Db5/2 F5/2
+Db/F   F5/2 Eb5 Db5 Ab4/2 F4/2
+C7     G4/3 C5 E5/2 G5/2
+"""),
+    Section("caldera", 81, (0.48, 0.72), "oboe", """
+Fm     C5/4 - Ab4 G4 F4
+Db     Db4/3 F4 Ab4/4
+Eb     G4/4 Eb4/2 Bb3/2
+Cm     G3/3 C4 Eb4 D4 C4/2
+Ab     Eb4/2 C5/4 Bb4 Ab4
+Bbm    F4/3 Db4 Bb3/4
+Edim   E4 G4 Bb4/2 G4/3 E4
+C7     C4/4 E4/2 G4/2
+"""),
+    Section("firestorm", 109, (0.89, 1.07), "horn", """
+Fm     F4/2 C5 F5 C5/2 Ab4/2
+Db     Db5 C5 Bb4 Ab4 F4/4
+Eb/G   G4/2 Bb4/2 G5/2 F5/2
+C7     E5/3 Db5 C5/2 G4/2
+Bbm    Bb4/2 F5/3 Db5 C5 Bb4
+Fm/C   C5/3 Ab4 F4/2 C4/2
+Db/F   Db4/3 F4 Ab4/2 F4/2
+C7     G4/2 E4/2 C4/3 -
+"""),
+]
+
+SCORES = {"dark": (12, 3, DARK), "earth": (10, 5, EARTH), "water": (12, 4, WATER), "fire": (8, 4, FIRE)}

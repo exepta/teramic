@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 730,
+  "name": "Volcanic Obsidian",
+  "description": "Violet light catches the sharp fractures in this volcanic glass.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.4,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/relics/volcanic_obsidian.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.28,
+      "reflectance": 0.28,
+      "normal_texture": "textures/relics/volcanic_obsidian_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

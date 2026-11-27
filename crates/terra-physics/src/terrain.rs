@@ -172,6 +172,7 @@ fn profile_current(
 pub struct TerrainCollisionState {
     sections: HashMap<SectionPos, ReadySection>,
     interest: HashSet<SectionPos>,
+    interest_centers: Vec<SectionPos>,
     pub active_colliders: usize,
     pub pending_jobs: usize,
     pub completed_jobs: usize,
@@ -179,6 +180,26 @@ pub struct TerrainCollisionState {
 }
 
 impl TerrainCollisionState {
+    fn update_interest(&mut self, centers: &[SectionPos]) {
+        if self.interest_centers == centers {
+            return;
+        }
+        self.interest_centers.clear();
+        self.interest_centers.extend_from_slice(centers);
+        self.interest.clear();
+        for &center in centers {
+            for z in -BUILD_RADIUS..=BUILD_RADIUS {
+                for y in -BUILD_RADIUS..=BUILD_RADIUS {
+                    for x in -BUILD_RADIUS..=BUILD_RADIUS {
+                        if let Ok(position) = center.offset([x, y, z]) {
+                            self.interest.insert(position);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     pub(crate) fn in_dispatch_interest(&self, section: SectionPos) -> bool {
         self.interest.contains(&section)
     }
@@ -200,24 +221,24 @@ impl TerrainCollisionState {
                 for x in low.x..=high.x {
                     let position = SectionPos::new(x, y, z);
                     let epoch = journal.mesh_epoch(position);
-                    if !collision_inputs_known(position, chunks) {
+                    let Some(ready) = self.sections.get(&position) else {
                         return false;
-                    }
-                    if self.sections.get(&position).is_some_and(|ready| {
-                        plain_current(ready, position, chunks, journal)
-                            || plain_region_current(
-                                ready, position, minimum, maximum, chunks, journal,
-                            )
-                    }) {
-                        continue;
-                    }
-                    if self.sections.get(&position).is_none_or(|ready| {
-                        ready.epoch != epoch
-                            || !profile_current(ready.profile, position, chunks, journal)
-                    }) || chunks
+                    };
+                    if chunks
                         .loaded
                         .get(&position)
                         .is_none_or(|section| section.mesh_epoch > epoch)
+                        || !collision_inputs_known(position, chunks)
+                    {
+                        return false;
+                    }
+                    if ready.epoch == epoch
+                        && profile_current(ready.profile, position, chunks, journal)
+                    {
+                        continue;
+                    }
+                    if !plain_current(ready, position, chunks, journal)
+                        && !plain_region_current(ready, position, minimum, maximum, chunks, journal)
                     {
                         return false;
                     }
@@ -273,6 +294,9 @@ fn geometry_chunks(center: SectionPos, chunks: &ChunkStore) -> Result<ChunkStore
 // Connected shapes read the one-section halo; mineral profiles also consult
 // two vertical neighbors. Unknown generated bases must never become empty space.
 fn collision_inputs_known(position: SectionPos, chunks: &ChunkStore) -> bool {
+    if !chunks.has_pending_voxel_bases() {
+        return chunks.loaded.contains_key(&position);
+    }
     if !chunks.voxel_data_known(position) {
         return false;
     }
@@ -363,12 +387,13 @@ fn dispatch(
     journal: Res<EditJournal>,
     properties: Res<terra_core::block_properties::BlockPropertiesCatalog>,
     focus: CollisionFocus,
-    mut state: ResMut<TerrainCollisionState>,
+    state: ResMut<TerrainCollisionState>,
     mut jobs: ResMut<ColliderJobs>,
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("collision.dispatch");
+    let state = state.into_inner();
     let Some(centers) = focus.centers() else {
-        state.interest.clear();
+        state.update_interest(&[]);
         return;
     };
     jobs.0.retain(|position, _| {
@@ -377,39 +402,30 @@ fn dispatch(
                 .iter()
                 .any(|&center| nearby(*position, center, RETAIN_RADIUS))
     });
-    let positions: Vec<_> = centers
+    state.update_interest(&centers);
+    let mut candidates: Vec<_> = state
+        .interest
         .iter()
-        .flat_map(|&center| {
-            (-BUILD_RADIUS..=BUILD_RADIUS).flat_map(move |z| {
-                (-BUILD_RADIUS..=BUILD_RADIUS).flat_map(move |y| {
-                    (-BUILD_RADIUS..=BUILD_RADIUS)
-                        .filter_map(move |x| center.offset([x, y, z]).ok())
-                })
-            })
-        })
-        .collect();
-    state.interest.clear();
-    state.interest.extend(positions.iter().copied());
-    let mut candidates: Vec<_> = positions
-        .into_iter()
+        .copied()
         .filter_map(|position| {
             let section = chunks.loaded.get(&position)?;
             let epoch = journal.mesh_epoch(position);
-            if !collision_inputs_known(position, &chunks) || section.mesh_epoch > epoch {
+            let ready = state.sections.get_mut(&position);
+            if ready.as_ref().is_some_and(|ready| {
+                ready.epoch == epoch && profile_current(ready.profile, position, &chunks, &journal)
+            }) {
                 return None;
             }
-            if state
-                .sections
-                .get(&position)
-                .is_some_and(|ready| plain_current(ready, position, &chunks, &journal))
+            if section.mesh_epoch > epoch || !collision_inputs_known(position, &chunks) {
+                return None;
+            }
+            if let Some(ready) = ready
+                && plain_current(ready, position, &chunks, &journal)
             {
-                state.sections.get_mut(&position).unwrap().epoch = epoch;
+                ready.epoch = epoch;
                 return None;
             }
-            (state.sections.get(&position).is_none_or(|ready| {
-                ready.epoch != epoch || !profile_current(ready.profile, position, &chunks, &journal)
-            }) && !jobs.0.contains_key(&position))
-            .then_some(position)
+            (!jobs.0.contains_key(&position)).then_some(position)
         })
         .collect();
     candidates.sort_by_key(|position| {
@@ -427,7 +443,6 @@ fn dispatch(
             .unwrap_or(0);
         (distance, position.y, position.z, position.x)
     });
-    candidates.dedup();
     // Snapshot preparation also runs on the main thread. Spread edit bursts
     // over frames while still allowing the first collider to make progress.
     let preparation_started = std::time::Instant::now();

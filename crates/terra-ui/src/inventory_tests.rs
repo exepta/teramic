@@ -6938,3 +6938,179 @@ fn tar_coatings_are_world_states_while_path_and_tar_bucket_remain_obtainable() {
         assert!(!terra_core::construction::obtainable(material));
     }
 }
+
+#[test]
+fn u_opens_both_cooking_uses_and_selects_the_actual_station_without_moving_food() {
+    use terra_core::creatures::AnimalProduct;
+    let mut app = app(GameMode::Survival);
+    let raw = ItemKind::Animal(AnimalProduct::Fish);
+    let cooked = ItemKind::Animal(AnimalProduct::CookedFish);
+    app.world_mut()
+        .resource_mut::<ClientSession>()
+        .inventory
+        .creative_set(
+            0,
+            terra_core::ItemStack {
+                item: raw,
+                count: 3,
+            },
+        );
+    action(&mut app, InventoryAction::Toggle);
+    action(
+        &mut app,
+        InventoryAction::Hover {
+            command: "slot".into(),
+            index: Some(0),
+            item: item_id(raw),
+        },
+    );
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyU);
+    app.update();
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset(KeyCode::KeyU);
+    let view = app.world().resource::<CraftingView>();
+    assert!(view.recipe_open && view.showing_uses);
+    let foods: Vec<_> = view
+        .recipe_alternatives
+        .iter()
+        .filter(|r| r.output[0].item == Some(cooked))
+        .collect();
+    assert_eq!(foods.len(), 2);
+    let campfire = foods
+        .iter()
+        .find(|row| row.summary == "Campfire")
+        .expect("open fire cooking");
+    let index = campfire.index;
+    app.world_mut()
+        .write_message(crafting::CraftingAction::SelectAlternative(index));
+    app.update();
+    let view = app.world().resource::<CraftingView>();
+    assert!(view.recipe_open && view.campfire && !view.showing_uses);
+    assert_eq!(view.recipe_output[0].item, Some(cooked));
+    assert_eq!(
+        app.world().resource::<ClientSession>().inventory.count(raw),
+        3
+    );
+    assert!(requests(&mut app).is_empty());
+}
+
+#[test]
+fn u_is_suppressed_while_typing_and_distinguishes_empty_uses_from_no_hover() {
+    let mut app = app(GameMode::Creative);
+    let potion = ItemKind::Potion(7);
+    action(&mut app, InventoryAction::Toggle);
+    action(
+        &mut app,
+        InventoryAction::Hover {
+            command: "catalog".into(),
+            index: None,
+            item: item_id(potion),
+        },
+    );
+    let field = app
+        .world_mut()
+        .spawn(ElementId("inventory-search".into()))
+        .id();
+    app.insert_resource(InputFocus::from_entity(field));
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyU);
+    app.update();
+    assert!(!app.world().resource::<CraftingView>().recipe_open);
+    app.insert_resource(InputFocus::default());
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .reset(KeyCode::KeyU);
+    app.world_mut()
+        .resource_mut::<ButtonInput<KeyCode>>()
+        .press(KeyCode::KeyU);
+    app.update();
+    let view = app.world().resource::<CraftingView>();
+    assert!(view.showing_uses);
+    assert!(view.recipe_alternatives.is_empty());
+    assert!(!view.message.is_empty());
+    assert!(requests(&mut app).is_empty());
+}
+
+#[test]
+fn reverse_recipe_lookup_includes_fuel_bottling_crushing_and_custom_dyes() {
+    use terra_core::{beds::DyeColor, crafting::RecipeBook, creatures::AnimalProduct};
+    let mut app = app(GameMode::Survival);
+    action(&mut app, InventoryAction::Toggle);
+    let entries = |app: &mut App, item| {
+        app.world_mut()
+            .resource_mut::<ClientSession>()
+            .inventory
+            .creative_set(0, terra_core::ItemStack { item, count: 1 });
+        action(app, InventoryAction::Uses(item_id(item)));
+        app.world()
+            .resource::<CraftingView>()
+            .recipe_alternatives
+            .clone()
+    };
+    let fuel = ItemKind::Block(terra_voxel::MaterialId::CharredLog as u16);
+    assert!(terra_core::furnace::fuel_seconds(fuel).is_some());
+    assert!(
+        entries(&mut app, fuel)
+            .iter()
+            .any(|row| row.output[0].item == Some(ItemKind::Animal(AnimalProduct::CookedFish)))
+    );
+    let brew = entries(&mut app, ItemKind::GlassBottle);
+    for r in terra_core::brewing::recipes() {
+        assert!(
+            brew.iter()
+                .any(|row| row.output[0].item == Some(r.output().item))
+        );
+    }
+    let crushed = &terra_core::crusher::recipes()[0];
+    assert!(
+        entries(&mut app, crushed.input)
+            .iter()
+            .any(|row| row.output[0].item == Some(crushed.output.item))
+    );
+    let dye = ItemKind::Dye(DyeColor::Red);
+    let mix = entries(&mut app, dye)
+        .into_iter()
+        .find(|r| r.summary == "Mixer")
+        .expect("calibrated RGB batch");
+    let Some(ItemKind::Dye(DyeColor::Rgb(rgb))) = mix.output[0].item else {
+        panic!()
+    };
+    assert!(
+        terra_core::mixer::recipe(rgb)
+            .inputs
+            .iter()
+            .any(|i| i.item == dye)
+    );
+    app.world_mut()
+        .write_message(crafting::CraftingAction::SelectAlternative(mix.index));
+    app.update();
+    assert_eq!(
+        app.world().resource::<CraftingView>().recipe_heading,
+        "Mixing Recipe"
+    );
+    // This mixed dye exists only in the recipe preview, not in the catalog or bag.
+    action(
+        &mut app,
+        InventoryAction::Uses(item_id(ItemKind::Dye(DyeColor::Rgb(rgb)))),
+    );
+    let view = app.world().resource::<CraftingView>();
+    assert!(view.showing_uses);
+    assert!(view.recipe_alternatives.iter().any(|row| row.output[0].item
+        == Some(ItemKind::DyedBed {
+            material: 71,
+            color: DyeColor::Rgb(rgb)
+        })));
+    let boards = ItemKind::Block(16);
+    let uses = entries(&mut app, boards);
+    assert!(
+        uses.len()
+            >= RecipeBook::builtins()
+                .iter()
+                .filter(|r| r.ingredients().iter().any(|i| i.matches(boards)))
+                .count()
+    );
+}

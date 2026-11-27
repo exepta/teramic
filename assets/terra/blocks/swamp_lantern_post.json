@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 700,
+  "name": "Marsh Lantern Post",
+  "description": "A lantern hangs from the crossbar of a willow post.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.46,
+  "resistance": 0.62,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/swamp_lantern_post.glb",
+  "struct_block": true,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.27,
+        0,
+        0.44
+      ],
+      "maximum": [
+        0.37,
+        0.95,
+        0.56
+      ]
+    }
+  ],
+  "textures": {}
+}

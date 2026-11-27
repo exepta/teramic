@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 727,
+  "name": "Inlaid Temple Frieze",
+  "description": "A turquoise and brass frieze crowns a weathered archway.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.4,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "bevel_width": 0.018,
+  "textures": {
+    "side": "textures/relics/temple_architrave.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.88,
+      "reflectance": 0.13,
+      "normal_texture": "textures/relics/temple_architrave_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

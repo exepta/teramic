@@ -9,18 +9,19 @@ pub fn planted_shape(species: terra_core::TreeSpecies, seed: u64) -> Option<Tree
     planted_shape_with_ecology(species, seed, 4)
 }
 
-/// New birches use the saved world ecology; existing exact-cell records never
-/// regenerate. Other species retain their established player-grown silhouettes.
+/// Newly planted trees use the same modern forms as the forest. Existing mature
+/// records retain their exact cells and do not pass through this constructor.
 #[cfg(feature = "bevy")]
 pub fn planted_shape_with_ecology(
     species: terra_core::TreeSpecies,
     seed: u64,
     ecology_revision: u8,
 ) -> Option<TreeCells> {
-    let revision = if species == terra_core::TreeSpecies::Birch && ecology_revision >= 7 {
-        7
-    } else {
+    let revision = if species == terra_core::TreeSpecies::Birch && ecology_revision < 7 {
+        // A legacy planted birch retained the original birch form until revision seven.
         4
+    } else {
+        ecology_revision.max(4)
     };
     let species = match species {
         terra_core::TreeSpecies::Oak => TreeSpecies::Green,
@@ -28,6 +29,7 @@ pub fn planted_shape_with_ecology(
         terra_core::TreeSpecies::Birch => TreeSpecies::Birch,
         terra_core::TreeSpecies::Cherry => TreeSpecies::Cherry(false),
         terra_core::TreeSpecies::Apple => TreeSpecies::Apple,
+        terra_core::TreeSpecies::Acacia => TreeSpecies::Acacia,
     };
     let tree = Tree::with_species_revision([0; 3], seed, [0.; 4], species, revision);
     let shape = tree.felling_shape()?;
@@ -103,6 +105,7 @@ mod tests {
             (terra_core::TreeSpecies::Birch, TreeSpecies::Birch),
             (terra_core::TreeSpecies::Cherry, TreeSpecies::Cherry(false)),
             (terra_core::TreeSpecies::Apple, TreeSpecies::Apple),
+            (terra_core::TreeSpecies::Acacia, TreeSpecies::Acacia),
         ] {
             for seed in [0, 1, 42, 1201] {
                 let expected = Tree::with_species_revision([0; 3], seed, [0.; 4], natural, 4)

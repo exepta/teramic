@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 646,
+  "name": "Baobab Log",
+  "description": "Pale bark around the heart of a thick baobab.",
+  "creative_category": "wood",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.85,
+  "resistance": 2.2,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/savanna/baobab_log_side.png",
+    "end": "textures/savanna/baobab_log_end.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.91,
+      "reflectance": 0.09,
+      "normal_texture": "textures/savanna/baobab_log_side_normal.png"
+    },
+    "end": {
+      "roughness": 0.91,
+      "reflectance": 0.09,
+      "normal_texture": "textures/savanna/baobab_log_end_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "end",
+    "end",
+    "side",
+    "side"
+  ]
+}

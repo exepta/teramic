@@ -27,6 +27,65 @@ pub(super) struct Geometry {
     pub hell: Vec<super::hell::Batch>,
 }
 
+/// Preserve the four actual frond poses during both versions of the collapse animation.
+pub(super) fn palm_piece(
+    templates: &crate::blocks::TemplateSet,
+    snapshots: &[Snapshot],
+    section: SectionPos,
+    index: u16,
+    cell: [u32; 3],
+    fallback: u16,
+) -> Vec<MeshBatch> {
+    let id = snapshots
+        .iter()
+        .find(|s| s.position == section)
+        .and_then(|s| s.models.as_ref()?.cell_material(index))
+        .filter(|m| terra_voxel::MaterialId::is_palm_frond(*m))
+        .unwrap_or(fallback);
+    let Some(template) = templates.blocks.get(&id) else {
+        return Vec::new();
+    };
+    if let Some(terrain) = snapshots
+        .iter()
+        .find(|s| s.position == section)
+        .and_then(|s| s.options.terrain.as_ref())
+        && let Ok(origin) = section.origin()
+    {
+        let coords = std::array::from_fn(|i| origin[i] + i64::from(cell[i]));
+        let spans = terrain.tree_appearance(origin).palm_spans(coords, id);
+        if !spans.is_empty()
+            && let Some(prim) = template.model.first()
+        {
+            let mut batches = BTreeMap::new();
+            crate::meshing::custom::palm::append(
+                &mut batches,
+                prim.material,
+                cell.map(|p| p as i32),
+                &spans,
+            );
+            return batches.into_values().collect();
+        }
+    }
+    template
+        .model
+        .iter()
+        .map(|prim| MeshBatch {
+            material: prim.material,
+            positions: prim
+                .positions
+                .iter()
+                .map(|p| std::array::from_fn(|i| p[i] + cell[i] as f32))
+                .collect(),
+            normals: prim.normals.clone(),
+            tangents: prim.tangents.clone(),
+            uvs: prim.uvs.clone(),
+            indices: prim.indices.clone(),
+            colors: vec![[1.; 4]; prim.positions.len()],
+            ..Default::default()
+        })
+        .collect()
+}
+
 pub(super) fn prepare(
     event: &Collapse,
     snapshots: &[Snapshot],
@@ -66,7 +125,10 @@ pub(super) fn prepare(
                     .iter()
                     .flat_map(|face| {
                         if face.material == event.wood_material
-                            || face.material == event.leaves_material
+                            || terra_voxel::MaterialId::same_tree_material(
+                                event.leaves_material,
+                                face.material,
+                            )
                         {
                             without_cells(std::slice::from_ref(face), &mask)
                         } else {
@@ -110,6 +172,7 @@ pub(super) fn prepare(
                     event.leaves_material
                 };
                 let mut faces = Vec::new();
+                let mut palm_batches = Vec::new();
                 for (index, is_wood) in section.cells().filter(|(_, w)| *w == wood) {
                     let position = event
                         .cell_position(section.position, index)
@@ -126,6 +189,17 @@ pub(super) fn prepare(
                         u32::from(index / 16 % 16),
                         u32::from(index / 256),
                     ];
+                    if terra_voxel::MaterialId::is_palm_frond(material) {
+                        palm_batches.extend(palm_piece(
+                            templates,
+                            snapshots,
+                            section.position,
+                            index,
+                            cell,
+                            material,
+                        ));
+                        continue;
+                    }
                     for mut face in super::super::mining_geometry::full_faces(cell, material) {
                         let mut neighbor = position;
                         neighbor[face.side / 2] += if face.side % 2 == 0 { -1 } else { 1 };
@@ -144,7 +218,7 @@ pub(super) fn prepare(
                         faces.push(face);
                     }
                 }
-                if faces.is_empty() {
+                if faces.is_empty() && palm_batches.is_empty() {
                     continue;
                 }
                 let options =
@@ -161,6 +235,7 @@ pub(super) fn prepare(
                         });
                 let mut batches =
                     compose_section_with_options(&faces, templates, section.position, &options)?;
+                batches.extend(palm_batches);
                 let pivot_y = (band as f32 + 0.5) * band_height;
                 for batch in &mut batches {
                     for p in &mut batch.positions {

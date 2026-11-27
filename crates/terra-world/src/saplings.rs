@@ -23,9 +23,8 @@ pub(crate) struct GrowthWork {
     pending: Option<PendingGrowth>,
 }
 
-pub fn soil(material: u16) -> bool {
-    matches!(material, 1 | 2 | 306 | 307 | terra_core::farming::FARMLAND)
-}
+pub use crate::props::placement::sapling_soil as soil;
+
 /// Saplings need a clear outdoor shaft or nearby artificial light. Unknown loaded cells
 /// are never guessed to be empty. Night delays outdoor growth, not placement.
 pub fn light(chunks: &ChunkStore, root: [i64; 3], daylight: bool) -> bool {
@@ -668,9 +667,11 @@ mod tests;
 pub const fn leaf_species(material: u16) -> Option<TreeSpecies> {
     Some(match material {
         7 | 8 => TreeSpecies::Oak,
-        9 => TreeSpecies::Birch,
+        9 | 586 => TreeSpecies::Birch,
+        585 => TreeSpecies::Spruce,
         132 | 133 => TreeSpecies::Cherry,
         195 => TreeSpecies::Apple,
+        644 => TreeSpecies::Acacia,
         _ => return None,
     })
 }

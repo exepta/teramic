@@ -1,6 +1,8 @@
 """Closed ornamental lights, fabric, vegetation and authored dungeon mechanisms."""
 import math
-from .geometry import cylinder,ellipsoid,cross,leaf,candle,crystal
+from voxel_props.geometry import VoxelSculpt
+from voxel_props.surface import voxelize
+from .geometry import cylinder,ellipsoid,cross,leaf,candle
 
 def light(mesh,family):
     if family in ('lantern','torch','candles','chandelier','brazier'):
@@ -96,14 +98,34 @@ def vegetation(mesh,family):
     elif family=='moss':
         for i in range(9):ellipsoid(mesh,[.20+(i%3)*.30,.046,.20+(i//3)*.30],[.20,.045,.20],'moss',8,4)
     else:
-        glow=family=='glow_mushrooms'
-        for x,z,h,r in [(.30,.33,.28,.15),(.63,.49,.54,.23),(.40,.71,.20,.12)]:
-            cylinder(mesh,[x,0,z],[x,h,z],.033,'bone',10)
-            ellipsoid(mesh,[x,h,z],[r,r*.55,r],'soul' if glow else 'cloth',12,6)
-            for i in range(5):
-                a=i*math.tau/5
-                ellipsoid(mesh,[x+math.cos(a)*r*.65,h+r*.32,z+math.sin(a)*r*.65],[r*.13,.015,r*.13],'flower',8,4)
+        mushroom_colony(mesh, glow=family == 'glow_mushrooms')
+        return True
+    voxelize(mesh, resolution=16)
     return True
+
+
+def mushroom_colony(mesh, glow):
+    sculpt = VoxelSculpt(24)
+    # A pale gill layer sits under the overhang on each fruiting body.
+    # Small luminous flecks are also exposed on top of the glowing variety.
+    for cx, cz, stem, radius in [(7, 8, 6, 3), (15, 12, 11, 5), (9, 17, 4, 2)]:
+        for y in range(stem):
+            for dx in (0, 1):
+                for dz in (0, 1):
+                    sculpt.cells[cx+dx, y, cz+dz] = 'bone'
+        tiers = [(radius-1, 'soul' if glow else 'flower'), (radius, 'cloth'),
+                 (radius, 'flower' if glow else 'cloth'), (radius-1, 'cloth')]
+        for layer, (width, pigment) in enumerate(tiers):
+            for dx in range(-width, width+1):
+                for dz in range(-width, width+1):
+                    if abs(dx)+abs(dz) <= width + width//2:
+                        key = cx+dx, stem+layer, cz+dz
+                        sculpt.cells[key] = pigment
+        for dx, dz in [(-1, 0), (1, 1), (0, -2)]:
+            key = cx+dx, stem+3, cz+dz
+            if key in sculpt.cells:
+                sculpt.cells[key] = 'soul' if glow else 'flower'
+    sculpt.emit(mesh)
 
 def mechanism(mesh,family):
     if family not in ('plate','lever','switch','portcullis','gate','spikes','arrows'):return False

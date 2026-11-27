@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 539,
+  "name": "Palm Frond (North)",
+  "description": "Arching palm foliage with tapered, folded leaflets.",
+  "creative_category": "nature",
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/palm_frond_north.glb",
+  "collision_boxes": [],
+  "struct_block": true,
+  "textures": {}
+}

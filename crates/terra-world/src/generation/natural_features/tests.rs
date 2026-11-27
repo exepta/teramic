@@ -3,6 +3,33 @@ use crate::{SectionGenerator, TerrainGenerator};
 use terra_core::{Config, WorldConfig};
 use terra_voxel::global_to_section;
 
+#[test]
+fn groundcover_forms_species_patches_across_tile_edges() {
+    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+    let mut occupied = 0;
+    let mut adjacent_agree = 0;
+    let mut distant_agree = 0;
+    let mut other_species_differ = 0;
+    let mut samples = 0;
+    for tile in -8..8 {
+        let x = tile * TILE_SIZE - 1;
+        for z in -96..96 {
+            let grass = terrain.in_prop_patch([x, z], MaterialId::Seagrass as u16);
+            let neighbor = terrain.in_prop_patch([x + 1, z], MaterialId::Seagrass as u16);
+            let distant = terrain.in_prop_patch([x + 57, z], MaterialId::Seagrass as u16);
+            let kelp = terrain.in_prop_patch([x, z], MaterialId::RibbonKelp as u16);
+            occupied += i32::from(grass);
+            adjacent_agree += i32::from(grass == neighbor);
+            distant_agree += i32::from(grass == distant);
+            other_species_differ += i32::from(grass != kelp);
+            samples += 1;
+        }
+    }
+    assert!((samples / 4..samples * 9 / 10).contains(&occupied));
+    assert!(adjacent_agree > distant_agree + samples / 5);
+    assert!(other_species_differ > samples / 10);
+}
+
 fn terrain() -> TerraGenerator {
     TerraGenerator::new(WorldConfig {
         ecology_revision: 5,
@@ -32,6 +59,12 @@ fn habitat(terrain: &TerraGenerator, tile: Tile) -> Habitat<'_> {
     base.surface_material = MaterialId::BloodGrass;
     base.biome.weights = super::super::biomes::BiomeWeights {
         blood_forest: 1.0,
+        ashlands: 0.,
+        savanna: 0.0,
+        swamp: 0.0,
+        petrified_forest: 0.0,
+        crystal_highlands: 0.0,
+        misty_coast: 0.0,
         ocean: 0.0,
         plains: 0.0,
         forest: 0.0,
@@ -125,6 +158,7 @@ fn habitats_reject_water_portals_slopes_structures_and_tree_feet() {
             }
             if mode == 3 {
                 context.sites.push(Arc::new(Site {
+                    tidal_nest: false,
                     summary: SiteSummary {
                         id: 1,
                         kind: StructureKind::Village,

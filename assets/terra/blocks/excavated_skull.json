@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 723,
+  "name": "Excavated Skull",
+  "description": "A long-toothed fossil skull with hollow eye sockets.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.3,
+  "resistance": 2.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/excavated_skull.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": 746,
+  "name": "Cyan Quartz Spire",
+  "description": "Cold blue crystal grows beside the amethyst dikes.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 2.1,
+  "resistance": 4.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/crystal_highlands/cyan_spire.png",
+    "edge": "textures/crystal_highlands/cyan_spire.png",
+    "cap": "textures/crystal_highlands/cyan_spire.png"
+  },
+  "materials": {
+    "side": {
+      "normal_texture": "textures/crystal_highlands/cyan_spire_normal.png",
+      "roughness": 0.31,
+      "reflectance": 0.43,
+      "emission": [
+        0.029,
+        0.071,
+        0.105
+      ]
+    },
+    "edge": {
+      "normal_texture": "textures/crystal_highlands/cyan_spire_normal.png",
+      "roughness": 0.23,
+      "reflectance": 0.43,
+      "emission": [
+        0.029,
+        0.071,
+        0.105
+      ],
+      "base_color": [
+        0.76,
+        0.81,
+        0.93,
+        1.0
+      ]
+    },
+    "cap": {
+      "normal_texture": "textures/crystal_highlands/cyan_spire_normal.png",
+      "roughness": 0.26,
+      "reflectance": 0.43,
+      "emission": [
+        0.029,
+        0.071,
+        0.105
+      ],
+      "base_color": [
+        1.0,
+        0.98,
+        1.0,
+        1.0
+      ]
+    }
+  },
+  "face_materials": [
+    "side",
+    "edge",
+    "edge",
+    "cap",
+    "side",
+    "edge"
+  ]
+}

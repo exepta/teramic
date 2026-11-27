@@ -75,6 +75,7 @@ pub(super) fn dispatch_water_jobs(
         let Ok(mut fluids) = journal.fluid_snapshot(position) else {
             continue;
         };
+        crate::water::falls::add_cells(column.water_columns(), origin, &mut fluids, Some(&journal));
         let Ok(overrides) = journal.snapshot(position) else {
             continue;
         };
@@ -374,9 +375,10 @@ fn capture_occluders(
                                 chunks.surface_column_at(cell[0], cell[2]).map_or_else(
                                     Default::default,
                                     |column| {
-                                        crate::water::fluid::from_columns(
+                                        crate::water::falls::sampled(
                                             column.water_columns(),
-                                            cell[1],
+                                            cell,
+                                            journal,
                                         )
                                     },
                                 )
@@ -514,7 +516,7 @@ fn build_patch(
             }
         }
     }
-    let mut patch = crate::water::build_natural_patch(
+    let mut patch = crate::water::build_reservoir_patch(
         position,
         origin,
         columns,

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 748,
+  "name": "Gilded Runestone",
+  "description": "Gold wire traces a rune across the dressed stone.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 2.1,
+  "resistance": 4.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/crystal_highlands/gilded_runestone.png"
+  },
+  "materials": {
+    "side": {
+      "normal_texture": "textures/crystal_highlands/gilded_runestone_normal.png",
+      "roughness": 0.84,
+      "reflectance": 0.14
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

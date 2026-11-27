@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": 498,
+  "name": "Blood Brazier",
+  "description": "Scarlet flames rise from a wrought iron bowl.",
+  "creative_category": "nature",
+  "hardness": 0.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/blood_brazier.glb",
+  "textures": {},
+  "struct_block": true,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.19,
+        0,
+        0.19
+      ],
+      "maximum": [
+        0.81,
+        0.12,
+        0.81
+      ]
+    },
+    {
+      "minimum": [
+        0.34,
+        0.12,
+        0.34
+      ],
+      "maximum": [
+        0.66,
+        0.41,
+        0.66
+      ]
+    }
+  ],
+  "light": {
+    "color": [
+      1.0,
+      0.075,
+      0.1
+    ],
+    "intensity": 360,
+    "range": 9,
+    "falloff": "soft_core",
+    "flicker": 0.025,
+    "cave_intensity": 0.8,
+    "shadows": false
+  }
+}

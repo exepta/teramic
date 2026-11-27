@@ -1,0 +1,24 @@
+{
+  "id": "zebra",
+  "title": "Zebra",
+  "health": 18,
+  "food": 25,
+  "water": 23,
+  "size": [
+    0.65,
+    1.71,
+    2.1
+  ],
+  "speed": 2.16,
+  "group_size": 4,
+  "sleeps": true,
+  "spawn": {
+    "biomes": [
+      "savanna"
+    ],
+    "herd_size": [
+      3,
+      4
+    ]
+  }
+}

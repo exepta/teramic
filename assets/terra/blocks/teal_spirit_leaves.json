@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": 606,
+  "name": "Teal Spirit Leaves",
+  "description": "Jade leaves carrying sprays of pale turquoise blossom.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.35,
+  "resistance": 0.6,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "side": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.92,
+      "reflectance": 0.09
+    },
+    "top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.92,
+      "reflectance": 0.09
+    },
+    "spray": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.92,
+      "reflectance": 0.09
+    }
+  },
+  "textures": {
+    "side": "textures/foliage/spirit_teal_side.png",
+    "top": "textures/foliage/spirit_teal_top.png",
+    "spray": "textures/foliage/spirit_teal_cluster.png"
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "top",
+    "side",
+    "side"
+  ],
+  "foliage_cluster": {
+    "material": "spray"
+  }
+}

@@ -56,7 +56,7 @@ fn templates() -> TemplateSet {
 }
 
 #[test]
-fn ordinary_blocks_stay_inside_their_cells_and_keep_closed_surface_shells() {
+fn cube_cores_close_every_exposed_face_and_relief_only_projects_into_open_cells() {
     let templates = templates();
     let mut plain_templates = self::templates();
     for block in plain_templates.blocks.values_mut() {
@@ -153,15 +153,24 @@ fn ordinary_blocks_stay_inside_their_cells_and_keep_closed_surface_shells() {
                         }
                     }
                 }
+                let additive = detail_level == DetailLevel::Near
+                    && templates.block_details.micro_geometry
+                    && templates.sculpted_blocks.contains_key(&material);
                 for batch in &batches {
-                    assert!(
-                        batch
-                            .positions
-                            .iter()
-                            .flatten()
-                            .all(|p| (0.0..=1.0).contains(p)),
-                        "extruded block: material={material}, LOD={detail_level:?}, mask={mask}"
-                    );
+                    for point in &batch.positions {
+                        let mut outside_axes = 0;
+                        for (axis, &coordinate) in point.iter().enumerate() {
+                            if !(0.0..=1.0).contains(&coordinate) {
+                                outside_axes += 1;
+                                let side = axis * 2 + usize::from(coordinate > 1.0);
+                                assert!(
+                                    additive && mask & (1 << side) != 0,
+                                    "detail reaches an occupied neighbour: material={material}, point={point:?}, mask={mask}"
+                                );
+                            }
+                        }
+                        assert!(outside_axes <= 1, "detail crosses a diagonal neighbour");
+                    }
                     assert!(
                         batch
                             .indices
@@ -196,7 +205,11 @@ fn ordinary_blocks_stay_inside_their_cells_and_keep_closed_surface_shells() {
                                 1.0001
                             };
                             assert!(
-                                hit.is_some_and(|d| (0.9999..=maximum).contains(&d)),
+                                hit.is_some_and(|d| if additive {
+                                    (0.75..=1.0001).contains(&d)
+                                } else {
+                                    (0.9999..=maximum).contains(&d)
+                                }),
                                 "open/deformed face: material={material}, LOD={detail_level:?}, mask={mask}, side={}, uv={u},{v}, hit={hit:?}",
                                 face.side
                             );
@@ -217,11 +230,6 @@ fn joined_cube_uvs_use_the_same_projection_as_greedy_lods() {
     let templates = templates();
     for material in [1, 3, 5] {
         for level in [DetailLevel::Near, DetailLevel::Middle, DetailLevel::Far] {
-            // Authored near geometry retains its atlas UVs. Its tiled coarse
-            // counterpart, like ordinary cubes, must use the greedy projection.
-            if material == 1 && level == DetailLevel::Near {
-                continue;
-            }
             let top = terra_voxel::meshing::BlockFace {
                 edge_mask: 15,
                 occupied_neighbor: false,
@@ -248,7 +256,13 @@ fn joined_cube_uvs_use_the_same_projection_as_greedy_lods() {
             )
             .expect("projected flat terrain");
             for batch in batches {
-                for (position, uv) in batch.positions.iter().zip(&batch.uvs) {
+                for ((position, uv), normal) in
+                    batch.positions.iter().zip(&batch.uvs).zip(&batch.normals)
+                {
+                    if templates.sculpted_blocks.contains_key(&material) && normal[1].abs() < 0.5 {
+                        // The steep sides of raised tiles have their own unwrapped UVs.
+                        continue;
+                    }
                     assert_eq!(*uv, [position[0], position[2]], "{material}: {level:?}");
                 }
             }

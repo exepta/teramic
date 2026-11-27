@@ -65,6 +65,7 @@ fn player_and_worker_felling_use_the_same_leaf_roll_and_keep_actual_material_var
         (6, 133, terra_core::TreeSpecies::Cherry),
         (10, 9, terra_core::TreeSpecies::Birch),
         (6, 195, terra_core::TreeSpecies::Apple),
+        (643, 644, terra_core::TreeSpecies::Acacia),
     ] {
         let (mut chunks, mut journal, plan, expected) = leaf_fixture(wood, leaves, species);
         let mut queue = Queue::default();

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 572,
+  "name": "Marker Buoy",
+  "description": "A striped float marking a submerged mooring.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 0.7,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/marker_buoy.glb",
+  "collision_boxes": [],
+  "textures": {}
+}

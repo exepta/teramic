@@ -95,6 +95,164 @@ fn assert_identical(actual: &[PrimitiveTemplate], expected: &[PrimitiveTemplate]
 }
 
 #[test]
+fn village_roof_geometry_matches_before_and_after_server_subscription() {
+    use crate::meshing::DetailLevel::{Far, Middle, Near};
+    use terra_core::{WorldConfig, WorldSeed, construction};
+    use terra_voxel::global_to_section;
+    use terra_world::{SectionGenerator, TerraGenerator, edits::EditJournal};
+
+    // A pitched house roof in seed 1337 straddles the x=208 section edge.
+    let generator = SectionGenerator::new(
+        TerraGenerator::new(WorldConfig {
+            seed: WorldSeed(1337),
+            structures_revision: 3,
+            landscape_revision: 0,
+            geology_revision: 0,
+            ocean_revision: 0,
+            cave_structure_revision: 0,
+            base_height: 16.,
+            sea_level: 0.,
+            hill_amplitude: 0.,
+            mountain_amplitude: 0.,
+            terrace_strength: 0.,
+            caves: false,
+            trees: false,
+            water: false,
+            rivers: false,
+            biomes: false,
+            ..Default::default()
+        })
+        .unwrap(),
+    );
+    let owner = SectionPos::new(13, 1, 10);
+    let column = generator.prepare_column([owner.x, owner.z], true).unwrap();
+    let generated = generator
+        .build_prepared(owner, 0, &Default::default(), &column)
+        .unwrap();
+    let mut data = BlockSection::empty(owner).unwrap();
+    let mut assets = templates();
+    let stairs: Vec<_> = column
+        .model_objects_in_halo(owner)
+        .filter(|o| construction::is_stair(o.material))
+        .cloned()
+        .collect();
+    for stair in &stairs {
+        let (section, cell) = global_to_section(stair.position);
+        if section != owner {
+            continue;
+        }
+        assert_eq!(generated.data.block(cell).unwrap(), stair.material);
+        data.set_block(cell, stair.material).unwrap();
+        let asset = assets.blocks.get_mut(&stair.material).unwrap();
+        asset.model = crate::blocks::cube::box_model(
+            &construction::placed_boxes(stair.material, 0, [None; 6]),
+            asset.bevel_width,
+            asset.face_materials,
+        );
+    }
+    assert!(
+        stairs
+            .iter()
+            .any(|o| global_to_section(o.position).0 != owner)
+    );
+    let loaded = |p| {
+        let (section, cell) = global_to_section(p);
+        (section == owner).then(|| data.block(cell).unwrap())
+    };
+    let snapshot = |journal: &EditJournal| {
+        capture_prepared(
+            &data,
+            &assets,
+            journal,
+            Some(&column),
+            &journal.snapshot(owner).unwrap(),
+            loaded,
+        )
+        .unwrap()
+    };
+    let mut journal = EditJournal::default();
+    let distant = snapshot(&journal);
+    let mut directions = std::collections::HashSet::new();
+    for model in &distant.models {
+        directions.insert(model.state.facing);
+    }
+    assert!(
+        directions.len() >= 2,
+        "both pitches must have their own pose"
+    );
+    assert_eq!(journal.edited_blocks(), 0);
+    journal.initialize_structures(&stairs).unwrap();
+    let confirmed = snapshot(&journal);
+    let geometry = |snapshot: &ModelSnapshot, detail_level| {
+        compose(
+            &BlockMesh::default(),
+            snapshot,
+            &assets,
+            owner,
+            &RenderOptions {
+                detail_level,
+                terrain: None,
+                water_level: None,
+                exposure: None,
+                conditions: Default::default(),
+                tints: Default::default(),
+            },
+        )
+        .unwrap()
+    };
+    let expected = geometry(&confirmed, Near);
+    assert!(expected.iter().any(|b| !b.positions.is_empty()));
+    for level in [Near, Middle, Far] {
+        assert!(
+            geometry(&distant, level) == expected,
+            "{level:?} changed the roof geometry"
+        );
+    }
+    // Only the adjacent section's network delta is present: the owning stair
+    // must still use the server's rotation when selecting its corner geometry.
+    let (model, side, neighbor) = distant
+        .models
+        .iter()
+        .find_map(|model| {
+            (0..6).find_map(|side| {
+                let mut p = owner.global_block(model.cell.map(|v| v as usize)).unwrap();
+                p[side / 2] += if side % 2 == 0 { -1 } else { 1 };
+                (global_to_section(p).0 != owner
+                    && model.neighbors[side].is_some_and(construction::is_stair))
+                .then_some((model, side, p))
+            })
+        })
+        .expect("the roof row must continue into an unpublished section");
+    let mut rotated = journal.object_state(neighbor).unwrap();
+    rotated.facing = (rotated.facing + 1) % 4;
+    journal.set_object_state(neighbor, Some(rotated)).unwrap();
+    let mut replica = EditJournal::default();
+    replica
+        .import_delta(journal.section_delta(global_to_section(neighbor).0))
+        .unwrap();
+    let mixed = snapshot(&replica);
+    let corner = mixed.models.iter().find(|m| m.cell == model.cell).unwrap();
+    assert_eq!(corner.state, model.state);
+    assert_eq!(corner.neighbor_facing[side], rotated.facing);
+    let stair = stairs
+        .iter()
+        .find(|o| global_to_section(o.position).0 == owner && o.state.unwrap().facing != 0)
+        .unwrap();
+    journal.set_object_state(stair.position, None).unwrap();
+    let cell = global_to_section(stair.position).1.map(|v| v as i32);
+    assert_eq!(
+        snapshot(&journal)
+            .models
+            .iter()
+            .find(|m| m.cell == cell)
+            .unwrap()
+            .state
+            .facing,
+        0
+    );
+}
+
+#[test]
 fn repeated_construction_profiles_reuse_geometry_without_losing_corner_poses_or_materials() {
     let templates = templates();
     let mut cache = ConstructionProfiles::default();

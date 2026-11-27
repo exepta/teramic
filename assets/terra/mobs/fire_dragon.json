@@ -1,0 +1,32 @@
+{
+  "id": "fire_dragon",
+  "title": "Fire Dragon",
+  "variant_titles": [
+    "Fire Dragon",
+    "Cinder Dragon",
+    "Obsidian Fire Dragon",
+    "Sulfur Dragon"
+  ],
+  "health": 640,
+  "food": 80,
+  "water": 80,
+  "size": [
+    5.0,
+    6.0,
+    7.2
+  ],
+  "speed": 7.1,
+  "group_size": 1,
+  "sleeps": true,
+  "combat": {
+    "damage": 25,
+    "aggro_radius": 48,
+    "reach": 3,
+    "cooldown": 2.4
+  },
+  "spawn": {
+    "biomes": [
+      "ashlands"
+    ]
+  }
+}

@@ -25,7 +25,7 @@ fn smelting_assets_are_valid_unique_and_fuels_are_wood_not_snow_or_clay() {
     for recipe in recipes() {
         assert!(recipe.valid());
     }
-    for id in [6, 10, 36, 16, 17, 18] {
+    for id in [6, 10, 36, 16, 17, 18, 621, 622, 643, 645, 646] {
         assert!(fuel_seconds(ItemKind::Block(id)).is_some());
     }
     for id in [3, 5, 9, 19, 39] {

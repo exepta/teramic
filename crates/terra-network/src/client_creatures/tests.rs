@@ -243,3 +243,55 @@ fn repeated_full_snapshots_leave_real_strides_and_attack_clocks_intact_for_every
         assert_eq!(track.current.behavior, CreatureBehavior::Attack);
     }
 }
+
+#[test]
+fn stone_guardian_and_other_walkers_ease_each_stair_without_changing_authority() {
+    use std::time::Duration;
+    for kind in [
+        CreatureKind::Cow,
+        CreatureKind::Villager,
+        CreatureKind::ThornBrute,
+        CreatureKind::StoneGolem,
+        CreatureKind::FireDragon,
+        CreatureKind::LargeSpider,
+    ] {
+        let mut a = animal(creature_id([0, 0], 0).unwrap(), kind);
+        a.behavior = if kind.is_spider() {
+            CreatureBehavior::Crawl
+        } else {
+            CreatureBehavior::Hunt
+        };
+        a.velocity = [2., 0., 0.];
+        assert!(ground_stride(&a));
+        for dy in [-1., 1.] {
+            let mut track = CreatureTrack {
+                current: a.clone(),
+                previous: a.clone(),
+                received: Instant::now(),
+                interval: 0.1,
+                playback: Default::default(),
+            };
+            let start = track.received;
+            track.apply(a.clone(), 0., start);
+            let mut b = a.clone();
+            b.position[0] += 0.2;
+            b.position[1] += dy;
+            track.apply(b.clone(), 0.1, start + Duration::from_millis(100));
+            let mut last = a.position[1] as f32;
+            let mut intermediate = 0;
+            for i in 0..=80 {
+                let y = track.position_at(start + Duration::from_millis(5 * i)).y;
+                assert!((y - last).abs() < 0.15, "{kind:?}: {last} to {y}");
+                if (y - a.position[1] as f32).abs() > 0.03
+                    && (y - b.position[1] as f32).abs() > 0.03
+                {
+                    intermediate += 1;
+                }
+                last = y;
+            }
+            assert!(intermediate >= 10);
+            assert!((last - b.position[1] as f32).abs() < 0.001);
+            assert_eq!(track.current, b);
+        }
+    }
+}

@@ -13,7 +13,9 @@ pub mod dragon_nursery;
 pub mod dragons;
 pub mod ecology;
 pub mod forest;
+pub mod golem;
 mod horses;
+pub mod lava_worm;
 pub mod navigation;
 #[path = "creature_needs.rs"]
 mod needs;
@@ -26,6 +28,8 @@ pub mod spiders;
 pub mod spirit;
 pub mod stalker;
 mod support;
+#[cfg(test)]
+mod test_habitat;
 pub mod villagers;
 mod work;
 pub use needs::{Forage, apply_forage};
@@ -192,7 +196,9 @@ impl Habitat<'_> {
         let mut cell = p.map(|v| v.floor() as i64);
         let mut surface = None;
         for _ in 0..16 {
-            let block = self.block(cell)?;
+            let Some(block) = self.block(cell) else {
+                return surface;
+            };
             let fluid = self
                 .chunks
                 .fluid_cell_at(self.terrain, self.journal, cell, block);
@@ -574,10 +580,19 @@ pub(super) fn biome_slug(biome: crate::generation::biomes::BiomeKind) -> &'stati
         BiomeKind::CherryForest => "cherry_forest",
         BiomeKind::SpiritBlossom => "spirit_blossom",
         BiomeKind::BloodForest => "blood_forest",
+        BiomeKind::Ashlands => "ashlands",
+        BiomeKind::Savanna => "savanna",
+        BiomeKind::Swamp => "swamp",
+        BiomeKind::PetrifiedForest => "petrified_forest",
+        BiomeKind::CrystalHighlands => "crystal_highlands",
+        BiomeKind::MistyCoast => "misty_coast",
     }
 }
 
 pub fn spawn_cell(population: &mut CreaturePopulation, habitat: &Habitat, home: [i64; 2]) -> bool {
+    if golem::populate(population, habitat, home, &[]) {
+        return true;
+    }
     if population.explored.contains(&home) {
         return sandworm::recover_missing_spawn(population, habitat, home);
     }
@@ -600,6 +615,9 @@ pub fn spawn_cell_away_from_players(
 ) -> bool {
     if available == 0 {
         return false;
+    }
+    if golem::populate(population, habitat, home, players) {
+        return true;
     }
     let center = [home[0] as f64 * 32.0 + 16.0, home[1] as f64 * 32.0 + 16.0];
     let lair = (!population.explored.contains(&home))
@@ -691,8 +709,10 @@ fn spawn_cell_budgeted_using<'a>(
         ];
         let id = creature_id(home, 0).expect("validated habitat");
         let (variant, bounds, yaw) = nest_body(habitat, home, id, kind);
+        let submerged =
+            kind == Kind::WaterDragon && habitat.terrain.config().structures_revision >= 16;
         if !spawn_volume_loaded(habitat, position, bounds)
-            || !habitat.clear(position, bounds, false)
+            || !habitat.clear(position, bounds, submerged)
         {
             return false;
         }
@@ -704,7 +724,11 @@ fn spawn_cell_budgeted_using<'a>(
             velocity: [0.0; 3],
             yaw,
             health: kind.health(),
-            behavior: Behavior::Rest,
+            behavior: if submerged {
+                Behavior::Swim
+            } else {
+                Behavior::Rest
+            },
             timer: 6.0,
             age: 0.0,
             variant,
@@ -758,7 +782,12 @@ fn spawn_cell_budgeted_using<'a>(
             continue;
         }
         let biome = biome_slug(habitat.terrain.surface_biome(&surface));
-        let kind = if fish {
+        let kind = if biome == "ashlands" {
+            if slot != 0 || surface.lava_level.is_none() {
+                continue;
+            }
+            Kind::LavaWorm
+        } else if fish {
             let ocean = surface.biome.weights.ocean > 0.55;
             let lake = habitat
                 .terrain
@@ -781,6 +810,12 @@ fn spawn_cell_budgeted_using<'a>(
                 continue;
             };
             kind
+        } else if biome == "savanna" {
+            if (group_seed >> 36).is_multiple_of(3) {
+                Kind::Elephant
+            } else {
+                Kind::Zebra
+            }
         } else if !matches!(biome, "spirit_blossom" | "blood_forest")
             && slot == 0
             && (group_seed >> 40).is_multiple_of(7)
@@ -814,7 +849,16 @@ fn spawn_cell_budgeted_using<'a>(
         if slot >= species.spawn_group_size(group_seed, biome, legacy_group) {
             continue;
         }
-        let position = if fish {
+        let position = if kind == Kind::LavaWorm {
+            let level = surface.lava_level.expect("selected volcanic pool");
+            if !spawn_volume_loaded(habitat, [x, level - 2., z], [3., kind.size()[1] + 2., 3.]) {
+                return false;
+            }
+            let Some(p) = lava_worm::anchor(habitat, [x, level, z]) else {
+                continue;
+            };
+            p
+        } else if fish {
             let Some(water) = water else {
                 continue;
             };
@@ -823,6 +867,15 @@ fn spawn_cell_budgeted_using<'a>(
             };
             y = if species.aquatic_spawn().depth_below_surface.is_some() {
                 (water.level - depth).max(water.bed + 0.2)
+            } else if biome == "ocean" {
+                let t = (seed % 1001) as f64 / 1000.;
+                let span = (water.depth - kind.size()[1] - 0.45).max(0.);
+                let from_bed = if (group_seed >> 24).is_multiple_of(3) {
+                    span * (0.30 + t * 0.38)
+                } else {
+                    span.min(0.24 + t * 1.3)
+                };
+                water.bed + 0.2 + from_bed
             } else if kind == Kind::Fish {
                 y
             } else {
@@ -865,13 +918,38 @@ fn spawn_cell_budgeted_using<'a>(
             };
             p
         } else {
-            let Some(p) =
-                habitat.ground_rotated([x, y, z], kind, f64::from((seed % 628) as f32 * 0.01))
-            else {
+            let yaw = f64::from((seed % 628) as f32 * 0.01);
+            if matches!(kind, Kind::Elephant | Kind::Zebra) {
+                // The rotated body can reach the next streamed section across a bank.
+                // Defer the herd if its feet or crown still have unknown voxels.
+                let [width, height, length] = kind.size();
+                let (sin, cos) = yaw.sin_cos();
+                let envelope = [
+                    width * cos.abs() + length * sin.abs(),
+                    height + 2.,
+                    width * sin.abs() + length * cos.abs(),
+                ];
+                if !spawn_volume_loaded(habitat, [x, y - 2., z], envelope) {
+                    return false;
+                }
+            }
+            let Some(p) = habitat.ground_rotated([x, y, z], kind, yaw) else {
                 continue;
             };
             let support = habitat.block([x.floor() as i64, p[1] as i64 - 1, z.floor() as i64]);
             if !(matches!(support, Some(1 | 2))
+                || matches!(kind, Kind::Elephant | Kind::Zebra)
+                    && support
+                        .and_then(terra_voxel::MaterialId::from_raw)
+                        .is_some_and(|m| {
+                            matches!(
+                                m,
+                                terra_voxel::MaterialId::SavannaTurf
+                                    | terra_voxel::MaterialId::DrySavannaTurf
+                                    | terra_voxel::MaterialId::DrySavannaSoil
+                                    | terra_voxel::MaterialId::SavannaLoam
+                            )
+                        })
                 || kind == Kind::Bear && support == Some(4)
                 || kind == Kind::SpiritFox
                     && support == Some(terra_voxel::MaterialId::SpiritBlossomGrass as u16)
@@ -890,7 +968,7 @@ fn spawn_cell_budgeted_using<'a>(
             velocity: [0.0; 3],
             yaw: (seed % 628) as f32 * 0.01,
             health: kind.health(),
-            behavior: if kind == Kind::SandWorm {
+            behavior: if matches!(kind, Kind::SandWorm | Kind::LavaWorm) {
                 Behavior::Burrowed
             } else if fish {
                 Behavior::Swim
@@ -1006,8 +1084,16 @@ pub(super) fn step_with_flowers(
         aquatics::step(animal, habitat, players, &bears::PreyIndex::default(), dt);
         return Forage::None;
     }
+    if animal.kind == Kind::LavaWorm {
+        lava_worm::step(animal, habitat, players, dt);
+        return Forage::None;
+    }
     if animal.kind == Kind::SandWorm {
         sandworm::step(animal, habitat, players, dt);
+        return Forage::None;
+    }
+    if animal.kind == Kind::StoneGolem {
+        golem::step(animal, habitat, players, dt, search, navigation, |_, _| {});
         return Forage::None;
     }
     if forest::hostile(animal.kind) {

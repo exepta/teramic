@@ -4,7 +4,10 @@ use crate::protocol::chat::{ChatEntry, LocateResult, sanitize};
 use bevy::tasks::{AsyncComputeTaskPool, Task, futures_lite::future};
 use terra_world::{
     TerraGenerator,
-    generation::{CaveEcology, biomes::BiomeKind, structures::StructureKind},
+    generation::{
+        CaveEcology, CoastalLandmarkKind, CrystalLandmarkKind, biomes::BiomeKind,
+        structures::StructureKind,
+    },
     spawn::WorldSpawn,
 };
 
@@ -149,12 +152,7 @@ struct Located {
     spawn: Option<WorldSpawn>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LocateTarget {
-    Biome(BiomeKind),
-    Cave(CaveEcology),
-    Structure(StructureKind),
-}
+use crate::protocol::commands::LocateTarget;
 
 impl LocateTarget {
     fn name(self) -> &'static str {
@@ -165,6 +163,13 @@ impl LocateTarget {
             Self::Cave(CaveEcology::Dripstone) => "Dripstone Cave",
             Self::Cave(CaveEcology::Waterfall) => "Ice Cave",
             Self::Cave(_) => "Cave",
+            Self::CoastalLandmark(CoastalLandmarkKind::Shipwreck) => "Coastal Shipwreck",
+            Self::CoastalLandmark(CoastalLandmarkKind::FishingVillage) => "Fishing Village",
+            Self::CoastalLandmark(CoastalLandmarkKind::Lighthouse) => "Coastal Lighthouse",
+            Self::CoastalLandmark(CoastalLandmarkKind::TidalCave) => "Tidal Cave",
+            Self::CrystalLandmark(CrystalLandmarkKind::CrystalMine) => "Crystal Mine",
+            Self::CrystalLandmark(CrystalLandmarkKind::MageTower) => "Mage Tower",
+            Self::CrystalLandmark(CrystalLandmarkKind::CrystalVault) => "Crystal Vault",
             Self::Structure(StructureKind::Village) => "Village",
             Self::Structure(StructureKind::Ruin) => "Ruin",
             Self::Structure(StructureKind::Mine) => "Mine",
@@ -175,6 +180,7 @@ impl LocateTarget {
             Self::Structure(StructureKind::DarkDragonLair) => "Dark Dragon Lair",
             Self::Structure(StructureKind::EarthDragonLair) => "Earth Dragon Lair",
             Self::Structure(StructureKind::WaterDragonLair) => "Water Dragon Lair",
+            Self::Structure(StructureKind::FireDragonLair) => "Fire Dragon Lair",
         }
     }
 }
@@ -1205,6 +1211,12 @@ fn biome_name(kind: BiomeKind) -> &'static str {
         BiomeKind::CherryForest => "Cherry Forest",
         BiomeKind::SpiritBlossom => "Spirit Blossom",
         BiomeKind::BloodForest => "Blood Forest",
+        BiomeKind::Ashlands => "Ashlands",
+        BiomeKind::Savanna => "Savanna",
+        BiomeKind::Swamp => "Swamp",
+        BiomeKind::PetrifiedForest => "Petrified Forest",
+        BiomeKind::CrystalHighlands => "Crystal Highlands",
+        BiomeKind::MistyCoast => "Misty Coast",
     }
 }
 
@@ -1213,63 +1225,43 @@ fn parse_command(text: &str) -> Result<Option<LocateTarget>, &'static str> {
     if parts == ["/help"] {
         return Ok(None);
     }
-    if parts.len() < 3 || parts[0] != "/locate" {
-        return Err("Usage: /locate biome <name> | /locate struct teramic::<structure>.");
-    }
-    if parts[1] == "struct" {
-        if parts.len() != 3 {
-            return Err(
-                "Usage: /locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost|teramic::cemetery|teramic::grave_dungeon|teramic::dark_dragon_lair|teramic::earth_dragon_lair|teramic::water_dragon_lair>.",
-            );
+    use crate::protocol::commands::{BIOMES, STRUCTURES};
+    use terra_core::command_ids::resolve;
+    match parts.as_slice() {
+        ["/locate", "struct", name] => resolve(name, STRUCTURES.iter().copied())
+            .map(Some)
+            .map_err(|e| e.message("Unknown structure. Tab lists available structures.")),
+        ["/locate", "biome", rest @ ..] if !rest.is_empty() => {
+            let input = rest.join("_").to_ascii_lowercase();
+            let (namespace, name) = input
+                .split_once("::")
+                .map_or((None, input.as_str()), |(ns, name)| (Some(ns), name));
+            let result = resolve(&input, BIOMES.iter().copied());
+            if result != Err(terra_core::command_ids::LookupError::Unknown) {
+                return result.map(Some).map_err(|e| e.message("Unknown biome."));
+            }
+            // Historic aliases only refer to built-in biomes.
+            let alias = match name {
+                "mushroompark" => "mushroom_park",
+                "cliffteddesert" => "cliffted_desert",
+                "cherryforest" => "cherry_forest",
+                "spiritblossom" | "spirit-blossom" => "spirit_blossom",
+                "bloodforest" | "blood-forest" | "blutwald" => "blood_forest",
+                "aschelande" | "ashland" => "ashlands",
+                "savanne" => "savanna",
+                "sumpf" => "swamp",
+                "highlands" => "highland",
+                _ => return Err("Unknown biome. Tab lists available biomes."),
+            };
+            if namespace.is_some_and(|ns| ns != "teramic") {
+                return Err("Unknown biome. Tab lists available biomes.");
+            }
+            resolve(&format!("teramic::{alias}"), BIOMES.iter().copied())
+                .map(Some)
+                .map_err(|e| e.message("Unknown biome."))
         }
-        return match parts[2].to_ascii_lowercase().as_str() {
-            "teramic::village" => Ok(Some(LocateTarget::Structure(StructureKind::Village))),
-            "teramic::ruin" => Ok(Some(LocateTarget::Structure(StructureKind::Ruin))),
-            "teramic::mine" => Ok(Some(LocateTarget::Structure(StructureKind::Mine))),
-            "teramic::kingdom" => Ok(Some(LocateTarget::Structure(StructureKind::Kingdom))),
-            "teramic::outpost" => Ok(Some(LocateTarget::Structure(StructureKind::Outpost))),
-            "teramic::cemetery" => Ok(Some(LocateTarget::Structure(StructureKind::Cemetery))),
-            "teramic::dark_dragon_lair" => {
-                Ok(Some(LocateTarget::Structure(StructureKind::DarkDragonLair)))
-            }
-            "teramic::earth_dragon_lair" => Ok(Some(LocateTarget::Structure(
-                StructureKind::EarthDragonLair,
-            ))),
-            "teramic::water_dragon_lair" => Ok(Some(LocateTarget::Structure(
-                StructureKind::WaterDragonLair,
-            ))),
-            "teramic::grave_dungeon" => {
-                Ok(Some(LocateTarget::Structure(StructureKind::GraveDungeon)))
-            }
-            _ => Err(
-                "Unknown structure. Use teramic::village, teramic::ruin, teramic::mine, teramic::kingdom, teramic::outpost, teramic::cemetery, teramic::grave_dungeon, teramic::dark_dragon_lair, teramic::earth_dragon_lair or teramic::water_dragon_lair.",
-            ),
-        };
+        _ => Err("Usage: /locate biome <name> | /locate struct <name>."),
     }
-    if parts[1] != "biome" {
-        return Err("Usage: /locate biome <name> | /locate struct teramic::<structure>.");
-    }
-    let name = parts[2..].join("_").to_ascii_lowercase();
-    if let Some((_, ecology)) = crate::protocol::commands::CAVE_BIOMES
-        .iter()
-        .find(|(slug, _)| *slug == name)
-    {
-        return Ok(Some(LocateTarget::Cave(*ecology)));
-    }
-    let biome = match name.as_str() {
-        "ocean" => BiomeKind::Ocean,
-        "plains" => BiomeKind::Plains,
-        "forest" => BiomeKind::Forest,
-        "desert" => BiomeKind::Desert,
-        "highland" => BiomeKind::Highland,
-        "mushroom_park" | "mushroompark" => BiomeKind::MushroomPark,
-        "cliffted_desert" | "cliffteddesert" => BiomeKind::ClifftedDesert,
-        "cherry_forest" | "cherryforest" => BiomeKind::CherryForest,
-        "spirit_blossom" | "spiritblossom" | "spirit-blossom" => BiomeKind::SpiritBlossom,
-        "blood_forest" | "bloodforest" | "blood-forest" | "blutwald" => BiomeKind::BloodForest,
-        _ => return Err("Unknown biome. Use /help for biome names."),
-    };
-    Ok(Some(LocateTarget::Biome(biome)))
 }
 
 fn locate(terrain: &TerraGenerator, origin: [i64; 2], target: LocateTarget) -> Option<Located> {
@@ -1277,22 +1269,52 @@ fn locate(terrain: &TerraGenerator, origin: [i64; 2], target: LocateTarget) -> O
         LocateTarget::Cave(kind) => cave_locate::find(terrain, origin, kind),
         LocateTarget::Biome(biome) => locate_biome(terrain, origin, biome),
         LocateTarget::Structure(kind) => locate_structure(terrain, origin, kind),
+        LocateTarget::CrystalLandmark(kind) => locate_crystal_landmark(terrain, origin, kind),
+        LocateTarget::CoastalLandmark(kind) => {
+            if terrain.config().ecology_revision < 22
+                || !terrain.marine_overhaul()
+                || !kind.enabled(terrain.config())
+                || terrain.config().structures_revision == 0
+            {
+                return None;
+            }
+            locate_patch_landmark(terrain, origin, target, |tile| {
+                terrain
+                    .coastal_landmark_at(tile)
+                    .filter(|site| site.kind == kind)
+                    .map(|site| site.entrance())
+            })
+        }
     }
 }
 
 fn locate_biome(terrain: &TerraGenerator, origin: [i64; 2], biome: BiomeKind) -> Option<Located> {
+    let biome = if biome == BiomeKind::ClifftedDesert && terrain.desert_overhaul() {
+        BiomeKind::Desert
+    } else {
+        biome
+    };
     if !terrain.config().biomes && biome != BiomeKind::Forest {
         return None;
     }
     let sample = |x: i64, z: i64| {
-        if x.abs() > 990_000
-            || z.abs() > 990_000
-            || terrain.surface_biome(&terrain.surface_column(x as f64 + 0.5, z as f64 + 0.5))
-                != biome
+        if x.unsigned_abs() > 990_000 || z.unsigned_abs() > 990_000 {
+            return None;
+        }
+        let [sx, sz] = [x, z].map(|v| v as f64 + 0.5);
+        // Region identity is cheap. Only possible matches need full hydrology,
+        // cave and slope sampling; the final surface check handles coastlines.
+        if terrain.config().landscape_revision >= 9
+            && biome != BiomeKind::Ocean
+            && !terrain.biome_at(sx, sz).weights.is_land_destination(biome)
         {
             return None;
         }
-        let height = terrain.surface_height(x as f64 + 0.5, z as f64 + 0.5);
+        let column = terrain.surface_column(sx, sz);
+        if terrain.surface_biome(&column) != biome {
+            return None;
+        }
+        let height = column.height;
         let mut found = Located {
             target: LocateTarget::Biome(biome),
             label: None,
@@ -1309,13 +1331,15 @@ fn locate_biome(terrain: &TerraGenerator, origin: [i64; 2], biome: BiomeKind) ->
                     }
                     let sx = x + dx * 4;
                     let sz = z + dz * 4;
-                    if terrain
-                        .surface_biome(&terrain.surface_column(sx as f64 + 0.5, sz as f64 + 0.5))
-                        != biome
+                    let column = terrain.surface_column(sx as f64 + 0.5, sz as f64 + 0.5);
+                    if terrain.surface_biome(&column) != biome
+                        || terrain.config().landscape_revision >= 9
+                            && biome != BiomeKind::Ocean
+                            && !column.biome.weights.is_land_destination(biome)
                     {
                         continue;
                     }
-                    let height = terrain.surface_height(sx as f64 + 0.5, sz as f64 + 0.5);
+                    let height = column.height;
                     let spawn = WorldSpawn {
                         ground: [sx, (height - 0.5).floor() as i64, sz],
                     };
@@ -1439,6 +1463,88 @@ fn locate_structure(
     })
 }
 
+fn locate_crystal_landmark(
+    terrain: &TerraGenerator,
+    origin: [i64; 2],
+    kind: CrystalLandmarkKind,
+) -> Option<Located> {
+    let config = terrain.config();
+    let enabled = match kind {
+        CrystalLandmarkKind::CrystalMine => config.structures.mines,
+        CrystalLandmarkKind::MageTower | CrystalLandmarkKind::CrystalVault => {
+            config.structures.ruins
+        }
+    };
+    if !enabled
+        || !config.biomes
+        || config.ecology_revision < 21
+        || config.structures_revision == 0
+        || origin.iter().any(|v| v.unsigned_abs() > 990_000)
+    {
+        return None;
+    }
+    locate_patch_landmark(
+        terrain,
+        origin,
+        LocateTarget::CrystalLandmark(kind),
+        |tile| {
+            terrain
+                .crystal_landmark_at(tile)
+                .filter(|site| site.kind == kind)
+                .map(|site| site.world(0, 3, -5))
+        },
+    )
+}
+fn locate_patch_landmark(
+    terrain: &TerraGenerator,
+    origin: [i64; 2],
+    target: LocateTarget,
+    entrance: impl Fn([i64; 2]) -> Option<[i64; 3]>,
+) -> Option<Located> {
+    use terra_world::generation::natural_features::TILE_SIZE;
+    if origin.iter().any(|v| v.unsigned_abs() > 990_000) {
+        return None;
+    }
+    let tile = origin.map(|v| v.div_euclid(TILE_SIZE));
+    let radius = SEARCH_STEP * SEARCH_RINGS;
+    let mut nearest = None;
+    for ring in 0..=radius / TILE_SIZE + 1 {
+        for dz in -ring..=ring {
+            // Interior rows of this ring contain only their left and right edge.
+            let step = if dz.abs() == ring {
+                1
+            } else {
+                (2 * ring) as usize
+            };
+            for dx in (-ring..=ring).step_by(step) {
+                let Some(position) = entrance([tile[0] + dx, tile[1] + dz]) else {
+                    continue;
+                };
+                let distance = (position[0] - origin[0]).pow(2) + (position[2] - origin[1]).pow(2);
+                if distance <= radius.pow(2)
+                    && position[0].unsigned_abs() <= 990_000
+                    && position[2].unsigned_abs() <= 990_000
+                {
+                    let candidate = (distance, position);
+                    nearest = Some(nearest.map_or(candidate, |old| candidate.min(old)));
+                }
+            }
+        }
+        // Every entrance is within its owning tile. Later rings are separated
+        // from the origin by at least this many complete tiles on one axis.
+        if nearest.is_some_and(|(distance, _)| distance < (ring * TILE_SIZE).pow(2)) {
+            break;
+        }
+    }
+    let (_, position) = nearest?;
+    Some(Located {
+        target,
+        label: None,
+        position,
+        spawn: nearby_dry_landing(terrain, position),
+    })
+}
+
 fn nearby_dry_landing(terrain: &TerraGenerator, position: [i64; 3]) -> Option<WorldSpawn> {
     let journal = EditJournal::default();
     for ring in 0_i64..=6 {
@@ -1538,6 +1644,16 @@ mod tests {
                 Ok(Some(LocateTarget::Biome(BiomeKind::BloodForest)))
             );
         }
+        for &(id, target) in crate::protocol::commands::BIOMES {
+            let short = id.split_once("::").unwrap().1;
+            for name in [short, id] {
+                assert_eq!(
+                    parse_command(&format!("/locate biome {name}")),
+                    Ok(Some(target))
+                );
+            }
+        }
+        assert!(parse_command("/locate biome unknown::desert").is_err());
         assert!(parse_command("/locate desert").is_err());
         assert!(parse_command("/teleport 1 2 3").is_err());
         assert!(parse_command("/locate biome desert extra").is_err());
@@ -1582,8 +1698,19 @@ mod tests {
                 Ok(Some(LocateTarget::Structure(kind)))
             );
         }
+        for &(id, target) in crate::protocol::commands::STRUCTURES {
+            let short = id.split_once("::").unwrap().1;
+            assert_eq!(
+                parse_command(&format!("/locate struct {id}")),
+                Ok(Some(target))
+            );
+            assert_eq!(
+                parse_command(&format!("/locate struct {short}")),
+                Ok(Some(target))
+            );
+        }
         for command in [
-            "/locate struct village",
+            "/locate struct other::village",
             "/locate struct teramic::missing",
             "/locate struct teramic::village extra",
             "/locate struct",
@@ -1597,6 +1724,80 @@ mod tests {
         .unwrap();
         assert!(locate_structure(&terrain, [-385, -1], StructureKind::Village).is_none());
         assert!(locate_structure(&terrain, [i64::MIN, 0], StructureKind::Mine).is_none());
+    }
+
+    #[test]
+    fn coast_chat_commands_find_all_four_reachable_maritime_structures() {
+        use terra_core::Config;
+        let config = terra_core::WorldConfig {
+            biome_definitions: Some(terra_core::BiomeDefinitions::builtin().clone()),
+            ..terra_core::WorldConfig::from_toml(include_str!("../../../configs/world.toml"))
+                .unwrap()
+        };
+        let terrain = TerraGenerator::new(config).unwrap();
+        for (slug, kind) in [
+            ("shipwreck", CoastalLandmarkKind::Shipwreck),
+            ("fishing_village", CoastalLandmarkKind::FishingVillage),
+            ("lighthouse", CoastalLandmarkKind::Lighthouse),
+            ("tidal_cave", CoastalLandmarkKind::TidalCave),
+        ] {
+            let target = parse_command(&format!("/locate struct {slug}"))
+                .unwrap()
+                .unwrap();
+            assert_eq!(target, LocateTarget::CoastalLandmark(kind));
+            assert_eq!(
+                parse_command(&format!("/locate struct teramic::{slug}")).unwrap(),
+                Some(target)
+            );
+            let found = locate(&terrain, [0, 0], target).unwrap();
+            let [x, _, z] = found.position;
+            let tile = [x.div_euclid(32), z.div_euclid(32)];
+            let site = terrain.coastal_landmark_at(tile).unwrap();
+            assert_eq!(site.kind, kind);
+            assert_eq!(site.entrance(), found.position);
+            assert_eq!(
+                locate(&terrain, [x, z], target).unwrap().position,
+                found.position
+            );
+            eprintln!("coast {slug} at {:?}", found.position);
+        }
+    }
+
+    #[test]
+    fn crystal_structure_search_returns_real_nearby_entrances_on_the_default_seed() {
+        use terra_world::generation::natural_features::TILE_SIZE;
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            biome_definitions: Some(
+                terra_core::BiomeDefinitions::load_directory(
+                    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/biome"),
+                )
+                .unwrap(),
+            ),
+            ..default()
+        })
+        .unwrap();
+        for kind in [
+            CrystalLandmarkKind::CrystalMine,
+            CrystalLandmarkKind::MageTower,
+            CrystalLandmarkKind::CrystalVault,
+        ] {
+            let found = locate(&terrain, [0, 0], LocateTarget::CrystalLandmark(kind))
+                .expect("default seed has a nearby crystal highland");
+            let [x, _, z] = found.position;
+            let tile = [x.div_euclid(TILE_SIZE), z.div_euclid(TILE_SIZE)];
+            let site = terrain.crystal_landmark_at(tile).unwrap();
+            assert_eq!(site.kind, kind);
+            assert_eq!(found.position, site.world(0, 3, -5));
+            assert!(x * x + z * z <= (SEARCH_STEP * SEARCH_RINGS).pow(2));
+            assert_eq!(
+                locate_crystal_landmark(&terrain, [x, z], kind)
+                    .unwrap()
+                    .position,
+                found.position
+            );
+            assert!(locate_crystal_landmark(&terrain, [i64::MIN, 0], kind).is_none());
+            eprintln!("{kind:?} entrance {:?}", found.position);
+        }
     }
 
     #[test]

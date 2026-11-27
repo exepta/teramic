@@ -60,8 +60,12 @@ pub(super) fn cold_ocean(terrain: &TerraGenerator) -> (i64, i64) {
 }
 
 #[test]
-fn cold_ocean_remains_open_water_in_headless_and_padded_sections() {
-    let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+fn legacy_cold_ocean_remains_open_water_in_headless_and_padded_sections() {
+    let terrain = TerraGenerator::new(WorldConfig {
+        ecology_revision: 14,
+        ..Default::default()
+    })
+    .unwrap();
     let (x, z) = cold_ocean(&terrain);
     let column = terrain.surface_column(x as f64 + 0.5, z as f64 + 0.5);
     assert!(column.ice_bottom().is_none());

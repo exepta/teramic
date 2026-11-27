@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 648,
+  "name": "Short Savanna Grass",
+  "description": "Low golden tussocks.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/savanna_short_grass.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

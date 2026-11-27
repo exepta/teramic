@@ -56,12 +56,15 @@ impl ForageRegrowth {
     pub fn valid(self) -> bool {
         self.prop.valid()
             && !self.prop.removed
-            && !self.prop.wall_attached()
             && !self.prop.growing_grass()
-            && matches!(
-                self.prop.kind,
-                PropKind::Grass | PropKind::Flower | PropKind::Mushroom | PropKind::SmallPlant
-            )
+            && (if self.prop.wall_attached() {
+                self.prop.kind == PropKind::Coconut
+            } else {
+                matches!(
+                    self.prop.kind,
+                    PropKind::Grass | PropKind::Flower | PropKind::Mushroom | PropKind::SmallPlant
+                )
+            })
             && self.remaining_seconds.is_finite()
             && (0.0..=600.0).contains(&self.remaining_seconds)
     }

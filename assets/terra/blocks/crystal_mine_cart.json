@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 761,
+  "name": "Crystal Ore Cart",
+  "description": "Crystal Ore Cart",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crystal_mine_cart.glb",
+  "struct_block": true,
+  "hardness": 1.2,
+  "resistance": 4.0,
+  "required_tool": null,
+  "mining_level": 0,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.1,
+        0.08,
+        0.06
+      ],
+      "maximum": [
+        0.9,
+        0.61,
+        0.94
+      ]
+    }
+  ]
+}

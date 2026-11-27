@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 525,
+  "name": "Tawny Milkcaps",
+  "description": "Little ochre caps open above a bed of leaf litter.",
+  "creative_category": "nature",
+  "hardness": 0.42,
+  "resistance": 0.9,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/tawny_milkcaps.glb",
+  "textures": {},
+  "collision_boxes": [],
+  "struct_block": true
+}

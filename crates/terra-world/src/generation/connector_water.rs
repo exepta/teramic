@@ -53,7 +53,15 @@ impl TerraGenerator {
         let level = -24.0 - f64::from(h % 4) * 24.0;
         let center = self.cave_biome_at([origin[0] as f64 + 16.0, level, origin[1] as f64 + 16.0]);
         let mut result = [None; SIDE * SIDE];
-        if center.weights[3] + center.weights[2] * 0.35 < 0.3 {
+        // A sealed pocket draws from the same aquifer under all its banks.
+        let half = SIDE as f64 * 0.5;
+        if center.weights[3] + center.weights[2] * 0.35 < 0.3
+            || self.volcanic_basin(
+                origin[0] as f64 + half,
+                origin[1] as f64 + half,
+                half * std::f64::consts::SQRT_2,
+            )
+        {
             return result;
         }
         let mut air = [false; SIDE * SIDE];

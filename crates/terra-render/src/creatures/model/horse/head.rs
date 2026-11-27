@@ -17,7 +17,9 @@ pub(super) fn meshes(variant: u8) -> Result<(Mesh, Mesh), String> {
         0.24,
         skin,
     )?;
-    let muzzle = if matches!(variant, 0..=4 | 7..=14) {
+    let muzzle = if variant == ZEBRA_COAT {
+        [0.14, 0.135, 0.13]
+    } else if matches!(variant, 0..=4 | 7..=14) {
         [0.83, 0.68, 0.55]
     } else {
         coat(variant, [0.0, 1.4, -1.03])
@@ -93,5 +95,16 @@ pub(super) fn meshes(variant: u8) -> Result<(Mesh, Mesh), String> {
         side,
         skin,
     });
-    eyes::attach(head.finish()?, &specs)
+    let mesh = if variant == ZEBRA_COAT {
+        head.finish_painted(|p, tint| {
+            if tint == skin {
+                coat(variant, (p + HEAD).to_array())
+            } else {
+                tint
+            }
+        })?
+    } else {
+        head.finish()?
+    };
+    eyes::attach(mesh, &specs)
 }

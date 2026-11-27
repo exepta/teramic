@@ -29,6 +29,7 @@ fn app() -> App {
             },
         })
         .add_message::<MenuAction>()
+        .add_message::<AudioAudition>()
         .add_message::<SessionRequest>()
         .add_message::<terra_player::CaptureRequest>()
         .add_systems(Update, navigation::actions);
@@ -728,17 +729,29 @@ fn audio_drafts_apply_discard_reset_and_reload_use_the_same_preferences() {
     command(&mut app, "options");
     command(&mut app, "audio");
     assert_eq!(app.world().resource::<OptionsDraft>().audio, defaults);
-    for (id, value) in [
-        ("audio-master", "40"),
-        ("audio-ambience", "60"),
-        ("audio-animals", "20"),
-        ("audio-footsteps", "45"),
-        ("audio-water", "0"),
-        ("audio-river", "35"),
-        ("audio-waterfall", "80"),
-        ("audio-muted", "true"),
+    let mut cues = app
+        .world()
+        .resource::<Messages<AudioAudition>>()
+        .get_cursor_current();
+    for (id, value, channel) in [
+        ("audio-master", "40", AudioAudition::Master),
+        ("audio-ambience", "60", AudioAudition::Ambience),
+        ("audio-animals", "20", AudioAudition::Animals),
+        ("audio-footsteps", "45", AudioAudition::Footsteps),
+        ("audio-water", "0", AudioAudition::Water),
+        ("audio-river", "35", AudioAudition::River),
+        ("audio-waterfall", "80", AudioAudition::Waterfall),
+        ("audio-muted", "true", AudioAudition::Master),
     ] {
         change(&mut app, id, value);
+        assert_eq!(
+            cues.read(app.world().resource())
+                .copied()
+                .collect::<Vec<_>>(),
+            [channel]
+        );
+        change(&mut app, id, value);
+        assert_eq!(cues.read(app.world().resource()).count(), 0);
     }
     let expected = AudioConfig {
         master_volume: 0.4,
@@ -1082,6 +1095,67 @@ fn biome_picker_selects_a_picture_and_blocks_the_underlying_form() {
         .unwrap();
     assert_eq!(selected.title, "Blood Forest");
     assert!(selected.image.ends_with("biome-choice-blood-forest.png"));
+    command(&mut app, "world-biome-picker-open");
+    command(&mut app, "world-biome-ashlands");
+    let form = app.world().resource::<WorldMenu>();
+    assert_eq!(
+        form.preferred_spawn_biome,
+        Some(terra_core::BiomeKind::Ashlands)
+    );
+    let selected = view::world_biome_choices(form)
+        .into_iter()
+        .find(|card| card.class_name.ends_with(" selected"))
+        .unwrap();
+    assert_eq!(selected.title, "Ashlands");
+    assert!(selected.image.ends_with("biome-choice-ashlands.png"));
+    command(&mut app, "world-biome-picker-open");
+    command(&mut app, "world-biome-savanna");
+    let form = app.world().resource::<WorldMenu>();
+    assert_eq!(
+        form.preferred_spawn_biome,
+        Some(terra_core::BiomeKind::Savanna)
+    );
+    let card = view::world_biome_choices(form)
+        .into_iter()
+        .find(|c| c.class_name.ends_with(" selected"))
+        .unwrap();
+    assert_eq!(card.title, "Savanna");
+    assert!(card.image.ends_with("biome-choice-savanna.png"));
+
+    command(&mut app, "world-biome-picker-open");
+    command(&mut app, "world-biome-swamp");
+    let form = app.world().resource::<WorldMenu>();
+    assert_eq!(
+        form.preferred_spawn_biome,
+        Some(terra_core::BiomeKind::Swamp)
+    );
+    let card = view::world_biome_choices(form)
+        .into_iter()
+        .find(|c| c.class_name.ends_with(" selected"))
+        .unwrap();
+    assert_eq!(card.title, "Swamp");
+    assert!(card.image.ends_with("biome-choice-swamp.png"));
+
+    command(&mut app, "world-biome-picker-open");
+    command(&mut app, "world-biome-petrified-forest");
+    let form = app.world().resource::<WorldMenu>();
+    assert_eq!(
+        form.preferred_spawn_biome,
+        Some(terra_core::BiomeKind::PetrifiedForest)
+    );
+    command(&mut app, "world-biome-picker-open");
+    command(&mut app, "world-biome-crystal-highlands");
+    assert_eq!(
+        app.world().resource::<WorldMenu>().preferred_spawn_biome,
+        Some(terra_core::BiomeKind::CrystalHighlands)
+    );
+    command(&mut app, "world-biome-picker-open");
+    command(&mut app, "world-biome-misty-coast");
+    assert_eq!(
+        app.world().resource::<WorldMenu>().preferred_spawn_biome,
+        Some(terra_core::BiomeKind::MistyCoast)
+    );
+
     command(&mut app, "world-biome-picker-open");
     command(&mut app, "dialog-cancel");
     assert!(!app.world().resource::<WorldMenu>().biome_picker_open);

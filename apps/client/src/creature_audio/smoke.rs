@@ -85,6 +85,7 @@ fn run(world: &mut World) {
         }
         let material = materials[fixture.emitted / 3];
         world.write_message(Footstep {
+            creature: None,
             position: fixture.point - Vec3::Y * terra_physics::character::PLAYER_HALF_HEIGHT,
             forward: Vec2::Y, walker: Walker::Player, material,
             alternate: fixture.emitted.is_multiple_of(2),

@@ -7,7 +7,7 @@ use terra_world::{
     streaming::{ChunkStore, WorldTerrain},
 };
 
-#[derive(Resource, Default, Debug)]
+#[derive(Resource, Default, Debug, Clone, Copy, PartialEq)]
 pub struct UnderwaterState {
     pub submerged: bool,
     pub blend: f32,
@@ -76,6 +76,24 @@ pub(crate) fn water_surface(
     Some(y as f32 + f32::from(fluid.amount) / f32::from(terra_world::water::FLUID_CAPACITY))
 }
 
+fn lava_depth_at(chunks: &ChunkStore, journal: &EditJournal, mut cell: [i64; 3], eye: Vec3) -> f32 {
+    if !terra_world::lava::occupies(chunks, cell) {
+        return 0.;
+    }
+    // The optical gradient saturates after three metres. Include the upper
+    // cells so swimming down past a cell boundary does not reset the glow.
+    for _ in 0..3 {
+        let above = [cell[0], cell[1] + 1, cell[2]];
+        if !terra_world::lava::occupies(chunks, above) {
+            break;
+        }
+        cell = above;
+    }
+    (terra_world::lava::height_at(chunks, journal, cell, eye.x.into(), eye.z.into())
+        - f64::from(eye.y))
+    .max(0.) as f32
+}
+
 impl WaterProbe {
     fn sample(
         &mut self,
@@ -128,12 +146,20 @@ pub(crate) fn update(
         Res<ChunkStore>,
         Res<EditJournal>,
     ),
-    mut state: ResMut<UnderwaterState>,
+    mut published: ResMut<UnderwaterState>,
     mut cameras: Cameras,
     mut probe: Local<WaterProbe>,
     mut previous_vision: Local<f32>,
+    mut previous_weather: Local<[f32; 3]>,
     (mut previous_offset, mut near_planes): ProjectionHistory,
 ) {
+    let mut state = *published;
+    // Wind, snowflake size and wetness animate independently of the view fog.
+    let weather_inputs = weather
+        .as_ref()
+        .map_or([0.; 3], |w| [w.clouds, w.flash, w.rain.max(w.snow)]);
+    let weather_changed = weather_inputs != *previous_weather;
+    *previous_weather = weather_inputs;
     let limit = limit.and_then(|limit| limit.0);
     let range = crate::scene::view_range::CameraRange::limited(
         &config.client,
@@ -163,6 +189,10 @@ pub(crate) fn update(
         let p = camera.translation;
         let old_depth = state.depth;
         let cell = p.floor().as_i64vec3().to_array();
+        let lava_depth = lava_depth_at(&chunks, &journal, cell, p);
+        if optical.lava_depth != lava_depth {
+            optical.lava_depth = lava_depth;
+        }
         state.depth = if config.world.water
             && chunks.block_at(cell).is_some_and(|id| {
                 id == terra_core::plumbing::BASIN || terra_world::water::can_hold_fluid(id)
@@ -199,21 +229,41 @@ pub(crate) fn update(
             && !cave.is_changed()
             && !vision_changed
             && !offset_changed
-            && weather.as_ref().is_none_or(|weather| !weather.is_changed());
+            && !weather_changed
+            && !fog.is_added()
+            && !ambient.is_added()
+            && !grading.is_added();
         state.blend += (target - state.blend) * (1.0 - (-14.0 * time.delta_secs()).exp());
         if (target - state.blend).abs() < 0.001 {
             state.blend = target;
         }
         let blend = state.blend;
-        let biome_color = chunks
-            .prepared_column([cell[0].div_euclid(16), cell[2].div_euclid(16)])
-            .and_then(|column| {
-                column.surface_at(cell[0], cell[2]).map(|surface| {
-                    super::biome::pool_tint(surface.cave, f64::from(p.y))
-                        .unwrap_or_else(|| super::biome::biome_tint(surface.biome))
+        let column = chunks.surface_column_at(cell[0], cell[2]);
+        let thermal = blend > 0.
+            && column.is_some_and(|s| s.biome.weights.ashlands > 0.4)
+            && chunks
+                .prepared_column([cell[0].div_euclid(16), cell[2].div_euclid(16)])
+                .is_some_and(|c| {
+                    c.geothermal_water([f64::from(p.x), f64::from(p.y), f64::from(p.z)])
+                });
+        let biome_color = if thermal {
+            super::biome::THERMAL_TINT
+        } else {
+            column.map_or(super::biome::DEFAULT_TINT, |surface| {
+                super::biome::pool_tint(surface.cave, f64::from(p.y)).unwrap_or_else(|| {
+                    super::biome::habitat_tint(surface.biome, terrain.0.marine_overhaul())
                 })
             })
-            .unwrap_or(super::biome::DEFAULT_TINT);
+        };
+        let sediment = column
+            .filter(|surface| super::biome::pool_tint(surface.cave, f64::from(p.y)).is_none())
+            .map_or(0., |surface| {
+                (surface.biome.weights.swamp as f32).max(surface.ocean.swamp)
+            });
+        let sediment_changed = optical.sediment != sediment;
+        if sediment_changed {
+            optical.sediment = sediment;
+        }
         let strength = match config.client.water_quality {
             WaterQuality::Low => 0.0,
             WaterQuality::Medium => 0.55,
@@ -222,17 +272,40 @@ pub(crate) fn update(
         let water = Vec4::new(
             blend * strength,
             state.depth.max(0.0),
-            if blend > 0.001 {
+            if blend > 0.001 || lava_depth > 0.0 {
                 time.elapsed_secs()
             } else {
                 0.0
             },
             strength,
         );
-        let clouds = weather.as_ref().map_or(1., |w| 1. - w.clouds * 0.5);
-        let aperture = cave.gallery_aperture(daylight.daylight * clouds);
-        let irradiance = crate::scene::caves::aperture_irradiance(aperture, p);
+        let irradiance = cave.indirect_skylight;
         let mut scattering = medium_scattering(biome_color, daylight.daylight, cave.blend);
+        let silt = Vec3::from_array(super::biome::SWAMP_TINT)
+            * (0.22 + 0.78 * daylight.daylight)
+            * crate::scene::caves::sky_visibility(cave.blend);
+        scattering = scattering
+            .truncate()
+            .lerp(silt, sediment)
+            .extend(scattering.w * (1. - sediment));
+        if blend > 0.0
+            && terrain.0.marine_overhaul()
+            && column.is_some_and(|s| {
+                s.ocean.area().is_some()
+                    && s.water_level
+                        .is_some_and(|surface| (surface as f32 - p.y - state.depth).abs() < 0.25)
+            })
+        {
+            // As the optical path deepens, open seawater shifts from sunlit
+            // turquoise towards cobalt. Nearby coral keeps its local lighting.
+            let depth_mix = 1.0 - (-state.depth.max(0.) / 17.).exp();
+            scattering *= Vec4::new(
+                0.95 - 0.18 * depth_mix,
+                0.95 - 0.29 * depth_mix,
+                1.14 + 0.38 * depth_mix,
+                1.0,
+            );
+        }
         scattering += (underwater_color(biome_color) * (irradiance * 3.).min(0.9)).extend(0.);
         let medium_color = scattering.truncate();
         let tint_changed = optical.scattering != scattering;
@@ -265,6 +338,7 @@ pub(crate) fn update(
         }
         let world_from_view = if blend > 0.001
             || near_medium
+            || lava_depth > 0.0
             || optical.parameters.z > 0.001
             || optical.parameters.w > 0.001
         {
@@ -281,7 +355,7 @@ pub(crate) fn update(
         if optical.world_from_view != world_from_view {
             optical.world_from_view = world_from_view;
         }
-        if stable && !tint_changed {
+        if stable && !tint_changed && !sediment_changed {
             continue;
         }
         apply_environment(
@@ -291,7 +365,12 @@ pub(crate) fn update(
                 blend
             },
             state.depth,
-            range.fog,
+            sediment,
+            if config.client.fog_distance > 0. {
+                daylight.fog_range(range.fog, range.offset)
+            } else {
+                range.fog
+            },
             &mut fog,
             &mut grading,
             &mut ambient,
@@ -324,20 +403,16 @@ pub(crate) fn update(
         crate::scene::caves::apply(cave.blend, blend, &mut fog, &mut grading, &mut ambient);
         // Diffuse light bounced from the actual gallery opening. A closed or
         // absent skylight contributes nothing, even where the walls contain salt.
-        let bounce = cave.salt_skylight * cave.blend * daylight.daylight;
-        if aperture.w > 0. {
+        if irradiance > 0. {
             // Skylight illuminance admitted by an opening falls with its
             // apparent area. Mix radiances in linear colour space so warm
             // nearby lamps and reflective mineral faces retain their hues.
-            let incident = 9_000. * irradiance;
+            let incident = cave.bounced_illuminance(daylight.exposure);
             let combined = ambient.brightness + incident;
             let base = ambient.color.to_linear();
             let sky = LinearRgba::new(0.38, 0.67, 1., 1.);
             ambient.color = base.mix(&sky, incident / combined.max(1.)).into();
             ambient.brightness = combined;
-        } else if bounce > 0.0 {
-            ambient.brightness += 285.0 * bounce;
-            ambient.color = ambient.color.mix(&Color::srgb(0.79, 0.88, 1.0), bounce);
         }
         apply_night_vision(
             vision,
@@ -345,6 +420,7 @@ pub(crate) fn update(
             &mut ambient,
         );
     }
+    published.set_if_neq(state);
 }
 
 /// View-local fill preserves actual world lights, shadows and other players' night vision.
@@ -383,6 +459,7 @@ fn medium_fog(surface_srgb: Vec3, water_linear: Vec3, blend: f32) -> Color {
 fn apply_environment(
     blend: f32,
     depth: f32,
+    sediment: f32,
     surface_range: (f32, f32),
     fog: &mut DistanceFog,
     grading: &mut ColorGrading,
@@ -391,7 +468,8 @@ fn apply_environment(
     let color = SURFACE_FOG.lerp(Vec3::new(0.035, 0.22, 0.20), blend);
     fog.color = Color::srgb(color.x, color.y, color.z);
     fog.directional_light_color = Color::NONE;
-    let underwater_range = (36.0 - depth.max(0.0) * 0.45).clamp(17.0, 36.0);
+    let underwater_range = (49.0 - depth.max(0.0) * 0.72).clamp(19.0, 49.0);
+    let underwater_range = underwater_range + (5.5 - underwater_range) * sediment;
     fog.falloff = FogFalloff::Linear {
         start: surface_range.0 * (1.0 - blend) + 1.5 * blend,
         end: surface_range.1 * (1.0 - blend) + underwater_range * blend,
@@ -399,7 +477,7 @@ fn apply_environment(
     grading.global.temperature = SURFACE_TEMPERATURE * (1.0 - blend) - 0.012 * blend;
     grading.global.tint = -0.004 * blend;
     grading.global.exposure = -0.12 * blend;
-    grading.global.post_saturation = SURFACE_SATURATION * (1.0 - blend) + 1.01 * blend;
+    grading.global.post_saturation = SURFACE_SATURATION * (1.0 - blend) + 1.07 * blend;
     ambient.brightness =
         SURFACE_AMBIENT * (1.0 - blend) + (565.0 - depth.clamp(0.0, 48.0) * 3.0) * blend;
 }
@@ -407,6 +485,65 @@ fn apply_environment(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn suspended_silt_shortens_even_low_quality_swamp_visibility() {
+        let mut fog = DistanceFog::default();
+        let mut grading = ColorGrading::default();
+        let mut ambient = AmbientLight::default();
+        for (sediment, end) in [(0., 47.56), (0.5, 26.53), (1., 5.5)] {
+            apply_environment(
+                1.,
+                2.,
+                sediment,
+                (20., 90.),
+                &mut fog,
+                &mut grading,
+                &mut ambient,
+            );
+            let FogFalloff::Linear { end: actual, .. } = fog.falloff else {
+                panic!("missing submerged fog")
+            };
+            assert!((actual - end).abs() < 0.001);
+        }
+    }
+
+    #[test]
+    fn lava_optics_follow_partial_tops_and_stacked_cells() {
+        use terra_voxel::{BlockSection, SectionPos};
+        use terra_world::{lava::LAVA, streaming::LoadedSection};
+        let section = SectionPos::default();
+        let mut data = BlockSection::empty(section).unwrap();
+        data.set_block([5, 4, 5], LAVA).unwrap();
+        data.set_block([5, 5, 5], LAVA).unwrap();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            section,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
+        );
+        let mut journal = EditJournal::default();
+        let depth = |journal: &EditJournal, y: f32| {
+            lava_depth_at(
+                &chunks,
+                journal,
+                [5, y.floor() as i64, 5],
+                Vec3::new(5.5, y, 5.5),
+            )
+        };
+        assert_eq!(depth(&journal, 4.5), 1.5);
+        assert_eq!(depth(&journal, 5.5), 0.5);
+        assert_eq!(depth(&journal, 6.0), 0.);
+        journal.record([5, 5, 5], LAVA).unwrap();
+        assert!(depth(&journal, 5.1) > 0.);
+        assert_eq!(depth(&journal, 5.95), 0.);
+    }
 
     #[test]
     fn night_vision_is_local_level_scaled_and_does_not_brighten_daytime() {
@@ -453,10 +590,10 @@ mod tests {
         let baseline = grading.clone();
         let mut ambient = AmbientLight::default();
         let range = crate::scene::surface_fog_range(192.0, 1.0);
-        apply_environment(1.0, 5.0, range, &mut fog, &mut grading, &mut ambient);
+        apply_environment(1.0, 5.0, 0., range, &mut fog, &mut grading, &mut ambient);
         assert!(grading.global.temperature < 0.0);
         assert!(ambient.brightness < SURFACE_AMBIENT);
-        apply_environment(0.0, -1.0, range, &mut fog, &mut grading, &mut ambient);
+        apply_environment(0.0, -1.0, 0., range, &mut fog, &mut grading, &mut ambient);
         assert_eq!(grading.global.temperature, baseline.global.temperature);
         assert_eq!(
             grading.global.post_saturation,
@@ -479,7 +616,7 @@ mod tests {
         let mut fog = DistanceFog::default();
         let mut grading = crate::scene::surface_grading();
         let mut ambient = AmbientLight::default();
-        apply_environment(1.0, 1.0, range, &mut fog, &mut grading, &mut ambient);
+        apply_environment(1.0, 1.0, 0., range, &mut fog, &mut grading, &mut ambient);
         let FogFalloff::Linear {
             start,
             end: shallow,
@@ -490,14 +627,14 @@ mod tests {
         let clear_fill = ambient.brightness;
         assert_eq!(start, 1.5);
         assert!(shallow >= 35.0 && grading.global.post_saturation >= 1.0);
-        apply_environment(1.0, 64.0, range, &mut fog, &mut grading, &mut ambient);
+        apply_environment(1.0, 64.0, 0., range, &mut fog, &mut grading, &mut ambient);
         let FogFalloff::Linear { end: deep, .. } = fog.falloff else {
             panic!("Linear water fog")
         };
         assert!(deep >= 17.0 && deep < shallow);
         assert!(ambient.brightness < clear_fill);
-        let purple = underwater_color(super::super::biome::COLORS[5]);
-        assert!(purple.z > purple.y && purple.x > purple.y);
+        let park = underwater_color(super::super::biome::COLORS[5]);
+        assert!(park.y > 4.0 * park.x && park.z > 4.0 * park.x);
         assert!(
             water_surface(
                 &WorldTerrain(terra_world::TerraGenerator::new(Default::default()).unwrap()),

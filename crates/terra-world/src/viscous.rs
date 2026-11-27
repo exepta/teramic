@@ -44,6 +44,11 @@ pub fn surface_at(chunks: &ChunkStore, journal: &EditJournal, point: [f64; 3]) -
     }
     let p = point.map(|v| v.floor() as i64);
     let material = chunks.block_at(p)?;
+    if material == crate::lava::LAVA || crate::lava::immersed_decoration(chunks, p, material) {
+        return Some(crate::lava::height_at(
+            chunks, journal, p, point[0], point[2],
+        ));
+    }
     if material == bile::FLUID {
         return crate::bile::height_at(chunks, journal, point);
     }
@@ -68,6 +73,33 @@ pub fn swimming_column(
         return None;
     }
     let mut p = point.map(|v| v.floor() as i64);
+    if crate::lava::occupies(chunks, p) {
+        let mut level = surface_at(chunks, journal, point)?;
+        if point[1] >= level {
+            return None;
+        }
+        let mut bed = p[1];
+        while p[1] - bed < 64 && crate::lava::occupies(chunks, [p[0], bed - 1, p[2]]) {
+            bed -= 1;
+        }
+        while level == level.floor()
+            && level < point[1] + 64.
+            && crate::lava::occupies(chunks, [p[0], level as i64, p[2]])
+        {
+            level = crate::lava::height_at(
+                chunks,
+                journal,
+                [p[0], level as i64, p[2]],
+                point[0],
+                point[2],
+            );
+        }
+        return Some(crate::water::WaterColumn {
+            level,
+            bed: bed as f64,
+            depth: level - bed as f64,
+        });
+    }
     if chunks.block_at(p) != Some(bile::FLUID) {
         return None;
     }
@@ -154,7 +186,13 @@ pub fn body_contact(
                     if immersion > 0. {
                         contact.immersion = contact.immersion.max(immersion);
                         contact.movement_multiplier =
-                            contact.movement_multiplier.min(0.55 - 0.25 * immersion);
+                            contact
+                                .movement_multiplier
+                                .min(if material == crate::lava::LAVA {
+                                    0.40 - 0.19 * immersion
+                                } else {
+                                    0.55 - 0.25 * immersion
+                                });
                     }
                 }
             }

@@ -85,7 +85,11 @@ impl DedicatedStore {
             .map_or(requested.rivers, |world| world.rivers);
         // Existing saves own this contract, even when a new template defaults to 1.
         result.ocean_revision = saved.as_ref().map_or(1, |world| world.ocean_revision);
-        result.ecology_revision = saved.as_ref().map_or(11, |world| world.ecology_revision);
+        result.ecology_revision = saved
+            .as_ref()
+            .map_or(WorldConfig::CURRENT_ECOLOGY_REVISION, |world| {
+                world.ecology_revision
+            });
         result.blood_forest_revision = saved
             .as_ref()
             .map_or(1, |world| world.blood_forest_revision);
@@ -541,7 +545,7 @@ mod tests {
 
     #[test]
     fn new_chambers_do_not_upgrade_saved_cave_revisions_or_overwrite_edits() {
-        for revision in 0..=10 {
+        for revision in 0..WorldConfig::default().cave_structure_revision {
             let root = fresh_directory();
             let saved = WorldConfig {
                 cave_structure_revision: revision,
@@ -664,7 +668,7 @@ mod tests {
     }
     #[test]
     fn saved_ecology_revisions_preserve_legacy_manifests_and_player_edits() {
-        for revision in 0..=10 {
+        for revision in 0..WorldConfig::CURRENT_ECOLOGY_REVISION {
             let root = fresh_directory();
             let saved = WorldConfig {
                 ecology_revision: revision,
@@ -685,7 +689,7 @@ mod tests {
                 save_toml(&manifest, &path).unwrap();
             }
             let requested = WorldConfig {
-                ecology_revision: 11,
+                ecology_revision: WorldConfig::CURRENT_ECOLOGY_REVISION,
                 ..saved.clone()
             };
             let resolved = DedicatedStore::resolve_world_config(&root, &requested).unwrap();

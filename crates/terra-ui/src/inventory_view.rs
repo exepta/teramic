@@ -318,6 +318,8 @@ pub(super) fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, 
         | ItemKind::Bitumen
         | ItemKind::GloomEssence
         | ItemKind::DragonLoot(_)
+        | ItemKind::RuneCore
+        | ItemKind::ForestCrystal
         | ItemKind::LightSplitter
         | ItemKind::RoadAggregate => {
             let (name, description) =
@@ -329,6 +331,8 @@ pub(super) fn item_metadata(item: ItemKind, palette: &BlockPalette) -> (String, 
                         (
                             if item == ItemKind::Tool(terra_core::ToolKind::BileBucket) {
                                 "Galle Bucket".to_owned()
+                            } else if item == ItemKind::Tool(terra_core::ToolKind::LavaBucket) {
+                                "Lava Bucket".to_owned()
                             } else {
                                 item.identifier()
                                     .split("::")

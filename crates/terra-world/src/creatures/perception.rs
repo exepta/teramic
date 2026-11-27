@@ -5,13 +5,26 @@ const MAX_RANGE: f64 = 96.0;
 const MAX_CELLS: usize = 384;
 const TARGET_PROBES: usize = 8;
 
+/// Once an attacker commits its body to a swing, stepping around its shoulder
+/// evades that swing. Vertical neighbours can still be in reach.
+pub(super) fn in_melee_arc(yaw: f32, from: [f64; 3], target: [f64; 3]) -> bool {
+    let dx = target[0] - from[0];
+    let dz = target[2] - from[2];
+    let (s, c) = f64::from(yaw).sin_cos();
+    -s * dx - c * dz >= 0.36 * dx.hypot(dz) - 0.04
+}
+
 pub(super) fn visible(h: &Habitat, from: [f64; 3], to: [f64; 3]) -> bool {
+    obstruction(h, from, to).is_none()
+}
+
+pub(super) fn obstruction(h: &Habitat, from: [f64; 3], to: [f64; 3]) -> Option<[i64; 3]> {
     if !super::navigation::valid_point(from) || !super::navigation::valid_point(to) {
-        return false;
+        return Some(from.map(|v| v.floor() as i64));
     }
     let length = distance(from, to).sqrt();
     if length > MAX_RANGE {
-        return false;
+        return Some(from.map(|v| v.floor() as i64));
     }
     let direction = std::array::from_fn::<_, 3, _>(|i| (to[i] - from[i]) / length.max(1e-12));
     let mut cell = from.map(|v| v.floor() as i64);
@@ -41,7 +54,7 @@ pub(super) fn visible(h: &Habitat, from: [f64; 3], to: [f64; 3]) -> bool {
     });
     for _ in 0..MAX_CELLS {
         let Some(material) = h.block(cell) else {
-            return false;
+            return Some(cell);
         };
         if terra_voxel::MaterialId::from_raw(material).is_none_or(|m| m.is_solid()) {
             let mut blocked = false;
@@ -49,7 +62,7 @@ pub(super) fn visible(h: &Habitat, from: [f64; 3], to: [f64; 3]) -> bool {
                 blocked |= shape.ray(from, direction, length).is_some();
             });
             if !known || blocked {
-                return false;
+                return Some(cell);
             }
         }
         // Opened leaves can extend into neighboring air, exactly as their
@@ -63,12 +76,12 @@ pub(super) fn visible(h: &Habitat, from: [f64; 3], to: [f64; 3]) -> bool {
                     blocked |= shape.ray(from, direction, length).is_some()
                 });
                 if blocked {
-                    return false;
+                    return Some(neighbor);
                 }
             }
         }
         if cell == end {
-            return true;
+            return None;
         }
         // An endpoint exactly on several voxel planes belongs to `end`.
         // Do not step past a finished axis into a wall/floor merely because
@@ -80,7 +93,7 @@ pub(super) fn visible(h: &Habitat, from: [f64; 3], to: [f64; 3]) -> bool {
         cell[axis] += step[axis];
         next[axis] += delta[axis];
     }
-    false
+    Some(cell)
 }
 
 /// Hidden nearer actors never mask a visible enemy. Sorting and ray work have

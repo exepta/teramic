@@ -26,6 +26,8 @@ pub enum FarmingAction {
     PourTar,
     FillBileBucket,
     EmptyBileBucket,
+    FillLavaBucket,
+    EmptyLavaBucket,
 }
 
 #[cfg(test)]

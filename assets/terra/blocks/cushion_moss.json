@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 523,
+  "name": "Cushion Moss",
+  "description": "Soft pads of lime-green moss spread over the forest floor.",
+  "creative_category": "nature",
+  "hardness": 0.42,
+  "resistance": 0.9,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/cushion_moss.glb",
+  "textures": {},
+  "collision_boxes": [],
+  "struct_block": true
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 733,
+  "name": "Fallen Burnt Log",
+  "description": "An ember seam glows beneath the cracked bark.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.4,
+  "resistance": 3.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/fallen_charred_log.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

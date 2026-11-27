@@ -101,7 +101,7 @@ impl HydraulicMaterials {
     }
 }
 pub(super) fn install(app: &mut App) {
-    app.add_plugins(MaterialPlugin::<FluidMaterial>::default())
+    crate::material_work::add::<FluidMaterial>(app)
         .add_systems(Startup, setup)
         .add_systems(
             PostUpdate,

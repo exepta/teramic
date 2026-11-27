@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 764,
+  "name": "Amethyst Column Capital",
+  "description": "Amethyst Column Capital",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/amethyst_capital.glb",
+  "struct_block": true,
+  "hardness": 1.2,
+  "resistance": 4.0,
+  "required_tool": null,
+  "mining_level": 0,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.05,
+        0.0,
+        0.05
+      ],
+      "maximum": [
+        0.95,
+        1.0,
+        0.95
+      ]
+    }
+  ]
+}

@@ -6,7 +6,19 @@ use tilt_ui::TiltUiComponentRuntimeSet;
 struct InventoryDomCache {
     root: Option<Entity>,
     parked: Option<ParkedUiBindings>,
+    shell_layout: Option<Node>,
     viewport: Option<UVec2>,
+}
+
+impl InventoryDomCache {
+    fn restore_layout(&mut self, world: &mut World) {
+        if let Some(layout) = self.shell_layout.take()
+            && let Some(root) = self.root
+            && let Ok(mut shell) = world.get_entity_mut(root)
+        {
+            shell.insert_if_new(layout);
+        }
+    }
 }
 
 pub(super) fn install(app: &mut App) {
@@ -22,14 +34,18 @@ fn restore_before_bindings(world: &mut World) {
     let _scope = terra_core::profiling::ScopeTimer::new("ui.inventory.restore_bindings");
     world.resource_scope(|world, mut cache: Mut<InventoryDomCache>| {
         let visible = world.resource::<InventoryView>().visible;
-        if !visible
-            || cache
-                .root
-                .is_some_and(|root| world.get_entity(root).is_err())
+        if cache
+            .root
+            .is_some_and(|root| world.get_entity(root).is_err())
         {
             *cache = InventoryDomCache::default();
         }
         if !visible {
+            cache.restore_layout(world);
+            if let Some(bindings) = cache.parked.take() {
+                bindings.restore(world);
+            }
+            *cache = InventoryDomCache::default();
             return;
         }
         let viewport = world
@@ -50,11 +66,16 @@ fn restore_before_bindings(world: &mut World) {
         // or still describe an open block inventory just after Close was processed.
         let open = view.open && state.is_none_or(|state| state.open);
         let prewarming = view.prewarming && !view.open;
+        let hidden = !view.open && !prewarming;
+        let source_container = view.source_container;
+        if !hidden {
+            cache.restore_layout(world);
+        }
         if (open || prewarming) && !pending_open {
             // An ACK can clear the pending flag before the view's cadence runs.
             // Restore only after that projection has caught up to the actual surface.
             let projection_ready = world.get_resource::<ClientSession>().is_none_or(|session| {
-                view.source_container
+                source_container
                     == session
                         .container
                         .as_ref()
@@ -77,6 +98,18 @@ fn restore_before_bindings(world: &mut World) {
                 cache.root = Some(root);
                 cache.parked = Some(ParkedUiBindings::take(world, root));
             }
+        }
+        // Display::None still makes Bevy walk the entire retained tree. Wait
+        // for a hidden layout pass to clear the descendants' geometry before
+        // taking the shell out of layout. Keep the ECS hierarchy for teardown.
+        if hidden
+            && cache.shell_layout.is_none()
+            && let Some(root) = cache.root
+            && world
+                .get::<ComputedNode>(root)
+                .is_some_and(ComputedNode::is_empty)
+        {
+            cache.shell_layout = world.entity_mut(root).take::<Node>();
         }
     });
 }
@@ -122,6 +155,94 @@ mod tests {
             ["block"]
         );
         (app, shell)
+    }
+
+    #[test]
+    fn closed_shell_leaves_layout_after_geometry_clears_and_resumes_before_prewarm() {
+        use bevy::ui::{ui_layout_system, ui_surface::UiSurface};
+
+        let (mut app, shell) = cache_app();
+        app.init_resource::<UiSurface>()
+            .init_resource::<bevy::text::FontCx>()
+            .init_resource::<bevy::text::RemSize>()
+            .add_systems(PostUpdate, ui_layout_system);
+        let root = app
+            .world_mut()
+            .spawn(Node {
+                position_type: PositionType::Absolute,
+                width: Val::Px(800.0),
+                height: Val::Px(600.0),
+                flex_direction: FlexDirection::Column,
+                ..default()
+            })
+            .id();
+        let backdrop = app
+            .world_mut()
+            .spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Px(300.0),
+                    ..default()
+                },
+                ChildOf(root),
+            ))
+            .id();
+        app.world_mut().entity_mut(shell).insert((
+            Node {
+                width: Val::Px(428.0),
+                height: Val::Px(160.0),
+                ..default()
+            },
+            ChildOf(backdrop),
+        ));
+        let child = app
+            .world_mut()
+            .spawn((
+                Node {
+                    width: Val::Percent(50.0),
+                    height: Val::Px(32.0),
+                    ..default()
+                },
+                ChildOf(shell),
+            ))
+            .id();
+        let hotbar = app
+            .world_mut()
+            .spawn((
+                Node {
+                    width: Val::Px(90.0),
+                    height: Val::Px(20.0),
+                    ..default()
+                },
+                ChildOf(root),
+            ))
+            .id();
+        let size = |app: &App, entity| app.world().get::<ComputedNode>(entity).unwrap().size();
+        app.update();
+        assert_eq!(size(&app, shell), Vec2::new(428.0, 160.0));
+        assert_eq!(size(&app, child), Vec2::new(214.0, 32.0));
+        app.world_mut().resource_mut::<InventoryState>().open = false;
+        app.world_mut().resource_mut::<InventoryView>().open = false;
+        app.world_mut().get_mut::<Node>(backdrop).unwrap().display = Display::None;
+        app.update();
+        assert!(app.world().get::<Node>(shell).is_some());
+        assert_eq!(size(&app, child), Vec2::ZERO);
+        app.update();
+        assert!(app.world().get::<Node>(shell).is_none());
+        assert!(
+            app.world_mut()
+                .resource_mut::<UiSurface>()
+                .get_layout(shell, true)
+                .is_err()
+        );
+        assert_eq!(app.world().get::<ChildOf>(child).unwrap().parent(), shell);
+        assert_eq!(size(&app, hotbar), Vec2::new(90.0, 20.0));
+        app.world_mut().resource_mut::<InventoryView>().prewarming = true;
+        app.world_mut().get_mut::<Node>(backdrop).unwrap().display = Display::Flex;
+        app.update();
+        assert!(app.world().get::<ParkedUi>(shell).is_none());
+        assert_eq!(size(&app, shell), Vec2::new(428.0, 160.0));
+        assert_eq!(size(&app, child), Vec2::new(214.0, 32.0));
     }
 
     #[test]

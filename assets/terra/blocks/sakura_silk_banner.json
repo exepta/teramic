@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 604,
+  "name": "Cherry Blossom Banner",
+  "description": "A notched silk banner embroidered with a cherry flower.",
+  "creative_category": "decoration",
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/sakura_silk_banner.glb",
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "textures": {},
+  "collision_boxes": []
+}

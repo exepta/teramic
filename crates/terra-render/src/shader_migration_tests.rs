@@ -21,7 +21,7 @@ fn all_custom_shader_modules_parse_as_wesl() {
         assert!(!source.contains("#{"), "{}", path.display());
         checked += 1;
     }
-    assert_eq!(checked, 26); // Includes shared near/coarse particle-fluid coverage.
+    assert_eq!(checked, 28); // Includes the breaking surf material.
 }
 
 #[test]
@@ -470,6 +470,8 @@ fn authored_grass_top_palette_preserves_tints_normals_and_weather_order() {
             assert!(body.contains("normalize(input.world_normal).y"));
             assert!(body.contains("round(input.world_position.y)"));
             assert!(body.contains("green_texel && (top_face || side_face)"));
+            assert!(body.contains("side_face && !green_texel"));
+            assert!(body.contains("source_color * soil_shade"));
             assert!(body.contains("* vertex_tint"));
             assert!(body.contains("calendar_turf = true"));
             assert!(body.contains("calendar_turf = turf"));

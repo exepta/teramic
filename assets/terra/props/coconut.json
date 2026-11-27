@@ -1,0 +1,6 @@
+{
+  "kind": "coconut",
+  "creative_category": "food",
+  "description": "A brown, fibrous fruit that grows beneath a palm crown.",
+  "food": { "nutrition": 12.0, "saturation": 8.0, "eat_seconds": 1.6 }
+}

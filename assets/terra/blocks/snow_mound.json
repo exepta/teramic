@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 592,
+  "name": "Snow Mound",
+  "description": "A wind-rounded mound with soft overlapping edges.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/snow_mound.glb",
+  "collision_boxes": [],
+  "struct_block": true,
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "textures": {}
+}

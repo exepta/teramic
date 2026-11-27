@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 765,
+  "name": "Mining Tool Rack",
+  "description": "Mining Tool Rack",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/mine_tool_rack.glb",
+  "struct_block": true,
+  "hardness": 1.2,
+  "resistance": 4.0,
+  "required_tool": null,
+  "mining_level": 0,
+  "textures": {},
+  "collision_boxes": []
+}

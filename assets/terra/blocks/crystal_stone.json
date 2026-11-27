@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 739,
+  "name": "Crystal Stone",
+  "description": "Cloudy quartz forms a pale band inside the massif.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 2.1,
+  "resistance": 4.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/crystal_highlands/crystal_stone.png"
+  },
+  "materials": {
+    "side": {
+      "normal_texture": "textures/crystal_highlands/crystal_stone_normal.png",
+      "roughness": 0.31,
+      "reflectance": 0.43
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

@@ -98,6 +98,7 @@ fn scene(app: &mut App) -> Fixture {
         .insert(
             OWNER,
             crate::meshing::RenderedSection {
+                folded_leaves: None,
                 micro_detail: false,
                 appearance_epoch: 0,
                 entity: current,

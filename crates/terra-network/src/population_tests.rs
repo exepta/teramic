@@ -666,6 +666,7 @@ fn caps_are_local_and_exclude_owned_dead_and_far_away_animals() {
 
 #[test]
 fn visible_worm_anatomy_has_an_interest_margin_and_started_cycles_finish_beyond_it() {
+    let mut chunks = ChunkStore::default();
     let mut worm = Creature {
         id: creature_id([0, 0], 0).unwrap(),
         kind: CreatureKind::SandWorm,
@@ -696,10 +697,58 @@ fn visible_worm_anatomy_has_an_interest_margin_and_started_cycles_finish_beyond_
     ] {
         worm.behavior = phase;
         assert!(
-            finish_phase(&worm),
+            needs_distant_tick(&worm, &chunks),
             "{phase:?} finishes despite lost interest"
         );
     }
     worm.behavior = CreatureBehavior::Burrowed;
-    assert!(!finish_phase(&worm));
+    assert!(!needs_distant_tick(&worm, &chunks));
+    worm.kind = CreatureKind::LavaWorm;
+    worm.behavior = CreatureBehavior::Swim;
+    assert!(!needs_distant_tick(&worm, &chunks));
+    let (section, local) = terra_voxel::global_to_section([230, 0, 0]);
+    let mut data = terra_voxel::BlockSection::empty(section).unwrap();
+    data.set_block(local, terra_voxel::MaterialId::Lava as u16)
+        .unwrap();
+    chunks.loaded.insert(
+        section,
+        terra_world::streaming::LoadedSection {
+            data,
+            props: vec![],
+            mesh: None,
+            mesh_epoch: 0,
+            water: None,
+            water_epoch: 0,
+        },
+    );
+    assert!(needs_distant_tick(&worm, &chunks));
+}
+
+#[test]
+fn a_molten_worm_hit_ignites_only_a_vulnerable_living_player_for_five_seconds() {
+    use terra_core::{EffectKind, GameMode};
+    for (mode, protection, burns) in [
+        (GameMode::Survival, 0., true),
+        (GameMode::Creative, 0., false),
+        (GameMode::Survival, 1., false),
+    ] {
+        let mut peer = super::super::survival::tests::resting_peer(85.);
+        peer.survival.protection = protection;
+        molten_worm_hit(&mut peer, 6., mode);
+        assert_eq!(
+            peer.vitals
+                .effects
+                .timed(EffectKind::OnFire)
+                .map(|a| a.remaining_seconds),
+            burns.then_some(5.)
+        );
+        if burns {
+            let health = peer.vitals.health;
+            for _ in 0..20 {
+                peer.vitals.advance_life(false, 0.25);
+            }
+            assert!(!peer.vitals.effects.contains(EffectKind::OnFire));
+            assert!(peer.vitals.health < health);
+        }
+    }
 }

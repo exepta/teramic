@@ -11,11 +11,13 @@ pub(crate) struct Tree {
     pub origin: [i64; 3],
     pub species: TreeSpecies,
     pub wood_material: MaterialId,
+    pub leaves_material: MaterialId,
     pub form: TreeForm,
     pub bounds: Bounds,
     pub wood: Vec<WoodSegment>,
     pub crowns: Vec<Crown>,
     pub lantern: Option<[i64; 3]>,
+    pub(super) ornament_material: MaterialId,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,11 +43,14 @@ impl Tree {
     pub(crate) fn sapling_species(&self) -> Option<terra_core::TreeSpecies> {
         Some(match self.species {
             TreeSpecies::Green | TreeSpecies::Autumn => terra_core::TreeSpecies::Oak,
+            TreeSpecies::Acacia => terra_core::TreeSpecies::Acacia,
             TreeSpecies::Spruce | TreeSpecies::Fir => terra_core::TreeSpecies::Spruce,
             TreeSpecies::Birch => terra_core::TreeSpecies::Birch,
             TreeSpecies::Cherry(_) => terra_core::TreeSpecies::Cherry,
             TreeSpecies::Apple => terra_core::TreeSpecies::Apple,
             TreeSpecies::Palm
+            | TreeSpecies::Baobab
+            | TreeSpecies::Willow
             | TreeSpecies::Mushroom(_)
             | TreeSpecies::SpiritBlossom(_)
             | TreeSpecies::Bloodwood => {
@@ -99,7 +104,7 @@ impl Tree {
         Some(crate::tree_felling::Shape {
             origin: self.origin,
             wood_material: self.wood_material as u16,
-            leaves_material: self.species.leaves() as u16,
+            leaves_material: self.leaves_material as u16,
             wood,
             leaves,
         })
@@ -116,6 +121,29 @@ impl Tree {
         species: TreeSpecies,
         ecology_revision: u8,
     ) -> Self {
+        if ecology_revision >= 15 && matches!(species, TreeSpecies::Cherry(_)) {
+            return Self::sakura(origin, seed, roots, species);
+        }
+        if ecology_revision >= 15 && matches!(species, TreeSpecies::Spruce | TreeSpecies::Fir) {
+            return Self::tapered_conifer(origin, seed, species);
+        }
+        if ecology_revision >= 14 {
+            match species {
+                TreeSpecies::Green | TreeSpecies::Autumn | TreeSpecies::Apple => {
+                    return Self::woodland_broadleaf(origin, seed, roots, species);
+                }
+                TreeSpecies::Spruce => return Self::woodland_spruce(origin, seed),
+                _ => {}
+            }
+        }
+        if ecology_revision >= 12 && species == TreeSpecies::Bloodwood {
+            return Self::ancient_bloodwood(origin, seed, roots);
+        }
+        if ecology_revision >= 12
+            && let TreeSpecies::Mushroom(_) = species
+        {
+            return Self::park_mushroom(origin, seed, roots, ecology_revision >= 13);
+        }
         if ecology_revision >= 7 && species == TreeSpecies::Birch {
             return Self::crowned_birch(origin, seed, roots);
         }
@@ -146,6 +174,10 @@ impl Tree {
     ) -> Self {
         match species {
             TreeSpecies::Apple => return Self::apple(origin, seed, false),
+            TreeSpecies::Willow => return Self::willow(origin, seed),
+            TreeSpecies::Acacia | TreeSpecies::Baobab => {
+                return Self::savanna(origin, seed, species);
+            }
             TreeSpecies::Palm => return Self::palm(origin, seed),
             TreeSpecies::Spruce => return Self::spruce(origin, seed),
             TreeSpecies::Fir => return Self::fir(origin, seed),
@@ -284,11 +316,17 @@ impl Tree {
             origin,
             species,
             wood_material: species.wood(),
+            leaves_material: species.leaves(),
             form,
             bounds,
             wood,
             crowns,
             lantern: None,
+            ornament_material: if species == TreeSpecies::Bloodwood {
+                MaterialId::HangingBloodVines
+            } else {
+                MaterialId::HangingBlossomLantern
+            },
         };
         tree.lantern = tree.choose_blossom_lantern();
         tree
@@ -304,15 +342,12 @@ impl Tree {
     }
     pub fn leaves_at(&self, global: [i64; 3]) -> Option<MaterialId> {
         if self.lantern == Some(global) {
-            return Some(if self.species == TreeSpecies::Bloodwood {
-                MaterialId::HangingBloodVines
-            } else {
-                MaterialId::HangingBlossomLantern
-            });
+            return Some(self.ornament_material);
         }
         let point = self.local(global);
-        (self.bounds.contains(point) && self.crowns.iter().any(|c| c.contains(point)))
-            .then_some(self.species.leaves())
+        self.crowns
+            .iter()
+            .find_map(|c| c.material(point, self.leaves_material))
     }
     pub fn stamp_wood(&self, start: [i64; 3], size: usize, blocks: &mut [u16]) {
         for segment in &self.wood {
@@ -326,8 +361,10 @@ impl Tree {
     pub fn stamp_leaves(&self, start: [i64; 3], size: usize, blocks: &mut [u16]) {
         for crown in &self.crowns {
             visit_voxels(crown.bounds, self.origin, start, size, |point, index| {
-                if blocks[index] == 0 && crown.contains(point) {
-                    blocks[index] = self.species.leaves() as u16;
+                if blocks[index] == 0
+                    && let Some(material) = crown.material(point, self.leaves_material)
+                {
+                    blocks[index] = material as u16;
                 }
             });
         }
@@ -337,11 +374,7 @@ impl Tree {
                 let index =
                     local[0] as usize + size * (local[1] as usize + size * local[2] as usize);
                 if blocks[index] == 0 {
-                    blocks[index] = if self.species == TreeSpecies::Bloodwood {
-                        MaterialId::HangingBloodVines as u16
-                    } else {
-                        MaterialId::HangingBlossomLantern as u16
-                    };
+                    blocks[index] = self.ornament_material as u16;
                 }
             }
         }

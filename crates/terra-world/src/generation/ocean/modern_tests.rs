@@ -16,6 +16,12 @@ fn climate(terrain: &TerraGenerator, temperature: f64, humidity: f64, ocean: f64
         cherry_forest: 0.0,
         spirit_blossom: 0.0,
         blood_forest: 0.0,
+        ashlands: 0.0,
+        savanna: 0.0,
+        swamp: 0.0,
+        petrified_forest: 0.0,
+        crystal_highlands: 0.0,
+        misty_coast: 0.0,
     };
     biome
 }

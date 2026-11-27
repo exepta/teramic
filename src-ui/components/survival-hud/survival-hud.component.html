@@ -24,17 +24,17 @@
     <div class="vital-statuses">
       <div id="survival-food-status" class="food-status"><img id="survival-food-frame" class="food-frame" src="tilt-ui://assets/survival-status-frame.png" alt="" /><img id="survival-food" class="food-icon" src="tilt-ui://assets/survival-atlas.png" alt="Hunger" /><progress-bar id="survival-hunger" class="hunger-bar" min="0" max="100" [value]="survivalView.hunger" /></div>
       @for (effect of localizedUi.statusEffectView.cards; track effect.id) {
-        <div id="status-effect-card" [class]="effect.class" [title]="effect.tooltip"><ornate-frame></ornate-frame>@if (effect.night_vision) { <div class="status-effect-icon night-vision-icon"><icon name="eye" size="32" /></div> } @else { <img class="status-effect-icon" src="tilt-ui://assets/status-effects-atlas.png" [alt]="effect.icon" /> }<div class="effect-details">@if (statusEffectView.expanded) { <p class="effect-name">{{ effect.name }}</p> }<div class="effect-level"><div [class.active]="effect.level >= 1"></div><div [class.active]="effect.level >= 2"></div><div [class.active]="effect.level >= 3"></div><div [class.active]="effect.level >= 4"></div><div [class.active]="effect.level >= 5"></div></div><p class="effect-time">{{ effect.time_label }}</p></div></div>
+        <div id="status-effect-card" [class]="effect.class" [title]="effect.tooltip"><img class="effect-frame inventory-reference-frame" src="tilt-ui://assets/inventory-copper-frame.png" alt="" />@if (effect.night_vision) { <div class="status-effect-icon night-vision-icon"><icon name="eye" size="32" /></div> } @else { <img class="status-effect-icon" [class]="effect.icon_class" src="tilt-ui://assets/status-effects-atlas.png" [alt]="effect.name" /> }<div class="effect-details">@if (statusEffectView.expanded) { <p class="effect-name">{{ effect.name }}</p> }<div class="effect-level"><div [class.active]="effect.level >= 1"></div><div [class.active]="effect.level >= 2"></div><div [class.active]="effect.level >= 3"></div><div [class.active]="effect.level >= 4"></div><div [class.active]="effect.level >= 5"></div></div><p class="effect-time">{{ effect.time_label }}</p></div></div>
       }
       @if (statusEffectView.overflow > 0) {
-        <div id="status-effect-overflow" class="status-effect-card effect-overflow" [title]="localizedUi.statusEffectView.overflow_title"><ornate-frame></ornate-frame><p>+{{ localizedUi.statusEffectView.overflow }}</p></div>
+        <div id="status-effect-overflow" class="status-effect-card effect-overflow" [title]="localizedUi.statusEffectView.overflow_title"><img class="effect-frame inventory-reference-frame" src="tilt-ui://assets/inventory-copper-frame.png" alt="" /><p>+{{ localizedUi.statusEffectView.overflow }}</p></div>
       }
     </div>
     @if (statusEffectView.regeneration) {
-      <img id="regen-heart-0" class="regeneration-heart" src="tilt-ui://assets/status-effects-atlas.png" alt="Status effect 11" />
-      <img id="regen-heart-1" class="regeneration-heart" src="tilt-ui://assets/status-effects-atlas.png" alt="Status effect 11" />
-      <img id="regen-heart-2" class="regeneration-heart" src="tilt-ui://assets/status-effects-atlas.png" alt="Status effect 11" />
-      <img id="regen-heart-3" class="regeneration-heart" src="tilt-ui://assets/status-effects-atlas.png" alt="Status effect 11" />
+      <img id="regen-heart-0" class="regeneration-heart atlas-cell-11" src="tilt-ui://assets/status-effects-atlas.png" alt="" />
+      <img id="regen-heart-1" class="regeneration-heart atlas-cell-11" src="tilt-ui://assets/status-effects-atlas.png" alt="" />
+      <img id="regen-heart-2" class="regeneration-heart atlas-cell-11" src="tilt-ui://assets/status-effects-atlas.png" alt="" />
+      <img id="regen-heart-3" class="regeneration-heart atlas-cell-11" src="tilt-ui://assets/status-effects-atlas.png" alt="" />
     }
   </div>
   @if (survivalView.editing) {

@@ -6,10 +6,13 @@ const HALF_WIDTH: f64 = 0.25;
 const SLOT_ORDER: [usize; CAPACITY] = [0, 3, 1, 2];
 
 pub fn support(prop: &WorldProp) -> [i64; 3] {
+    if prop.kind.reef_attachment() {
+        return super::reef_flora::support(prop);
+    }
     if prop.kind == PropKind::AppleFruit {
         return [
             prop.position[0].floor() as i64,
-            (prop.position[1] + 0.43).floor() as i64,
+            (prop.position[1] + 0.43 * f64::from(prop.scale)).floor() as i64,
             prop.position[2].floor() as i64,
         ];
     }
@@ -29,6 +32,26 @@ pub fn support(prop: &WorldProp) -> [i64; 3] {
         (prop.position[1] - 1.0).floor() as i64,
         prop.position[2].floor() as i64,
     ]
+}
+
+pub fn sapling_soil(material: u16) -> bool {
+    use terra_voxel::MaterialId as M;
+    matches!(
+        M::from_raw(material),
+        Some(
+            M::Grass
+                | M::Dirt
+                | M::SavannaTurf
+                | M::DrySavannaTurf
+                | M::DrySavannaSoil
+                | M::SavannaLoam
+                | M::Farmland
+                | M::SpiritBlossomGrass
+                | M::SpiritBlossomDirt
+                | M::PetalTurf
+                | M::WoodlandLitter
+        )
+    )
 }
 
 /// A ground anchor must have a complete top surface, not a fluid, thin mineral
@@ -59,8 +82,10 @@ pub fn supported(prop: &WorldProp, mut block: impl FnMut([i64; 3]) -> Option<u16
         return (!unknown).then_some(fits);
     }
     let material = block(support(prop))?;
-    let anchor = if prop.kind.sapling().is_some() {
-        matches!(material, 1 | 2 | 306 | 307 | terra_core::farming::FARMLAND)
+    let anchor = if prop.kind.reef_attachment() {
+        super::reef_flora::substrate(material)
+    } else if prop.kind.sapling().is_some() {
+        sapling_soil(material)
     } else if prop.wall_attached() {
         matches!(material, 6 | 10 | 36 | 134 | 313)
     } else {
@@ -88,7 +113,7 @@ pub fn cost(kind: PropKind) -> usize {
 }
 
 pub fn align(prop: &mut WorldProp, support: [i64; 3], slot: usize) {
-    if prop.kind == PropKind::SpiderWeb {
+    if prop.kind == PropKind::SpiderWeb || prop.kind.reef_attachment() {
         return;
     }
     if prop.kind != PropKind::Scarecrow {
@@ -130,7 +155,10 @@ pub fn generated_slot(rank: usize) -> usize {
 }
 
 pub(crate) fn compatible(prop: &WorldProp, cell: [i64; 3]) -> bool {
-    if prop.wall_attached() || matches!(prop.kind, PropKind::SpiderWeb | PropKind::AppleFruit) {
+    if prop.kind.reef_attachment()
+        || prop.wall_attached()
+        || matches!(prop.kind, PropKind::SpiderWeb | PropKind::AppleFruit)
+    {
         return false;
     }
     if prop.kind.sapling().is_some()

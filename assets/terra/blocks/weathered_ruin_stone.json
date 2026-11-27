@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 708,
+  "name": "Weathered Ruin Stone",
+  "description": "Weather and lichen have rounded the old masonry.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.3,
+  "resistance": 2.0,
+  "render_kind": "cube",
+  "bevel_width": 0.035,
+  "textures": {
+    "side": "textures/petrified_forest/weathered_ruin_stone.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.9,
+      "reflectance": 0.13,
+      "normal_texture": "textures/petrified_forest/weathered_ruin_stone_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

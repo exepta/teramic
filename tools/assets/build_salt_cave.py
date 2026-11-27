@@ -9,7 +9,7 @@ import math
 import random
 
 from build_castle import BLOCKS, Mesh
-from build_spirit_blossom import export
+from voxel_props.surface import export_voxels
 
 TILES = BLOCKS / 'textures/salt_cave'
 # Vertices of the illustrated cubes: left, rear, right, front, front foot, right foot.
@@ -234,7 +234,7 @@ def build():
     for number,(shape,en,de) in enumerate(PROPS,459):
         slug='salt_'+shape
         mesh=outcrop(shape,number)
-        textures=export(mesh,slug,('Warm core',))
+        textures=export_voxels(mesh, slug, ('Warm core',), resolution=16)
         low, high = (.73,1) if shape=='stalactite' else (0,.23 if shape=='rubble' else .29)
         boxes=[dict(minimum=[.10,low,.10],maximum=[.90,high,.90])]
         if shape!='rubble':

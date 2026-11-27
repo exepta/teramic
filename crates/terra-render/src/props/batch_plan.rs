@@ -1,6 +1,25 @@
 //! Split stable geometry on the worker, without cutting a prop or its crossfade.
 
-pub(super) const VERTEX_LIMIT: usize = 1 << 16;
+use crate::upload_budget::{MAX_BATCH_BYTES, MAX_BATCH_VERTICES};
+
+// These arrays are the ones compose_with_exposure_mode hands to split_batches,
+// before index compaction or stripping an identity growth payload.
+fn fits_upload(vertices: usize, indices: usize, rooted: bool, packed: bool) -> bool {
+    let position_and_uv = size_of::<[f32; 3]>() + size_of::<[f32; 2]>();
+    let normal_and_color = if packed {
+        size_of::<[i8; 4]>() + size_of::<[u8; 4]>()
+    } else {
+        size_of::<[f32; 3]>() + size_of::<[f32; 4]>()
+    };
+    let growth = if rooted {
+        size_of::<[f32; 2]>() + size_of::<[f32; 3]>()
+    } else {
+        0
+    };
+    vertices <= MAX_BATCH_VERTICES
+        && vertices * (position_and_uv + normal_and_color + growth) + indices * size_of::<u32>()
+            <= MAX_BATCH_BYTES
+}
 
 #[derive(Clone, Copy)]
 pub(super) struct Entry {
@@ -32,26 +51,30 @@ pub(super) struct Plan {
     pub destinations: Vec<Option<usize>>,
 }
 
-pub(super) fn plan(entries: &[Entry]) -> Plan {
+pub(super) fn plan(entries: &[Entry], packed: bool) -> Plan {
     let mut plan = Plan {
         pieces: Vec::new(),
         destinations: vec![None; entries.len()],
     };
     for rooted in [false, true] {
-        let total: usize = entries
+        let (vertices, indices) = entries
             .iter()
             .filter(|entry| entry.rooted == rooted && entry.indices != 0)
-            .map(|entry| entry.vertices)
-            .sum();
-        let split = total > VERTEX_LIMIT;
+            .fold((0, 0), |(v, i), e| (v + e.vertices, i + e.indices));
+        let split = !fits_upload(vertices, indices, rooted, packed);
         let mut current = None::<usize>;
         for (index, &entry) in entries.iter().enumerate() {
             if entry.rooted != rooted || entry.indices == 0 || (split && rooted && entry.pending) {
                 continue;
             }
             let destination = if let Some(current) = current
-                && (!split || plan.pieces[current].vertices + entry.vertices <= VERTEX_LIMIT)
-            {
+                && (!split
+                    || fits_upload(
+                        plan.pieces[current].vertices + entry.vertices,
+                        plan.pieces[current].indices + entry.indices,
+                        rooted,
+                        packed,
+                    )) {
                 current
             } else {
                 let next = plan.pieces.len();
@@ -62,8 +85,8 @@ pub(super) fn plan(entries: &[Entry]) -> Plan {
                 current = Some(next);
                 next
             };
-            // An intrinsic template larger than the limit stays intact and
-            // progresses alone via the uploader's existing oversize exception.
+            // The generic worker splitter can cut a single oversized template;
+            // ordinary batches already satisfy its two handoff limits.
             plan.pieces[destination].append(entry);
             plan.destinations[index] = Some(destination);
         }
@@ -106,15 +129,18 @@ mod tests {
 
     #[test]
     fn small_layouts_keep_their_original_order_and_batch_count() {
-        let plan = plan(&[
-            entry(12, true, false),
-            entry(16, false, false),
-            entry(20, true, true),
-            Entry {
-                indices: 0,
-                ..entry(24, false, false)
-            },
-        ]);
+        let plan = plan(
+            &[
+                entry(12, true, false),
+                entry(16, false, false),
+                entry(20, true, true),
+                Entry {
+                    indices: 0,
+                    ..entry(24, false, false)
+                },
+            ],
+            true,
+        );
         assert_eq!(plan.destinations, [Some(1), Some(0), Some(1), None]);
         assert_eq!(
             plan.pieces,
@@ -137,14 +163,17 @@ mod tests {
 
     #[test]
     fn stable_pieces_fit_u16_and_pending_variants_wait_together_at_the_end() {
-        let plan = plan(&[
-            entry(24_000, true, true),
-            entry(40_000, true, false),
-            entry(40_000, false, false),
-            entry(24_000, true, true),
-            entry(40_000, true, false),
-            entry(40_000, false, false),
-        ]);
+        let plan = plan(
+            &[
+                entry(24_000, true, true),
+                entry(40_000, true, false),
+                entry(40_000, false, false),
+                entry(24_000, true, true),
+                entry(40_000, true, false),
+                entry(40_000, false, false),
+            ],
+            true,
+        );
         assert_eq!(
             plan.destinations,
             [Some(4), Some(2), Some(0), Some(4), Some(3), Some(1)]
@@ -152,7 +181,7 @@ mod tests {
         assert!(
             plan.pieces
                 .iter()
-                .all(|piece| piece.vertices <= VERTEX_LIMIT)
+                .all(|piece| piece.vertices <= MAX_BATCH_VERTICES)
         );
         assert_eq!(
             plan.pieces
@@ -167,14 +196,17 @@ mod tests {
 
     #[test]
     fn intrinsically_large_templates_and_atomic_pending_batches_remain_explicit_exceptions() {
-        let plan = plan(&[
-            entry(VERTEX_LIMIT + 1, false, false),
-            entry(4, false, false),
-            entry(40_000, true, true),
-            entry(40_000, true, true),
-        ]);
+        let plan = plan(
+            &[
+                entry(MAX_BATCH_VERTICES + 1, false, false),
+                entry(4, false, false),
+                entry(40_000, true, true),
+                entry(40_000, true, true),
+            ],
+            true,
+        );
         assert_eq!(plan.destinations, [Some(0), Some(1), Some(2), Some(2)]);
-        assert_eq!(plan.pieces[0].vertices, VERTEX_LIMIT + 1);
+        assert_eq!(plan.pieces[0].vertices, MAX_BATCH_VERTICES + 1);
         assert_eq!(plan.pieces[1].vertices, 4);
         assert_eq!(plan.pieces[2].vertices, 80_000);
     }

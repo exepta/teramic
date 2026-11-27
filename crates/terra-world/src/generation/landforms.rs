@@ -1,28 +1,78 @@
-use super::{RiverSample, TerraGenerator, biomes::BiomeSample, biomes::smoothstep};
+use super::{OasisSample, RiverSample, TerraGenerator, biomes::BiomeSample, biomes::smoothstep};
 use noise::NoiseFn;
 
+pub(super) struct SurfaceWaters {
+    pub(super) course: Option<RiverSample>,
+    pub(super) cascade: Option<RiverSample>,
+    pub(super) oasis: Option<OasisSample>,
+    pub(super) lake: Option<OasisSample>,
+}
+
 impl TerraGenerator {
+    pub(super) fn surface_waters(&self, x: f64, z: f64, savanna: Option<f64>) -> SurfaceWaters {
+        let course = self.river_course_at(x, z);
+        SurfaceWaters {
+            course,
+            cascade: self.savanna_cascade_at(x, z, course, savanna),
+            oasis: self.oasis_at(x, z),
+            lake: self.lake_at(x, z),
+        }
+    }
+
     pub fn surface_height(&self, x: f64, z: f64) -> f64 {
-        if self.config().landscape_revision >= 5 {
-            return self.carved_surface_height(x, z, self.terrain_base_height(x, z));
+        if self.config().landscape_revision >= 5 && self.config().ecology_revision < 16 {
+            return self.carved_surface_height(
+                x,
+                z,
+                self.terrain_base_height(x, z),
+                &self.surface_waters(x, z, None),
+            );
         }
         self.height_with_biome(x, z, self.climate_biome_at(x, z))
     }
 
     pub(super) fn height_with_biome(&self, x: f64, z: f64, biome: BiomeSample) -> f64 {
-        let raw = self.base_height_with_biome(x, z, biome);
-        self.carved_surface_height(x, z, raw)
+        self.carved_surface_height(
+            x,
+            z,
+            self.watershed_ground(x, z, biome),
+            &self.surface_waters(x, z, Some(biome.weights.savanna)),
+        )
     }
 
-    fn carved_surface_height(&self, x: f64, z: f64, raw: f64) -> f64 {
-        let regional_lake = self
-            .connected_hydrology()
-            .then(|| self.lake_at(x, z))
-            .flatten();
-        let river = self.river_at(x, z);
+    /// The banks that constrain a reservoir are the actual pre-carving terrain.
+    /// A hydraulic head fitted to the original hills can sit far above a basalt valley.
+    pub(super) fn watershed_ground(&self, x: f64, z: f64, biome: BiomeSample) -> f64 {
+        let raw = self.base_height_with_biome(x, z, biome);
+        let raw = self.coastal_relief(x, z, raw, biome.weights);
+        let raw = self.crystal_height(x, z, raw, biome.weights.crystal_highlands);
+        let raw = self.petrified_height(x, z, raw, biome.weights.petrified_forest);
+        let raw = self.swamp_height(x, z, raw, biome.weights.swamp);
+        let volcanic = self.volcanic_strength(biome);
+        let height = self.volcanic_height(
+            x,
+            z,
+            self.savanna_height(x, z, raw, biome.weights.savanna),
+            volcanic,
+        );
+        self.gully_height(x, z, height, volcanic)
+    }
+
+    pub(super) fn watershed_height(&self, x: f64, z: f64) -> f64 {
+        self.watershed_ground(x, z, self.climate_biome_at(x, z))
+    }
+
+    pub(super) fn carved_surface_height(
+        &self,
+        x: f64,
+        z: f64,
+        raw: f64,
+        waters: &SurfaceWaters,
+    ) -> f64 {
+        let river = waters.course;
         let height = river.map_or(raw, |river| {
             let mut height = river_height(raw, river, self.config().sea_level);
-            if let Some(lake) = regional_lake {
+            if let Some(lake) = waters.lake.filter(|_| self.connected_hydrology()) {
                 let wet_channel = river.distance < river.width
                     && (river.bed_height() - 0.5).floor() + 1.0 < river.level;
                 if !wet_channel {
@@ -30,7 +80,15 @@ impl TerraGenerator {
                     // apron must not cut holes in the lake's higher dry shore.
                     let protect =
                         1.0 - smoothstep(lake.radius + 6.0, lake.radius + 18.0, lake.distance);
-                    height += (raw - height) * protect;
+                    // Retain enough bank to contain the lake. Restoring the
+                    // entire pre-carving hillside created sheer walls alongside
+                    // the last wet voxel of channels entering a high basin.
+                    let rim = if self.config().river_terrain_revision >= 5 {
+                        raw.min(lake.level.ceil() + 0.5)
+                    } else {
+                        raw
+                    };
+                    height += (rim - height).max(0.0) * protect;
                 }
             }
             let Some(cavity) = river.cavity() else {
@@ -42,14 +100,17 @@ impl TerraGenerator {
                 height
             }
         });
-        let height = self
-            .oasis_at(x, z)
-            .map_or(height, |oasis| oasis.carve(height));
-        let lake = if self.connected_hydrology() {
-            regional_lake
-        } else {
-            self.lake_at(x, z)
-        };
+        let height = waters.cascade.map_or(height, |stream| {
+            river_height(height, stream, self.config().sea_level)
+        });
+        let height = waters.oasis.map_or(height, |oasis| {
+            if self.desert_overhaul() {
+                oasis.carve_desert(height)
+            } else {
+                oasis.carve(height)
+            }
+        });
+        let lake = waters.lake;
         let height = lake.map_or(height, |lake| lake.carve(height));
         self.spirit_hill_relief(x, z, height, river, lake)
     }
@@ -80,7 +141,7 @@ impl TerraGenerator {
             for step in 1..=64 {
                 let sx = x + direction * f64::from(step) * cross[0];
                 let sz = z + direction * f64::from(step) * cross[1];
-                let raw = self.base_height_with_biome(sx, sz, self.climate_biome_at(sx, sz));
+                let raw = self.watershed_height(sx, sz);
                 let river = self.river_at(sx, sz);
                 let h = river.map_or(raw, |r| river_height(raw, r, self.config().sea_level));
                 let next =
@@ -103,7 +164,7 @@ impl TerraGenerator {
             if config.hill_amplitude == 0.0 && config.mountain_amplitude == 0.0 {
                 return config.base_height;
             }
-            return self.advanced_height(x, z);
+            return self.regional_base_height(x, z, self.advanced.height(x, z), biome);
         }
         if config.landscape_revision >= 4 {
             if config.hill_amplitude == 0.0 && config.mountain_amplitude == 0.0 {
@@ -164,7 +225,7 @@ impl TerraGenerator {
     }
 }
 
-fn river_height(raw: f64, river: RiverSample, sea_level: f64) -> f64 {
+pub(super) fn river_height(raw: f64, river: RiverSample, sea_level: f64) -> f64 {
     if river.covered || raw < sea_level - 1.0 {
         return raw;
     }

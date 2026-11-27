@@ -177,8 +177,8 @@ pub(super) fn run(world: &mut World) {
                         return Ok(false);
                     }
                     let view = world.resource::<terra_ui::CraftingView>();
-                    if view.smelting || view.brewing || view.wood_options.len() != 4 {
-                        return Err("Narrow chest recipe lost its four real wood alternatives".into());
+                    if view.smelting || view.brewing || view.wood_options.len() != 5 {
+                        return Err("Narrow chest recipe lost a wood alternative".into());
                     }
                     recipe_bounds(world)?;
                     shot(world, "crafting-recipe-reference-narrow")?;
@@ -238,7 +238,7 @@ pub(super) fn run(world: &mut World) {
                     {
                         return Err("Narrow recipe navigation changed or failed to close the inventory".into());
                     }
-                    info!(captures = state.captured, seconds = state.start.elapsed().as_secs_f64(), "Native narrow recipes passed: 768x640 physical window, bounded popup, real scroll documents and wheel, retained inventory, no catalog or close button, four wood choices, production furnace recipe, native ESC/E and unchanged authoritative inventory");
+                    info!(captures = state.captured, seconds = state.start.elapsed().as_secs_f64(), "Native narrow recipes passed: 768x640 physical window, bounded popup, real scroll documents and wheel, retained inventory, no catalog or close button, five plank choices, production furnace recipe, native ESC/E and unchanged authoritative inventory");
                     return Ok(true);
                 }
             }

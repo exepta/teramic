@@ -366,7 +366,7 @@ fn rotated_modern_roofs_and_tower_treads_face_the_actual_rise() {
 fn graded_street_crossings_cannot_overwrite_an_existing_tread_or_side_lane() {
     let terrain = terrain(0);
     let mut builder = builder(&terrain, 1);
-    let mut roads = paths::Routes::new([0, 0], &[], [[1000, 1000], [1001, 1001]]);
+    let mut roads = paths::Routes::new([0, 0], &[], None);
     roads.connect(&mut builder, [9, 18, 0]).unwrap();
     let before = builder.patches.clone();
     let shapes = builder.objects.clone();
@@ -384,7 +384,7 @@ fn graded_street_crossings_cannot_overwrite_an_existing_tread_or_side_lane() {
     }
 
     let mut builder = self::builder(&terrain, 1);
-    let mut roads = paths::Routes::new([0, 0], &[], [[1000, 1000], [1001, 1001]]);
+    let mut roads = paths::Routes::new([0, 0], &[], None);
     roads.connect(&mut builder, [9, 16, 0]).unwrap();
     roads.connect(&mut builder, [5, 16, 8]).unwrap();
     assert_eq!(builder.finish().unwrap().block_at([5, 16, 0]), Some(0));
@@ -402,7 +402,7 @@ fn clamped_bridge_decks_reject_submerged_origins_before_emitting_a_segment() {
     let mut builder = builder(&terrain, 1);
     assert_eq!(builder.ground(0, 0), 0);
     assert_eq!(terrain.water_column(0.5, 0.5).unwrap().level, 8.0);
-    let mut roads = paths::Routes::new([0, 0], &[], [[1000, 1000], [1001, 1001]]);
+    let mut roads = paths::Routes::new([0, 0], &[], None);
     assert_eq!(roads.connect(&mut builder, [20, 9, 0]), None);
     assert!(builder.patches.is_empty());
     assert!(builder.objects.is_empty());
@@ -492,7 +492,7 @@ fn dirt_path_steps_face_uphill_for_all_axes_and_both_height_directions() {
     for [dx, dz] in [[1, 0], [-1, 0], [0, 1], [0, -1]] {
         for height in [14, 18] {
             let mut builder = builder(&terrain, 1);
-            let mut roads = paths::Routes::new([0, 0], &[], [[1000, 1000], [1001, 1001]]);
+            let mut roads = paths::Routes::new([0, 0], &[], None);
             roads
                 .connect(&mut builder, [dx * 9, height, dz * 9])
                 .unwrap();

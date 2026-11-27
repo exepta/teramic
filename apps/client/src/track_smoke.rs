@@ -74,6 +74,7 @@ fn run(world: &mut World) {
             for walker in [Walker::Player, Walker::Cow] {
                 for i in 0..5 {
                     world.write_message(Footstep {
+                        creature: None,
                         position: Vec3::new(
                             if material == 4 { 3.0 } else { 11.0 } + i as f32 * 0.2,
                             32.0,

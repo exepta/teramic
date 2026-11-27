@@ -91,7 +91,7 @@ fn ready(journal: &mut EditJournal, id: u64) {
     t.growth_seconds = t.species.growth_seconds();
 }
 #[test]
-fn all_five_species_plant_and_mature_into_exact_persistent_trees_across_sections() {
+fn all_species_plant_and_mature_into_exact_persistent_trees_across_sections() {
     for species in TreeSpecies::ALL {
         let (mut chunks, mut journal, prop) = fixture(species, 101);
         assert!(plant(&mut chunks, &mut journal, prop, PlayerUuid::from_u128(1)).unwrap());

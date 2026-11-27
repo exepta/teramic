@@ -4,6 +4,7 @@ mod picking;
 pub mod placement;
 #[cfg(test)]
 mod placement_tests;
+pub mod reef_flora;
 pub mod seasonal;
 pub mod visual;
 pub mod webs;
@@ -148,10 +149,14 @@ pub enum PropKind {
     CherrySapling,
     AppleSapling,
     AppleFruit,
+    Coconut,
+    ReefFan,
+    HangingPearlKelp,
+    AcaciaSapling,
 }
 
 impl PropKind {
-    pub const ALL: [Self; 25] = [
+    pub const ALL: [Self; 29] = [
         Self::Grass,
         Self::Flower,
         Self::Bush,
@@ -177,6 +182,10 @@ impl PropKind {
         Self::CherrySapling,
         Self::AppleSapling,
         Self::AppleFruit,
+        Self::Coconut,
+        Self::ReefFan,
+        Self::HangingPearlKelp,
+        Self::AcaciaSapling,
     ];
     pub fn sapling(self) -> Option<terra_core::TreeSpecies> {
         terra_core::TreeSpecies::from_sapling(self.into())
@@ -190,10 +199,15 @@ impl PropKind {
             _ => None,
         }
     }
+    pub fn reef_attachment(self) -> bool {
+        matches!(self, Self::ReefFan | Self::HangingPearlKelp)
+    }
     pub fn aquatic(self) -> bool {
         matches!(
             self,
             Self::Seagrass
+                | Self::ReefFan
+                | Self::HangingPearlKelp
                 | Self::SeaCucumber
                 | Self::BranchingCoral
                 | Self::TubeCoral
@@ -206,19 +220,18 @@ impl PropKind {
 
 impl From<terra_core::ResourcePropKind> for PropKind {
     fn from(kind: terra_core::ResourcePropKind) -> Self {
-        if kind == terra_core::ResourcePropKind::AppleFruit {
-            Self::AppleFruit
-        } else {
-            Self::ALL[kind as usize]
-        }
+        Self::ALL[kind as usize]
     }
 }
 impl From<PropKind> for terra_core::ResourcePropKind {
     fn from(kind: PropKind) -> Self {
-        if kind == PropKind::AppleFruit {
-            Self::AppleFruit
-        } else {
-            Self::ALL[kind as usize]
+        match kind {
+            PropKind::AppleFruit => Self::AppleFruit,
+            PropKind::Coconut => Self::Coconut,
+            PropKind::ReefFan => Self::ReefFan,
+            PropKind::HangingPearlKelp => Self::HangingPearlKelp,
+            PropKind::AcaciaSapling => Self::AcaciaSapling,
+            _ => Self::ALL[kind as usize],
         }
     }
 }
@@ -243,7 +256,10 @@ impl WorldProp {
     }
     /// High mushroom variants grow from a trunk face rather than a ground cell.
     pub fn wall_attached(&self) -> bool {
-        matches!(self.kind, PropKind::BeeNest | PropKind::Mushroom) && self.variant >= 128
+        matches!(
+            self.kind,
+            PropKind::BeeNest | PropKind::Mushroom | PropKind::Coconut
+        ) && self.variant >= 128
     }
 
     pub fn growing_grass(&self) -> bool {

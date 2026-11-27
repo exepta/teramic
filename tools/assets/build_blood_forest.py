@@ -11,8 +11,8 @@ NAMES=[('blood_grass','Blood Grass'),('blood_dirt','Blood Dirt'),('blood_stone',
 # readable below a canopy. These are albedos, not extra emissive terrain lights.
 COLORS=[
     [173,90,110], [123,83,87], [135,108,125], [151,121,144],
-    [174,96,103], [142,86,82], [199,89,124], [191,113,128],
-    [162,85,109], [212,63,98], [151,104,118], [238,152,101],
+    [174,96,103], [142,86,82], [199,89,124], [132,65,73],
+    [132,61,75], [212,63,98], [151,104,118], [238,152,101],
 ]
 PALETTE={
     'ivory':[.94,.87,.75], 'shadow':[.085,.035,.055],
@@ -63,6 +63,27 @@ def texture_pixel(x, y, index, side=False, end=False):
 def texture(slug, index, side=False, end=False):
     pixels = [texture_pixel(x, y, index, side, end) + [255]
               for y in range(SIZE) for x in range(SIZE)]
+    if index in (1,7,8) and not side:
+        from PIL import Image, ImageDraw
+        from random import Random
+        img = Image.new('RGBA', (SIZE,SIZE))
+        img.putdata([tuple(pixel) for pixel in pixels])
+        pen = ImageDraw.Draw(img)
+        rng = Random(5400+index)
+        for _ in range(59 if index in (7,8) else 27):
+            x, y = rng.randrange(SIZE), rng.randrange(SIZE)
+            angle = rng.random()*math.tau
+            ux, uy = math.cos(angle), math.sin(angle)
+            length, width = rng.uniform(4,14), rng.uniform(2,5)
+            ink = rng.choice([(170,43,58), (120,39,55), (104,45,46), (94,42,47), (158,58,61)])
+            for tx in (-SIZE,0,SIZE):
+                for ty in (-SIZE,0,SIZE):
+                    def p(along, across):
+                        return (x+tx+ux*along-uy*across, y+ty+uy*along+ux*across)
+                    pen.polygon([p(-length,0),p(-length*.28,-width),p(length*.30,-width*.8),
+                                 p(length,.6),p(1,width*.6),p(-length*.21,width)],fill=ink+(255,))
+                    pen.line([p(-length*.80,0),p(length*.70,0)],fill=(ink[0]+22,ink[1]+9,ink[2]+6,255))
+        pixels = list(img.getdata())
     png(BLOCKS / 'textures' / f'{slug}.png', pixels, SIZE)
 
 
@@ -109,31 +130,53 @@ def sculpt_prop(mesh,index):
     if index in (12,19):
         for x,z,h in ([(.5,.5,.96)] if index==19 else [(.3,.35,.49),(.65,.62,.65),(.72,.25,.34)]):mushroom(mesh,x,z,h)
     elif index==13:
-        for i in range(9):
-            a=i*math.tau/9
-            low=[.5,.08,.5];high=[.5+math.cos(a)*.38,.35+(i%3)*.13,.5+math.sin(a)*.38]
-            mesh.branch(low,high,.033,'wood',end_radius=.017)
-            for j in (1,2):
-                c=[low[k]+(high[k]-low[k])*j/3 for k in range(3)]
-                mesh.branch(c,[c[0]+math.cos(a+.8)*.10,c[1]+.15,c[2]+math.sin(a+.8)*.10],.035,'petal',end_radius=.001)
-            mesh.blob([high[0],high[1]-.03,high[2]],[.038]*3,'crystal')
+        # Interleaved arches rise from both feet. Hooked thorns point along the stem.
+        for stem, (yaw, height, radius) in enumerate([(0.32,.78,.42), (2.15,.52,.35)]):
+            dx, dz = math.cos(yaw), math.sin(yaw)
+            previous = None
+            for step in range(11):
+                angle = step * math.pi / 10
+                across = math.cos(angle) * radius
+                bend = math.sin(2 * angle + stem) * .067
+                point = [.5 + dx*across - dz*bend, .035 + height*math.sin(angle),
+                         .5 + dz*across + dx*bend]
+                if previous is not None:
+                    mesh.branch(previous, point, .051 if stem == 0 else .035, 'wood')
+                if 0 < step < 10 and step % 2:
+                    tip = [point[0] + dx*.12*math.cos(angle) - dz*.035,
+                           point[1] + .11*math.sin(angle), point[2] + dz*.12*math.cos(angle) + dx*.035]
+                    mesh.branch(point, tip, .037, 'petal', end_radius=.008)
+                    mesh.blob(tip,[.015]*3,'crystal')
+                previous = point
     elif index==14:
-        mesh.branch([.5,.02,.5],[.5,.60,.5],.025,'stem')
-        for i in range(7):
-            a=i*math.tau/7
-            mesh.blob([.5+math.cos(a)*.13,.65,.5+math.sin(a)*.13],[.12,.07,.10],'petal')
-        mesh.blob([.5,.67,.5],[.07,.04,.07],'glow')
+        for x,z,h,spread in [(.39,.45,.90,.17),(.70,.62,.63,.13)]:
+            mesh.branch([.49,.016,.52],[x,h-.04,z],.025,'stem')
+            for dx, dz in [(1,0),(-1,0),(0,1),(0,-1)]:
+                cx,cz = x + dx*spread*.75, z + dz*spread*.75
+                mesh.box([cx-.09,h-.095,cz-.08],[cx+.09,h-.034,cz+.08],'petal')
+                mesh.box([cx-.061+dx*.047,h-.046,cz-.054+dz*.047],
+                         [cx+.061+dx*.047,h+.008,cz+.054+dz*.047],'petal')
+            mesh.box([x-.046,h-.06,z-.046],[x+.05,h+.014,z+.05],'glow')
     elif index==15:
-        for i in range(5):
-            x=.15+i*.16;end=.08+(i%3)*.09
-            mesh.branch([x,.97,.55],[x+.035,end,.48],.012,'wood')
-            for j in range(5):
-                y=.86-j*.145
-                if y>end:mesh.blob([x+(.035 if j%2 else -.035),y,.5],[.05,.095,.035],'leaf')
+        for i,(x, end) in enumerate([(.18,.16),(.50,.03),(.79,.29)]):
+            previous = [x,.99,.56]
+            for j in range(1,9):
+                t = j / 8
+                p = [x + .06*math.sin(i+t*6.2), .99 + t*(end-.99), .52 + .07*math.cos(i+t*4)]
+                mesh.branch(previous,p,.021,'wood')
+                side = .056 if j%2 else -.056
+                mesh.blob([p[0]+side,p[1]-.032,p[2]],[.065,.081,.038],'leaf')
+                previous = p
     elif index==16:
-        for i in range(7):
-            a=i*math.tau/7
-            mesh.branch([.5,.55,.5],[.5+math.cos(a)*.43,.025,.5+math.sin(a)*.43],.085,'wood',end_radius=.025)
+        for i in range(6):
+            a=i*math.tau/6
+            elbow = [.5 + .20*math.cos(a+.48),.37+(i%3)*.053,.5+.20*math.sin(a+.48)]
+            ankle = [.5 + .31*math.cos(a-.13),.072,.5+.31*math.sin(a-.13)]
+            tip = [.5+.45*math.cos(a),.025,.5+.45*math.sin(a)]
+            mesh.branch([.5,.44,.5],elbow,.084,'wood')
+            mesh.branch(elbow,ankle,.084,'wood',end_radius=.052)
+            mesh.branch(ankle,tip,.052,'wood',end_radius=.022)
+            mesh.branch([elbow[0],elbow[1]+.04,elbow[2]],ankle,.019,'petal')
     elif index==17:
         # Long bones crisscross in three narrowing layers below the skull.
         for layer, count in [(0,3),(1,2),(2,1)]:
@@ -210,7 +253,9 @@ def main():
         (BLOCKS/f'{slug}.json').write_text(json.dumps(d,indent=2)+'\n')
     if not args.prop_models_only:
         from biome_surfaces.foliage import refresh
+        from blood_forest.sanctuary import build as build_sanctuary
         refresh({406})
+        build_sanctuary()
     print('Rebuilt ten voxel prop GLBs; definitions and textures unchanged.' if args.prop_models_only
-          else 'Generated 22 independent Blood Forest blocks with individual JSON, GLB and PNG assets.')
+          else 'Generated the 34 Blood Forest blocks and props.')
 if __name__=='__main__':main()

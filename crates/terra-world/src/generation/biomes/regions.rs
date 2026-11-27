@@ -100,6 +100,7 @@ impl TerraGenerator {
         weights.highland = 0.0;
         weights.desert = 0.0;
         weights.cliffted_desert = 0.0;
+        weights.ashlands = 0.0;
         (site, land_kind(weights))
     }
 
@@ -160,7 +161,7 @@ impl TerraGenerator {
             (dx * dx + dz * dz).sqrt()
         });
         let closest = distances.into_iter().fold(f64::INFINITY, f64::min);
-        let mut weights = [0.0_f64; 10];
+        let mut weights = [0.0_f64; 16];
         for (site, distance) in sites.iter().zip(distances) {
             let influence = 1.0 - smoothstep(0.0, spacing * 0.18, distance - closest);
             let weight = &mut weights[site.kind as usize];

@@ -191,3 +191,5 @@
 }
 .recipe-reference .recipe-content::scrollbar-y-track { width: 6px !important; background-color: #25190f !important; border: 1px solid #95683b !important; border-radius: 3px !important; }
 .recipe-reference .recipe-content::scrollbar-y-thumb { background-color: #e9a132 !important; border: 1px solid #ffd16b !important; border-radius: 3px !important; }
+
+.recipe-reference .recipe-content.recipe-uses-content { overflow-y: auto !important; padding-right: 8px !important; }

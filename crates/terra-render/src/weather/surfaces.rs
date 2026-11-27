@@ -438,7 +438,7 @@ fn detail_family(templates: &crate::blocks::TemplateSet, slot: usize) -> f32 {
     {
         return 7.0;
     }
-    for (id, family) in [(306, 8.0), (400, 9.0)] {
+    for (id, family) in [(306, 8.0), (400, 9.0), (terra_world::lava::LAVA, 15.0)] {
         if templates
             .blocks
             .get(&id)
@@ -447,8 +447,22 @@ fn detail_family(templates: &crate::blocks::TemplateSet, slot: usize) -> f32 {
             return family;
         }
     }
+    if templates.sculpted_blocks.get(&1).is_some_and(|shape| {
+        shape.reference_grass
+            && (slot == shape.core.face_materials[3] || slot == shape.core.face_materials[0])
+    }) {
+        return 16.0;
+    }
     if templates.authored_terrain_material(slot) {
         return 6.0;
+    }
+    if templates.blocks.iter().any(|(&id, block)| {
+        terra_core::footsteps::TrackSurface::from_block(id)
+            == Some(terra_core::footsteps::TrackSurface::Snow)
+            && (block.render_kind == BlockRenderKind::Cube && block.face_materials[3] == slot
+                || block.model.iter().any(|p| p.material == slot))
+    }) {
+        return 5.0;
     }
     for (id, family) in [(3, 1.0), (2, 2.0), (1, 3.0), (4, 4.0), (5, 5.0)] {
         if templates.blocks.get(&id).is_some_and(|b| {
@@ -483,6 +497,7 @@ fn detail_family(templates: &crate::blocks::TemplateSet, slot: usize) -> f32 {
 struct DetailFamilies {
     source: Option<std::sync::Arc<crate::blocks::TemplateSet>>,
     values: HashMap<usize, f32>,
+    palette: HashSet<AssetId<StandardMaterial>>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -498,16 +513,23 @@ fn prepare(
     mut events: MessageReader<AssetEvent<StandardMaterial>>,
     mut families: Local<DetailFamilies>,
 ) {
-    if !families
-        .source
-        .as_ref()
-        .zip(blocks.templates.as_ref())
-        .is_some_and(|(old, current)| std::sync::Arc::ptr_eq(old, current))
-    {
-        families.source = blocks.templates.clone();
-        families.values.clear();
+    status.wet_batches = wet.iter().len();
+    let palette_changed = blocks.is_changed();
+    if palette_changed {
+        families.palette.clear();
+        families
+            .palette
+            .extend(blocks.materials.iter().map(Handle::id));
+        if !families
+            .source
+            .as_ref()
+            .zip(blocks.templates.as_ref())
+            .is_some_and(|(old, current)| std::sync::Arc::ptr_eq(old, current))
+        {
+            families.source = blocks.templates.clone();
+            families.values.clear();
+        }
     }
-    status.wet_batches = wet.iter().count();
     let changed: HashSet<_> = events
         .read()
         .filter_map(|event| match event {
@@ -516,11 +538,18 @@ fn prepare(
             | AssetEvent::LoadedWithDependencies { id } => Some(*id),
             _ => None,
         })
+        .filter(|id| families.palette.contains(id))
         .collect();
+    if !palette_changed && changed.is_empty() {
+        return;
+    }
     // One shared wet handle per opaque surface or translucent Galle material,
     // never per block or liquid level. Dry terrain uses stock PBR with a binding-free
     // depth extension, retaining StandardMaterial's bindless resource layout.
     for (slot, handle) in blocks.materials.iter().enumerate() {
+        if !palette_changed && !changed.contains(&handle.id()) {
+            continue;
+        }
         let Some(base) = standard.get(handle) else {
             continue;
         };
@@ -557,7 +586,7 @@ fn prepare(
             family
         };
         let detail = Vec4::new(
-            if (6.0..=9.0).contains(&family) || family == 14.0 {
+            if (6.0..=9.0).contains(&family) || matches!(family, 14.0 | 15.0 | 16.0) {
                 -family
             } else if settings.material_detail {
                 family
@@ -1045,6 +1074,12 @@ mod tests {
         assert_eq!(detail_family(&templates, 42), 12.0);
         assert_eq!(detail_family(&templates, 43), 13.0);
         assert_eq!(detail_family(&templates, 44), 0.0);
+        for (id, top) in [(481, 52), (581, 53), (582, 54), (584, 55)] {
+            let mut snow = templates.blocks[&903].clone();
+            snow.face_materials = [top; 6];
+            templates.blocks.insert(id, snow);
+            assert_eq!(detail_family(&templates, top), 5.0);
+        }
         let mut spirit = templates.blocks[&903].clone();
         spirit.face_materials = [45; 6];
         templates.blocks.insert(306, spirit);
@@ -1268,13 +1303,21 @@ mod tests {
             .add_message::<AssetEvent<StandardMaterial>>()
             .add_systems(Update, prepare);
         let base = app
-            .world_mut()
-            .resource_mut::<Assets<StandardMaterial>>()
-            .add(StandardMaterial::default());
+            .world()
+            .resource::<Assets<StandardMaterial>>()
+            .reserve_handle();
         app.world_mut()
             .resource_mut::<crate::blocks::BlockAssets>()
             .materials
             .push(base.clone());
+        app.update();
+        assert!(app.world().resource::<WetMaterials>().0.is_empty());
+        app.world_mut()
+            .resource_mut::<Assets<StandardMaterial>>()
+            .insert(base.id(), StandardMaterial::default())
+            .unwrap();
+        app.world_mut()
+            .write_message(AssetEvent::<StandardMaterial>::Added { id: base.id() });
         app.update();
         let wet = app.world().resource::<WetMaterials>().0[&0].clone();
         let depth = app.world().resource::<TerrainDepthMaterials>().0[&0].clone();

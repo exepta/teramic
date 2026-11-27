@@ -1,0 +1,402 @@
+[
+  {
+    "source": "Savanna",
+    "en": "Savanna",
+    "de": "Savanne"
+  },
+  {
+    "source": "Savanna · Warm",
+    "en": "Savanna · Warm",
+    "de": "Savanne · Warm"
+  },
+  {
+    "source": "Acacia sapling",
+    "en": "Acacia sapling",
+    "de": "Akaziensetzling"
+  },
+  {
+    "source": "An acacia sapling. Plant on open soil with room for its wide, flat crown. Grows during loaded daylight.",
+    "en": "An acacia sapling. Plant on open soil with room for its wide, flat crown. Grows during loaded daylight.",
+    "de": "Pflanze den Akaziensetzling auf offenem Boden mit Platz für seine breite Schirmkrone. Er wächst bei Tageslicht, solange das Gebiet geladen ist."
+  },
+  {
+    "source": "Savanna Grass Block",
+    "en": "Savanna Grass Block",
+    "de": "Savannengrasblock"
+  },
+  {
+    "source": "Olive grass rooted in dry red earth.",
+    "en": "Olive grass rooted in dry red earth.",
+    "de": "Olivgrüne Grasnarbe auf trockener roter Erde."
+  },
+  {
+    "source": "Dry Savanna Grass Block",
+    "en": "Dry Savanna Grass Block",
+    "de": "Trockener Savannengrasblock"
+  },
+  {
+    "source": "A golden mat of sun-dried grass.",
+    "en": "A golden mat of sun-dried grass.",
+    "de": "Goldene Grasnarbe mit sonnengetrockneten Halmen."
+  },
+  {
+    "source": "Dry Savanna Soil",
+    "en": "Dry Savanna Soil",
+    "de": "Trockene Savannenerde"
+  },
+  {
+    "source": "Dry earth broken into little plates.",
+    "en": "Dry earth broken into little plates.",
+    "de": "Trockene Erde mit feinen Rissen."
+  },
+  {
+    "source": "Savanna Loam",
+    "en": "Savanna Loam",
+    "de": "Savannenlehm"
+  },
+  {
+    "source": "Russet clay from the floodplain.",
+    "en": "Russet clay from the floodplain.",
+    "de": "Rotbrauner Lehm aus der Flussaue."
+  },
+  {
+    "source": "Carved Savanna Sandstone",
+    "en": "Carved Savanna Sandstone",
+    "de": "Geschnitzter Savannensandstein"
+  },
+  {
+    "source": "Weathered sun carvings from a sandstone gateway.",
+    "en": "Weathered sun carvings from a sandstone gateway.",
+    "de": "Verwittertes Sonnenrelief von einem Sandsteintor."
+  },
+  {
+    "source": "Red Sandstone",
+    "en": "Red Sandstone",
+    "de": "Roter Sandstein"
+  },
+  {
+    "source": "A bed of iron-red sandstone.",
+    "en": "A bed of iron-red sandstone.",
+    "de": "Eisenroter Sandstein mit feiner Schichtung."
+  },
+  {
+    "source": "Savanna Rock",
+    "en": "Savanna Rock",
+    "de": "Savannenfels"
+  },
+  {
+    "source": "Warm grey stone from the plateaus.",
+    "en": "Warm grey stone from the plateaus.",
+    "de": "Warmgrauer Fels von den Hochflächen."
+  },
+  {
+    "source": "Layered Savanna Rock",
+    "en": "Layered Savanna Rock",
+    "de": "Geschichteter Savannenfels"
+  },
+  {
+    "source": "Dark seams divide shelves of ochre rock.",
+    "en": "Dark seams divide shelves of ochre rock.",
+    "de": "Dunkle Adern trennen ockerfarbene Steinschichten."
+  },
+  {
+    "source": "Weathered Savanna Stone",
+    "en": "Weathered Savanna Stone",
+    "de": "Verwitterter Savannenstein"
+  },
+  {
+    "source": "Grey limestone flecked with lichen.",
+    "en": "Grey limestone flecked with lichen.",
+    "de": "Grauer Kalkstein mit Flechtenflecken."
+  },
+  {
+    "source": "Pale Basalt",
+    "en": "Pale Basalt",
+    "de": "Heller Basalt"
+  },
+  {
+    "source": "Purple-grey basalt exposed by wind.",
+    "en": "Purple-grey basalt exposed by wind.",
+    "de": "Vom Wind freigelegter grauvioletter Basalt."
+  },
+  {
+    "source": "Ochre Stone",
+    "en": "Ochre Stone",
+    "de": "Ockerstein"
+  },
+  {
+    "source": "Golden stone from the dry escarpment.",
+    "en": "Golden stone from the dry escarpment.",
+    "de": "Goldgelbes Gestein aus der Steilstufe."
+  },
+  {
+    "source": "Acacia Log",
+    "en": "Acacia Log",
+    "de": "Akazienstamm"
+  },
+  {
+    "source": "Fissured bark around amber heartwood.",
+    "en": "Fissured bark around amber heartwood.",
+    "de": "Rissige Rinde um bernsteinfarbenes Kernholz."
+  },
+  {
+    "source": "Acacia Leaves",
+    "en": "Acacia Leaves",
+    "de": "Akazienlaub"
+  },
+  {
+    "source": "Fine paired leaflets from a spreading crown.",
+    "en": "Fine paired leaflets from a spreading crown.",
+    "de": "Feine gefiederte Blätter der breiten Schirmkrone."
+  },
+  {
+    "source": "Acacia Planks",
+    "en": "Acacia Planks",
+    "de": "Akazienbretter"
+  },
+  {
+    "source": "Warm red boards sawn from acacia wood.",
+    "en": "Warm red boards sawn from acacia wood.",
+    "de": "Warmrote Bretter aus Akazienholz."
+  },
+  {
+    "source": "Baobab Log",
+    "en": "Baobab Log",
+    "de": "Baobabstamm"
+  },
+  {
+    "source": "Pale bark around the heart of a thick baobab.",
+    "en": "Pale bark around the heart of a thick baobab.",
+    "de": "Helle Rinde um den mächtigen Stamm eines Baobabs."
+  },
+  {
+    "source": "Baobab Leaves",
+    "en": "Baobab Leaves",
+    "de": "Baobablaub"
+  },
+  {
+    "source": "Broad finger-shaped leaves from a baobab crown.",
+    "en": "Broad finger-shaped leaves from a baobab crown.",
+    "de": "Breite, handförmige Blätter aus der Baobabkrone."
+  },
+  {
+    "source": "Short Savanna Grass",
+    "en": "Short Savanna Grass",
+    "de": "Kurzes Savannengras"
+  },
+  {
+    "source": "Low golden tussocks.",
+    "en": "Low golden tussocks.",
+    "de": "Niedrige goldene Grasbüschel."
+  },
+  {
+    "source": "Tall Savanna Grass",
+    "en": "Tall Savanna Grass",
+    "de": "Hohes Savannengras"
+  },
+  {
+    "source": "Tall grass with ripe seed heads.",
+    "en": "Tall grass with ripe seed heads.",
+    "de": "Hohe Halme mit reifen Samenständen."
+  },
+  {
+    "source": "Savanna Thorn Bush",
+    "en": "Savanna Thorn Bush",
+    "de": "Savannendornbusch"
+  },
+  {
+    "source": "Thorny twigs with a few dry leaves.",
+    "en": "Thorny twigs with a few dry leaves.",
+    "de": "Dornige Zweige mit wenigen trockenen Blättern."
+  },
+  {
+    "source": "Acacia Sapling",
+    "en": "Acacia Sapling",
+    "de": "Akaziensetzling"
+  },
+  {
+    "source": "A young acacia with its first umbrella of leaves.",
+    "en": "A young acacia with its first umbrella of leaves.",
+    "de": "Eine junge Akazie mit den ersten Schirmästen."
+  },
+  {
+    "source": "Savanna Aloe",
+    "en": "Savanna Aloe",
+    "de": "Savannenaloe"
+  },
+  {
+    "source": "A rosette of thick, green leaves.",
+    "en": "A rosette of thick, green leaves.",
+    "de": "Eine Rosette aus fleischigen grünen Blättern."
+  },
+  {
+    "source": "Savanna Agave",
+    "en": "Savanna Agave",
+    "de": "Savannenagave"
+  },
+  {
+    "source": "Long blue-green blades with pale edges.",
+    "en": "Long blue-green blades with pale edges.",
+    "de": "Lange blaugrüne Blätter mit hellen Kanten."
+  },
+  {
+    "source": "Yellow Savanna Flowers",
+    "en": "Yellow Savanna Flowers",
+    "de": "Gelbe Savannenblumen"
+  },
+  {
+    "source": "Little golden daisies in the dry grass.",
+    "en": "Little golden daisies in the dry grass.",
+    "de": "Kleine goldgelbe Korbblüten im trockenen Gras."
+  },
+  {
+    "source": "Red Savanna Flowers",
+    "en": "Red Savanna Flowers",
+    "de": "Rote Savannenblumen"
+  },
+  {
+    "source": "Scarlet flowers above the grass.",
+    "en": "Scarlet flowers above the grass.",
+    "de": "Scharlachrote Blüten über dem Gras."
+  },
+  {
+    "source": "Savanna Succulent",
+    "en": "Savanna Succulent",
+    "de": "Savannensukkulente"
+  },
+  {
+    "source": "Compact clusters of fleshy green pads.",
+    "en": "Compact clusters of fleshy green pads.",
+    "de": "Dicke grüne Blätter in kleinen Gruppen."
+  },
+  {
+    "source": "Small Savanna Cactus",
+    "en": "Small Savanna Cactus",
+    "de": "Kleiner Savannenkaktus"
+  },
+  {
+    "source": "A squat ribbed cactus.",
+    "en": "A squat ribbed cactus.",
+    "de": "Ein niedriger gerippter Kaktus."
+  },
+  {
+    "source": "Flowering Savanna Cactus",
+    "en": "Flowering Savanna Cactus",
+    "de": "Blühender Savannenkaktus"
+  },
+  {
+    "source": "A tall cactus crowned with pink flowers.",
+    "en": "A tall cactus crowned with pink flowers.",
+    "de": "Ein hoher Kaktus mit einer Krone rosa Blüten."
+  },
+  {
+    "source": "Small Savanna Boulder",
+    "en": "Small Savanna Boulder",
+    "de": "Kleiner Savannenfelsbrocken"
+  },
+  {
+    "source": "A low group of sun-warmed stones.",
+    "en": "A low group of sun-warmed stones.",
+    "de": "Eine kleine Gruppe sonnenwarmer Steine."
+  },
+  {
+    "source": "Large Savanna Boulder",
+    "en": "Large Savanna Boulder",
+    "de": "Großer Savannenfelsbrocken"
+  },
+  {
+    "source": "A broad grey boulder split down one side.",
+    "en": "A broad grey boulder split down one side.",
+    "de": "Ein breiter grauer Felsbrocken mit einer Spalte."
+  },
+  {
+    "source": "Savanna Rock Formation",
+    "en": "Savanna Rock Formation",
+    "de": "Savannenfelsformation"
+  },
+  {
+    "source": "Weathered blocks stacked on a low shelf.",
+    "en": "Weathered blocks stacked on a low shelf.",
+    "de": "Verwitterte Steinquader auf einem Felssims."
+  },
+  {
+    "source": "Savanna Rib Bones",
+    "en": "Savanna Rib Bones",
+    "de": "Rippen aus der Savanne"
+  },
+  {
+    "source": "Bleached ribs left in the sun.",
+    "en": "Bleached ribs left in the sun.",
+    "de": "In der Sonne gebleichte Rippen."
+  },
+  {
+    "source": "Small Termite Mound",
+    "en": "Small Termite Mound",
+    "de": "Kleiner Termitenhügel"
+  },
+  {
+    "source": "Low russet spires with tiny entrances.",
+    "en": "Low russet spires with tiny entrances.",
+    "de": "Niedrige rotbraune Türmchen mit kleinen Eingängen."
+  },
+  {
+    "source": "Tall Termite Mound",
+    "en": "Tall Termite Mound",
+    "de": "Hoher Termitenhügel"
+  },
+  {
+    "source": "A tall fluted tower of baked earth.",
+    "en": "A tall fluted tower of baked earth.",
+    "de": "Ein hoher gerippter Turm aus harter Erde."
+  },
+  {
+    "source": "Dry Acacia Snag",
+    "en": "Dry Acacia Snag",
+    "de": "Trockener Akazienstamm"
+  },
+  {
+    "source": "A sun-bleached trunk with broken branches.",
+    "en": "A sun-bleached trunk with broken branches.",
+    "de": "Ein ausgeblichener Stamm mit abgebrochenen Ästen."
+  },
+  {
+    "source": "Weathered Acacia Stump",
+    "en": "Weathered Acacia Stump",
+    "de": "Verwitterter Akazienstumpf"
+  },
+  {
+    "source": "Old roots around a split stump.",
+    "en": "Old roots around a split stump.",
+    "de": "Alte Wurzeln an einem gespaltenen Stumpf."
+  },
+  {
+    "source": "Savanna Stone Arch",
+    "en": "Savanna Stone Arch",
+    "de": "Savannensteinbogen"
+  },
+  {
+    "source": "Sandstone stones span an open arch.",
+    "en": "Sandstone stones span an open arch.",
+    "de": "Sandsteine bilden einen offenen Bogen."
+  },
+  {
+    "source": "Savanna Plateau Ledge",
+    "en": "Savanna Plateau Ledge",
+    "de": "Savannenfelsplateau"
+  },
+  {
+    "source": "An eroded ledge capped with grass.",
+    "en": "An eroded ledge capped with grass.",
+    "de": "Ein ausgewaschener Felssims mit Grasnarbe."
+  },
+  {
+    "source": "Horned Savanna Skull",
+    "en": "Horned Savanna Skull",
+    "de": "Gehörnter Savannenschädel"
+  },
+  {
+    "source": "A sun-bleached skull with wide horns.",
+    "en": "A sun-bleached skull with wide horns.",
+    "de": "Ein gebleichter Schädel mit ausladenden Hörnern."
+  }
+]

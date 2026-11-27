@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 758,
+  "name": "Glacial Erratic",
+  "description": "Glacial ice carried this fractured boulder to the ledge.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.65,
+  "resistance": 1.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/glacier_boulder.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.22,
+        0,
+        0.23
+      ],
+      "maximum": [
+        0.78,
+        0.6,
+        0.76
+      ]
+    }
+  ]
+}

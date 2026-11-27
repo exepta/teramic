@@ -1000,6 +1000,26 @@
     "en": "Loading"
   },
   {
+    "source": "Loading chunks ...",
+    "de": "Chunks werden geladen …",
+    "en": "Loading chunks …"
+  },
+  {
+    "source": "Preparing terrain ...",
+    "de": "Gelände wird vorbereitet …",
+    "en": "Preparing terrain …"
+  },
+  {
+    "source": "Preparing water surfaces ...",
+    "de": "Wasserflächen werden vorbereitet …",
+    "en": "Preparing water surfaces …"
+  },
+  {
+    "source": "Preparing world objects ...",
+    "de": "Weltobjekte werden vorbereitet …",
+    "en": "Preparing world objects …"
+  },
+  {
     "source": "Laderaum öffnen",
     "de": "Laderaum öffnen",
     "en": "Open cargo hold"

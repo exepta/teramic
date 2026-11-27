@@ -404,7 +404,7 @@ fn cache_keeps_active_tiles_and_uses_a_private_tile_when_every_entry_is_busy() {
     let private = sampler.tile(private_key);
     let expected = sampler.node((private_key[0] * CELLS - 1) as f64 * SPACING, -SPACING);
     assert_eq!(
-        sampler.node_at(&private, 0).values().map(f64::to_bits),
+        sampler.node_at(&private, 0).map(f64::to_bits),
         expected.values().map(f64::to_bits)
     );
     {

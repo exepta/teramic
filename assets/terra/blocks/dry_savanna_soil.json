@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 634,
+  "name": "Dry Savanna Soil",
+  "description": "Dry earth broken into little plates.",
+  "creative_category": "terrain",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/savanna/dry_savanna_soil_side.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.91,
+      "reflectance": 0.09,
+      "normal_texture": "textures/savanna/dry_savanna_soil_side_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

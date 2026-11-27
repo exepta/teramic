@@ -33,6 +33,13 @@ impl ClientChat {
         self.revision = self.revision.saturating_add(1);
     }
 
+    pub fn dismiss_help(&mut self) {
+        if self.help_page.take().is_some() {
+            self.rules = false;
+            self.revision = self.revision.saturating_add(1);
+        }
+    }
+
     pub fn push(&mut self, entry: ChatEntry) {
         if self.entries.len() >= CHAT_HISTORY_LIMIT {
             self.entries.pop_front();

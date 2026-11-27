@@ -47,6 +47,7 @@ mod tests {
         use crate::{ItemKind, ToolKind};
         assert_eq!(ToolKind::TarBucket as u8, 41);
         assert_eq!(ToolKind::BileBucket as u8, 42);
+        assert_eq!(ToolKind::LavaBucket as u8, 43);
         let item = ItemKind::Tool(ToolKind::BileBucket);
         assert_eq!(item.max_stack(), 1);
         assert_eq!(

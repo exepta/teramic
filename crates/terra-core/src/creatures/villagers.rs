@@ -13,9 +13,12 @@ pub const NOMAD_B: u8 = 20;
 pub const NOMAD_C: u8 = 21;
 pub const NOMAD_D: u8 = 22;
 pub const CRAFTSMAN: u8 = 23;
-pub const ROLE_COUNT: u8 = 24;
+pub const SWAMP_WITCH: u8 = 24;
+pub const SWAMP_WARLOCK: u8 = 25;
+pub const SWAMP_HERMIT: u8 = 26;
+pub const ROLE_COUNT: u8 = 27;
 /// Explicit membership avoids accidentally classifying appended civilians as soldiers.
-pub const CIVILIAN_ROLES: [u8; 21] = [
+pub const CIVILIAN_ROLES: [u8; 24] = [
     0,
     1,
     2,
@@ -37,6 +40,9 @@ pub const CIVILIAN_ROLES: [u8; 21] = [
     NOMAD_C,
     NOMAD_D,
     CRAFTSMAN,
+    SWAMP_WITCH,
+    SWAMP_WARLOCK,
+    SWAMP_HERMIT,
 ];
 
 pub const fn is_civilian(role: u8) -> bool {
@@ -61,6 +67,18 @@ pub fn id(home: [i64; 2], slot: u16) -> Option<u64> {
             | (u64::from(slot / 128) << 39)
             | u64::from(slot % 128),
     )
+}
+
+/// Bit 50 is outside both settlement coordinates and all 4096 ordinary bed slots.
+pub fn swamp_id(tile: [i64; 2], role: u8) -> Option<u64> {
+    if !(SWAMP_WITCH..=SWAMP_HERMIT).contains(&role) {
+        return None;
+    }
+    Some(id(tile, u16::from(role - SWAMP_WITCH))? | (1 << 50))
+}
+
+pub fn is_swamp_resident(value: u64, tile: [i64; 2]) -> bool {
+    (SWAMP_WITCH..=SWAMP_HERMIT).any(|role| swamp_id(tile, role) == Some(value))
 }
 
 pub fn slot(value: u64, home: [i64; 2]) -> Option<u16> {
@@ -90,6 +108,9 @@ pub fn greeting(id: u64, role: u8, asleep: bool) -> String {
         "Ich schlafe gerade. Komm morgen wieder."
     } else {
         match role {
+            SWAMP_WITCH => "Die blauen Pilze leuchten, wenn der Nebel zwischen die Wurzeln zieht.",
+            SWAMP_WARLOCK => "Bei niedrigem Wasser kannst du die alten Runen unter dem Moos lesen.",
+            SWAMP_HERMIT => "Tritt auf die hellen Bohlen. Die dunklen sind schon morsch.",
             CRAFTSMAN => "Mit Baumaterial und einem Bauauftrag errichte ich neue Haeuser.",
             ENGINEER => "Ich kuemmere mich um Gleise und Lokomotiven.",
             MINER => "Unter dem Fels warten Erz und Kohle.",

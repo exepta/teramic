@@ -7,6 +7,7 @@ use noise::NoiseFn;
 use terra_voxel::MaterialId;
 
 mod modern;
+mod shelves;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OceanArea {
@@ -42,7 +43,7 @@ pub struct OceanHabitat {
     /// Connected clay deposit thickness; zero retains the underlying substrate.
     pub clay_depth: f32,
     substrate: Option<MaterialId>,
-    /// Solid sea ice extends downward from sea level + 1; zero means open water.
+    /// Local inland ice extends downward from the water surface voxel. Oceans stay open.
     pub ice_depth: u8,
 }
 

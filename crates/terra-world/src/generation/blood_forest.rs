@@ -50,6 +50,10 @@ impl TerraGenerator {
         let ground_patch = self.hills.get([x * 0.035 + 17.0, z * 0.035 - 9.0]);
         Some(if exposure > 0.6 {
             MaterialId::BloodStone
+        } else if self.config().ecology_revision >= 12 && ground_patch < -0.46 {
+            MaterialId::CoagulatedMud
+        } else if self.config().ecology_revision >= 12 && ground_patch.abs() < 0.14 {
+            MaterialId::BlightedRootSoil
         } else if ground_patch > 0.25 {
             MaterialId::BloodMoss
         } else if ground_patch < -0.25 {
@@ -277,6 +281,16 @@ mod tests {
             base.biome.weights.forest = 1.0 - weight;
             for (surface, dirt, stone) in [
                 (MaterialId::Grass, MaterialId::Dirt, MaterialId::Stone),
+                (
+                    MaterialId::BlightedRootSoil,
+                    MaterialId::BloodDirt,
+                    MaterialId::BloodStone,
+                ),
+                (
+                    MaterialId::CoagulatedMud,
+                    MaterialId::BloodDirt,
+                    MaterialId::BloodStone,
+                ),
                 (
                     MaterialId::BloodDirt,
                     MaterialId::BloodDirt,

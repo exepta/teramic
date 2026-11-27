@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 565,
+  "name": "Sea Urchin",
+  "description": "Violet spines protect a round sea urchin.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 0.7,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/sea_urchin.glb",
+  "collision_boxes": [],
+  "textures": {}
+}

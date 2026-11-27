@@ -12,7 +12,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from biome_surfaces import rgb, mix
+from biome_surfaces import rgb
 from biome_surfaces.foliage import BLOCKS, PROFILES, SIZE, Canvas, blend_at, disc, flower, leaf, stem
 from build_spirit_blossom import png
 
@@ -29,39 +29,21 @@ def blossom(color, style, ident, scale=2.7):
     return canvas
 
 
-def fruit(color, ident, cone=False):
+def pine_cone(color):
     canvas = Canvas(color)
     for y in range(SIZE):
         for x in range(SIZE):
             u, v = (x + .5) / SIZE, (y + .5) / SIZE
-            if cone:
-                t = (v - .11) / .78
-                if not 0 < t < 1:
-                    continue
-                half = .29 * math.sin(math.pi * t) ** .60 * (.72 + .35 * t)
-                edge = (half - abs(u - .5)) * SIZE
-                if edge < -.5:
-                    continue
-                ridge = .5 + .5 * math.cos(t * math.pi * 15 + abs(u - .5) * 33)
-                pigment = rgb([126, 80, 39], .73 + .33 * ridge + .12 * (1 - abs(u - .5) / half))
-            else:
-                # One whole asymmetric apple, with a small top cleft and a soft
-                # lit shoulder. It is rendered on its own convex mesh in game.
-                dx = (u - .5) / .34
-                dy = (v - .52) / .34
-                distance = math.sqrt(dx * dx + dy * dy)
-                cleft = .065 * math.exp(-((u - .5) / .055) ** 2) if v < .3 else 0
-                edge = (1 - distance - cleft) * SIZE * .34
-                if edge < -.5:
-                    continue
-                shade = .72 + .29 * math.sqrt(max(0, 1 - min(1, distance) ** 2)) - dx * .11
-                pigment = rgb([195, 36, 48], shade)
-                shine = math.exp(-(((u - .39) / .035) ** 2 + ((v - .36) / .055) ** 2)) * .6
-                pigment = rgb(mix(pigment, [255, 213, 169], shine))
+            t = (v - .11) / .78
+            if not 0 < t < 1:
+                continue
+            half = .29 * math.sin(math.pi * t) ** .60 * (.72 + .35 * t)
+            edge = (half - abs(u - .5)) * SIZE
+            if edge < -.5:
+                continue
+            ridge = .5 + .5 * math.cos(t * math.pi * 15 + abs(u - .5) * 33)
+            pigment = rgb([126, 80, 39], .73 + .33 * ridge + .12 * (1 - abs(u - .5) / half))
             blend_at(canvas, x, y, pigment, min(1, edge + .5))
-    if not cone:
-        stem(canvas, (.50, .23), (.53, .12), [101, 68, 33], .012)
-        leaf(canvas, (.62, .21), .24, .14, 1.0, [73, 130, 43], 'apple', ident)
     return canvas
 
 
@@ -100,11 +82,20 @@ def image(profile):
         # grey leaf with an occasional separate blossom attached to it.
         colours = ([249, 154, 189], [244, 145, 184], [255, 181, 205], [248, 165, 195]) if style == 'cherry_pink' else (
             [253, 244, 226], [248, 239, 230], [255, 248, 237], [247, 236, 224])
-        return sheet([blossom(c, style, ident + k, 2.65) for k, c in enumerate(colours)], color)
+        sprays=[]
+        for k,c in enumerate(colours):
+            canvas=Canvas(c)
+            # Keep the central blossom readable; offset paired buds and a
+            # bronze leaf along its spur make each outer silhouette different.
+            sign = 1 if k % 2 else -1
+            leaf(canvas,(.5+sign*.19,.69),.32,.16,sign*.94,[161,141,89],style,ident+k)
+            flower(canvas,(.5+sign*.26,.62),c,style,ident+49+k,.83)
+            flower(canvas,(.5+sign*.20,.74),rgb(c,.88),style,ident+87+k,.58)
+            flower(canvas,(.5,.5),c,style,(ident+k)*109,2.55)
+            sprays.append(canvas)
+        return sheet(sprays, color)
     first, second = blade(color, style, ident, 1.07), blade(color, style, ident + 1, .88)
-    if style == 'apple':
-        accent, extra = fruit(color, ident), blossom([250, 220, 219], style, ident, 2.5)
-    elif petals or style == 'birch':
+    if petals or style == 'birch':
         petals = petals or [249, 239, 197]
         accent = blossom(petals, style, ident)
         extra = blossom(rgb(petals, .95), style, ident + 1, 2.3)
@@ -128,7 +119,7 @@ def needles():
                      'spruce', variant * 79 + tier + 377)
         leaf(canvas, (.5, .145), .17, .065, 0, rgb(color, 1.22), 'spruce', 379)
         tiles.append(canvas)
-    return sheet([*tiles, fruit(color, 383, True), rosette(color, 'spruce', 389)], color)
+    return sheet([*tiles, pine_cone(color), rosette(color, 'spruce', 389)], color)
 
 
 def bind(profiles=PROFILES):

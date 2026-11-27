@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": 644,
+  "name": "Acacia Leaves",
+  "description": "Fine paired leaflets from a spreading crown.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/foliage/acacia_side.png",
+    "top": "textures/foliage/acacia_top.png",
+    "spray": "textures/foliage/acacia_cluster.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.91,
+      "reflectance": 0.09
+    },
+    "top": {
+      "roughness": 0.91,
+      "reflectance": 0.09
+    },
+    "spray": {
+      "roughness": 0.91,
+      "reflectance": 0.09
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "top",
+    "side",
+    "side"
+  ],
+  "foliage_cluster": {
+    "material": "spray"
+  }
+}

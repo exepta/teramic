@@ -36,8 +36,14 @@ use terra_voxel::global_to_section;
 
 #[test]
 fn reported_desert_gallery_has_one_connected_daylight_opening_and_roofed_side_halls() {
+    assert_desert_gallery(13);
+    assert_desert_gallery(14);
+}
+
+fn assert_desert_gallery(ecology_revision: u8) {
     let terrain = TerraGenerator::new(WorldConfig {
         seed: terra_core::WorldSeed(2286876405460410298),
+        ecology_revision,
         cave_structure_revision: 11,
         ..Default::default()
     })
@@ -88,6 +94,25 @@ fn reported_desert_gallery_has_one_connected_daylight_opening_and_roofed_side_ha
             ((column.cave.floor.ceil() as i64)..(column.cave.ceiling.floor() as i64))
                 .any(|y| generator.block_at([x, y, z]).unwrap() == 0)
         );
+    }
+    if ecology_revision >= 14 {
+        // The dune field changes absolute heights. Both dry caps and wet beds
+        // must still be supported by the real generated blocks.
+        for [x, z] in [[241, -9514], [241, -9504], [295, -9468]] {
+            let px = x as f64 + 0.5;
+            let pz = z as f64 + 0.5;
+            let c = terrain.surface_column(px, pz);
+            if let Some(w) = terrain.water_column(px, pz) {
+                assert_ne!(generator.block_at([x, w.bed as i64 - 1, z]).unwrap(), 0);
+            } else if c.river_cavity.is_none() && c.cave_cavity.is_none() {
+                let y = (c.height - 0.5).floor() as i64;
+                assert_eq!(
+                    generator.block_at([x, y, z]).unwrap(),
+                    c.surface_material as u16
+                );
+            }
+        }
+        return;
     }
     // The unclipped chamber ceiling crosses the terrain surface here. It
     // previously painted a ring of stone and salt ore across the intact dune.
@@ -703,6 +728,7 @@ fn legacy_highland_basins_preserve_their_geometry_and_seed_real_block_overflows(
     ])
     .0;
     let mut wakes = Vec::new();
+    let mut flowing_faces = 0;
     for dy in 0..=1 {
         let generated = generator
             .build(
@@ -720,15 +746,34 @@ fn legacy_highland_basins_preserve_their_geometry_and_seed_real_block_overflows(
                     .iter()
                     .all(|&i| (i as usize) < water.positions.len())
             );
-            assert!(
-                water.surface_effects.iter().all(|effect| effect[3] == 0.0),
-                "reservoirs cannot invent waterfall foam before actual gravity flow exists"
-            );
+            flowing_faces += water
+                .surface_effects
+                .iter()
+                .filter(|effect| effect[3] != 0.)
+                .count();
         }
     }
     assert!(
-        !wakes.is_empty(),
-        "legacy saved basins must wake the existing real liquid scheduler without regenerating their geometry"
+        wakes.is_empty(),
+        "legacy basin flow must also be present without a simulation tick"
+    );
+    assert!(
+        flowing_faces > 0,
+        "the first legacy basin mesh includes its supplied cascade"
+    );
+    let px = pair.0.floor() as i64 - 1;
+    let pz = pair.1.floor() as i64;
+    let plan = generator
+        .prepare_column([px.div_euclid(16), pz.div_euclid(16)], false)
+        .unwrap();
+    let channel = plan.surface_at(px, pz).unwrap();
+    let head = pair.2.level.ceil() as i64 - 1;
+    assert!(
+        channel
+            .falls
+            .into_iter()
+            .flatten()
+            .any(|s| s.contains(head) && i64::from(s.bottom) <= head - 4)
     );
 }
 
@@ -1174,4 +1219,41 @@ fn living_galleries_generate_banked_water_native_palettes_and_rooted_ornaments()
             "{kind:?} bridges={bridges} wet={pools} dry={empty}"
         );
     }
+}
+
+#[test]
+fn cave_water_never_projects_above_the_local_ground_when_a_backwater_lowers_the_roof() {
+    let terrain = TerraGenerator::new(WorldConfig {
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
+        ..Default::default()
+    })
+    .unwrap();
+    let (x, z) = (70.5, -11460.5);
+    let column = terrain.surface_column(x, z);
+    let room = terrain.cave_room_at(x, z);
+    let resolved = terrain.cave_structure_at(x, z);
+    let planned = room.water.expect("regional underground reservoir");
+    assert!(planned.level > column.height + 20.);
+    assert!(column.cave.water.is_none());
+    assert!(resolved.water.is_none());
+    // Even where the hydrology result changes, streaming and tree placement
+    // must see exactly the same chamber and opening.
+    assert_eq!(room.active(), resolved.active());
+    assert_eq!(room.open_to_sky(), resolved.open_to_sky());
+    assert_eq!(room.gallery_axis(), resolved.gallery_axis());
+    assert_eq!(room.center, resolved.center);
+    assert_eq!(room.radius, resolved.radius);
+    assert_eq!(
+        [room.floor, room.ceiling],
+        [resolved.floor, resolved.ceiling]
+    );
+    #[cfg(feature = "bevy")]
+    {
+        let [sx, sz] = [x, z].map(|v| (v.floor() as i64).div_euclid(16));
+        assert_eq!(
+            room.gallery_shell_span(sx, sz),
+            resolved.gallery_shell_span(sx, sz)
+        );
+    }
+    assert!(terrain.water_columns(x, z).at(41).is_none());
 }

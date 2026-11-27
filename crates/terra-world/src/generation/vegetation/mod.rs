@@ -1,13 +1,17 @@
 mod appearance;
 mod aquatic;
 mod birch;
+mod bloodwood;
 mod forms;
+pub use appearance::{PalmSpan, TreeAppearance, TreeAppearanceSnapshot};
 pub(in crate::generation) use appearance::{PlantedAppearanceSource, TreeAppearanceCache};
-pub use appearance::{TreeAppearance, TreeAppearanceSnapshot};
 mod geometry;
 mod ground;
 mod grove;
 mod ornaments;
+mod sakura;
+mod savanna;
+mod willow;
 pub use ground::GroundCover;
 pub(crate) use ground::understory_cover;
 mod placement;
@@ -15,11 +19,15 @@ mod placement;
 mod planted;
 #[cfg(feature = "bevy")]
 pub use planted::{planted_shape, planted_shape_with_ecology};
+mod coconuts;
 mod species;
+mod spirit_elder;
 #[cfg(test)]
 mod tests;
 mod tree;
+pub(super) use coconuts::palm_coconuts;
 mod trunk_fungi;
+mod woodland;
 pub(crate) use trunk_fungi::attached_mushroom;
 
 pub(crate) use placement::{trees_in_column, trees_in_region};

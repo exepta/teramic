@@ -494,11 +494,322 @@ pub enum MaterialId {
     FrostCluster = 485,
     GlacialCrystalCluster = 486,
     CaveWildflowers = 487,
+    MushroomGill = 488,
+    GoldenSporePods = 489,
+    PondBlossoms = 490,
+    MossyNurseLog = 491,
+    BlightedRootSoil = 492,
+    CoagulatedMud = 493,
+    BloodstainedBricks = 494,
+    CarvedBloodStone = 495,
+    TornBloodBanner = 496,
+    StandingBloodLantern = 497,
+    BloodBrazier = 498,
+    WeatheredRibcage = 499,
+    BoneStake = 500,
+    BloodCrystalGrowth = 501,
+    HangingBloodLantern = 502,
+    FallenBloodBranches = 503,
+    BrownMushroomCap = 504,
+    MyceliumTurf = 505,
+    SporeSoil = 506,
+    GlowMushroomCap = 507,
+    WoodlandToadstools = 508,
+    AmberShelfStump = 509,
+    ExposedMycelialRoots = 510,
+    MushroomMossTuft = 511,
+    ParkCedarShingles = 512,
+    ParkTimber = 513,
+    MeadowSunflowers = 514,
+    RoseFoxgloves = 515,
+    BlueSlateShingles = 516,
+    BoundHayBale = 517,
+    MeadowLimestone = 518,
+    WoodlandLitter = 519,
+    WoodlandTrail = 520,
+    ForestBramble = 521,
+    WindfallTwigs = 522,
+    CushionMoss = 523,
+    WoodlandStones = 524,
+    TawnyMilkcaps = 525,
+    ButtressStump = 526,
+    DuneSand = 527,
+    RedDuneSand = 528,
+    BandedSandstone = 529,
+    CarvedSunstone = 530,
+    OasisMosaic = 531,
+    DesertAgave = 532,
+    FloweringYucca = 533,
+    PricklyPear = 534,
+    PaintedAmphora = 535,
+    SunBanner = 536,
+    PalmFrondEast = 537,
+    PalmFrondNorthEast = 538,
+    PalmFrondNorth = 539,
+    PalmFrondNorthWest = 540,
+    WetSand = 541,
+    MarineLimestone = 542,
+    ReefStone = 543,
+    SeaBasalt = 544,
+    BrainCoral = 545,
+    TableCoral = 546,
+    StaghornCoral = 547,
+    OrganPipeCoral = 548,
+    SeaFan = 549,
+    MushroomCoral = 550,
+    CoralBush = 551,
+    LuminousCoral = 552,
+    RibbonKelp = 553,
+    GiantKelp = 554,
+    RedAlgae = 555,
+    BrownAlgae = 556,
+    GreenAlgae = 557,
+    Bladderwrack = 558,
+    ClamShell = 559,
+    ReefOyster = 560,
+    SpiralShell = 561,
+    ConeShell = 562,
+    ScallopShell = 563,
+    Starfish = 564,
+    SeaUrchin = 565,
+    SandDollar = 566,
+    MarineDriftwood = 567,
+    WreckTimbers = 568,
+    ShipAnchor = 569,
+    FishingNet = 570,
+    LobsterPot = 571,
+    MarkerBuoy = 572,
+    BarnacledBarrel = 573,
+    SeaCrystal = 574,
+    TidalBoulders = 575,
+    BarnacledBoulder = 576,
+    ReefPillar = 577,
+    ReefArch = 578,
+    ReefLedge = 579,
+    BubbleVent = 580,
+    Firn = 581,
+    IcySnow = 582,
+    AlpineGranite = 583,
+    SnowCoveredSod = 584,
+    SnowySpruceLeaves = 585,
+    WinterBirchBranches = 586,
+    AlpineConifer = 587,
+    DeadWinterBush = 588,
+    FrozenShrub = 589,
+    AlpineIcicles = 590,
+    MoraineRocks = 591,
+    SnowMound = 592,
+    PineCones = 593,
+    FrostedTussock = 594,
+    MountainFlowerRemnants = 595,
+    PetalTurf = 596,
+    BlossomStone = 597,
+    MossyBlossomStone = 598,
+    SakuraBellflowers = 599,
+    SakuraFlowerTuft = 600,
+    FallenCherryPetals = 601,
+    SakuraFoxStatue = 602,
+    SakuraGardenLantern = 603,
+    SakuraSilkBanner = 604,
+    SakuraPetalShrub = 605,
+    TealSpiritLeaves = 606,
+    MoonlitSpiritLeaves = 607,
+    WisteriaTassel = 608,
+    JadeSpiritVine = 609,
+    SpiritGeode = 610,
+    WispMushrooms = 611,
+    RunePillar = 612,
+    Lava = 613,
+    Ash = 614,
+    CompactedAsh = 615,
+    ScorchedDirt = 616,
+    ColumnarBasalt = 617,
+    DarkVolcanicStone = 618,
+    VolcanicGravel = 619,
+    EmberCrystalOre = 620,
+    CharredLog = 621,
+    CharredPlanks = 622,
+    LavaCrust = 623,
+    AshBush = 624,
+    BurntGrass = 625,
+    BlackenedStump = 626,
+    CharredSapling = 627,
+    EmberCrystals = 628,
+    Fumarole = 629,
+    FossilBones = 630,
+    AshMushrooms = 631,
+    SavannaTurf = 632,
+    DrySavannaTurf = 633,
+    DrySavannaSoil = 634,
+    SavannaLoam = 635,
+    CarvedSandstone = 636,
+    RedSandstone = 637,
+    SavannaRock = 638,
+    LayeredSavannaRock = 639,
+    WeatheredSavannaStone = 640,
+    PaleBasalt = 641,
+    OchreStone = 642,
+    AcaciaLog = 643,
+    AcaciaLeaves = 644,
+    AcaciaPlanks = 645,
+    BaobabLog = 646,
+    BaobabLeaves = 647,
+    SavannaShortGrass = 648,
+    SavannaTallGrass = 649,
+    SavannaThornBush = 650,
+    AcaciaSapling = 651,
+    SavannaAloe = 652,
+    SavannaAgave = 653,
+    YellowSavannaFlower = 654,
+    RedSavannaFlower = 655,
+    SavannaSucculent = 656,
+    SmallSavannaCactus = 657,
+    FloweringSavannaCactus = 658,
+    SmallSavannaBoulder = 659,
+    LargeSavannaBoulder = 660,
+    SavannaRockPile = 661,
+    SavannaRibs = 662,
+    SmallTermiteMound = 663,
+    TallTermiteMound = 664,
+    DryAcaciaSnag = 665,
+    WeatheredAcaciaStump = 666,
+    SavannaStoneArch = 667,
+    SavannaPlateauStone = 668,
+    HornedSkull = 669,
+    SwampTurf = 670,
+    SwampMud = 671,
+    Peat = 672,
+    StonySwampMud = 673,
+    MossyPeat = 674,
+    SwampClay = 675,
+    SwampStone = 676,
+    MossySwampStone = 677,
+    SwampRuinedBricks = 678,
+    WillowLog = 679,
+    MossyWillowLog = 680,
+    WillowPlanks = 681,
+    WillowLeaves = 682,
+    HangingMoss = 683,
+    SwampReeds = 684,
+    SwampCattails = 685,
+    SwampFern = 686,
+    BogIris = 687,
+    SwampGlowcaps = 688,
+    SwampMushrooms = 689,
+    SwampSedge = 690,
+    BogLoosestrife = 691,
+    MarshFireflies = 692,
+    SwampToadstools = 693,
+    MossyStump = 694,
+    FallenWillow = 695,
+    SwampBoulder = 696,
+    WillowRoots = 697,
+    RootArch = 698,
+    WillowBoat = 699,
+    SwampLanternPost = 700,
+    SwampBanner = 701,
+    FireDragonEgg = 702,
+    DustyGround = 703,
+    CrackedStoneSoil = 704,
+    PetrifiedLog = 705,
+    PetrifiedPlanks = 706,
+    MineralEncrustedStone = 707,
+    WeatheredRuinStone = 708,
+    CarvedTempleStone = 709,
+    PetrifiedDeadRoot = 710,
+    BrokenPetrifiedStump = 711,
+    ShatteredStoneRoot = 712,
+    PetrifiedMineralDeposit = 713,
+    SmallDryShrub = 714,
+    LargeDryShrub = 715,
+    PetrifiedRubble = 716,
+    ExcavationCrate = 717,
+    ExcavationAwning = 718,
+    ExcavationStandard = 719,
+    PetrifiedSapwood = 720,
+    PetrifiedHeartwood = 721,
+    ExcavatedRib = 722,
+    ExcavatedSkull = 723,
+    FossiliferousStone = 724,
+    TurquoiseVeinedStone = 725,
+    RootBoundStone = 726,
+    TempleArchitrave = 727,
+    ScoriaBricks = 728,
+    PyricRuneStone = 729,
+    VolcanicObsidian = 730,
+    GeyserVent = 731,
+    EmberBloom = 732,
+    FallenCharredLog = 733,
+    CinderRoot = 734,
+    MineralStrata = 735,
+    ArchaeologyUrn = 736,
+    AshenBrazier = 737,
+    TemplePennant = 738,
+    CrystalStone = 739,
+    CrystalOre = 740,
+    PolishedHighlandRock = 741,
+    AuriciteOre = 742,
+    CrystalGravel = 743,
+    HighlandCliffStone = 744,
+    AmethystSpire = 745,
+    CyanSpire = 746,
+    CrystalAshlar = 747,
+    GildedRunestone = 748,
+    VioletRoofSlate = 749,
+    CrystalShardCluster = 750,
+    CrystalCrown = 751,
+    AuriciteDeposit = 752,
+    MixedCrystalVein = 753,
+    AlpineCrystalBloom = 754,
+    HighlandTussock = 755,
+    FrostedMoss = 756,
+    HighlandScree = 757,
+    GlacierBoulder = 758,
+    VaultKeystone = 759,
+    CrystalPennant = 760,
+    CrystalMineCart = 761,
+    CrystalLantern = 762,
+    VaultSigil = 763,
+    AmethystCapital = 764,
+    MineToolRack = 765,
+    CrystalObservatoryLens = 766,
+    AmethystPrismFoot = 767,
+    AmethystPrismShaft = 768,
+    AmethystPrismTip = 769,
+    MassiveAmethyst = 770,
+    MassiveAquamarine = 771,
+    AmethystLance = 772,
+    AquamarineLance = 773,
+    CoastalGranite = 774,
+    TidewornRock = 775,
+    SaltStainedStone = 776,
+    BeachShingle = 777,
+    CoarseShoreSand = 778,
+    MossyCoastalStone = 779,
+    LichenCoastalStone = 780,
+    WhitewashedPlaster = 781,
+    HarborTimber = 782,
+    LighthouseStripe = 783,
+    HarborRoofTiles = 784,
+    MooringPost = 785,
+    HarborSign = 786,
+    BeaconLens = 787,
+    SeaThrift = 788,
+    DuneGrassTuft = 789,
+    SaltCrate = 790,
+    VioletTorch = 791,
+    HighlandCrystalShards = 792,
+    AltarCrystalFoot = 793,
+    AltarCrystalHeart = 794,
+    AltarCrystalCrown = 795,
+    TempleCrystalCluster = 796,
 }
 
 impl MaterialId {
-    pub const LAST: u16 = Self::CaveWildflowers as u16;
-    pub const FOLIAGE: [u16; 10] = [7, 8, 9, 132, 133, 195, 310, 311, 312, 406];
+    pub const LAST: u16 = Self::TempleCrystalCluster as u16;
+    pub const FOLIAGE: [u16; 17] = [
+        7, 8, 9, 132, 133, 195, 310, 311, 312, 406, 585, 586, 606, 607, 644, 647, 682,
+    ];
     pub const BLOCK_COUNT: usize = Self::LAST as usize;
 
     pub const fn identifier(self) -> &'static str {
@@ -558,6 +869,315 @@ impl MaterialId {
             Self::FrostCluster => "teramic::frost_cluster",
             Self::GlacialCrystalCluster => "teramic::glacial_crystal_cluster",
             Self::CaveWildflowers => "teramic::cave_wildflowers",
+            Self::ParkCedarShingles => "teramic::park_cedar_shingles",
+            Self::ParkTimber => "teramic::park_timber",
+            Self::MeadowSunflowers => "teramic::meadow_sunflowers",
+            Self::RoseFoxgloves => "teramic::rose_foxgloves",
+            Self::BlueSlateShingles => "teramic::blue_slate_shingles",
+            Self::BoundHayBale => "teramic::bound_hay_bale",
+            Self::MeadowLimestone => "teramic::meadow_limestone",
+            Self::WoodlandLitter => "teramic::woodland_litter",
+            Self::WoodlandTrail => "teramic::woodland_trail",
+            Self::ForestBramble => "teramic::forest_bramble",
+            Self::WindfallTwigs => "teramic::windfall_twigs",
+            Self::CushionMoss => "teramic::cushion_moss",
+            Self::WoodlandStones => "teramic::woodland_stones",
+            Self::TawnyMilkcaps => "teramic::tawny_milkcaps",
+            Self::DuneSand => "teramic::dune_sand",
+            Self::RedDuneSand => "teramic::red_dune_sand",
+            Self::BandedSandstone => "teramic::banded_sandstone",
+            Self::CarvedSunstone => "teramic::carved_sunstone",
+            Self::OasisMosaic => "teramic::oasis_mosaic",
+            Self::DesertAgave => "teramic::desert_agave",
+            Self::FloweringYucca => "teramic::flowering_yucca",
+            Self::PricklyPear => "teramic::prickly_pear",
+            Self::PaintedAmphora => "teramic::painted_amphora",
+            Self::SunBanner => "teramic::sun_banner",
+            Self::Firn => "teramic::firn",
+            Self::IcySnow => "teramic::icy_snow",
+            Self::AlpineGranite => "teramic::alpine_granite",
+            Self::SnowCoveredSod => "teramic::snow_covered_sod",
+            Self::SnowySpruceLeaves => "teramic::snowy_spruce_leaves",
+            Self::WinterBirchBranches => "teramic::winter_birch_branches",
+            Self::AlpineConifer => "teramic::alpine_conifer",
+            Self::DeadWinterBush => "teramic::dead_winter_bush",
+            Self::FrozenShrub => "teramic::frozen_shrub",
+            Self::AlpineIcicles => "teramic::alpine_icicles",
+            Self::MoraineRocks => "teramic::moraine_rocks",
+            Self::SnowMound => "teramic::snow_mound",
+            Self::PineCones => "teramic::pine_cones",
+            Self::FrostedTussock => "teramic::frosted_tussock",
+            Self::MountainFlowerRemnants => "teramic::mountain_flower_remnants",
+            Self::PetalTurf => "teramic::petal_turf",
+            Self::BlossomStone => "teramic::blossom_stone",
+            Self::MossyBlossomStone => "teramic::mossy_blossom_stone",
+            Self::SakuraBellflowers => "teramic::sakura_bellflowers",
+            Self::SakuraFlowerTuft => "teramic::sakura_flower_tuft",
+            Self::FallenCherryPetals => "teramic::fallen_cherry_petals",
+            Self::SakuraFoxStatue => "teramic::sakura_fox_statue",
+            Self::SakuraGardenLantern => "teramic::sakura_garden_lantern",
+            Self::SakuraSilkBanner => "teramic::sakura_silk_banner",
+            Self::SakuraPetalShrub => "teramic::sakura_petal_shrub",
+            Self::TealSpiritLeaves => "teramic::teal_spirit_leaves",
+            Self::MoonlitSpiritLeaves => "teramic::moonlit_spirit_leaves",
+            Self::WisteriaTassel => "teramic::wisteria_tassel",
+            Self::JadeSpiritVine => "teramic::jade_spirit_vine",
+            Self::SpiritGeode => "teramic::spirit_geode",
+            Self::WispMushrooms => "teramic::wisp_mushrooms",
+            Self::RunePillar => "teramic::rune_pillar",
+            Self::Lava => "teramic::lava",
+            Self::Ash => "teramic::ash",
+            Self::CompactedAsh => "teramic::compacted_ash",
+            Self::ScorchedDirt => "teramic::scorched_dirt",
+            Self::ColumnarBasalt => "teramic::columnar_basalt",
+            Self::DarkVolcanicStone => "teramic::dark_volcanic_stone",
+            Self::VolcanicGravel => "teramic::volcanic_gravel",
+            Self::EmberCrystalOre => "teramic::ember_crystal_ore",
+            Self::CharredLog => "teramic::charred_log",
+            Self::CharredPlanks => "teramic::charred_planks",
+            Self::LavaCrust => "teramic::lava_crust",
+            Self::AshBush => "teramic::ash_bush",
+            Self::BurntGrass => "teramic::burnt_grass",
+            Self::BlackenedStump => "teramic::blackened_stump",
+            Self::CharredSapling => "teramic::charred_sapling",
+            Self::EmberCrystals => "teramic::ember_crystals",
+            Self::Fumarole => "teramic::fumarole",
+            Self::FossilBones => "teramic::fossil_bones",
+            Self::AshMushrooms => "teramic::ash_mushrooms",
+            Self::SavannaTurf => "teramic::savanna_turf",
+            Self::DrySavannaTurf => "teramic::dry_savanna_turf",
+            Self::DrySavannaSoil => "teramic::dry_savanna_soil",
+            Self::SavannaLoam => "teramic::savanna_loam",
+            Self::CarvedSandstone => "teramic::carved_sandstone",
+            Self::RedSandstone => "teramic::red_sandstone",
+            Self::SavannaRock => "teramic::savanna_rock",
+            Self::LayeredSavannaRock => "teramic::layered_savanna_rock",
+            Self::WeatheredSavannaStone => "teramic::weathered_savanna_stone",
+            Self::PaleBasalt => "teramic::pale_basalt",
+            Self::OchreStone => "teramic::ochre_stone",
+            Self::AcaciaLog => "teramic::acacia_log",
+            Self::AcaciaLeaves => "teramic::acacia_leaves",
+            Self::AcaciaPlanks => "teramic::acacia_planks",
+            Self::BaobabLog => "teramic::baobab_log",
+            Self::BaobabLeaves => "teramic::baobab_leaves",
+            Self::SavannaShortGrass => "teramic::savanna_short_grass",
+            Self::SavannaTallGrass => "teramic::savanna_tall_grass",
+            Self::SavannaThornBush => "teramic::savanna_thorn_bush",
+            Self::AcaciaSapling => "teramic::wild_acacia_sapling",
+            Self::SavannaAloe => "teramic::savanna_aloe",
+            Self::SavannaAgave => "teramic::savanna_agave",
+            Self::YellowSavannaFlower => "teramic::yellow_savanna_flower",
+            Self::RedSavannaFlower => "teramic::red_savanna_flower",
+            Self::SavannaSucculent => "teramic::savanna_succulent",
+            Self::SmallSavannaCactus => "teramic::small_savanna_cactus",
+            Self::FloweringSavannaCactus => "teramic::flowering_savanna_cactus",
+            Self::SmallSavannaBoulder => "teramic::small_savanna_boulder",
+            Self::LargeSavannaBoulder => "teramic::large_savanna_boulder",
+            Self::SavannaRockPile => "teramic::savanna_rock_pile",
+            Self::SavannaRibs => "teramic::savanna_ribs",
+            Self::SmallTermiteMound => "teramic::small_termite_mound",
+            Self::TallTermiteMound => "teramic::tall_termite_mound",
+            Self::DryAcaciaSnag => "teramic::dry_acacia_snag",
+            Self::WeatheredAcaciaStump => "teramic::weathered_acacia_stump",
+            Self::SavannaStoneArch => "teramic::savanna_stone_arch",
+            Self::SavannaPlateauStone => "teramic::savanna_plateau_stone",
+            Self::HornedSkull => "teramic::horned_skull",
+            Self::SwampTurf => "teramic::swamp_turf",
+            Self::SwampMud => "teramic::swamp_mud",
+            Self::Peat => "teramic::peat",
+            Self::StonySwampMud => "teramic::stony_swamp_mud",
+            Self::MossyPeat => "teramic::mossy_peat",
+            Self::SwampClay => "teramic::swamp_clay",
+            Self::SwampStone => "teramic::swamp_stone",
+            Self::MossySwampStone => "teramic::mossy_swamp_stone",
+            Self::SwampRuinedBricks => "teramic::swamp_ruined_bricks",
+            Self::WillowLog => "teramic::willow_log",
+            Self::MossyWillowLog => "teramic::mossy_willow_log",
+            Self::WillowPlanks => "teramic::willow_planks",
+            Self::WillowLeaves => "teramic::willow_leaves",
+            Self::HangingMoss => "teramic::hanging_moss",
+            Self::SwampReeds => "teramic::swamp_reeds",
+            Self::SwampCattails => "teramic::swamp_cattails",
+            Self::SwampFern => "teramic::swamp_fern",
+            Self::BogIris => "teramic::bog_iris",
+            Self::SwampGlowcaps => "teramic::swamp_glowcaps",
+            Self::SwampMushrooms => "teramic::swamp_mushrooms",
+            Self::SwampSedge => "teramic::swamp_sedge",
+            Self::BogLoosestrife => "teramic::bog_loosestrife",
+            Self::MarshFireflies => "teramic::marsh_fireflies",
+            Self::SwampToadstools => "teramic::swamp_toadstools",
+            Self::MossyStump => "teramic::mossy_stump",
+            Self::FallenWillow => "teramic::fallen_willow",
+            Self::SwampBoulder => "teramic::swamp_boulder",
+            Self::WillowRoots => "teramic::willow_roots",
+            Self::RootArch => "teramic::root_arch",
+            Self::WillowBoat => "teramic::willow_boat",
+            Self::SwampLanternPost => "teramic::swamp_lantern_post",
+            Self::SwampBanner => "teramic::swamp_banner",
+            Self::FireDragonEgg => "teramic::fire_dragon_egg",
+            Self::DustyGround => "teramic::dusty_ground",
+            Self::CrackedStoneSoil => "teramic::cracked_stone_soil",
+            Self::PetrifiedLog => "teramic::petrified_log",
+            Self::PetrifiedPlanks => "teramic::petrified_planks",
+            Self::MineralEncrustedStone => "teramic::mineral_encrusted_stone",
+            Self::WeatheredRuinStone => "teramic::weathered_ruin_stone",
+            Self::CarvedTempleStone => "teramic::carved_temple_stone",
+            Self::PetrifiedDeadRoot => "teramic::petrified_dead_root",
+            Self::BrokenPetrifiedStump => "teramic::broken_petrified_stump",
+            Self::ShatteredStoneRoot => "teramic::shattered_stone_root",
+            Self::PetrifiedMineralDeposit => "teramic::petrified_mineral_deposit",
+            Self::SmallDryShrub => "teramic::small_dry_shrub",
+            Self::LargeDryShrub => "teramic::large_dry_shrub",
+            Self::PetrifiedRubble => "teramic::petrified_rubble",
+            Self::ExcavationCrate => "teramic::excavation_crate",
+            Self::ExcavationAwning => "teramic::excavation_awning",
+            Self::ExcavationStandard => "teramic::excavation_standard",
+            Self::PetrifiedSapwood => "teramic::petrified_sapwood",
+            Self::PetrifiedHeartwood => "teramic::petrified_heartwood",
+            Self::ExcavatedRib => "teramic::excavated_rib",
+            Self::ExcavatedSkull => "teramic::excavated_skull",
+            Self::FossiliferousStone => "teramic::fossiliferous_stone",
+            Self::TurquoiseVeinedStone => "teramic::turquoise_veined_stone",
+            Self::RootBoundStone => "teramic::root_bound_stone",
+            Self::TempleArchitrave => "teramic::temple_architrave",
+            Self::ScoriaBricks => "teramic::scoria_bricks",
+            Self::PyricRuneStone => "teramic::pyric_rune_stone",
+            Self::VolcanicObsidian => "teramic::volcanic_obsidian",
+            Self::GeyserVent => "teramic::geyser_vent",
+            Self::EmberBloom => "teramic::ember_bloom",
+            Self::FallenCharredLog => "teramic::fallen_charred_log",
+            Self::CinderRoot => "teramic::cinder_root",
+            Self::MineralStrata => "teramic::mineral_strata",
+            Self::ArchaeologyUrn => "teramic::archaeology_urn",
+            Self::AshenBrazier => "teramic::ashen_brazier",
+            Self::TemplePennant => "teramic::temple_pennant",
+            Self::CrystalStone => "teramic::crystal_stone",
+            Self::CrystalOre => "teramic::crystal_ore",
+            Self::PolishedHighlandRock => "teramic::polished_highland_rock",
+            Self::AuriciteOre => "teramic::auricite_ore",
+            Self::CrystalGravel => "teramic::crystal_gravel",
+            Self::HighlandCliffStone => "teramic::highland_cliff_stone",
+            Self::AmethystSpire => "teramic::amethyst_spire",
+            Self::CyanSpire => "teramic::cyan_spire",
+            Self::CrystalAshlar => "teramic::crystal_ashlar",
+            Self::GildedRunestone => "teramic::gilded_runestone",
+            Self::VioletRoofSlate => "teramic::violet_roof_slate",
+            Self::CrystalShardCluster => "teramic::crystal_shard_cluster",
+            Self::CrystalCrown => "teramic::crystal_crown",
+            Self::AuriciteDeposit => "teramic::auricite_deposit",
+            Self::MixedCrystalVein => "teramic::mixed_crystal_vein",
+            Self::AlpineCrystalBloom => "teramic::alpine_crystal_bloom",
+            Self::HighlandTussock => "teramic::highland_tussock",
+            Self::FrostedMoss => "teramic::frosted_moss",
+            Self::HighlandScree => "teramic::highland_scree",
+            Self::GlacierBoulder => "teramic::glacier_boulder",
+            Self::VaultKeystone => "teramic::vault_keystone",
+            Self::CrystalPennant => "teramic::crystal_pennant",
+            Self::CrystalMineCart => "teramic::crystal_mine_cart",
+            Self::CrystalLantern => "teramic::crystal_lantern",
+            Self::VaultSigil => "teramic::vault_sigil",
+            Self::AmethystCapital => "teramic::amethyst_capital",
+            Self::MineToolRack => "teramic::mine_tool_rack",
+            Self::CrystalObservatoryLens => "teramic::crystal_observatory_lens",
+            Self::AmethystPrismFoot => "teramic::amethyst_prism_foot",
+            Self::AmethystPrismShaft => "teramic::amethyst_prism_shaft",
+            Self::AmethystPrismTip => "teramic::amethyst_prism_tip",
+            Self::MassiveAmethyst => "teramic::massive_amethyst",
+            Self::MassiveAquamarine => "teramic::massive_aquamarine",
+            Self::AmethystLance => "teramic::amethyst_lance",
+            Self::AquamarineLance => "teramic::aquamarine_lance",
+            Self::CoastalGranite => "teramic::coastal_granite",
+            Self::TidewornRock => "teramic::tideworn_rock",
+            Self::SaltStainedStone => "teramic::salt_stained_stone",
+            Self::BeachShingle => "teramic::beach_shingle",
+            Self::CoarseShoreSand => "teramic::coarse_shore_sand",
+            Self::MossyCoastalStone => "teramic::mossy_coastal_stone",
+            Self::LichenCoastalStone => "teramic::lichen_coastal_stone",
+            Self::WhitewashedPlaster => "teramic::whitewashed_plaster",
+            Self::HarborTimber => "teramic::harbor_timber",
+            Self::LighthouseStripe => "teramic::lighthouse_stripe",
+            Self::HarborRoofTiles => "teramic::harbor_roof_tiles",
+            Self::MooringPost => "teramic::mooring_post",
+            Self::HarborSign => "teramic::harbor_sign",
+            Self::BeaconLens => "teramic::beacon_lens",
+            Self::SeaThrift => "teramic::sea_thrift",
+            Self::DuneGrassTuft => "teramic::dune_grass_tuft",
+            Self::SaltCrate => "teramic::salt_crate",
+            Self::VioletTorch => "teramic::violet_torch",
+            Self::HighlandCrystalShards => "teramic::highland_crystal_shards",
+            Self::AltarCrystalFoot => "teramic::altar_crystal_foot",
+            Self::AltarCrystalHeart => "teramic::altar_crystal_heart",
+            Self::AltarCrystalCrown => "teramic::altar_crystal_crown",
+            Self::TempleCrystalCluster => "teramic::temple_crystal_cluster",
+            Self::PalmFrondEast => "teramic::palm_frond_east",
+            Self::PalmFrondNorthEast => "teramic::palm_frond_northeast",
+            Self::PalmFrondNorth => "teramic::palm_frond_north",
+            Self::PalmFrondNorthWest => "teramic::palm_frond_northwest",
+            Self::WetSand => "teramic::wet_sand",
+            Self::MarineLimestone => "teramic::marine_limestone",
+            Self::ReefStone => "teramic::reef_stone",
+            Self::SeaBasalt => "teramic::sea_basalt",
+            Self::BrainCoral => "teramic::brain_coral",
+            Self::TableCoral => "teramic::table_coral",
+            Self::StaghornCoral => "teramic::staghorn_coral",
+            Self::OrganPipeCoral => "teramic::organ_pipe_coral",
+            Self::SeaFan => "teramic::sea_fan",
+            Self::MushroomCoral => "teramic::mushroom_coral",
+            Self::CoralBush => "teramic::coral_bush",
+            Self::LuminousCoral => "teramic::luminous_coral",
+            Self::RibbonKelp => "teramic::ribbon_kelp",
+            Self::GiantKelp => "teramic::giant_kelp",
+            Self::RedAlgae => "teramic::red_algae",
+            Self::BrownAlgae => "teramic::brown_algae",
+            Self::GreenAlgae => "teramic::green_algae",
+            Self::Bladderwrack => "teramic::bladderwrack",
+            Self::ClamShell => "teramic::clam_shell",
+            Self::ReefOyster => "teramic::reef_oyster",
+            Self::SpiralShell => "teramic::spiral_shell",
+            Self::ConeShell => "teramic::cone_shell",
+            Self::ScallopShell => "teramic::scallop_shell",
+            Self::Starfish => "teramic::starfish",
+            Self::SeaUrchin => "teramic::sea_urchin",
+            Self::SandDollar => "teramic::sand_dollar",
+            Self::MarineDriftwood => "teramic::marine_driftwood",
+            Self::WreckTimbers => "teramic::wreck_timbers",
+            Self::ShipAnchor => "teramic::ship_anchor",
+            Self::FishingNet => "teramic::fishing_net",
+            Self::LobsterPot => "teramic::lobster_pot",
+            Self::MarkerBuoy => "teramic::marker_buoy",
+            Self::BarnacledBarrel => "teramic::barnacled_barrel",
+            Self::SeaCrystal => "teramic::sea_crystal",
+            Self::TidalBoulders => "teramic::tidal_boulders",
+            Self::BarnacledBoulder => "teramic::barnacled_boulder",
+            Self::ReefPillar => "teramic::reef_pillar",
+            Self::ReefArch => "teramic::reef_arch",
+            Self::ReefLedge => "teramic::reef_ledge",
+            Self::BubbleVent => "teramic::bubble_vent",
+            Self::ButtressStump => "teramic::buttress_stump",
+            Self::MushroomGill => "teramic::mushroom_gill",
+            Self::GoldenSporePods => "teramic::golden_spore_pods",
+            Self::PondBlossoms => "teramic::pond_blossoms",
+            Self::MossyNurseLog => "teramic::mossy_nurse_log",
+            Self::BrownMushroomCap => "teramic::brown_mushroom_cap",
+            Self::MyceliumTurf => "teramic::mycelium_turf",
+            Self::SporeSoil => "teramic::spore_soil",
+            Self::GlowMushroomCap => "teramic::glow_mushroom_cap",
+            Self::WoodlandToadstools => "teramic::woodland_toadstools",
+            Self::AmberShelfStump => "teramic::amber_shelf_stump",
+            Self::ExposedMycelialRoots => "teramic::exposed_mycelial_roots",
+            Self::MushroomMossTuft => "teramic::mushroom_moss_tuft",
+            Self::BlightedRootSoil => "teramic::blighted_root_soil",
+            Self::CoagulatedMud => "teramic::coagulated_mud",
+            Self::BloodstainedBricks => "teramic::bloodstained_bricks",
+            Self::CarvedBloodStone => "teramic::carved_blood_stone",
+            Self::TornBloodBanner => "teramic::torn_blood_banner",
+            Self::StandingBloodLantern => "teramic::standing_blood_lantern",
+            Self::BloodBrazier => "teramic::blood_brazier",
+            Self::WeatheredRibcage => "teramic::weathered_ribcage",
+            Self::BoneStake => "teramic::bone_stake",
+            Self::BloodCrystalGrowth => "teramic::blood_crystal_growth",
+            Self::HangingBloodLantern => "teramic::hanging_blood_lantern",
+            Self::FallenBloodBranches => "teramic::fallen_blood_branches",
             Self::StrawBlock => "teramic::straw_block",
             Self::NestStraw => "teramic::nest_straw",
             Self::FogBlock => "teramic::fog_block",
@@ -1486,6 +2106,315 @@ impl MaterialId {
             485 => Self::FrostCluster,
             486 => Self::GlacialCrystalCluster,
             487 => Self::CaveWildflowers,
+            488 => Self::MushroomGill,
+            489 => Self::GoldenSporePods,
+            490 => Self::PondBlossoms,
+            491 => Self::MossyNurseLog,
+            492 => Self::BlightedRootSoil,
+            493 => Self::CoagulatedMud,
+            494 => Self::BloodstainedBricks,
+            495 => Self::CarvedBloodStone,
+            496 => Self::TornBloodBanner,
+            497 => Self::StandingBloodLantern,
+            498 => Self::BloodBrazier,
+            499 => Self::WeatheredRibcage,
+            500 => Self::BoneStake,
+            501 => Self::BloodCrystalGrowth,
+            502 => Self::HangingBloodLantern,
+            503 => Self::FallenBloodBranches,
+            504 => Self::BrownMushroomCap,
+            505 => Self::MyceliumTurf,
+            506 => Self::SporeSoil,
+            507 => Self::GlowMushroomCap,
+            508 => Self::WoodlandToadstools,
+            509 => Self::AmberShelfStump,
+            510 => Self::ExposedMycelialRoots,
+            511 => Self::MushroomMossTuft,
+            512 => Self::ParkCedarShingles,
+            513 => Self::ParkTimber,
+            514 => Self::MeadowSunflowers,
+            515 => Self::RoseFoxgloves,
+            516 => Self::BlueSlateShingles,
+            517 => Self::BoundHayBale,
+            518 => Self::MeadowLimestone,
+            519 => Self::WoodlandLitter,
+            520 => Self::WoodlandTrail,
+            521 => Self::ForestBramble,
+            522 => Self::WindfallTwigs,
+            523 => Self::CushionMoss,
+            524 => Self::WoodlandStones,
+            525 => Self::TawnyMilkcaps,
+            526 => Self::ButtressStump,
+            527 => Self::DuneSand,
+            528 => Self::RedDuneSand,
+            529 => Self::BandedSandstone,
+            530 => Self::CarvedSunstone,
+            531 => Self::OasisMosaic,
+            532 => Self::DesertAgave,
+            533 => Self::FloweringYucca,
+            534 => Self::PricklyPear,
+            535 => Self::PaintedAmphora,
+            536 => Self::SunBanner,
+            581 => Self::Firn,
+            582 => Self::IcySnow,
+            583 => Self::AlpineGranite,
+            584 => Self::SnowCoveredSod,
+            585 => Self::SnowySpruceLeaves,
+            586 => Self::WinterBirchBranches,
+            587 => Self::AlpineConifer,
+            588 => Self::DeadWinterBush,
+            589 => Self::FrozenShrub,
+            590 => Self::AlpineIcicles,
+            591 => Self::MoraineRocks,
+            592 => Self::SnowMound,
+            593 => Self::PineCones,
+            594 => Self::FrostedTussock,
+            595 => Self::MountainFlowerRemnants,
+            596 => Self::PetalTurf,
+            597 => Self::BlossomStone,
+            598 => Self::MossyBlossomStone,
+            599 => Self::SakuraBellflowers,
+            600 => Self::SakuraFlowerTuft,
+            601 => Self::FallenCherryPetals,
+            602 => Self::SakuraFoxStatue,
+            603 => Self::SakuraGardenLantern,
+            604 => Self::SakuraSilkBanner,
+            605 => Self::SakuraPetalShrub,
+            606 => Self::TealSpiritLeaves,
+            607 => Self::MoonlitSpiritLeaves,
+            608 => Self::WisteriaTassel,
+            609 => Self::JadeSpiritVine,
+            610 => Self::SpiritGeode,
+            611 => Self::WispMushrooms,
+            612 => Self::RunePillar,
+            613 => Self::Lava,
+            614 => Self::Ash,
+            615 => Self::CompactedAsh,
+            616 => Self::ScorchedDirt,
+            617 => Self::ColumnarBasalt,
+            618 => Self::DarkVolcanicStone,
+            619 => Self::VolcanicGravel,
+            620 => Self::EmberCrystalOre,
+            621 => Self::CharredLog,
+            622 => Self::CharredPlanks,
+            623 => Self::LavaCrust,
+            624 => Self::AshBush,
+            625 => Self::BurntGrass,
+            626 => Self::BlackenedStump,
+            627 => Self::CharredSapling,
+            628 => Self::EmberCrystals,
+            629 => Self::Fumarole,
+            630 => Self::FossilBones,
+            631 => Self::AshMushrooms,
+            632 => Self::SavannaTurf,
+            633 => Self::DrySavannaTurf,
+            634 => Self::DrySavannaSoil,
+            635 => Self::SavannaLoam,
+            636 => Self::CarvedSandstone,
+            637 => Self::RedSandstone,
+            638 => Self::SavannaRock,
+            639 => Self::LayeredSavannaRock,
+            640 => Self::WeatheredSavannaStone,
+            641 => Self::PaleBasalt,
+            642 => Self::OchreStone,
+            643 => Self::AcaciaLog,
+            644 => Self::AcaciaLeaves,
+            645 => Self::AcaciaPlanks,
+            646 => Self::BaobabLog,
+            647 => Self::BaobabLeaves,
+            648 => Self::SavannaShortGrass,
+            649 => Self::SavannaTallGrass,
+            650 => Self::SavannaThornBush,
+            651 => Self::AcaciaSapling,
+            652 => Self::SavannaAloe,
+            653 => Self::SavannaAgave,
+            654 => Self::YellowSavannaFlower,
+            655 => Self::RedSavannaFlower,
+            656 => Self::SavannaSucculent,
+            657 => Self::SmallSavannaCactus,
+            658 => Self::FloweringSavannaCactus,
+            659 => Self::SmallSavannaBoulder,
+            660 => Self::LargeSavannaBoulder,
+            661 => Self::SavannaRockPile,
+            662 => Self::SavannaRibs,
+            663 => Self::SmallTermiteMound,
+            664 => Self::TallTermiteMound,
+            665 => Self::DryAcaciaSnag,
+            666 => Self::WeatheredAcaciaStump,
+            667 => Self::SavannaStoneArch,
+            668 => Self::SavannaPlateauStone,
+            669 => Self::HornedSkull,
+            670 => Self::SwampTurf,
+            671 => Self::SwampMud,
+            672 => Self::Peat,
+            673 => Self::StonySwampMud,
+            674 => Self::MossyPeat,
+            675 => Self::SwampClay,
+            676 => Self::SwampStone,
+            677 => Self::MossySwampStone,
+            678 => Self::SwampRuinedBricks,
+            679 => Self::WillowLog,
+            680 => Self::MossyWillowLog,
+            681 => Self::WillowPlanks,
+            682 => Self::WillowLeaves,
+            683 => Self::HangingMoss,
+            684 => Self::SwampReeds,
+            685 => Self::SwampCattails,
+            686 => Self::SwampFern,
+            687 => Self::BogIris,
+            688 => Self::SwampGlowcaps,
+            689 => Self::SwampMushrooms,
+            690 => Self::SwampSedge,
+            691 => Self::BogLoosestrife,
+            692 => Self::MarshFireflies,
+            693 => Self::SwampToadstools,
+            694 => Self::MossyStump,
+            695 => Self::FallenWillow,
+            696 => Self::SwampBoulder,
+            697 => Self::WillowRoots,
+            698 => Self::RootArch,
+            699 => Self::WillowBoat,
+            700 => Self::SwampLanternPost,
+            701 => Self::SwampBanner,
+            702 => Self::FireDragonEgg,
+            703 => Self::DustyGround,
+            704 => Self::CrackedStoneSoil,
+            705 => Self::PetrifiedLog,
+            706 => Self::PetrifiedPlanks,
+            707 => Self::MineralEncrustedStone,
+            708 => Self::WeatheredRuinStone,
+            709 => Self::CarvedTempleStone,
+            710 => Self::PetrifiedDeadRoot,
+            711 => Self::BrokenPetrifiedStump,
+            712 => Self::ShatteredStoneRoot,
+            713 => Self::PetrifiedMineralDeposit,
+            714 => Self::SmallDryShrub,
+            715 => Self::LargeDryShrub,
+            716 => Self::PetrifiedRubble,
+            717 => Self::ExcavationCrate,
+            718 => Self::ExcavationAwning,
+            719 => Self::ExcavationStandard,
+            720 => Self::PetrifiedSapwood,
+            721 => Self::PetrifiedHeartwood,
+            722 => Self::ExcavatedRib,
+            723 => Self::ExcavatedSkull,
+            724 => Self::FossiliferousStone,
+            725 => Self::TurquoiseVeinedStone,
+            726 => Self::RootBoundStone,
+            727 => Self::TempleArchitrave,
+            728 => Self::ScoriaBricks,
+            729 => Self::PyricRuneStone,
+            730 => Self::VolcanicObsidian,
+            731 => Self::GeyserVent,
+            732 => Self::EmberBloom,
+            733 => Self::FallenCharredLog,
+            734 => Self::CinderRoot,
+            735 => Self::MineralStrata,
+            736 => Self::ArchaeologyUrn,
+            737 => Self::AshenBrazier,
+            738 => Self::TemplePennant,
+            739 => Self::CrystalStone,
+            740 => Self::CrystalOre,
+            741 => Self::PolishedHighlandRock,
+            742 => Self::AuriciteOre,
+            743 => Self::CrystalGravel,
+            744 => Self::HighlandCliffStone,
+            745 => Self::AmethystSpire,
+            746 => Self::CyanSpire,
+            747 => Self::CrystalAshlar,
+            748 => Self::GildedRunestone,
+            749 => Self::VioletRoofSlate,
+            750 => Self::CrystalShardCluster,
+            751 => Self::CrystalCrown,
+            752 => Self::AuriciteDeposit,
+            753 => Self::MixedCrystalVein,
+            754 => Self::AlpineCrystalBloom,
+            755 => Self::HighlandTussock,
+            756 => Self::FrostedMoss,
+            757 => Self::HighlandScree,
+            758 => Self::GlacierBoulder,
+            759 => Self::VaultKeystone,
+            760 => Self::CrystalPennant,
+            761 => Self::CrystalMineCart,
+            762 => Self::CrystalLantern,
+            763 => Self::VaultSigil,
+            764 => Self::AmethystCapital,
+            765 => Self::MineToolRack,
+            766 => Self::CrystalObservatoryLens,
+            767 => Self::AmethystPrismFoot,
+            768 => Self::AmethystPrismShaft,
+            769 => Self::AmethystPrismTip,
+            770 => Self::MassiveAmethyst,
+            771 => Self::MassiveAquamarine,
+            772 => Self::AmethystLance,
+            773 => Self::AquamarineLance,
+            774 => Self::CoastalGranite,
+            775 => Self::TidewornRock,
+            776 => Self::SaltStainedStone,
+            777 => Self::BeachShingle,
+            778 => Self::CoarseShoreSand,
+            779 => Self::MossyCoastalStone,
+            780 => Self::LichenCoastalStone,
+            781 => Self::WhitewashedPlaster,
+            782 => Self::HarborTimber,
+            783 => Self::LighthouseStripe,
+            784 => Self::HarborRoofTiles,
+            785 => Self::MooringPost,
+            786 => Self::HarborSign,
+            787 => Self::BeaconLens,
+            788 => Self::SeaThrift,
+            789 => Self::DuneGrassTuft,
+            790 => Self::SaltCrate,
+            791 => Self::VioletTorch,
+            792 => Self::HighlandCrystalShards,
+            793 => Self::AltarCrystalFoot,
+            794 => Self::AltarCrystalHeart,
+            795 => Self::AltarCrystalCrown,
+            796 => Self::TempleCrystalCluster,
+            537 => Self::PalmFrondEast,
+            538 => Self::PalmFrondNorthEast,
+            539 => Self::PalmFrondNorth,
+            540 => Self::PalmFrondNorthWest,
+            541 => Self::WetSand,
+            542 => Self::MarineLimestone,
+            543 => Self::ReefStone,
+            544 => Self::SeaBasalt,
+            545 => Self::BrainCoral,
+            546 => Self::TableCoral,
+            547 => Self::StaghornCoral,
+            548 => Self::OrganPipeCoral,
+            549 => Self::SeaFan,
+            550 => Self::MushroomCoral,
+            551 => Self::CoralBush,
+            552 => Self::LuminousCoral,
+            553 => Self::RibbonKelp,
+            554 => Self::GiantKelp,
+            555 => Self::RedAlgae,
+            556 => Self::BrownAlgae,
+            557 => Self::GreenAlgae,
+            558 => Self::Bladderwrack,
+            559 => Self::ClamShell,
+            560 => Self::ReefOyster,
+            561 => Self::SpiralShell,
+            562 => Self::ConeShell,
+            563 => Self::ScallopShell,
+            564 => Self::Starfish,
+            565 => Self::SeaUrchin,
+            566 => Self::SandDollar,
+            567 => Self::MarineDriftwood,
+            568 => Self::WreckTimbers,
+            569 => Self::ShipAnchor,
+            570 => Self::FishingNet,
+            571 => Self::LobsterPot,
+            572 => Self::MarkerBuoy,
+            573 => Self::BarnacledBarrel,
+            574 => Self::SeaCrystal,
+            575 => Self::TidalBoulders,
+            576 => Self::BarnacledBoulder,
+            577 => Self::ReefPillar,
+            578 => Self::ReefArch,
+            579 => Self::ReefLedge,
+            580 => Self::BubbleVent,
 
             193 => Self::Lantern,
             194 => Self::Chain,
@@ -1495,17 +2424,47 @@ impl MaterialId {
 
     /// Fluid anchors and torches remain selectable without blocking movement.
     pub const fn is_solid(self) -> bool {
-        if matches!(self as u16, 359..=361 | 370..=372 | 374..=375 | 378..=387 | 399 | 412..=419 | 423..=429 | 483..=485 | 487)
+        if matches!(self as u16, 549..=574 | 580 | 613 | 624..=625 | 627..=628 | 630..=631 | 648..=658 | 662 | 683..=693 | 710..=716 | 718..=719 | 722..=723 | 732..=738 | 750..=757 | 760..=766)
+            || Self::is_palm_frond(self as u16)
+            || matches!(self as u16, 587..=595 | 608..=611)
+            || matches!(self as u16, 359..=361 | 370..=372 | 374..=375 | 378..=387 | 399 | 412..=419 | 423..=429 | 483..=485 | 487 | 489..=490 | 508 | 510..=511)
         {
             return false;
         }
         !matches!(
             self,
             Self::Air
+                | Self::SeaThrift
+                | Self::DuneGrassTuft
+                | Self::SakuraBellflowers
+                | Self::SakuraFlowerTuft
+                | Self::FallenCherryPetals
+                | Self::SakuraSilkBanner
+                | Self::SakuraPetalShrub
+                | Self::DesertAgave
+                | Self::FloweringYucca
+                | Self::PricklyPear
+                | Self::PaintedAmphora
+                | Self::SunBanner
+                | Self::ForestBramble
+                | Self::WindfallTwigs
+                | Self::CushionMoss
+                | Self::TawnyMilkcaps
+                | Self::WoodlandStones
+                | Self::MeadowSunflowers
+                | Self::RoseFoxgloves
+                | Self::TornBloodBanner
+                | Self::WeatheredRibcage
+                | Self::BoneStake
+                | Self::BloodCrystalGrowth
+                | Self::HangingBloodLantern
+                | Self::FallenBloodBranches
                 | Self::NestStraw
                 | Self::Bile
                 | Self::FluidWater
                 | Self::Torch
+                | Self::VioletTorch
+                | Self::HighlandCrystalShards
                 | Self::Lantern
                 | Self::Chain
                 | Self::Seagrass
@@ -1522,10 +2481,46 @@ impl MaterialId {
     }
 
     pub const fn is_opaque(self) -> bool {
-        if matches!(self, Self::BileBlock | Self::StrawBlock) {
+        if matches!(self as u16, 541..=544 | 613..=623 | 629 | 632..=643 | 645..=646 | 670..=681 | 703..=709 | 720..=721 | 724..=731 | 739..=749 | 759 | 774..=784)
+        {
             return true;
         }
-        if matches!(self as u16, 324..=343 | 397..=398 | 400..=405 | 407..=411 | 422 | 430..=431 | 440 | 454..=457 | 465..=466 | 469..=476 | 478..=482)
+        if matches!(
+            self,
+            Self::Firn
+                | Self::IcySnow
+                | Self::AlpineGranite
+                | Self::PetalTurf
+                | Self::BlossomStone
+                | Self::MossyBlossomStone
+                | Self::SnowCoveredSod
+                | Self::DuneSand
+                | Self::RedDuneSand
+                | Self::BandedSandstone
+                | Self::CarvedSunstone
+                | Self::OasisMosaic
+                | Self::BlueSlateShingles
+                | Self::BoundHayBale
+                | Self::MeadowLimestone
+                | Self::WoodlandLitter
+                | Self::WoodlandTrail
+                | Self::MushroomGill
+                | Self::BrownMushroomCap
+                | Self::MyceliumTurf
+                | Self::SporeSoil
+                | Self::GlowMushroomCap
+                | Self::ParkCedarShingles
+                | Self::ParkTimber
+                | Self::BileBlock
+                | Self::StrawBlock
+                | Self::BlightedRootSoil
+                | Self::CoagulatedMud
+                | Self::BloodstainedBricks
+                | Self::CarvedBloodStone
+        ) {
+            return true;
+        }
+        if matches!(self as u16, 324..=343 | 397..=398 | 400..=405 | 407..=411 | 422 | 430..=431 | 440 | 454..=457 | 465..=466 | 469..=482)
         {
             return true;
         }
@@ -1564,6 +2559,8 @@ impl MaterialId {
             self,
             Self::Air
                 | Self::Torch
+                | Self::VioletTorch
+                | Self::HighlandCrystalShards
                 | Self::Workbench
                 | Self::Chest
                 | Self::Furnace
@@ -1592,7 +2589,6 @@ impl MaterialId {
                 | Self::SolidWater
                 | Self::Glass
                 | Self::FluidWater
-                | Self::Ice
                 | Self::Seagrass
                 | Self::SaltCrystal
                 | Self::DripstoneTip
@@ -1604,11 +2600,32 @@ impl MaterialId {
     }
 
     pub const fn is_natural_ground(self) -> bool {
+        if matches!(self as u16, 541..=544 | 614..=620 | 623 | 632..=635 | 637..=642 | 670..=677 | 703..=704 | 707 | 724..=726 | 730 | 739..=744 | 774..=780)
+        {
+            return true;
+        }
         matches!(
             self,
-            Self::CaveGrass
+            Self::Firn
+                | Self::IcySnow
+                | Self::AlpineGranite
+                | Self::PetalTurf
+                | Self::BlossomStone
+                | Self::MossyBlossomStone
+                | Self::SnowCoveredSod
+                | Self::CaveGrass
+                | Self::DuneSand
+                | Self::RedDuneSand
+                | Self::BandedSandstone
+                | Self::MeadowLimestone
+                | Self::WoodlandLitter
+                | Self::WoodlandTrail
+                | Self::MyceliumTurf
+                | Self::SporeSoil
                 | Self::CaveMoss
                 | Self::RootedCaveDirt
+                | Self::BlightedRootSoil
+                | Self::CoagulatedMud
                 | Self::Grass
                 | Self::Dirt
                 | Self::Farmland
@@ -1640,8 +2657,69 @@ impl MaterialId {
             )
     }
 
+    pub const fn is_palm_frond(raw: u16) -> bool {
+        raw >= Self::PalmFrondEast as u16 && raw <= Self::PalmFrondNorthWest as u16
+    }
+
+    /// A palm owns fronds aligned to four axes. Felling tracks that family across unloaded sections.
+    pub const fn same_tree_material(expected: u16, actual: u16) -> bool {
+        expected == actual
+            || (Self::is_palm_frond(expected) && Self::is_palm_frond(actual))
+            || (matches!(expected, 606..=607) && matches!(actual, 321 | 608..=609))
+    }
+
     pub const fn flammable(self) -> bool {
-        if matches!(self, Self::StrawBlock | Self::NestStraw) {
+        if matches!(self as u16, 643..=658 | 665..=666 | 679..=695 | 697..=701) {
+            return true;
+        }
+        if matches!(
+            self,
+            Self::MooringPost
+                | Self::HarborSign
+                | Self::SaltCrate
+                | Self::DuneGrassTuft
+                | Self::SeaThrift
+                | Self::CharredLog
+                | Self::CharredPlanks
+                | Self::AshBush
+                | Self::BurntGrass
+                | Self::BlackenedStump
+                | Self::CharredSapling
+        ) || Self::is_palm_frond(self as u16)
+        {
+            return true;
+        }
+        if matches!(
+            self,
+            Self::TealSpiritLeaves
+                | Self::MoonlitSpiritLeaves
+                | Self::WisteriaTassel
+                | Self::JadeSpiritVine
+                | Self::WispMushrooms
+                | Self::SnowySpruceLeaves
+                | Self::WinterBirchBranches
+                | Self::PineCones
+                | Self::DeadWinterBush
+                | Self::AlpineConifer
+                | Self::FrostedTussock
+                | Self::MountainFlowerRemnants
+                | Self::SakuraBellflowers
+                | Self::SakuraFlowerTuft
+                | Self::FallenCherryPetals
+                | Self::SakuraSilkBanner
+                | Self::SakuraPetalShrub
+                | Self::MeadowSunflowers
+                | Self::ForestBramble
+                | Self::WindfallTwigs
+                | Self::CushionMoss
+                | Self::ButtressStump
+                | Self::RoseFoxgloves
+                | Self::BoundHayBale
+                | Self::StrawBlock
+                | Self::NestStraw
+                | Self::TornBloodBanner
+                | Self::FallenBloodBranches
+        ) {
             return true;
         }
         if matches!(self as u16, 404..=406 | 412..=416 | 418..=419 | 422..=429) {
@@ -1672,6 +2750,16 @@ impl MaterialId {
                 | Self::BirchPlanks
                 | Self::SprucePlanks
                 | Self::MushroomStem
+                | Self::ParkCedarShingles
+                | Self::ParkTimber
+                | Self::MushroomGill
+                | Self::BrownMushroomCap
+                | Self::GlowMushroomCap
+                | Self::WoodlandToadstools
+                | Self::MossyNurseLog
+                | Self::AmberShelfStump
+                | Self::ExposedMycelialRoots
+                | Self::MushroomMossTuft
                 | Self::PurpleMushroomCap
                 | Self::RedMushroomCap
                 | Self::YellowMushroomCap
@@ -1738,7 +2826,20 @@ mod tests {
             assert_eq!(material.is_opaque(), opaque);
             assert!(!material.flammable());
         }
-        assert_eq!(MaterialId::LAST, 487);
+    }
+
+    #[test]
+    fn palm_fronds_append_after_the_sun_banner() {
+        assert_eq!(MaterialId::SunBanner as u16, 536);
+        for (id, frond) in [
+            (537, MaterialId::PalmFrondEast),
+            (538, MaterialId::PalmFrondNorthEast),
+            (539, MaterialId::PalmFrondNorth),
+            (540, MaterialId::PalmFrondNorthWest),
+        ] {
+            assert_eq!(MaterialId::from_raw(id), Some(frond));
+            assert_eq!(frond as u16, id);
+        }
     }
 
     #[test]
@@ -1943,7 +3044,7 @@ mod cemetery_tests {
             );
             assert_eq!(
                 material.is_solid(),
-                !matches!(id, 359..=361 | 370..=372 | 374..=375 | 378..=387 | 399 | 412..=419 | 423..=429 | 483..=485 | 487)
+                !matches!(id, 359..=361 | 370..=372 | 374..=375 | 378..=387 | 399 | 412..=419 | 423..=429 | 483..=485 | 487 | 489..=490 | 508 | 510..=511)
             );
         }
     }

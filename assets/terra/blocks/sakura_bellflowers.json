@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 599,
+  "name": "Sakura Bellflowers",
+  "description": "Nodding bells on slender green stalks.",
+  "creative_category": "nature",
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/sakura_bellflowers.glb",
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "textures": {},
+  "collision_boxes": []
+}

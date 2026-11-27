@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 530,
+  "name": "Carved Sunstone",
+  "description": "A carved sandstone course from a desert gateway.",
+  "creative_category": "terrain",
+  "hardness": 1.4,
+  "resistance": 2,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "face_materials": [
+    "surface",
+    "surface",
+    "surface",
+    "surface",
+    "surface",
+    "surface"
+  ],
+  "textures": {
+    "surface": "textures/desert/carved_sunstone_surface.png"
+  },
+  "materials": {
+    "surface": {
+      "roughness": 0.94,
+      "reflectance": 0.14,
+      "normal_texture": "textures/desert/carved_sunstone_surface_normal.png"
+    }
+  }
+}

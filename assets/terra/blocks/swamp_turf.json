@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": 670,
+  "name": "Swamp Turf",
+  "description": "A mat of olive sedges clings to dark, soft earth.",
+  "creative_category": "terrain",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.46,
+  "resistance": 0.62,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/swamp/swamp_turf_side.png",
+    "top": "textures/swamp/swamp_turf_top.png",
+    "soil": "textures/swamp/swamp_mud_side.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.94,
+      "reflectance": 0.09,
+      "normal_texture": "textures/swamp/swamp_turf_side_normal.png"
+    },
+    "top": {
+      "roughness": 0.94,
+      "reflectance": 0.09,
+      "normal_texture": "textures/swamp/swamp_turf_top_normal.png"
+    },
+    "soil": {
+      "roughness": 0.82,
+      "normal_texture": "textures/swamp/swamp_mud_side_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "soil",
+    "top",
+    "side",
+    "side"
+  ]
+}

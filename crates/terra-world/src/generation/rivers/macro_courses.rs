@@ -52,7 +52,12 @@ impl TerraGenerator {
                         source[0] + (mouth[0] - source[0]) * t,
                         source[1] + (mouth[1] - source[1]) * t,
                     ];
-                    if self.terrain_base_height(p[0], p[1]) < sea - 0.5 {
+                    let climate = self.climate_biome_at(p[0], p[1]);
+                    if self.volcanic_watershed(climate) {
+                        valid = false;
+                        break;
+                    }
+                    if self.watershed_ground(p[0], p[1], climate) < sea - 0.5 {
                         dry_distance = length * (i - 1) as f64 / 16.0;
                         valid = coast && dry_distance >= MINIMUM - length / 16.0;
                         break;
@@ -168,17 +173,19 @@ impl TerraGenerator {
                 source[0] + (mouth[0] - source[0]) * t,
                 source[1] + (mouth[1] - source[1]) * t,
             ];
-            if self.terrain_base_height(p[0], p[1]) < self.config().sea_level - 0.6 {
-                if self.climate_biome_at(p[0], p[1]).weights.ocean < 0.45 {
+            let climate = self.climate_biome_at(p[0], p[1]);
+            if self.volcanic_watershed(climate) {
+                return None;
+            }
+            if self.watershed_ground(p[0], p[1], climate) < self.config().sea_level - 0.6 {
+                if climate.weights.ocean < 0.45 {
                     return None;
                 }
                 let mut dry = previous;
                 let mut wet = p;
                 for _ in 0..12 {
                     let middle = [(dry[0] + wet[0]) * 0.5, (dry[1] + wet[1]) * 0.5];
-                    if self.terrain_base_height(middle[0], middle[1])
-                        < self.config().sea_level - 0.6
-                    {
+                    if self.watershed_height(middle[0], middle[1]) < self.config().sea_level - 0.6 {
                         wet = middle;
                     } else {
                         dry = middle;
@@ -203,7 +210,9 @@ impl TerraGenerator {
                 source[0] + (mouth[0] - source[0]) * t,
                 source[1] + (mouth[1] - source[1]) * t,
             ];
-            self.terrain_base_height(p[0], p[1]) > self.config().sea_level - 0.5
+            let climate = self.climate_biome_at(p[0], p[1]);
+            !self.volcanic_watershed(climate)
+                && self.watershed_ground(p[0], p[1], climate) > self.config().sea_level - 0.5
         })
     }
 
@@ -259,13 +268,13 @@ impl TerraGenerator {
                                 || source[1] < probes[0].0[1]
                                 || source[0] > probes[48].0[0]
                                 || source[1] > probes[48].0[1]
-                                || self.terrain_base_height(source[0], source[1]) < p[1] + 5.0
+                                || self.watershed_height(source[0], source[1]) < p[1] + 5.0
                             {
                                 continue;
                             }
                             if (0..=16).all(|i| {
                                 let t = i as f64 / 16.0;
-                                self.terrain_base_height(
+                                self.watershed_height(
                                     source[0] + (join[0] - source[0]) * t,
                                     source[1] + (join[1] - source[1]) * t,
                                 ) >= p[1] + 1.0
@@ -309,7 +318,7 @@ impl TerraGenerator {
                 let mut lake = self.build_regional_lake(*mouth, seed ^ 0x7b91)?;
                 lake.level = lake.level.min(p[1] - 1.0);
                 if lake.level <= self.config().sea_level + 1.0
-                    || self.terrain_base_height(mouth[0], mouth[1]) - lake.level > 24.0
+                    || self.watershed_height(mouth[0], mouth[1]) - lake.level > 24.0
                 {
                     return None;
                 }
@@ -370,7 +379,7 @@ impl TerraGenerator {
         });
         for (i, p) in points.iter().enumerate() {
             let world = frame.world(p[0], p[2]);
-            ground[i] = self.terrain_base_height(world[0], world[1]);
+            ground[i] = self.watershed_height(world[0], world[1]);
             let subdivisions = (step / 24.0).ceil().clamp(4.0, 64.0) as usize;
             for n in 0..=subdivisions {
                 let at = (i as f64 + n as f64 / subdivisions as f64 - 0.5)
@@ -380,7 +389,7 @@ impl TerraGenerator {
                 let cross = points[a][0] + (points[b][0] - points[a][0]) * at.fract();
                 for side in [-12.0, 0.0, 12.0] {
                     let q = frame.world(cross + side, at * step);
-                    support[i] = support[i].min(self.terrain_base_height(q[0], q[1]) - 2.0);
+                    support[i] = support[i].min(self.watershed_height(q[0], q[1]) - 2.0);
                 }
             }
             // Keep at least one metre of real bank above the receiving water.

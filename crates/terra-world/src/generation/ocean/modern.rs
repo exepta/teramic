@@ -1,28 +1,9 @@
 //! Revision-four substrates use the same continuous marine fields as their props.
 use super::{BiomeSample, NoiseFn, OceanHabitat, TerraGenerator, smoothstep};
-use terra_core::{BiomeDefinitions, MarineFloorWeights, OceanBiomeConfig};
+use terra_core::MarineFloorWeights;
 use terra_voxel::MaterialId;
 
 impl TerraGenerator {
-    pub(in crate::generation) fn marine_config(&self) -> &OceanBiomeConfig {
-        self.config()
-            .biome_definitions
-            .as_ref()
-            .and_then(|definitions| {
-                definitions
-                    .get(super::super::biomes::BiomeKind::Ocean)
-                    .ocean
-                    .as_ref()
-            })
-            .unwrap_or_else(|| {
-                BiomeDefinitions::builtin()
-                    .get(super::super::biomes::BiomeKind::Ocean)
-                    .ocean
-                    .as_ref()
-                    .expect("validated ocean defaults")
-            })
-    }
-
     pub(super) fn modern_ocean_habitat(
         &self,
         x: f64,
@@ -30,7 +11,7 @@ impl TerraGenerator {
         biome: BiomeSample,
         sea: f64,
     ) -> OceanHabitat {
-        let config = self.marine_config();
+        let config = self.config().ocean_biome_config();
         let cold = 1.0
             - smoothstep(
                 config.cold_temperature - 0.08,
@@ -103,6 +84,15 @@ impl TerraGenerator {
                 MaterialId::CoralRed
             } else {
                 MaterialId::CoralYellow
+            };
+        }
+        if self.marine_overhaul() && sea > 0.5 {
+            substrate = match substrate {
+                MaterialId::Sand if rock < 0.36 => MaterialId::WetSand,
+                MaterialId::Stone if cold > 0.46 => MaterialId::SeaBasalt,
+                MaterialId::Stone if reef > 0.35 && rock > 0.48 => MaterialId::ReefStone,
+                MaterialId::Stone if swamp < 0.28 => MaterialId::MarineLimestone,
+                other => other,
             };
         }
         let clay_depth = if config.clay_frequency <= 0.0 {

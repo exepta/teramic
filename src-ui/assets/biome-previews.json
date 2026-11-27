@@ -2,12 +2,12 @@
   "method": "Native game screenshots; centre crop and downsample only. No upscaling or generated artwork.",
   "images": {
     "plains": {
-      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-plains-overview.png",
+      "source": "target/ashlands-review/photos/picker-plains-overview.png",
       "source_size": [
         1920,
         1080
       ],
-      "source_sha256": "ecda114ce909d494892d453068e19682039aae9b15f3a515b7020dd2fcf4f5a6",
+      "source_sha256": "cd72e6040c0a496a482b2bc75d38d92a6346586f09ff144ea4ae0fc6d4b17587",
       "crop_size": [
         1920,
         960
@@ -16,15 +16,15 @@
         1536,
         768
       ],
-      "sha256": "28b2fecd8a374db72db3ae449c7b15c73e622a20c57ba225f1f75446a681aa16"
+      "sha256": "dce57b609ec3f902a958ae63658dfabca3dd38895d211219eb326d218ae2bbb8"
     },
     "forest": {
-      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-forest-overview.png",
+      "source": "target/ashlands-review/photos/picker-forest-overview.png",
       "source_size": [
         1920,
         1080
       ],
-      "source_sha256": "a9643cc4f31f4407e828ef5a18518ee4968be134bcabc8cf1974f1e747d84352",
+      "source_sha256": "9d521404d92a9f59bb59b3fe12fdc59c6ec0967ff42a71fbf16d7f5c66527a37",
       "crop_size": [
         1920,
         960
@@ -33,15 +33,15 @@
         1536,
         768
       ],
-      "sha256": "019bd000d30f05d35d0b87dd1b37f4510729420b34bf556f7de830167569c150"
+      "sha256": "151010b5df81440ee7362d9388a0afaa15d7f7825bad8ff2e00aec54da8021b5"
     },
     "desert": {
-      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-desert-overview.png",
+      "source": "target/savanna-review/native-cards/picker-desert-overview.png",
       "source_size": [
         1920,
         1080
       ],
-      "source_sha256": "164481f7d9610b1952031966559c5524dffb07470a34f942188bf432e3268cd0",
+      "source_sha256": "c722b470afb7ed50d62642d7d26b94436d31cfa7fcbb6c8c44e929ecd2f1a723",
       "crop_size": [
         1920,
         960
@@ -50,15 +50,15 @@
         1536,
         768
       ],
-      "sha256": "8e5d40aeb90f088326512c2854899edf1022f7abed999130941e889a5c32ad7a"
+      "sha256": "7ee75ec37aab3f94fc0a4650588d3aa7d7ab353a0c05b223d64354a5296ade81"
     },
     "highlands": {
-      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-highlands-overview.png",
+      "source": "target/ashlands-review/photos/picker-highlands-overview.png",
       "source_size": [
         1920,
         1080
       ],
-      "source_sha256": "83f452eb2458033fd5dbe5b13d3b3bf2ebb849b978f6912c58f8413342965e46",
+      "source_sha256": "ea456e759944fca15135867421c5acbf3515a20bc24b7446eed97090bd3c9c4a",
       "crop_size": [
         1920,
         960
@@ -67,24 +67,24 @@
         1536,
         768
       ],
-      "sha256": "8bfd507aa89448372df94fcc984ed100231c9f5437e9337fa27e9e9b877fecee"
+      "sha256": "14dd774b3b01a66f0507e9de0eedb87e0d1d524b8c1c65d4dfde91f245822c0c"
     },
     "mushroom-park": {
-      "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-mushroom-park-overview.png",
+      "source": "target/ashlands-review/photos/picker-mushroom-park-overview.png",
       "source_size": [
-        2562,
-        1440
+        1920,
+        1080
       ],
-      "source_sha256": "c807a178d86f8757c01d2a5775ce1c40765b277e82be11daf62206860da94bdf",
+      "source_sha256": "89b4b49d4ad0a7d5b738565748d64fba58f38047792716de82eae19a9d839452",
       "crop_size": [
-        2562,
-        1281
+        1920,
+        960
       ],
       "export_size": [
         1536,
         768
       ],
-      "sha256": "a5d562db31005a7e2fbe77652fcd2fe45266dc781ec1e7eb8d593946a87ef758"
+      "sha256": "b9b3af0b73d310d90d288a4eacf60c936bd87f636cc76f9c860831086e8aa8c5"
     },
     "cliffted-desert": {
       "source": "tools/benchmarks/results/kingdom-terrain-worldcreate-2026-11-06/biome-sources/picker-cliffted-desert-overview.png",
@@ -104,12 +104,12 @@
       "sha256": "763dcdcdbb9e00006195f52bb00dba4671c9a0e912f4e36050cabbe379ee6e99"
     },
     "cherry-forest": {
-      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-cherry-forest-overview.png",
+      "source": "target/ashlands-review/photos/picker-cherry-forest-overview.png",
       "source_size": [
         1920,
         1080
       ],
-      "source_sha256": "2492f6d5682932dc111daf4ca6d8524dbc9b9578ef3ac26fe15f203ec781b73f",
+      "source_sha256": "aeb2c872b8f0f154e66147f790a2299ed21b9035320d26121c3538f8575a0a90",
       "crop_size": [
         1920,
         960
@@ -118,15 +118,15 @@
         1536,
         768
       ],
-      "sha256": "d6aa3a2154dfe47332dd0ec642183f9d9dbe136b43f1dd78a2e282cb69ea4bfb"
+      "sha256": "25561582b333ab319858af54cc77504cdd06cae1d4e976da7cb97cee3d342fdf"
     },
     "ocean": {
-      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-ocean-overview.png",
+      "source": "target/ashlands-review/photos/picker-ocean-overview.png",
       "source_size": [
         1920,
         1080
       ],
-      "source_sha256": "69e1557a12d6dbf2bea169f744303c30804b6dc7edfd9a8fe647d60c5efe7adc",
+      "source_sha256": "bbd67b31df4435dce2ea09562aded128219495d11e926748fd6c70aadd2e7ad7",
       "crop_size": [
         1920,
         960
@@ -135,15 +135,15 @@
         1536,
         768
       ],
-      "sha256": "6dd8cbed5a2bdea6be4070ff6e30d312488bf93c0180f515f242389caef5c25b"
+      "sha256": "077cc29d924807f0af4f733acaf13ea7edfb32c126b42568594c00380d1dcc00"
     },
     "spirit-blossom": {
-      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-spirit-blossom-overview.png",
+      "source": "target/ashlands-review/photos/picker-spirit-blossom-overview.png",
       "source_size": [
         1920,
         1080
       ],
-      "source_sha256": "aba6b0c4c10dcf35b9055b4491b9a7639886b66c74661bc06063d6b0ffd1ebd1",
+      "source_sha256": "395c5218a1040eee352a219e05b8771f8cff5513e97e2fbe824b42bf05f00881",
       "crop_size": [
         1920,
         960
@@ -152,15 +152,15 @@
         1536,
         768
       ],
-      "sha256": "e53d8dabeb355fc2db5144653bda31ed2e7b054a250c1b51c27a46797e79ae71"
+      "sha256": "b7eaa6778b9de400351a3fa1ccef382bbde44840cf90873e408f87c20ab72aca"
     },
     "blood-forest": {
-      "source": "target/reference-biomes/run.ZkiVMP/captures/picker-blood-forest-overview.png",
+      "source": "target/ashlands-review/photos/picker-blood-forest-overview.png",
       "source_size": [
         1920,
         1080
       ],
-      "source_sha256": "2de9f264e78e7ec0cb44f5216a0406aec42f2eb76218cf461b49d984ae794ef5",
+      "source_sha256": "8e83d2775563706e54527c333af84739983bb413ca9b8adc6f6d4bd3c4a23528",
       "crop_size": [
         1920,
         960
@@ -169,7 +169,109 @@
         1536,
         768
       ],
-      "sha256": "4927ecc837c1d1705a91da3a3e9c2643327c90527886c3b0f9d7bf48e7a9f1e3"
+      "sha256": "f3fb3dbc277e1c9a01996ec21c5ac4b9eec40a19333f6048ef351dd6d884b198"
+    },
+    "ashlands": {
+      "source": "target/biome-review-20261125/chooser/picker-ashlands-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "5a9f1c0895bc9e10278319799ab8805dc9182948c5aa196c0cbd024dca4d1375",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "8cddb47fe46947e473d72edc683ca8851f10f24d9df801c99144a0b426555444"
+    },
+    "savanna": {
+      "source": "target/savanna-review/native-cards/picker-savanna-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "7b8a62a7df94f1a55a4725b2ef4bec7429affa2216e36681ae01134e0c2e8cec",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "a3bd674ae6923946117372e8e43aa13ea0c7465ac3f2906e909772b0c9ab6d6f"
+    },
+    "swamp": {
+      "source": "target/petrified-review/picker-swamp-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "bbd27f1a7f4f1eddfdf3e515ef14e646bc12482a49edb096e28e39feff39ac15",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "149e9b15d43154ab92fddf836b2ea561c878ceca293cd3a62ba88f08f3a835ad"
+    },
+    "petrified-forest": {
+      "source": "target/biome-review-20261125/chooser/picker-petrified-forest-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "d40b0c70ffdda6ca428eb0fb2e0305a3b81eed195a620ef4cb1d5e02d41c3b46",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "5ba4d80d617bab3ea63540bc0ec6f78611215b2e986dde0a79512c8991ab54aa"
+    },
+    "crystal-highlands": {
+      "source": "target/crystal-review/sacred/picker-crystal-highlands-overview.png",
+      "source_size": [
+        1920,
+        960
+      ],
+      "source_sha256": "303b0b48afeda3c7b011104ec0f6ad8ab8931d3128adb69599817c466cc329c6",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "396f95c43bbaaef24cfb6c52afca670b5f3272324f12065dfcdbedb4beb36564"
+    },
+    "misty-coast": {
+      "source": "target/misty-review/chooser/picker-misty-coast-overview.png",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_sha256": "aa49c9dae56b6431e0c440bb896f5655fada81322a30711dbab2092f3b9d15d8",
+      "crop_size": [
+        1920,
+        960
+      ],
+      "export_size": [
+        1536,
+        768
+      ],
+      "sha256": "c6ba42700c00f09a141b1a92d28d8699780f0a5c07e1a863aa66120d254aad74"
     }
   }
 }

@@ -11,24 +11,29 @@ struct Sample {
 }
 
 impl Sample {
+    fn stair_to(&self, next: Vec3, on_tread: bool) -> bool {
+        let travel = next - self.position;
+        self.on_tread
+            && on_tread
+            && (0.04..=1.26).contains(&travel.y.abs())
+            && travel.x.hypot(travel.z) > 0.008
+    }
+
     /// Hermite interpolation follows the reported takeoff, turning and braking
     /// velocities. Bound both tangents per axis to the monotone range so a
     /// stale velocity cannot send a boot below the floor or past a wall.
     fn towards(&self, next: &Self, time: f64) -> Vec3 {
         let period = next.time - self.time;
         let t = ((time - self.time) / period).clamp(0., 1.) as f32;
-        if period > 0.4
-            || (self.velocity.length_squared() < 1e-6 && next.velocity.length_squared() < 1e-6)
-        {
-            // Throttled actors can cover distance while reporting zero velocity
-            // at both sample times. Keep that travel continuous.
-            return self.position.lerp(next.position, t);
-        }
+        // Throttled actors can cover distance while reporting zero velocity
+        // at both sample times. Keep that travel continuous.
+        let linear = period > 0.4
+            || (self.velocity.length_squared() < 1e-6 && next.velocity.length_squared() < 1e-6);
         let span = next.position - self.position;
         let mut offset = Vec3::ZERO;
         for axis in 0..3 {
             let delta = span[axis];
-            if delta.abs() < 1e-6 {
+            if linear || delta.abs() < 1e-6 {
                 offset[axis] = t * delta;
                 continue;
             }
@@ -37,6 +42,9 @@ impl Sample {
             let end = (next.velocity[axis] * scale).clamp(0., 3.);
             offset[axis] =
                 delta * t * (t * (3. - 2. * t) + (1. - t) * ((1. - t) * start - t * end));
+        }
+        if self.stair_to(next.position, next.on_tread) {
+            offset.y = span.y * t * t * (3.0 - 2.0 * t);
         }
         self.position + offset
     }
@@ -78,8 +86,13 @@ impl CreaturePlayback {
             return;
         }
         let discontinuity = self.samples.back().is_some_and(|s| {
-            s.position.distance(position)
-                > (s.velocity.length().max(velocity.length()) * period as f32 + 0.5)
+            let difference = position - s.position;
+            let travel = if s.stair_to(position, on_tread) {
+                difference.with_y(0.).length()
+            } else {
+                difference.length()
+            };
+            travel > (s.velocity.length().max(velocity.length()) * period as f32 + 0.5)
         });
         if let Some(arrival) = self.arrival {
             let variation = (now.saturating_duration_since(arrival).as_secs_f64() - period).abs();
@@ -163,7 +176,7 @@ impl CreaturePlayback {
         }
         let last = self.samples.back()?;
         let ahead = (time - last.time).clamp(0.0, 0.12) as f32;
-        // A grounded dragon reports the displacement across the previous stair
+        // A walker may report the displacement across the previous stair
         // as vertical velocity. It has already reached the new tread.
         let extrapolate = if last.on_tread {
             last.velocity.with_y(0.)

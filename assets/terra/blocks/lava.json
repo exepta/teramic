@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 613,
+  "name": "Molten Lava",
+  "description": "Viscous molten rock carrying small fragments of crust.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.25,
+  "resistance": 2.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "side": {
+      "roughness": 0.61,
+      "normal_texture": "textures/ashlands/lava_side_normal.png",
+      "emission": [
+        1.05,
+        0.15,
+        0.009
+      ]
+    }
+  },
+  "textures": {
+    "side": "textures/ashlands/lava_side.png"
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

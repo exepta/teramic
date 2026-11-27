@@ -79,7 +79,11 @@ pub fn carry_creature(
     habitat: &crate::creatures::Habitat,
     dt: f32,
 ) {
-    if !dt.is_finite() || !(0.0..=0.25).contains(&dt) || animal.velocity[1] > 0.1 {
+    if animal.kind == terra_core::creatures::CreatureKind::LavaWorm
+        || !dt.is_finite()
+        || !(0.0..=0.25).contains(&dt)
+        || animal.velocity[1] > 0.1
+    {
         return;
     }
     if animal.kind.is_spider()

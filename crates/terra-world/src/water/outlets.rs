@@ -28,6 +28,11 @@ pub(crate) fn natural_outlets(
         if bottom >= base && bottom <= hi {
             let below = [global[0], bottom - 1, global[1]];
             if column.water_columns().at(bottom - 1).is_none()
+                && !column
+                    .falls
+                    .into_iter()
+                    .flatten()
+                    .any(|s| s.contains(below[1]))
                 && super::can_hold_fluid(block_at(below))
                 && super::can_hold_fluid(block_at([global[0], bottom, global[1]]))
             {
@@ -59,7 +64,12 @@ pub(crate) fn natural_outlets(
                     continue;
                 }
                 let target = [global[0] + offset[0], y, global[1] + offset[1]];
-                if super::can_hold_fluid(block_at(target))
+                if !neighbor
+                    .falls
+                    .into_iter()
+                    .flatten()
+                    .any(|s| s.contains(target[1]))
+                    && super::can_hold_fluid(block_at(target))
                     && super::can_hold_fluid(block_at([global[0], y, global[1]]))
                 {
                     result.push(target);

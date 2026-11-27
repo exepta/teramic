@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 516,
+  "name": "Blue Slate Shingles",
+  "description": "Overlapping blue slate from the roofs of Plains farms.",
+  "creative_category": "nature",
+  "hardness": 1.5,
+  "resistance": 3.0,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "face_materials": [
+    "surface",
+    "surface",
+    "surface",
+    "surface",
+    "surface",
+    "surface"
+  ],
+  "textures": {
+    "surface": "textures/plains/blue_slate_shingles_surface.png"
+  },
+  "materials": {
+    "surface": {
+      "roughness": 0.87,
+      "normal_texture": "textures/plains/blue_slate_shingles_surface_normal.png"
+    }
+  }
+}

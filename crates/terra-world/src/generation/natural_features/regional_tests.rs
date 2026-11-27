@@ -46,6 +46,12 @@ fn habitat(terrain: &TerraGenerator, tile: Tile, biome: usize) -> Habitat<'_> {
         cherry_forest: weight(7),
         spirit_blossom: weight(8),
         blood_forest: 0.0,
+        ashlands: 0.0,
+        savanna: 0.0,
+        swamp: 0.0,
+        petrified_forest: 0.0,
+        crystal_highlands: 0.0,
+        misty_coast: 0.0,
     };
     let mut columns = HashMap::new();
     for z in tile[1] * 32..tile[1] * 32 + 32 {
@@ -321,4 +327,63 @@ fn cactus_voxels_share_section_direct_sample_and_authoritative_edit_paths() {
         .build(section, 1, &HashMap::from([(origin, 0)]), false)
         .unwrap();
     assert_eq!(edited.data.block(local).unwrap(), 0);
+}
+
+#[test]
+fn spirit_gateway_is_rooted_walkable_and_skips_obstructed_sites_atomically() {
+    let terrain = terrain();
+    for seed in [0, 1] {
+        let mut habitat = habitat(&terrain, [-1, -1], 8);
+        let center = [-16, -16];
+        let base = habitat.ground(center).unwrap().0;
+        let [dx, dz] = if seed == 0 { [1, 0] } else { [0, 1] };
+        let mut cells = BTreeMap::new();
+        assert!(regional::rune_arch(
+            &mut habitat,
+            center,
+            base,
+            seed,
+            &mut cells
+        ));
+        for y in 1..=5 {
+            assert!(!cells.contains_key(&[center[0], base + y, center[1]]));
+        }
+        for offset in [-3, 3] {
+            assert!(cells.contains_key(&[
+                center[0] + dx * offset,
+                base + 1,
+                center[1] + dz * offset
+            ]));
+        }
+        let first = *cells.keys().next().unwrap();
+        let mut found = std::collections::HashSet::from([first]);
+        let mut queue = vec![first];
+        while let Some(p) = queue.pop() {
+            for axis in 0..3 {
+                for d in [-1, 1] {
+                    let mut q = p;
+                    q[axis] += d;
+                    if cells.contains_key(&q) && found.insert(q) {
+                        queue.push(q);
+                    }
+                }
+            }
+        }
+        assert_eq!(
+            cells.len(),
+            found.len(),
+            "every stone must meet its neighbour across a face"
+        );
+        let point = [center[0] + dx * 3, center[1] + dz * 3];
+        habitat.columns.get_mut(&point).unwrap().water_level = Some(base as f64 + 2.0);
+        cells.clear();
+        assert!(!regional::rune_arch(
+            &mut habitat,
+            center,
+            base,
+            seed,
+            &mut cells
+        ));
+        assert!(cells.is_empty());
+    }
 }

@@ -28,6 +28,37 @@ fn objects(site: &Site) -> impl Iterator<Item = &StructureObject> {
 }
 
 #[test]
+fn current_plains_strongholds_keep_their_courtyard_without_fields_or_sails() {
+    let mut config = terrain(false, 13).config().clone();
+    config.ecology_revision = 14;
+    config.biomes = true;
+    let generator = TerraGenerator::new(config).unwrap();
+    for seed in [261, 522] {
+        let site = (-4..=4)
+            .flat_map(|rz| (-4..=4).map(move |rx| [rx, rz]))
+            .filter(|region| {
+                let [x, z] = region.map(|r| (r * REGION_SIZE + 192) as f64 + 0.5);
+                generator.biome_at(x, z).weights.dominant() == terra_core::BiomeKind::Plains
+            })
+            .find_map(|region| plan(&generator, region, seed))
+            .expect("a generated Plains stronghold");
+        assert!(
+            site.summary
+                .buildings
+                .iter()
+                .any(|b| b.role == BuildingRole::Barracks)
+        );
+        assert!(
+            site.summary
+                .buildings
+                .iter()
+                .all(|b| b.role != BuildingRole::Farm)
+        );
+        assert!(objects(&site).all(|object| object.crop.is_none()));
+    }
+}
+
+#[test]
 fn revision_seven_stronghold_toggles_are_independent_and_do_not_reroll_disabled_sites() {
     for (kingdoms, outposts) in [(false, false), (true, false), (false, true), (true, true)] {
         let mut config = terrain(false, 7).config().clone();

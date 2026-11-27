@@ -156,7 +156,7 @@ fn worker_splits_preserve_every_attribute_triangle_growth_range_and_winding() {
             assert!(
                 batches
                     .iter()
-                    .all(|batch| batch.positions.len() <= batch_plan::VERTEX_LIMIT)
+                    .all(|batch| batch.positions.len() <= crate::upload_budget::MAX_BATCH_VERTICES)
             );
             let mut expected = Vec::new();
             for prop in &props {
@@ -225,11 +225,12 @@ fn worker_splits_preserve_every_attribute_triangle_growth_range_and_winding() {
 
 #[test]
 fn a_single_template_larger_than_the_limit_is_preserved_without_panicking() {
+    const VERTICES: usize = (1 << 16) + 4;
     let section = SectionPos::new(-1, 0, -1);
     let terrain = TerraGenerator::new(Default::default()).unwrap();
     let templates = HashMap::from([(
         (PropKind::Bush as u8, 0, DetailLevel::Near),
-        template(0, batch_plan::VERTEX_LIMIT + 4),
+        template(0, VERTICES),
     )]);
     let (mut batches, count) = compose(
         &[prop(PropKind::Bush, 1, section)],
@@ -243,9 +244,77 @@ fn a_single_template_larger_than_the_limit_is_preserved_without_panicking() {
     assert_eq!(count, 1);
     assert_eq!(batches.len(), 1);
     let batch = &mut batches[0];
-    assert_eq!(batch.positions.len(), batch_plan::VERTEX_LIMIT + 4);
-    assert_eq!(batch.indices.len(), (batch_plan::VERTEX_LIMIT + 4) / 4 * 6);
+    assert_eq!(batch.positions.len(), VERTICES);
+    assert_eq!(batch.indices.len(), VERTICES / 4 * 6);
     batch.compact_indices();
     assert!(batch.compact_indices.is_empty());
     assert!(!batch.indices.is_empty());
+}
+
+#[test]
+fn dense_canonical_props_fit_uploads_without_an_extra_material_mesh() {
+    let section = SectionPos::new(-1, 0, -1);
+    let terrain = TerraGenerator::new(Default::default()).unwrap();
+    let mut materials = Assets::<StandardMaterial>::default();
+    let handle = materials.add(StandardMaterial::default());
+    let templates = make_templates(&PropMaterials::default(), &[handle], &materials).unwrap();
+    for (kind, packed) in [(PropKind::Grass, true), (PropKind::Flower, false)] {
+        let geometry = &templates[&(kind as u8, 0, DetailLevel::Near)].geometry;
+        let vertices = geometry.positions.len();
+        let indices = geometry.indices.len();
+        let old_first_piece = (1 << 16) / vertices;
+        let props: Vec<_> = (0..old_first_piece + 8)
+            .map(|i| prop(kind, i as u64, section))
+            .collect();
+        // The previous first piece overflowed the uploader, with eight more
+        // whole props already assigned to a separate material mesh.
+        assert!(old_first_piece * vertices > crate::upload_budget::MAX_BATCH_VERTICES);
+        let (batches, represented) = compose_with_exposure_mode(
+            &props,
+            section,
+            DetailLevel::Near,
+            &templates,
+            &terrain,
+            &Default::default(),
+            &HashMap::new(),
+            None,
+            packed,
+        )
+        .unwrap();
+        assert_eq!(represented, props.len());
+        assert_eq!(batches.len(), 2);
+        for batch in &batches {
+            assert_eq!(batch.positions.len() % vertices, 0);
+            assert_eq!(batch.indices.len() % indices, 0);
+            assert!(batch.positions.len() <= crate::upload_budget::MAX_BATCH_VERTICES);
+            assert!(
+                crate::upload_budget::batch_bytes(batch) <= crate::upload_budget::MAX_BATCH_BYTES
+            );
+        }
+        let first = &batches[0];
+        if !packed {
+            // At this point one more rooted flower still meets the vertex
+            // quota, but its uncompressed color, timing and anchor cross 4 MiB.
+            assert!(first.positions.len() + vertices <= crate::upload_budget::MAX_BATCH_VERTICES);
+            let bytes_per_prop =
+                crate::upload_budget::batch_bytes(first) / (first.positions.len() / vertices);
+            assert!(
+                crate::upload_budget::batch_bytes(first) + bytes_per_prop
+                    > crate::upload_budget::MAX_BATCH_BYTES
+            );
+        }
+        let final_batches = crate::upload_budget::split_batches(batches).unwrap();
+        assert_eq!(final_batches.len(), 2);
+        assert_eq!(
+            final_batches
+                .iter()
+                .map(|b| b.positions.len())
+                .sum::<usize>(),
+            props.len() * vertices
+        );
+        assert_eq!(
+            final_batches.iter().map(|b| b.indices.len()).sum::<usize>(),
+            props.len() * indices
+        );
+    }
 }

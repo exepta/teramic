@@ -72,7 +72,13 @@ impl TerraGenerator {
         let marine = reef + forest + cold;
         let soft = matches!(
             MaterialId::from_raw(material),
-            Some(MaterialId::Sand | MaterialId::Dirt | MaterialId::Clay | MaterialId::Mud)
+            Some(
+                MaterialId::Sand
+                    | MaterialId::WetSand
+                    | MaterialId::Dirt
+                    | MaterialId::Clay
+                    | MaterialId::Mud
+            )
         );
         let light = if modern {
             // Deep meadows thin out gradually; the configurable marine floor
@@ -140,6 +146,9 @@ impl TerraGenerator {
         } else {
             PropKind::Seagrass
         };
+        if !self.in_prop_patch([support[0], support[2]], kind as u16) {
+            return None;
+        }
         let scale = if kind == PropKind::Seagrass {
             0.35 + forest * habitat.cover * 1.05 + cold * 0.30 + random(seed, 4) * 0.30
         } else {

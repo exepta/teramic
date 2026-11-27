@@ -21,7 +21,7 @@ fn edible(kind: Kind, prop: &WorldProp) -> bool {
         && !prop.hidden_growth()
         && !prop.wall_attached()
         && match kind {
-            Kind::Cow | Kind::Sheep | Kind::Horse => {
+            Kind::Cow | Kind::Sheep | Kind::Horse | Kind::Elephant | Kind::Zebra => {
                 prop.kind == PropKind::Grass || prop.kind == PropKind::Wheat && prop.variant == 7
             }
             Kind::Pig => {
@@ -46,8 +46,25 @@ fn food_at(habitat: &Habitat, kind: Kind, position: [i64; 3]) -> Option<WorldPro
         .copied()
 }
 
+fn grazable_savanna(kind: Kind, habitat: &Habitat, ground: [i64; 3]) -> bool {
+    use terra_voxel::MaterialId as M;
+    matches!(kind, Kind::Zebra | Kind::Elephant)
+        && matches!(
+            habitat.block(ground).and_then(M::from_raw),
+            Some(M::SavannaTurf | M::DrySavannaTurf)
+        )
+}
+
 fn find_food(animal: &Creature, habitat: &Habitat) -> Option<NeedGoal> {
-    let owner = global_to_section(animal.position.map(|v| v.floor() as i64)).0;
+    let [x, y, z] = animal.position.map(|v| v.floor() as i64);
+    let soil = [x, y - 1, z];
+    if grazable_savanna(animal.kind, habitat, soil) {
+        return Some(NeedGoal {
+            kind: NeedKind::Food,
+            position: soil,
+        });
+    }
+    let owner = global_to_section([x, y, z]).0;
     let mut nearest = None;
     let mut best = 8.0_f64.powi(2);
     let mut inspected = 0;
@@ -189,8 +206,14 @@ pub(super) fn update(animal: &mut Creature, habitat: &Habitat, dt: f32, search: 
             .flatten();
         let available = match goal.kind {
             NeedKind::Water => water_at(habitat, goal.position),
-            NeedKind::Food => prop.is_some(),
-            NeedKind::Tree | NeedKind::Shelter | NeedKind::AttackAim => false,
+            NeedKind::Food => {
+                prop.is_some() || grazable_savanna(animal.kind, habitat, goal.position)
+            }
+            NeedKind::Tree
+            | NeedKind::Shelter
+            | NeedKind::AttackAim
+            | NeedKind::Territory
+            | NeedKind::AirborneAttackAim => false,
         };
         if !available
             || animal.needs.search_in <= 0.0
@@ -229,6 +252,8 @@ pub(super) fn update(animal: &mut Creature, habitat: &Habitat, dt: f32, search: 
                         section: prop.section,
                         id: prop.id,
                     };
+                } else if grazable_savanna(animal.kind, habitat, goal.position) {
+                    animal.needs.food = (animal.needs.food + 5.).min(animal.kind.food());
                 }
             }
         } else {

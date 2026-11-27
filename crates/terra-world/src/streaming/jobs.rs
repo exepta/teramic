@@ -104,7 +104,7 @@ pub(super) fn dispatch_jobs(
             let epoch = journal.mesh_epoch(position);
             let water_epoch = journal.water_mesh_epoch(position);
             let edits = journal.snapshot(position);
-            let generator = SectionGenerator::new(terrain.0.clone());
+            let generator = SectionGenerator::for_streaming(terrain.0.clone());
             let task = AsyncComputeTaskPool::get().spawn(async move {
                 let _scope = terra_core::profiling::ScopeTimer::new("streaming.remesh_loaded");
                 let result = edits.map_err(|e| e.to_string()).and_then(|edits| {
@@ -185,7 +185,7 @@ pub(super) fn dispatch_jobs(
                 )
             })
             .collect();
-        let generator = SectionGenerator::new(terrain.0.clone());
+        let generator = SectionGenerator::for_streaming(terrain.0.clone());
         let cached = chunks.columns.get(&coordinate).cloned();
         let with_mesh = settings.meshes;
         let task = AsyncComputeTaskPool::get().spawn(async move {
@@ -313,9 +313,30 @@ pub(super) fn receive_jobs(
                             }
                         }
                     }
-                    let has_fluids = journal
-                        .fluid_snapshot(position)
-                        .is_ok_and(|snapshot| !snapshot.is_empty())
+                    let blocked_fall = !output.remesh
+                        && section.water.is_some()
+                        && chunks
+                            .columns
+                            .get(&[position.x, position.z])
+                            .is_some_and(|col| {
+                                position.origin().is_ok_and(|origin| {
+                                    crate::water::falls::interrupted(
+                                        col.water_columns(),
+                                        origin,
+                                        &journal,
+                                    )
+                                })
+                            });
+                    if blocked_fall && journal.water_mesh_epoch(position) == 0 {
+                        let _ = journal.invalidate_generated_water_sections(
+                            &std::collections::BTreeSet::from([position]),
+                        );
+                        water_epoch = journal.water_mesh_epoch(position);
+                    }
+                    let has_fluids = blocked_fall
+                        || journal
+                            .fluid_snapshot(position)
+                            .is_ok_and(|snapshot| !snapshot.is_empty())
                         || journal.snapshot(position).is_ok_and(|snapshot| {
                             let Ok(origin) = position.origin() else {
                                 return false;

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": 794,
+  "name": "Altar Crystal Heart",
+  "description": "Altar Crystal Heart",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/altar_crystal_heart.glb",
+  "struct_block": true,
+  "hardness": 0.85,
+  "resistance": 2.0,
+  "mining_level": 0,
+  "required_tool": null,
+  "textures": {
+    "inclusion": "textures/crystal_highlands/amethyst_growth.png",
+    "body": "textures/crystal_highlands/amethyst_growth.png",
+    "cleavage": "textures/crystal_highlands/amethyst_growth.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.08,
+        0,
+        0.08
+      ],
+      "maximum": [
+        0.92,
+        0.93,
+        0.92
+      ]
+    }
+  ],
+  "light": {
+    "color": [
+      0.76,
+      0.36,
+      1.0
+    ],
+    "intensity": 3500,
+    "range": 19.0,
+    "falloff": "soft_core",
+    "flicker": 0.0,
+    "shadows": false,
+    "offset": [
+      0.5,
+      0.72,
+      0.48
+    ]
+  }
+}

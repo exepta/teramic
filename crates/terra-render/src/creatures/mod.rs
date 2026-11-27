@@ -6,7 +6,9 @@ mod dragon_animation;
 mod eye_gallery;
 mod forest_animation;
 mod gloom_effects;
+mod golem_animation;
 pub(crate) mod horse_pose;
+mod lava_worm;
 mod materials;
 mod military;
 mod model;
@@ -88,6 +90,7 @@ struct Limb(model::Part, Vec3);
 struct Models {
     parts: BTreeMap<(Kind, u8), ModelParts>,
     material: Handle<StandardMaterial>,
+    red_sand: Handle<StandardMaterial>,
     bell_material: Handle<StandardMaterial>,
     spirit_material: Handle<StandardMaterial>,
     glow_material: Handle<StandardMaterial>,
@@ -108,6 +111,7 @@ struct Models {
 type ModelParts = Vec<(model::Part, Vec3, Handle<Mesh>)>;
 pub(crate) fn install(app: &mut App) {
     sandworm::install(app);
+    lava_worm::install(app);
     gloom_effects::install(app);
     character_gallery::install(app);
     eye_gallery::install(app);
@@ -136,6 +140,11 @@ fn setup(
         slime_material: materials.add(materials::slime_body()),
         skeleton_eye_material: materials.add(materials::skeleton_eyes()),
         material: materials.add(StandardMaterial {
+            perceptual_roughness: 0.85,
+            ..default()
+        }),
+        red_sand: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.94, 0.62, 0.51),
             perceptual_roughness: 0.85,
             ..default()
         }),
@@ -245,7 +254,10 @@ fn setup(
         } else if kind == Kind::Villager {
             terra_core::creatures::villagers::ROLE_COUNT * 2
         } else if kind.is_dragon()
-            || matches!(kind, Kind::Butterfly | Kind::SpiritGloom | Kind::Skeleton)
+            || matches!(
+                kind,
+                Kind::Butterfly | Kind::SpiritGloom | Kind::Skeleton | Kind::StoneGolem
+            )
         {
             kind.variant_count()
         } else {
@@ -327,8 +339,10 @@ fn render(
         present.insert(avatar.0);
         let previous_position = transform.translation;
         let sleeping = animal.behavior == Behavior::Sleep;
-        motion.sleep += ((if sleeping { 1.0 } else { 0.0 }) - motion.sleep)
-            * (time.delta_secs() * 7.0).min(1.0);
+        if animal.kind != Kind::StoneGolem {
+            motion.sleep += ((if sleeping { 1.0 } else { 0.0 }) - motion.sleep)
+                * (time.delta_secs() * 7.0).min(1.0);
+        }
         transform.scale = instance_scale(animal);
         if animal.kind == Kind::Horse {
             motion.jump = mounts
@@ -415,6 +429,10 @@ fn render(
                     .as_secs_f32()
                     .min(track.interval.clamp(0.0, 0.25))
             });
+        if animal.kind == Kind::LavaWorm {
+            motion.worm_progress = (animal.timer - since).max(0.);
+            motion.worm_spit = lava_worm::aim(animal);
+        }
         if animal.kind == Kind::SandWorm {
             motion.worm_spit = if animal.behavior == Behavior::Spit {
                 terra_core::creatures::sandworm::aimed_spit_launch(animal).map(|(_, v)| {
@@ -448,6 +466,7 @@ fn render(
         let timed_melee = matches!(
             animal.kind,
             Kind::Skeleton
+                | Kind::StoneGolem
                 | Kind::BloodStalker
                 | Kind::BloodWisp
                 | Kind::ThornBrute
@@ -455,7 +474,11 @@ fn render(
                 | Kind::ReefShark
                 | Kind::WhaleShark
         );
-        let strike = if animal.kind == Kind::Villager {
+        let strike = if animal.kind == Kind::StoneGolem {
+            terra_core::creatures::golem::phase(animal.behavior, animal.timer - since)
+        } else if animal.kind == Kind::Skeleton && animal.behavior == Behavior::Emerge {
+            terra_core::creatures::skeleton_rise(animal.timer - since)
+        } else if animal.kind == Kind::Villager {
             f32::from(animal.behavior == Behavior::Attack)
         } else if timed_melee {
             if animal.behavior == Behavior::Attack {
@@ -491,7 +514,16 @@ fn render(
         } else {
             motion.attack += (strike - motion.attack) * (1.0 - (-time.delta_secs() * 16.0).exp());
         }
-        if animal.kind == Kind::Villager {
+        if animal.kind == Kind::StoneGolem {
+            motion.sleep = golem_animation::rubble_amount(
+                animal.behavior,
+                strike,
+                motion.sleep,
+                time.delta_secs(),
+            );
+            motion.phase += time.delta_secs() * motion.speed * std::f32::consts::PI
+                / terra_core::creatures::golem::STRIDE;
+        } else if animal.kind == Kind::Villager {
             // About half a metre per planted step. Standing still stops the gait clock.
             motion.phase += time.delta_secs() * motion.speed * 5.7;
         } else if animal.kind == Kind::SandWorm {
@@ -501,7 +533,11 @@ fn render(
             motion.phase +=
                 time.delta_secs() * (motion.speed * 5.0 + 0.5) * (1.0 + motion.youth * 0.35);
         }
-        motion.clock += time.delta_secs() * (1.0 + motion.youth * 0.20);
+        if matches!(animal.kind, Kind::Squid | Kind::LavaWorm) {
+            motion.clock = (animal.age + f64::from(since)) as f32;
+        } else {
+            motion.clock += time.delta_secs() * (1.0 + motion.youth * 0.20);
+        }
     }
     let ids = animals
         .as_ref()
@@ -557,14 +593,28 @@ fn render(
                     kind: animal.kind,
                     behavior: animal.behavior,
                     phase: (id % 31) as f32,
-                    clock: (id % 29) as f32 * 0.43,
+                    clock: if animal.kind == Kind::LavaWorm {
+                        animal.age as f32
+                    } else {
+                        (id % 29) as f32 * 0.43
+                    },
                     speed: 0.0,
-                    attack: 0.0,
-                    worm_progress: terra_core::creatures::sandworm::phase_progress(
-                        animal.behavior,
-                        animal.timer,
-                    ),
-                    worm_spit: if animal.behavior == Behavior::Spit {
+                    attack: if animal.kind == Kind::StoneGolem {
+                        terra_core::creatures::golem::phase(animal.behavior, animal.timer)
+                    } else {
+                        0.
+                    },
+                    worm_progress: if animal.kind == Kind::LavaWorm {
+                        animal.timer
+                    } else {
+                        terra_core::creatures::sandworm::phase_progress(
+                            animal.behavior,
+                            animal.timer,
+                        )
+                    },
+                    worm_spit: if animal.kind == Kind::LavaWorm {
+                        lava_worm::aim(animal)
+                    } else if animal.behavior == Behavior::Spit {
                         terra_core::creatures::sandworm::aimed_spit_launch(animal).map(|(_, v)| {
                             let (sin, cos) = animal.yaw.sin_cos();
                             [
@@ -579,7 +629,14 @@ fn render(
                     silk_length: silk_length(animal),
                     youth: 1.0 - animal.growth(),
                     jump,
-                    sleep: if animal.behavior == Behavior::Sleep {
+                    sleep: if animal.kind == Kind::StoneGolem {
+                        golem_animation::rubble_amount(
+                            animal.behavior,
+                            terra_core::creatures::golem::phase(animal.behavior, animal.timer),
+                            1.,
+                            0.,
+                        )
+                    } else if animal.behavior == Behavior::Sleep {
                         1.0
                     } else {
                         0.0
@@ -687,7 +744,8 @@ fn sleep_offset(kind: Kind) -> f32 {
         Kind::Cow => 0.62,
         Kind::Pig => 0.32,
         Kind::Bear => 0.40,
-        Kind::Horse => 0.68,
+        Kind::Horse | Kind::Zebra => 0.68,
+        Kind::Elephant => 0.89,
         _ => 0.0,
     };
     -leg * 0.90 * model_scale(kind).y
@@ -730,6 +788,14 @@ fn animate(
             }
             continue;
         }
+        if let model::Part::Golem(joint, lit) = part.0 {
+            let mut next = *transform;
+            let mut shown = *visibility;
+            golem_animation::animate(motion, joint, lit, &mut next, &mut shown);
+            transform.set_if_neq(next);
+            visibility.set_if_neq(shown);
+            continue;
+        }
         transform.translation = part.1;
         transform.scale = Vec3::ONE;
         if matches!(
@@ -758,6 +824,10 @@ fn animate(
         if matches!(part.0, model::Part::Body) && !matches!(motion.kind, Kind::Fish | Kind::Bee) {
             transform.scale.y = 1.0 + (motion.clock * 2.1).sin() * (0.004 + motion.youth * 0.003);
         }
+        if motion.kind == Kind::LavaWorm {
+            lava_worm::animate(motion, part, &mut transform, &mut visibility);
+            continue;
+        }
         if motion.kind == Kind::SandWorm {
             sandworm::animate(motion, part, &mut transform, &mut visibility);
             continue;
@@ -779,6 +849,40 @@ fn animate(
                 | Kind::ThornBrute
         ) {
             forest_animation::animate(motion, part, &mut transform);
+            continue;
+        }
+        if motion.kind == Kind::Elephant
+            && matches!(
+                part.0,
+                model::Part::Head | model::Part::ElephantEar(_) | model::Part::ElephantTrunk
+            )
+        {
+            let reaching = matches!(motion.behavior, Behavior::Drink | Behavior::Graze);
+            let pitch = if reaching { -0.22 } else { 0. };
+            let neck = Quat::from_euler(
+                EulerRot::YXZ,
+                (motion.clock * 0.58).sin() * 0.055,
+                pitch + motion.phase.sin() * 0.025,
+                0.,
+            );
+            let joint = match part.0 {
+                model::Part::ElephantEar(side) => {
+                    let flap = (motion.clock * 2.4).sin().max(0.).powi(3);
+                    Quat::from_rotation_y(side * (0.05 + flap * 0.29))
+                }
+                model::Part::ElephantTrunk => {
+                    let reach = if reaching { 0.22 } else { 0. };
+                    Quat::from_euler(
+                        EulerRot::XYZ,
+                        reach + (motion.clock * 1.2).sin() * 0.12,
+                        0.,
+                        (motion.phase * 0.60).sin() * 0.13,
+                    )
+                }
+                _ => Quat::IDENTITY,
+            };
+            transform.translation = model::ELEPHANT_HEAD + neck * (part.1 - model::ELEPHANT_HEAD);
+            transform.rotation = neck * joint;
             continue;
         }
         if motion.kind == Kind::Bear {
@@ -995,27 +1099,28 @@ fn animate_aquatic(motion: &Motion, part: &Limb, transform: &mut Transform) {
     }
     if motion.kind == Kind::Squid {
         let held = motion.behavior == Behavior::Hold;
+        let jet = terra_core::creatures::squid_jet(f64::from(motion.clock));
         match part.0 {
-            model::Part::Tentacles(offset) => {
-                let reach = if held { 0.24 } else { 0.0 };
-                let amplitude = if held {
-                    0.025
-                } else if fast {
-                    0.20
+            model::Part::Tentacles(angle) => {
+                // Adjacent pairs fan radially from their common shoulder. Their
+                // tips stream backwards together during the mantle's jet stroke.
+                let spread = if held {
+                    0.53
                 } else {
-                    0.085
+                    0.11 - jet * (if fast { 0.44 } else { 0.34 })
                 };
-                transform.rotation = Quat::from_euler(
-                    EulerRot::XYZ,
-                    (phase + offset).sin() * amplitude + reach * offset.cos(),
-                    (phase + offset + 0.6).cos() * amplitude + reach * offset.sin(),
-                    (phase * 0.7 + offset).sin() * 0.025,
-                );
-                transform.scale.z = 1.0 + phase.sin() * if fast { 0.05 } else { 0.018 };
+                let axis = Vec3::new(-angle.sin(), angle.cos(), 0.);
+                transform.rotation = Quat::from_axis_angle(axis, spread);
+                transform.scale.z = 1. + jet * 0.055;
             }
             model::Part::Body => {
-                let squeeze = phase.sin() * if fast { 0.035 } else { 0.012 };
-                transform.scale = Vec3::new(1.0 + squeeze, 1.0 + squeeze, 1.0 - squeeze * 0.6);
+                let squeeze = if held { 0. } else { jet };
+                transform.scale = Vec3::new(
+                    1.035 - 0.125 * squeeze,
+                    1.035 - 0.125 * squeeze,
+                    0.966 + 0.08 * squeeze,
+                );
+                transform.translation.y += 0.475 * (1. - transform.scale.y);
             }
             _ => {}
         }

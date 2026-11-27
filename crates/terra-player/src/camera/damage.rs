@@ -39,7 +39,9 @@ pub(crate) fn update(
     time: Res<Time>,
     session: Option<Res<terra_network::client::ClientSession>>,
     construction: Option<Res<super::ConstructionCamera>>,
+    settings: Option<Res<terra_core::GameplayConfig>>,
     mut motion: Local<HurtMotion>,
+    bodies: Query<&Transform, (With<super::PlayerBody>, Without<TerraCamera>)>,
     mut cameras: Query<(&mut Transform, &mut CameraLook), With<TerraCamera>>,
 ) {
     let current = session
@@ -50,11 +52,33 @@ pub(crate) fn update(
                 .map(|uuid| (uuid, s.stats.survival.health, s.stats.survival.max_health))
         });
     let offset = motion.sample(current, time.delta_secs());
-    if construction.as_ref().is_some_and(|c| c.active) || offset == Vec2::ZERO {
+    if construction.as_ref().is_some_and(|c| c.active) {
         return;
     }
+    let event = session
+        .as_deref()
+        .filter(|_| settings.as_ref().is_none_or(|s| s.view_bobbing))
+        .and_then(terra_network::client::ClientSession::current_eruption);
+    let listener = bodies
+        .iter()
+        .next()
+        .map(|body| body.translation.as_dvec3().to_array());
     for (mut camera, mut look) in &mut cameras {
-        camera.rotation *= Quat::from_euler(EulerRot::XYZ, offset.x, 0.0, offset.y);
+        let mut tilt = Vec3::new(offset.x, 0., offset.y);
+        if let Some(event) = event {
+            let gain =
+                event.tremor(listener.unwrap_or_else(|| camera.translation.as_dvec3().to_array()));
+            let t = event.age;
+            tilt += Vec3::new(
+                0.009 * (t * 28.1).sin() + 0.004 * (t * 41.9).sin(),
+                0.005 * (t * 21.3).sin(),
+                0.012 * (t * 18.6 + (t * 4.9).sin()).sin(),
+            ) * gain;
+        }
+        if tilt == Vec3::ZERO {
+            continue;
+        }
+        camera.rotation *= Quat::from_euler(EulerRot::XYZ, tilt.x, tilt.y, tilt.z);
         // Targeting continues using CameraLook's logical yaw/pitch. Mark the
         // rendered recoil so sync_external cannot feed it back into aim.
         look.presented(camera.rotation);
@@ -64,6 +88,73 @@ pub(crate) fn update(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn quake_moves_only_the_rendered_camera_and_respects_view_motion() {
+        use terra_world::volcano::{Eruption, Vent};
+        let mut app = App::new();
+        app.init_resource::<Time>()
+            .init_resource::<terra_network::client::ClientSession>()
+            .init_resource::<terra_core::GameplayConfig>()
+            .add_systems(Update, update);
+        let camera = app
+            .world_mut()
+            .spawn((TerraCamera, Transform::default()))
+            .id();
+        app.world_mut()
+            .get_mut::<CameraLook>(camera)
+            .unwrap()
+            .aim(Quat::IDENTITY);
+        let mut session = app
+            .world_mut()
+            .resource_mut::<terra_network::client::ClientSession>();
+        session.ready = true;
+        session.eruption = Some((
+            Eruption {
+                vent: Vent {
+                    origin: [0., 0., 0.],
+                    seed: 1,
+                },
+                cycle: 3,
+                age: 3.4,
+                landed: 0,
+            },
+            std::time::Instant::now(),
+        ));
+        app.update();
+        assert_ne!(
+            app.world().get::<Transform>(camera).unwrap().rotation,
+            Quat::IDENTITY
+        );
+        assert_eq!(
+            app.world().get::<CameraLook>(camera).unwrap().rotation(),
+            Quat::IDENTITY
+        );
+        app.world_mut()
+            .resource_mut::<terra_core::GameplayConfig>()
+            .view_bobbing = false;
+        app.world_mut()
+            .get_mut::<Transform>(camera)
+            .unwrap()
+            .rotation = Quat::IDENTITY;
+        app.update();
+        assert_eq!(
+            app.world().get::<Transform>(camera).unwrap().rotation,
+            Quat::IDENTITY
+        );
+        app.world_mut()
+            .resource_mut::<terra_core::GameplayConfig>()
+            .view_bobbing = true;
+        app.world_mut()
+            .get_mut::<Transform>(camera)
+            .unwrap()
+            .translation = Vec3::X * 101.;
+        app.update();
+        assert_eq!(
+            app.world().get::<Transform>(camera).unwrap().rotation,
+            Quat::IDENTITY
+        );
+    }
+
     #[test]
     fn cactus_recoil_is_a_bounded_pulse_and_never_retriggers_on_unchanged_health() {
         let id = terra_core::PlayerUuid::from_bytes([1; 16]);

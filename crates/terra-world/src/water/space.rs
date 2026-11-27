@@ -219,7 +219,6 @@ impl FluidSpace {
         }
     }
 
-    #[cfg(any(feature = "bevy", test))]
     pub fn from_global(solids: &[ShapeBox], p: [i64; 3]) -> Self {
         Self {
             solids: solids
@@ -274,7 +273,6 @@ impl FluidSpace {
                 .any(|b| (0..3).all(|i| point[i] >= b.minimum[i] && point[i] < b.maximum[i]))
     }
 
-    #[cfg(any(feature = "bevy", test))]
     pub fn connected(
         &self,
         cell: FluidCell,
@@ -403,7 +401,7 @@ fn builtin_placed_boxes(
                             source.maximum[axis]
                         }
                     });
-                    let point = if material == 40 {
+                    let point = if terra_core::block_shapes::is_torch(material) {
                         terra_core::block_shapes::torch_point(state.facing, point)
                     } else if material == 60 && state.facing >= 8 {
                         crate::objects::chimney_point(state.facing, point)

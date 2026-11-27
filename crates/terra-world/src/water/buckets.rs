@@ -152,5 +152,8 @@ pub fn transfer(
     let changed = journal
         .set_fluid(position, cell)
         .map_err(|e| e.to_string())?;
+    if !filled || changed {
+        super::falls::invalidate(chunks, journal, position).map_err(|error| error.to_string())?;
+    }
     Ok(!filled || changed)
 }

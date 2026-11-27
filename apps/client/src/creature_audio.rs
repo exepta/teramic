@@ -8,13 +8,17 @@ mod clips;
 mod dragons;
 mod eating;
 mod furniture;
+mod golem;
+mod lava_worm;
 mod plumbing;
+mod savanna;
 mod scene;
 mod smoke;
 mod source;
 mod spiders;
 mod stalker;
 mod thunder;
+mod volcanic;
 mod worm;
 
 use bevy::{audio::AddAudioSource, prelude::*};
@@ -50,6 +54,8 @@ pub(crate) fn install(app: &mut App) {
                 .after(terra_core::footsteps::FootstepSet)
                 .after(terra_core::footsteps::WaterMotionSet),
         );
+    app.add_message::<terra_render::VolcanicSound>()
+        .add_systems(Update, volcanic::update.after(scene::update));
     smoke::install(app);
     worm::install(app);
     dragons::install(app);

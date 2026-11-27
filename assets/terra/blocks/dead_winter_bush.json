@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 588,
+  "name": "Dead Winter Bush",
+  "description": "A fan of bare, weathered stems.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/dead_winter_bush.glb",
+  "collision_boxes": [],
+  "struct_block": true,
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "textures": {}
+}

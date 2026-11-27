@@ -1,0 +1,22 @@
+{
+  "id": "teramic::mossy_willow_planks",
+  "name": "Willow Planks",
+  "station": "hand",
+  "output": {
+    "item": {
+      "block": 681
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 680
+        },
+        "count": 1
+      }
+    ]
+  }
+}

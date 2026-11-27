@@ -76,8 +76,8 @@ impl Collapse {
         if self.foot.iter().any(|v| v.unsigned_abs() > 999_000)
             || !length.is_finite()
             || (length - 1.0).abs() > 0.001
-            || !matches!(self.wood_material, 6 | 10 | 36 | 134 | 313)
-            || !matches!(self.leaves_material, 7..=9 | 132 | 133 | 195 | 310..=312)
+            || !super::is_fellable_log(self.wood_material)
+            || !super::is_fellable_leaf(self.leaves_material)
             || self.sections.is_empty()
             || self.sections.len() > 128
         {

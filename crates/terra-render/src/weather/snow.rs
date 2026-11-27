@@ -112,7 +112,7 @@ pub(crate) fn model_surface_payload(
         condition.snow
     };
     let snow_sky_override = snow_exposed && exposure == 0.0;
-    (material == 98
+    (terra_core::footsteps::TrackSurface::from_block(material).is_some()
         || snow > 0.0
         || condition.wetness > 0.003
         || exposure != 0.0

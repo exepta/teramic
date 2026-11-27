@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 697,
+  "name": "Willow Roots",
+  "description": "Knotted willow roots grip the soft bank.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.46,
+  "resistance": 0.62,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/willow_roots.glb",
+  "struct_block": true,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.39,
+        0,
+        0.39
+      ],
+      "maximum": [
+        0.62,
+        0.41,
+        0.62
+      ]
+    }
+  ],
+  "textures": {}
+}

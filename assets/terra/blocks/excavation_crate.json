@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 717,
+  "name": "Excavation Crate",
+  "description": "Sorted mineral samples and a spade left by the dig crew.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.3,
+  "resistance": 2.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/excavation_crate.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.08,
+        0.0,
+        0.17
+      ],
+      "maximum": [
+        0.82,
+        0.47,
+        0.86
+      ]
+    }
+  ]
+}

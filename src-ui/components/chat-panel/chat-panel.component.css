@@ -23,7 +23,7 @@
 .chat-suggestion:hover { background-color: #4b6040; color: #fff1b5; }
 .chat-help { display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; border-top: 1px solid #566b4b; padding-top: 8px; }
 .chat-help-heading { display: flex; align-items: center; gap: 7px; color: #e1c37b; }
-.chat-help-heading p { color: #e1c37b; font-size: 15px; margin: 0; font-weight: 700; }
+.chat-help-heading p { flex-grow: 1; color: #e1c37b; font-size: 15px; margin: 0; font-weight: 700; }
 .chat-help-entry { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
 .chat-help-command { color: #b6d69a; font-size: 14px; margin: 0; font-weight: 700; }
 .chat-help-description { color: #d7dcd0; font-size: 13px; margin: 0; }

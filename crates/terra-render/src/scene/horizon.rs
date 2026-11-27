@@ -49,7 +49,7 @@ type HazeMaterial = ExtendedMaterial<StandardMaterial, HazeExtension>;
 struct Haze;
 
 pub(crate) fn install(app: &mut App) {
-    app.add_plugins(MaterialPlugin::<HazeMaterial>::default())
+    crate::material_work::add::<HazeMaterial>(app)
         .add_systems(Startup, setup)
         .add_systems(PostUpdate, update.before(TransformSystems::Propagate));
 }
@@ -106,6 +106,7 @@ fn update(
     mut materials: ResMut<Assets<HazeMaterial>>,
     daylight: Res<super::daylight::Daylight>,
     underwater: Res<crate::water::UnderwaterState>,
+    atmosphere: Option<Res<super::biome_atmosphere::BiomeAtmosphere>>,
 ) {
     let Some((camera, projection, fog)) = camera.iter().next() else {
         return;
@@ -140,7 +141,7 @@ fn update(
         let moon = (-daylight.sun).extend((1.0 - daylight.daylight) * (1.0 - underwater.blend));
         let sky = Vec4::new(
             daylight.rotation,
-            1.0 - underwater.blend,
+            1.0 - atmosphere.as_deref().map_or(0., |air| air.ashlands),
             underwater.blend,
             underwater.depth.max(0.0),
         );

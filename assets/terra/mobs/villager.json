@@ -25,7 +25,10 @@
     "Nomade B",
     "Nomade C",
     "Nomade D",
-    "Handwerker"
+    "Handwerker",
+    "Sumpfhexe",
+    "Sumpfhexer",
+    "Moor-Einsiedler"
   ],
   "health": 20.0,
   "food": 30.0,

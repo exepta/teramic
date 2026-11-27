@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 518,
+  "name": "Meadow Limestone",
+  "description": "Pale weathered limestone from ledges above the river.",
+  "creative_category": "nature",
+  "hardness": 1.5,
+  "resistance": 3.0,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "face_materials": [
+    "surface",
+    "surface",
+    "surface",
+    "surface",
+    "surface",
+    "surface"
+  ],
+  "textures": {
+    "surface": "textures/plains/meadow_limestone_surface.png"
+  },
+  "materials": {
+    "surface": {
+      "roughness": 0.87,
+      "normal_texture": "textures/plains/meadow_limestone_surface_normal.png"
+    }
+  }
+}

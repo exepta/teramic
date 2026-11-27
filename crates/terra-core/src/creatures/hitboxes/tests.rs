@@ -272,3 +272,23 @@ fn airborne_and_diving_worm_targets_follow_the_shared_authoritative_spine() {
         }
     }
 }
+
+#[test]
+fn guardian_target_rises_from_the_rubble_with_its_replicated_wake_phase() {
+    let mut golem = animal(Kind::StoneGolem);
+    golem.behavior = CreatureBehavior::Sleep;
+    let can_hit = |a: &Creature, x, y| {
+        for_creature(a)
+            .ray_distance([x, y, -4.], [0., 0., 1.], 8.)
+            .is_some()
+    };
+    assert!(can_hit(&golem, 1.95, 0.5));
+    assert!(!can_hit(&golem, 0., 2.));
+    golem.behavior = CreatureBehavior::Emerge;
+    golem.timer = super::super::golem::WAKE_SECONDS * 0.5;
+    assert!(can_hit(&golem, 0., 2.));
+    assert!(!can_hit(&golem, 0., 3.5));
+    golem.timer = 0.;
+    assert!(can_hit(&golem, 0., 3.5));
+    assert!(!can_hit(&golem, 1.95, 0.5));
+}

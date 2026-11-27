@@ -131,6 +131,7 @@ pub struct PreparedColumnChanged {
 }
 #[derive(Resource, Default)]
 pub struct ChunkStore {
+    pub(crate) lava_front: crate::lava::Front,
     pub(super) support_queue: VecDeque<[i64; 3]>,
     pub loaded: HashMap<SectionPos, LoadedSection>,
     pub(super) wanted: HashSet<SectionPos>,
@@ -193,8 +194,17 @@ impl ChunkStore {
             .surface_at(x, z)
     }
     /// Shared immutable generation data for low-priority cartography workers.
+    pub(crate) fn column_has_falls(&self, coordinate: [i64; 2]) -> bool {
+        self.columns
+            .get(&coordinate)
+            .is_some_and(|c| !c.fall_columns.is_empty())
+    }
     pub fn prepared_column(&self, coordinate: [i64; 2]) -> Option<Arc<crate::PreparedColumn>> {
         self.columns.get(&coordinate).cloned()
+    }
+
+    pub(crate) fn prepared_column_coordinates(&self) -> impl Iterator<Item = [i64; 2]> + '_ {
+        self.columns.keys().copied()
     }
 
     /// Unique callers may deduplicate by stable settlement ID. Never plans regions.
@@ -270,7 +280,7 @@ impl ChunkStore {
             .get(&[global[0].div_euclid(16), global[2].div_euclid(16)])
             .and_then(|column| column.surface_at(global[0], global[2]))
         {
-            crate::water::fluid::from_columns(surface.water_columns(), global[1])
+            crate::water::falls::sampled(surface.water_columns(), global, journal)
         } else {
             crate::water::fluid::natural_cell(terrain, global)
         }
@@ -294,7 +304,44 @@ impl ChunkStore {
         } else {
             Vec::new()
         };
+        let mut flow_edits = Vec::new();
+        if accepted
+            && (delta.revision != journal.revision(owner)
+                || delta.fluid_epoch != journal.fluid_epoch(owner))
+            && crate::water::falls::near(self, owner)
+        {
+            let incoming: HashSet<_> = delta
+                .blocks
+                .iter()
+                .map(|(p, _)| p.map(usize::from))
+                .collect();
+            for (local, raw) in &delta.blocks {
+                if let Ok(p) = owner.global_block(local.map(usize::from))
+                    && journal.block(p) != Some(*raw)
+                {
+                    flow_edits.push(p);
+                }
+            }
+            for (local, cell) in &delta.fluids {
+                if let Ok(p) = owner.global_block(local.map(usize::from))
+                    && cell.amount == 0
+                    && journal.fluid(p) != Some(*cell)
+                {
+                    flow_edits.push(p);
+                }
+            }
+            for (local, _) in journal.blocks_in_section(owner) {
+                if let Ok(p) = owner.global_block(local)
+                    && !incoming.contains(&local)
+                {
+                    flow_edits.push(p);
+                }
+            }
+        }
         let affected = journal.import_replica_delta(delta)?;
+        for p in flow_edits {
+            crate::water::falls::invalidate(self, journal, p).map_err(|e| e.to_string())?;
+        }
         // Publication of the visible mesh can lag behind a confirmed edit.
         // Material/collision consumers need the accepted voxel values now.
         if accepted && let Some(section) = self.loaded.get_mut(&owner) {
@@ -372,6 +419,10 @@ impl ChunkStore {
         self.unknown_voxel_bases
             .get(&position)
             .is_some_and(|cells| !cells.is_empty())
+    }
+    /// Empty on a fully confirmed world, so halo consumers can skip their neighbor probes.
+    pub fn has_pending_voxel_bases(&self) -> bool {
+        !self.unknown_voxel_bases.is_empty()
     }
     /// Copies confirmed voxels independently of the visible render mesh.
     /// Forgotten generated bases remain unavailable until section publication.
@@ -465,7 +516,7 @@ impl ChunkStore {
             }
             let cell = journal
                 .fluid(p)
-                .unwrap_or_else(|| crate::water::fluid::from_columns(natural, y));
+                .unwrap_or_else(|| crate::water::falls::sampled(natural, p, journal));
             let block = self.block_at(p)?;
             if cell.amount == 0 {
                 return None;

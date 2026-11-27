@@ -83,6 +83,9 @@ pub struct LiquidState {
 }
 
 impl LiquidState {
+    /// A new downhill step can feed another run of this many blocks.
+    pub(crate) const LAVA_RUN: u8 = 14;
+
     pub fn valid(self, position: [i64; 3], material: u16) -> bool {
         let horizontal = position[0]
             .abs_diff(self.origin[0])
@@ -91,23 +94,33 @@ impl LiquidState {
             .iter()
             .chain(self.origin.iter())
             .all(|p| p.unsigned_abs() <= 1_000_000)
-            && horizontal <= 4
-            && if material == terra_core::bile::FLUID {
-                (if self.age & terra_core::bile::FINE != 0 {
-                    (1..=64).contains(&self.volume)
-                        && self.age & terra_core::bile::LIFETIME_MASK
-                            <= if self.age & terra_core::bile::TIMER_8HZ != 0 {
-                                terra_core::bile::SPIT_STEPS
-                            } else {
-                                25
-                            }
-                        && (self.source || self.age & terra_core::bile::LIFETIME_MASK == 0)
-                } else {
-                    self.age <= 31 && (1..=8).contains(&self.volume)
-                }) && position[1].abs_diff(self.origin[1]) <= 512
+            && if material == terra_voxel::MaterialId::Lava as u16 {
+                let descent = self.origin[1].abs_diff(position[1]);
+                (1..=8).contains(&self.volume)
+                    && self.age <= Self::LAVA_RUN
+                    && horizontal <= u64::from(Self::LAVA_RUN) * (descent + 1)
+                    && (!self.source || self.origin == position)
+                    && self.origin[1] >= position[1]
+                    && self.origin[1].abs_diff(position[1]) <= 512
+            } else if material == terra_core::bile::FLUID {
+                horizontal <= 4
+                    && (if self.age & terra_core::bile::FINE != 0 {
+                        (1..=64).contains(&self.volume)
+                            && self.age & terra_core::bile::LIFETIME_MASK
+                                <= if self.age & terra_core::bile::TIMER_8HZ != 0 {
+                                    terra_core::bile::SPIT_STEPS
+                                } else {
+                                    25
+                                }
+                            && (self.source || self.age & terra_core::bile::LIFETIME_MASK == 0)
+                    } else {
+                        self.age <= 31 && (1..=8).contains(&self.volume)
+                    })
+                    && position[1].abs_diff(self.origin[1]) <= 512
                     && (!self.source || position == self.origin)
             } else {
-                self.age <= 31
+                horizontal <= 4
+                    && self.age <= 31
                     && terra_core::roads::is_tar(material)
                     && position[1] == self.origin[1]
                     && (1..=64).contains(&self.volume)
@@ -169,11 +182,22 @@ impl BlockObjectState {
                 && self.wood == Default::default()
                 && liquid.valid(position, material)
                 && self.facing
-                    == if material == terra_core::bile::FLUID {
+                    == if material == terra_voxel::MaterialId::Lava as u16 {
+                        liquid.volume - 1
+                    } else if material == terra_core::bile::FLUID {
                         terra_core::bile::facing(liquid.volume, liquid.age)
                     } else {
                         terra_core::roads::tar_state(liquid.volume.div_ceil(8), liquid.age)
                     };
+        }
+        if terra_core::quartz_prisms::is_quartz(material) {
+            return (self.facing < 4
+                || terra_core::quartz_prisms::slice(material, self.facing).is_some())
+                && self.peer.is_none()
+                && !self.secondary
+                && self.wood == Default::default()
+                && self.rail_curve.is_none()
+                && self.liquid.is_none();
         }
         if terra_core::rails::is_rail(material) {
             return crate::rails::valid_state(position, material, self);
@@ -238,7 +262,8 @@ impl BlockObjectState {
         }
         self.valid_at(position)
             && match material {
-                id if terra_core::profession_stations::is_station(id)
+                id if id == terra_voxel::MaterialId::Fumarole as u16 // Legacy oriented vent props keep their saved state.
+                    || terra_core::profession_stations::is_station(id)
                     || (terra_core::grave_blocks::is_prop(id)
                         || terra_core::blood_blocks::is_prop(id)
                         || terra_core::biome_flora::is_prop(id)) =>
@@ -336,7 +361,7 @@ impl BlockObjectState {
                 }
                 61..=64 => self.facing < 4 && self.peer.is_none() && !self.secondary,
                 68..=70 | 140 => self.facing < 8 && self.peer.is_none() && !self.secondary,
-                40 => {
+                40 | terra_core::block_shapes::VIOLET_TORCH => {
                     (self.facing == 0 || (4..8).contains(&self.facing))
                         && self.peer.is_none()
                         && !self.secondary

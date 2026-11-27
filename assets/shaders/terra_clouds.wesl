@@ -13,7 +13,8 @@ struct CloudUniforms {
     haze: vec4<f32>,
     lightning: vec4<f32>,
     lightning_tint: vec4<f32>,
-    sun: vec4<f32>,
+    sun: vec3<f32>,
+    ash_cover: f32,
     volume: vec4<f32>,
     drift: vec4<f32>,
 }
@@ -92,9 +93,10 @@ fn fragment(input: CloudVertex) -> CloudFragment {
     let jitter = 0.05 + fract(sin(dot(pixel, vec2<f32>(12.9898, 78.233))) * 43758.5453) * 0.90;
     let storm = max(cloud.volume.w, smoothstep(0.64, 0.99, cloud.weather.x));
     let extinction = mix(0.032, 0.080, storm);
-    let light_direction = select(-cloud.sun.xyz, cloud.sun.xyz, cloud.sun.y > 0.0);
+    let light_direction = select(-cloud.sun, cloud.sun, cloud.sun.y > 0.0);
     let daylight = mix(vec3<f32>(0.13, 0.18, 0.26), vec3<f32>(1.0, 0.985, 0.96), cloud.weather.y);
-    let cloud_color = mix(vec3<f32>(1.0), vec3<f32>(0.40, 0.43, 0.48), storm) * daylight;
+    let cloud_color = mix(mix(vec3<f32>(1.0), vec3<f32>(0.40, 0.43, 0.48), storm),
+        vec3<f32>(0.22, 0.14, 0.23), cloud.ash_cover * 0.91) * daylight;
     let forward_light = pow(max(0.0, dot(ray, light_direction)), 8.0) * 0.18;
     var transmittance = 1.0;
     var scattered = vec3<f32>(0.0);
@@ -117,7 +119,10 @@ fn fragment(input: CloudVertex) -> CloudFragment {
         let illumination = 0.44 + exp(-shadow * 2.4) * 0.43 + height * 0.18 + forward_light;
         let strike_distance = length(position.xz - cloud.lightning.xz);
         let flash = cloud.lightning.w * exp(-strike_distance * strike_distance / 22500.0);
-        let lit = cloud_color * illumination
+        // Indirect lava light catches the bases; the warmest rims face the disk.
+        let ember = cloud.ash_cover * (0.035 * (1.0 - height)
+            + forward_light * exp(-shadow * 3.0));
+        let lit = cloud_color * illumination + vec3<f32>(1.0, 0.25, 0.10) * ember
             + cloud.lightning_tint.rgb * (flash * 0.75 + cloud.weather.w * 0.02);
         let aerial = smoothstep(cloud.observer.w * 0.32, cloud.observer.w * 0.98, length(position.xz - cloud.observer.xz));
         scattered += mix(lit, cloud.haze.rgb, aerial) * opacity * transmittance;

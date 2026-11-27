@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 625,
+  "name": "Burnt Grass Tufts",
+  "description": "Brittle ochre stalks on burnt ground.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.25,
+  "resistance": 2.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/burnt_grass.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

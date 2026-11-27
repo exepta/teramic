@@ -4,7 +4,7 @@ pub const PADDED_VOLUME: usize = PADDED_SIZE * PADDED_SIZE * PADDED_SIZE;
 /// One read-only neighboring block around a 16^3 section, X fastest.
 pub type PaddedBlocks = Vec<u16>;
 /// Stable side indices match asset catalog face order: West, East, Down, Up, North, South.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BlockFace {
     pub minimum: [u32; 3],
     pub width: u32,
@@ -46,7 +46,7 @@ pub struct BlockSegment {
 }
 impl BlockMesh {
     pub fn is_empty(&self) -> bool {
-        self.indices.is_empty()
+        self.faces.is_empty() && self.indices.is_empty()
     }
 }
 #[derive(Debug, Error)]

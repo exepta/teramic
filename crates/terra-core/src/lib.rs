@@ -6,6 +6,7 @@ pub mod campfire;
 pub mod castle;
 #[cfg(test)]
 mod cherry_tests;
+pub mod command_ids;
 pub mod config;
 mod constants;
 pub mod containers;
@@ -54,7 +55,10 @@ pub use food::{FoodDefinition, FoodRegeneration, food};
 mod gameplay;
 mod identity;
 mod map_palette;
-pub use map_palette::{MapPalette, relative_grass_tint};
+pub use map_palette::{
+    DUNE_ALBEDO, MapPalette, RED_DUNE_ALBEDO, biome_edge_strength, regional_soil_albedo,
+    relative_grass_tint,
+};
 pub mod minerals;
 #[cfg(feature = "bevy")]
 pub mod miniature;
@@ -119,8 +123,10 @@ pub mod construction;
 pub mod crafting;
 pub mod flower_pot;
 pub mod kingdom;
+pub mod quartz_prisms;
 pub mod textiles;
 pub mod tints;
+pub mod voxel_surface;
 
 pub mod trees;
 pub use trees::{FruitPhase, FruitState, TreeRecord, TreeRegistry, TreeSpecies, TreeStage};

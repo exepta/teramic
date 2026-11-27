@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 517,
+  "name": "Bound Hay Bale",
+  "description": "Dried golden stalks cinched tight with two rope bands.",
+  "creative_category": "nature",
+  "hardness": 1.5,
+  "resistance": 3.0,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "face_materials": [
+    "end",
+    "end",
+    "surface",
+    "surface",
+    "surface",
+    "surface"
+  ],
+  "textures": {
+    "end": "textures/plains/bound_hay_bale_end.png",
+    "surface": "textures/plains/bound_hay_bale_surface.png"
+  },
+  "materials": {
+    "end": {
+      "roughness": 0.87,
+      "normal_texture": "textures/plains/bound_hay_bale_end_normal.png"
+    },
+    "surface": {
+      "roughness": 0.87,
+      "normal_texture": "textures/plains/bound_hay_bale_surface_normal.png"
+    }
+  }
+}

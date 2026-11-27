@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 503,
+  "name": "Fallen Blood Branches",
+  "description": "Broken bloodwood twigs still seep red sap.",
+  "creative_category": "nature",
+  "hardness": 0.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/fallen_blood_branches.glb",
+  "textures": {},
+  "struct_block": true,
+  "collision_boxes": []
+}

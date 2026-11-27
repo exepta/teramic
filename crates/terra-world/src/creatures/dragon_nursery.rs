@@ -56,7 +56,7 @@ pub fn step(
             changed = true;
             return false;
         }
-        if chunks.block_at([x, y - 1, z]) != Some(MaterialId::StrawBlock as u16) {
+        if !dragon_eggs::supports_egg(egg.shell, chunks.block_at([x, y - 1, z])) {
             return true;
         }
         let remaining = (required - egg.elapsed_days).max(0.);

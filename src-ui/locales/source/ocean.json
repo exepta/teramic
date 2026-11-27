@@ -1,0 +1,402 @@
+[
+  {
+    "source": "Wet Sand",
+    "en": "Wet Sand",
+    "de": "Nasser Sand"
+  },
+  {
+    "source": "Fine wet grains bear parallel tide marks.",
+    "en": "Fine wet grains bear parallel tide marks.",
+    "de": "Feine nasse Körner tragen parallele Gezeitenspuren."
+  },
+  {
+    "source": "Marine Limestone",
+    "en": "Marine Limestone",
+    "de": "Meereskalkstein"
+  },
+  {
+    "source": "Pale limestone laid down in an ancient sea.",
+    "en": "Pale limestone laid down in an ancient sea.",
+    "de": "Heller Kalkstein aus einem urzeitlichen Meer."
+  },
+  {
+    "source": "Reef Stone",
+    "en": "Reef Stone",
+    "de": "Riffstein"
+  },
+  {
+    "source": "A porous reef skeleton cut by holes and channels.",
+    "en": "A porous reef skeleton cut by holes and channels.",
+    "de": "Ein poröses Riffskelett voller Löcher und Kanäle."
+  },
+  {
+    "source": "Submarine Basalt",
+    "en": "Submarine Basalt",
+    "de": "Unterwasserbasalt"
+  },
+  {
+    "source": "Dark volcanic rock fractured beneath the waves.",
+    "en": "Dark volcanic rock fractured beneath the waves.",
+    "de": "Dunkles, unter Wasser zerklüftetes Vulkangestein."
+  },
+  {
+    "source": "Brain Coral",
+    "en": "Brain Coral",
+    "de": "Hirnkoralle"
+  },
+  {
+    "source": "Golden ridges wind across a domed coral colony.",
+    "en": "Golden ridges wind across a domed coral colony.",
+    "de": "Goldene Rillen winden sich über eine gewölbte Korallenkolonie."
+  },
+  {
+    "source": "Table Coral",
+    "en": "Table Coral",
+    "de": "Tischkoralle"
+  },
+  {
+    "source": "Overlapping orange plates catch the sunlight.",
+    "en": "Overlapping orange plates catch the sunlight.",
+    "de": "Überlappende orangefarbene Teller fangen das Sonnenlicht ein."
+  },
+  {
+    "source": "Staghorn Coral",
+    "en": "Staghorn Coral",
+    "de": "Geweihkoralle"
+  },
+  {
+    "source": "Pale tips crown sturdy red coral branches.",
+    "en": "Pale tips crown sturdy red coral branches.",
+    "de": "Helle Spitzen krönen kräftige rote Korallenäste."
+  },
+  {
+    "source": "Organ Pipe Coral",
+    "en": "Organ Pipe Coral",
+    "de": "Orgelkoralle"
+  },
+  {
+    "source": "A cluster of hollow golden coral tubes.",
+    "en": "A cluster of hollow golden coral tubes.",
+    "de": "Eine Gruppe hohler goldener Korallenröhren."
+  },
+  {
+    "source": "Violet Sea Fan",
+    "en": "Violet Sea Fan",
+    "de": "Violetter Seefächer"
+  },
+  {
+    "source": "A broad fan of violet branches.",
+    "en": "A broad fan of violet branches.",
+    "de": "Ein breiter Fächer aus violetten Ästen."
+  },
+  {
+    "source": "Mushroom Coral",
+    "en": "Mushroom Coral",
+    "de": "Pilzkoralle"
+  },
+  {
+    "source": "Frilled caps shade a colony of pink polyps.",
+    "en": "Frilled caps shade a colony of pink polyps.",
+    "de": "Gekrauste Hüte beschatten eine Kolonie rosa Polypen."
+  },
+  {
+    "source": "Coral Thicket",
+    "en": "Coral Thicket",
+    "de": "Korallenbusch"
+  },
+  {
+    "source": "Short vermilion branches grow in a dense thicket.",
+    "en": "Short vermilion branches grow in a dense thicket.",
+    "de": "Kurze zinnoberrote Zweige bilden ein dichtes Gebüsch."
+  },
+  {
+    "source": "Luminous Coral",
+    "en": "Luminous Coral",
+    "de": "Leuchtkoralle"
+  },
+  {
+    "source": "Azure coral tips glow on the reef at dusk.",
+    "en": "Azure coral tips glow on the reef at dusk.",
+    "de": "Azurfarbene Korallenspitzen leuchten in der Dämmerung."
+  },
+  {
+    "source": "Ribbon Kelp",
+    "en": "Ribbon Kelp",
+    "de": "Bandtang"
+  },
+  {
+    "source": "Fine green blades rise from a rocky holdfast.",
+    "en": "Fine green blades rise from a rocky holdfast.",
+    "de": "Feine grüne Blätter sprießen aus einer felsigen Haftwurzel."
+  },
+  {
+    "source": "Giant Kelp",
+    "en": "Giant Kelp",
+    "de": "Riesentang"
+  },
+  {
+    "source": "Long leafy stems form connected kelp forests.",
+    "en": "Long leafy stems form connected kelp forests.",
+    "de": "Lange belaubte Stängel bilden zusammenhängende Tangwälder."
+  },
+  {
+    "source": "Red Algae",
+    "en": "Red Algae",
+    "de": "Rotalge"
+  },
+  {
+    "source": "Small scarlet fronds cluster on the seabed.",
+    "en": "Small scarlet fronds cluster on the seabed.",
+    "de": "Kleine scharlachrote Wedel wachsen auf dem Meeresboden."
+  },
+  {
+    "source": "Brown Algae",
+    "en": "Brown Algae",
+    "de": "Braunalge"
+  },
+  {
+    "source": "Olive and amber blades grow in cold currents.",
+    "en": "Olive and amber blades grow in cold currents.",
+    "de": "Olivgrüne und bernsteinfarbene Blätter wachsen in kalten Strömungen."
+  },
+  {
+    "source": "Green Algae",
+    "en": "Green Algae",
+    "de": "Grünalge"
+  },
+  {
+    "source": "A tuft of fresh green seaweed.",
+    "en": "A tuft of fresh green seaweed.",
+    "de": "Ein Büschel frischer grüner Meeresalgen."
+  },
+  {
+    "source": "Bladderwrack",
+    "en": "Bladderwrack",
+    "de": "Blasentang"
+  },
+  {
+    "source": "Golden floats lift olive blades toward the light.",
+    "en": "Golden floats lift olive blades toward the light.",
+    "de": "Goldene Schwimmblasen heben olivgrüne Blätter zum Licht."
+  },
+  {
+    "source": "Clam",
+    "en": "Clam",
+    "de": "Venusmuschel"
+  },
+  {
+    "source": "A ridged bivalve rests on the sand.",
+    "en": "A ridged bivalve rests on the sand.",
+    "de": "Eine gerippte Muschel ruht auf dem Sand."
+  },
+  {
+    "source": "Reef Oyster",
+    "en": "Reef Oyster",
+    "de": "Riffauster"
+  },
+  {
+    "source": "A rough oyster shell with a pearly lining.",
+    "en": "A rough oyster shell with a pearly lining.",
+    "de": "Eine raue Austernschale mit perlmuttfarbener Innenseite."
+  },
+  {
+    "source": "Spiral Shell",
+    "en": "Spiral Shell",
+    "de": "Schneckenhaus"
+  },
+  {
+    "source": "A coiled, striped sea snail shell.",
+    "en": "A coiled, striped sea snail shell.",
+    "de": "Ein gewundenes, gestreiftes Meeresschneckenhaus."
+  },
+  {
+    "source": "Cone Shell",
+    "en": "Cone Shell",
+    "de": "Kegelschnecke"
+  },
+  {
+    "source": "Ivory bands wrap a tapering shell.",
+    "en": "Ivory bands wrap a tapering shell.",
+    "de": "Elfenbeinfarbene Bänder umziehen ein spitzes Schneckenhaus."
+  },
+  {
+    "source": "Scallop",
+    "en": "Scallop",
+    "de": "Jakobsmuschel"
+  },
+  {
+    "source": "Pink radial ribs fan out from the hinge.",
+    "en": "Pink radial ribs fan out from the hinge.",
+    "de": "Rosa Rippen fächern vom Scharnier aus auf."
+  },
+  {
+    "source": "Starfish",
+    "en": "Starfish",
+    "de": "Seestern"
+  },
+  {
+    "source": "Five orange arms spread across the seafloor.",
+    "en": "Five orange arms spread across the seafloor.",
+    "de": "Fünf orangefarbene Arme liegen auf dem Meeresboden."
+  },
+  {
+    "source": "Sea Urchin",
+    "en": "Sea Urchin",
+    "de": "Seeigel"
+  },
+  {
+    "source": "Violet spines protect a round sea urchin.",
+    "en": "Violet spines protect a round sea urchin.",
+    "de": "Violette Stacheln schützen einen runden Seeigel."
+  },
+  {
+    "source": "Sand Dollar",
+    "en": "Sand Dollar",
+    "de": "Sanddollar"
+  },
+  {
+    "source": "Five pale petals mark a flattened shell.",
+    "en": "Five pale petals mark a flattened shell.",
+    "de": "Fünf helle Blätter zieren eine flache Kalkschale."
+  },
+  {
+    "source": "Marine Driftwood",
+    "en": "Marine Driftwood",
+    "de": "Treibholz"
+  },
+  {
+    "source": "Salt-worn wood washed from a distant shore.",
+    "en": "Salt-worn wood washed from a distant shore.",
+    "de": "Salzgebleichtes Holz von einem fernen Ufer."
+  },
+  {
+    "source": "Wreck Timbers",
+    "en": "Wreck Timbers",
+    "de": "Wrackplanken"
+  },
+  {
+    "source": "Broken timbers from a stranded hull.",
+    "en": "Broken timbers from a stranded hull.",
+    "de": "Gebrochene Balken eines gestrandeten Rumpfs."
+  },
+  {
+    "source": "Ship Anchor",
+    "en": "Ship Anchor",
+    "de": "Schiffsanker"
+  },
+  {
+    "source": "A rusted iron anchor with two curved flukes.",
+    "en": "A rusted iron anchor with two curved flukes.",
+    "de": "Ein rostiger Eisenanker mit zwei gebogenen Flunken."
+  },
+  {
+    "source": "Fishing Net",
+    "en": "Fishing Net",
+    "de": "Fischernetz"
+  },
+  {
+    "source": "A diamond-meshed net slung between timber posts.",
+    "en": "A diamond-meshed net slung between timber posts.",
+    "de": "Ein rautenförmig geknüpftes Netz zwischen Holzpfählen."
+  },
+  {
+    "source": "Lobster Pot",
+    "en": "Lobster Pot",
+    "de": "Reusenfalle"
+  },
+  {
+    "source": "An arched wicker cage for catching shellfish.",
+    "en": "An arched wicker cage for catching shellfish.",
+    "de": "Eine gewölbte Korbreuse zum Krebsfang."
+  },
+  {
+    "source": "Marker Buoy",
+    "en": "Marker Buoy",
+    "de": "Markierungsboje"
+  },
+  {
+    "source": "A striped float marking a submerged mooring.",
+    "en": "A striped float marking a submerged mooring.",
+    "de": "Eine gestreifte Boje markiert einen versunkenen Liegeplatz."
+  },
+  {
+    "source": "Barnacled Barrel",
+    "en": "Barnacled Barrel",
+    "de": "Bewachsenes Fass"
+  },
+  {
+    "source": "Pale barnacles cling to a hooped oak cask.",
+    "en": "Pale barnacles cling to a hooped oak cask.",
+    "de": "Helle Seepocken haften an einem eisenbereiften Eichenfass."
+  },
+  {
+    "source": "Sea Crystal",
+    "en": "Sea Crystal",
+    "de": "Meereskristall"
+  },
+  {
+    "source": "A spray of luminous blue marine crystals.",
+    "en": "A spray of luminous blue marine crystals.",
+    "de": "Eine Gruppe leuchtend blauer Meereskristalle."
+  },
+  {
+    "source": "Tidal Boulders",
+    "en": "Tidal Boulders",
+    "de": "Gezeitenfindlinge"
+  },
+  {
+    "source": "Rounded stones piled by a strong tide.",
+    "en": "Rounded stones piled by a strong tide.",
+    "de": "Von starker Strömung aufgehäufte runde Steine."
+  },
+  {
+    "source": "Barnacled Boulder",
+    "en": "Barnacled Boulder",
+    "de": "Seepockenfels"
+  },
+  {
+    "source": "Barnacles encrust the face of a sea-worn boulder.",
+    "en": "Barnacles encrust the face of a sea-worn boulder.",
+    "de": "Seepocken bedecken die Flanke eines vom Meer geformten Felsens."
+  },
+  {
+    "source": "Reef Pillar",
+    "en": "Reef Pillar",
+    "de": "Riffsäule"
+  },
+  {
+    "source": "Algae cling to a layered column of reef rock.",
+    "en": "Algae cling to a layered column of reef rock.",
+    "de": "Algen haften an einer geschichteten Säule aus Riffgestein."
+  },
+  {
+    "source": "Reef Arch",
+    "en": "Reef Arch",
+    "de": "Riffbogen"
+  },
+  {
+    "source": "Water has worn a passage through the reef.",
+    "en": "Water has worn a passage through the reef.",
+    "de": "Das Wasser hat einen Durchgang durch das Riff geschliffen."
+  },
+  {
+    "source": "Reef Ledge",
+    "en": "Reef Ledge",
+    "de": "Riffplateau"
+  },
+  {
+    "source": "A mossy stone ledge overlooking a reef.",
+    "en": "A mossy stone ledge overlooking a reef.",
+    "de": "Ein moosiges Felsplateau über einem Riff."
+  },
+  {
+    "source": "Bubbling Sea Vent",
+    "en": "Bubbling Sea Vent",
+    "de": "Sprudelquelle"
+  },
+  {
+    "source": "Bubbles rise from holes in the submerged stone.",
+    "en": "Bubbles rise from holes in the submerged stone.",
+    "de": "Luftblasen steigen aus Öffnungen im versunkenen Stein auf."
+  }
+]

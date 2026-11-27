@@ -16,6 +16,12 @@ pub enum BiomeKind {
     CherryForest,
     SpiritBlossom,
     BloodForest,
+    Ashlands,
+    Savanna,
+    Swamp,
+    PetrifiedForest,
+    CrystalHighlands,
+    MistyCoast,
 }
 
 /// Broad climate compatibility; warm regions form a buffer between extremes.
@@ -38,13 +44,13 @@ impl BiomeClimate {
 impl BiomeKind {
     pub const fn climate(self) -> BiomeClimate {
         match self {
-            Self::Highland => BiomeClimate::Cold,
-            Self::Desert | Self::ClifftedDesert => BiomeClimate::Hot,
+            Self::Highland | Self::CrystalHighlands => BiomeClimate::Cold,
+            Self::Desert | Self::ClifftedDesert | Self::Ashlands => BiomeClimate::Hot,
             _ => BiomeClimate::Warm,
         }
     }
 
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 16] = [
         Self::Ocean,
         Self::Plains,
         Self::Forest,
@@ -55,6 +61,12 @@ impl BiomeKind {
         Self::CherryForest,
         Self::SpiritBlossom,
         Self::BloodForest,
+        Self::Ashlands,
+        Self::Savanna,
+        Self::Swamp,
+        Self::PetrifiedForest,
+        Self::CrystalHighlands,
+        Self::MistyCoast,
     ];
 
     pub const fn file_name(self) -> &'static str {
@@ -69,6 +81,12 @@ impl BiomeKind {
             Self::CherryForest => "cherry_forest.json",
             Self::SpiritBlossom => "spirit_blossom.json",
             Self::BloodForest => "blood_forest.json",
+            Self::Ashlands => "ashlands.json",
+            Self::Savanna => "savanna.json",
+            Self::Swamp => "swamp.json",
+            Self::PetrifiedForest => "petrified_forest.json",
+            Self::CrystalHighlands => "crystal_highlands.json",
+            Self::MistyCoast => "misty_coast.json",
         }
     }
 }
@@ -77,19 +95,19 @@ impl BiomeKind {
 #[serde(deny_unknown_fields)]
 pub struct BiomeDefinitions {
     #[serde(deserialize_with = "deserialize_entries")]
-    pub entries: [BiomeDefinition; 10],
+    pub entries: [BiomeDefinition; 16],
     #[serde(default = "super::LandscapeDefinitions::legacy_v5")]
     pub landscapes: super::LandscapeDefinitions,
 }
 
-/// Historic snapshots contain eight entries. Append the new profile without
-/// changing saved terrain: spirit_blossom_revision independently gates generation.
-fn deserialize_entries<'de, D>(deserializer: D) -> Result<[BiomeDefinition; 10], D::Error>
+/// Historic human-readable snapshots gain missing profiles in stable ID order.
+/// The saved revisions independently gate their generation.
+fn deserialize_entries<'de, D>(deserializer: D) -> Result<[BiomeDefinition; 16], D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     if !deserializer.is_human_readable() {
-        return <[BiomeDefinition; 10]>::deserialize(deserializer);
+        return <[BiomeDefinition; 16]>::deserialize(deserializer);
     }
     let mut entries = Vec::<BiomeDefinition>::deserialize(deserializer)?;
     if entries.len() == 8 {
@@ -104,9 +122,49 @@ where
                 .map_err(serde::de::Error::custom)?,
         );
     }
+    if entries.len() == 10 {
+        entries.push(
+            serde_json::from_str(include_str!("../../../../assets/biome/ashlands.json"))
+                .map_err(serde::de::Error::custom)?,
+        );
+    }
+    if entries.len() == 11 {
+        entries.push(
+            serde_json::from_str(include_str!("../../../../assets/biome/savanna.json"))
+                .map_err(serde::de::Error::custom)?,
+        );
+    }
+    if entries.len() == 12 {
+        entries.push(
+            serde_json::from_str(include_str!("../../../../assets/biome/swamp.json"))
+                .map_err(serde::de::Error::custom)?,
+        );
+    }
+    if entries.len() == 13 {
+        entries.push(
+            serde_json::from_str(include_str!(
+                "../../../../assets/biome/petrified_forest.json"
+            ))
+            .map_err(serde::de::Error::custom)?,
+        );
+    }
+    if entries.len() == 14 {
+        entries.push(
+            serde_json::from_str(include_str!(
+                "../../../../assets/biome/crystal_highlands.json"
+            ))
+            .map_err(serde::de::Error::custom)?,
+        );
+    }
+    if entries.len() == 15 {
+        entries.push(
+            serde_json::from_str(include_str!("../../../../assets/biome/misty_coast.json"))
+                .map_err(serde::de::Error::custom)?,
+        );
+    }
     entries.try_into().map_err(|entries: Vec<BiomeDefinition>| {
         serde::de::Error::custom(format!(
-            "expected 8/9 legacy or 10 biome profiles, got {}",
+            "expected 8–15 legacy or 16 biome profiles, got {}",
             entries.len()
         ))
     })
@@ -290,6 +348,12 @@ impl BiomeDefinitions {
                 include_str!("../../../../assets/biome/cherry_forest.json"),
                 include_str!("../../../../assets/biome/spirit_blossom.json"),
                 include_str!("../../../../assets/biome/blood_forest.json"),
+                include_str!("../../../../assets/biome/ashlands.json"),
+                include_str!("../../../../assets/biome/savanna.json"),
+                include_str!("../../../../assets/biome/swamp.json"),
+                include_str!("../../../../assets/biome/petrified_forest.json"),
+                include_str!("../../../../assets/biome/crystal_highlands.json"),
+                include_str!("../../../../assets/biome/misty_coast.json"),
             ];
             let mut result = Self {
                 entries: files

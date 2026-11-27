@@ -19,7 +19,12 @@ pub(super) fn wanted_sections(
     vertical_radius: i64,
 ) -> HashSet<SectionPos> {
     let mut wanted = HashSet::new();
-    extend_wanted_sections(&mut wanted, center, radius, vertical_radius);
+    extend_wanted_sections(
+        &mut wanted,
+        center,
+        radius,
+        [-vertical_radius, vertical_radius],
+    );
     wanted
 }
 
@@ -27,10 +32,10 @@ fn extend_wanted_sections(
     wanted: &mut HashSet<SectionPos>,
     center: SectionPos,
     radius: i64,
-    vertical_radius: i64,
+    vertical: [i64; 2],
 ) {
     for dz in -radius..=radius {
-        for dy in -vertical_radius..=vertical_radius {
+        for dy in vertical[0]..=vertical[1] {
             for dx in -radius..=radius {
                 if let Ok(p) = center.offset([dx, dy, dz]) {
                     wanted.insert(p);
@@ -110,7 +115,7 @@ pub(super) fn refresh_interest(
             &mut wanted,
             center,
             settings.radius,
-            settings.vertical_radius,
+            [-settings.vertical_radius, settings.vertical_radius],
         );
         let surface_height = chunks.columns.get(&[center.x, center.z]).map_or(
             environment.terrain.0.config().base_height,
@@ -142,10 +147,10 @@ pub(super) fn refresh_interest(
     }
     chunks.surface_views = (!previous.dragons.is_empty() || !galleries.is_empty())
         .then(|| (centers.clone(), settings.radius));
-    // A 5×3×5 envelope fits two outstretched wings plus the steering lookahead.
+    // Include the second section above the feet for a great dragon’s wingtip and climb sweep.
     // It follows the animal instead of keeping its entire territory resident.
     for &center in previous.dragons.iter() {
-        extend_wanted_sections(&mut wanted, center, 2, 1);
+        extend_wanted_sections(&mut wanted, center, 2, [-1, 2]);
     }
     {
         let chunks = &mut *chunks;
@@ -246,7 +251,7 @@ fn extend_gallery_shell(
     terrain: &crate::TerraGenerator,
 ) -> f32 {
     let eye = [center.x, center.y, center.z].map(|c| (c * 16 + 8) as f64);
-    let room = terrain.cave_structure_at(eye[0], eye[2]);
+    let room = terrain.cave_room_at(eye[0], eye[2]);
     let Some((length, [dx, dz])) = room.gallery_axis() else {
         return 0.;
     };
@@ -467,8 +472,8 @@ mod tests {
     fn direct_interest_union_keeps_overlapping_players_and_negative_sections() {
         let mut wanted = HashSet::new();
         for center in [SectionPos::new(-2, -3, -4), SectionPos::new(-1, -3, -4)] {
-            extend_wanted_sections(&mut wanted, center, 1, 1);
-            extend_wanted_sections(&mut wanted, center, 1, 1);
+            extend_wanted_sections(&mut wanted, center, 1, [-1, 1]);
+            extend_wanted_sections(&mut wanted, center, 1, [-1, 1]);
         }
         let mut expected = HashSet::new();
         for x in -3..=0 {
@@ -634,7 +639,7 @@ mod tests {
             .track_dragon_flight([[496., 78., 20.]]);
         app.update();
         let chunks = app.world().resource::<ChunkStore>();
-        assert_eq!(chunks.wanted.len(), 1 + 5 * 3 * 5);
+        assert_eq!(chunks.wanted.len(), 1 + 5 * 4 * 5);
         assert!(!chunks.wanted.contains(&SectionPos::new(15, 4, 1)));
         app.world_mut()
             .resource_mut::<ChunkStore>()

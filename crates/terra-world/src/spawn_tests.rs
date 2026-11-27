@@ -5,6 +5,10 @@ use crate::{SectionGenerator, TerraGenerator};
 use terra_core::{WorldConfig, WorldSeed};
 use terra_voxel::global_to_section;
 
+thread_local! {
+    pub(super) static SURFACE_PROBES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 fn flat_config() -> WorldConfig {
     WorldConfig {
         landscape_revision: 3,
@@ -309,6 +313,39 @@ fn out_of_precision_range_origins_fail_without_wrapping() {
 }
 
 #[test]
+fn savanna_start_opens_onto_native_grass_and_acacia_trees() {
+    use crate::generation::TreeAppearance;
+    let terrain = TerraGenerator::new(WorldConfig {
+        preferred_spawn_biome: Some(terra_core::BiomeKind::Savanna),
+        ..Default::default()
+    })
+    .unwrap();
+    let journal = EditJournal::default();
+    let spawn = find_land_spawn(&terrain, &journal, [8, 24]).unwrap();
+    assert_dry_support(&terrain, &journal, spawn);
+    let [x, _, z] = spawn.ground;
+    let sample = terrain.surface_column(x as f64 + 0.5, z as f64 + 0.5);
+    assert!(sample.biome.weights.savanna > 0.8);
+    assert!(matches!(
+        sample.surface_material,
+        terra_voxel::MaterialId::SavannaTurf | terra_voxel::MaterialId::DrySavannaTurf
+    ));
+    let has_acacia = [-32, 0, 32].into_iter().any(|dx| {
+        [-32, 0, 32].into_iter().any(|dz| {
+            terrain
+                .tree_appearance([x + dx, 0, z + dz])
+                .tree_roots()
+                .any(|(p, kind)| {
+                    matches!(kind, TreeAppearance::Acacia | TreeAppearance::Baobab)
+                        && (x - p[0]).pow(2) + (z - p[2]).pow(2) <= 48 * 48
+                })
+        })
+    });
+    assert!(has_acacia, "no acacias near the first view at {spawn:?}");
+    println!("Natural savanna start on seed 42042: {:?}", spawn.ground);
+}
+
+#[test]
 fn preferred_biomes_choose_real_safe_deterministic_land_without_replacing_terrain() {
     for biome in terra_core::BiomeKind::ALL {
         let config = WorldConfig {
@@ -327,10 +364,26 @@ fn preferred_biomes_choose_real_safe_deterministic_land_without_replacing_terrai
         assert_dry_support(&terrain, &journal, spawn);
         let [x, _, z] = spawn.ground;
         assert!(super::matches_preferred_biome(&terrain, x, z, biome));
+        if biome == terra_core::BiomeKind::PetrifiedForest {
+            let column = terrain.surface_column(x as f64 + 0.5, z as f64 + 0.5);
+            assert!(matches!(
+                column.surface_material,
+                terra_voxel::MaterialId::DustyGround
+                    | terra_voxel::MaterialId::CrackedStoneSoil
+                    | terra_voxel::MaterialId::MineralEncrustedStone
+            ));
+        }
+        if biome == terra_core::BiomeKind::Highland {
+            assert!(spawn.ground[1] >= 110);
+        }
         if biome != terra_core::BiomeKind::Ocean {
             assert_eq!(
                 terrain.surface_biome(&terrain.surface_column(x as f64 + 0.5, z as f64 + 0.5)),
-                biome
+                if biome == terra_core::BiomeKind::ClifftedDesert {
+                    terra_core::BiomeKind::Desert
+                } else {
+                    biome
+                }
             );
         }
         let repeated = find_land_spawn(
@@ -357,6 +410,30 @@ fn preferred_biomes_choose_real_safe_deterministic_land_without_replacing_terrai
         assert_eq!(journal.edited_blocks(), 0);
         assert_eq!(journal.fluid_cells().count(), 0);
     }
+}
+
+#[test]
+fn distant_highlands_search_only_probes_ground_in_the_requested_biome() {
+    let terrain = TerraGenerator::new(WorldConfig {
+        seed: WorldSeed(12_496_593_119_465_509_061),
+        preferred_spawn_biome: Some(terra_core::BiomeKind::Highland),
+        rivers: true,
+        biome_definitions: Some(
+            terra_core::BiomeDefinitions::load_directory(
+                terra_core::asset_directory().join("biome"),
+            )
+            .unwrap(),
+        ),
+        ..Default::default()
+    })
+    .unwrap();
+    let journal = EditJournal::default();
+    SURFACE_PROBES.set(0);
+    let spawn = find_land_spawn(&terrain, &journal, [8, 24]).unwrap();
+    let probes = SURFACE_PROBES.get();
+    assert!(probes < 100, "expensive ground probes: {probes}");
+    assert_eq!(spawn.ground, [-15_352, 123, -15_336]);
+    assert_dry_support(&terrain, &journal, spawn);
 }
 
 #[test]

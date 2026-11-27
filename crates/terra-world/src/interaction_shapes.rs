@@ -16,6 +16,22 @@ pub use hearths::{
     ATTACHED_FIRE_SCALE, attached_campfire_box, attached_campfire_point, campfire_support_boxes,
 };
 
+pub fn visit_selection_boxes(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    properties: &BlockPropertiesCatalog,
+    position: [i64; 3],
+    mut visit: impl FnMut(ShapeBox),
+) -> bool {
+    if let Some(plant) = chunks.block_at(position).and_then(|material| {
+        crate::water::floating_plants::PlantSurface::at(chunks, journal, position, material)
+    }) {
+        visit(plant.bounds());
+        return true;
+    }
+    visit_boxes(chunks, journal, properties, position, visit)
+}
+
 pub fn visit_boxes(
     chunks: &ChunkStore,
     journal: &EditJournal,
@@ -192,6 +208,15 @@ fn visit_boxes_with_state(
     }
     let selected =
         override_state.unwrap_or_else(|| journal.object_state(position).unwrap_or_default());
+    if let Some(slice) = terra_core::quartz_prisms::slice(material, selected.facing) {
+        let offset = bevy_math::DVec3::from_array(position.map(|p| p as f64));
+        visit(ShapeBox {
+            hinged: false,
+            minimum: (slice.bounds[0].as_dvec3() + offset).to_array(),
+            maximum: (slice.bounds[1].as_dvec3() + offset).to_array(),
+        });
+        return true;
+    }
     if terra_core::roads::is_tar(material) {
         let volume = selected
             .liquid
@@ -533,8 +558,8 @@ fn visit_boxes_with_state(
                     source.maximum[axis]
                 }
             });
-            if material == 40 || material == 60 && state.facing >= 8 {
-                point = if material == 40 {
+            if terra_core::block_shapes::is_torch(material) || material == 60 && state.facing >= 8 {
+                point = if terra_core::block_shapes::is_torch(material) {
                     terra_core::block_shapes::torch_point(state.facing, point)
                 } else {
                     crate::objects::chimney_point(state.facing, point)
@@ -663,12 +688,28 @@ fn cast(
     let mut ores = std::collections::BTreeSet::new();
     let mut segments = std::collections::BTreeSet::new();
     let mut openings = std::collections::BTreeSet::new();
+    let mut plants = std::collections::BTreeSet::new();
     let mut nearest = terra_voxel::blocks::raycast_blocks_with(
         origin,
         direction,
         reach,
         |position| {
             let material = chunks.block_at(position).unwrap_or(1);
+            if !solid_only {
+                if crate::water::floating_plants::is_floating_plant(material) {
+                    plants.insert((position, material));
+                }
+                // Drawn at fractional water levels, a pad can lie wholly below its owner cell.
+                if crate::water::floating_plants::can_float_over(material) {
+                    let above = [position[0], position[1] + 1, position[2]];
+                    if let Some(plant) = chunks
+                        .block_at(above)
+                        .filter(|id| crate::water::floating_plants::is_floating_plant(*id))
+                    {
+                        plants.insert((above, plant));
+                    }
+                }
+            }
             journal.visit_extended_kinetics_near(position, |owner| {
                 openings.insert(owner);
             });
@@ -744,7 +785,8 @@ fn cast(
                 }
             }
             Some(
-                if ignore_liquid && crate::targeting::displaceable_liquid(material)
+                if crate::water::floating_plants::is_floating_plant(material)
+                    || ignore_liquid && crate::targeting::displaceable_liquid(material)
                     || solid_only
                         && terra_voxel::MaterialId::from_raw(material)
                             .is_some_and(|material| !material.is_solid())
@@ -811,6 +853,33 @@ fn cast(
             if model { nearest } else { Some(cell_hit) }
         },
     );
+    for (position, material) in plants {
+        let Some(plant) =
+            crate::water::floating_plants::PlantSurface::at(chunks, journal, position, material)
+        else {
+            continue;
+        };
+        let below = [position[0], position[1] - 1, position[2]];
+        // Unshaped submerged kelp or water uses its owner cube as a fallback
+        // target. A real floating facet in that same cell takes precedence.
+        let fallback = nearest.is_some_and(|hit| {
+            hit.position == below
+                && plant.bounds().minimum[1] < position[1] as f64
+                && chunks.block_at(below).is_some_and(|id| {
+                    crate::water::floating_plants::can_float_over(id)
+                        && !crate::segments::is_segment(id)
+                        && properties.shape(id).is_empty()
+                })
+        });
+        let limit = if fallback {
+            reach
+        } else {
+            nearest.map_or(reach, |hit| hit.distance)
+        };
+        if let Some(hit) = plant.ray(origin, direction, limit) {
+            nearest = Some(hit);
+        }
+    }
     for position in openings {
         visit_boxes(chunks, journal, properties, position, |bounds| {
             if let Some((distance, normal)) =

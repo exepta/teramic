@@ -12,10 +12,9 @@
   "model_layout": "scene",
   "model": "models/salt_crystal_cluster.glb",
   "textures": {
-    "Cleavage edge": "textures/salt_cave/compact_side.png",
     "Halite": "textures/salt_cave/clear_side.png",
+    "Cleavage edge": "textures/salt_cave/compact_side.png",
     "Warm core": "textures/salt_cave/clear_side.png",
-    "Chipped facet": "textures/salt_cave/crust_top.png",
     "Rock": "textures/salt_cave/base_side.png"
   },
   "collision_boxes": [

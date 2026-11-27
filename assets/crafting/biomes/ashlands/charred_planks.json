@@ -1,0 +1,22 @@
+{
+  "id": "teramic::charred_planks",
+  "name": "Charred Planks",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 622
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 621
+        },
+        "count": 1
+      }
+    ]
+  }
+}

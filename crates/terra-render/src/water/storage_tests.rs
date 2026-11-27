@@ -235,3 +235,33 @@ fn storage_layout_initialization_and_forward_bindings_match_both_shader_stages()
     assert!(!WaterExtension::enable_prepass());
     assert!(!WaterExtension::enable_shadows());
 }
+
+#[test]
+fn switching_saved_worlds_changes_the_open_sea_shader_key() {
+    use terra_world::{TerraGenerator, streaming::WorldTerrain};
+    let mut app = app();
+    let handle = app.world().resource::<WaterAssets>().0.clone();
+    let mut keys = Vec::new();
+    for rev in [14, 15, 14] {
+        app.insert_resource(WorldTerrain(
+            TerraGenerator::new(terra_core::WorldConfig {
+                ecology_revision: rev,
+                ..Default::default()
+            })
+            .unwrap(),
+        ));
+        app.update();
+        let extension = &app
+            .world()
+            .resource::<Assets<WaterMaterial>>()
+            .get(&handle)
+            .unwrap()
+            .extension;
+        assert_eq!(extension.regional_seas, rev == 15);
+        keys.push(WaterKey::from(extension));
+    }
+    assert_ne!(keys[0], keys[1]);
+    assert_eq!(keys[0], keys[2]);
+    let shader = include_str!("../../../../assets/shaders/terra_water.wesl");
+    assert!(shader.contains("@if(!WATER_REGIONAL_SEAS) {\n    water_color = mix(water_color,"));
+}

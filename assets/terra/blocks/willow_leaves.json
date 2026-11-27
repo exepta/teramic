@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": 682,
+  "name": "Weeping Willow Leaves",
+  "description": "Pairs of narrow leaves hang from long, drooping twigs.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.46,
+  "resistance": 0.62,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "spray": "textures/foliage/willow_leaves_cluster.png",
+    "top": "textures/foliage/willow_leaves_top.png",
+    "side": "textures/foliage/willow_leaves_side.png"
+  },
+  "materials": {
+    "spray": {
+      "roughness": 0.94,
+      "reflectance": 0.09
+    },
+    "top": {
+      "roughness": 0.94,
+      "reflectance": 0.09
+    },
+    "side": {
+      "roughness": 0.94,
+      "reflectance": 0.09
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "top",
+    "side",
+    "side"
+  ],
+  "foliage_cluster": {
+    "material": "spray"
+  }
+}

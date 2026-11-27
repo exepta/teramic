@@ -3,8 +3,11 @@ use terra_core::CropKind;
 
 const PATH: u16 = 102;
 const WOOL: u16 = 103;
+mod blood_sanctuary;
+mod desert;
 pub(super) mod dragon_lairs;
 mod graves;
+mod plains;
 pub(super) mod royal;
 mod village;
 pub(super) fn default_house_template() -> Result<Vec<StructureObject>, String> {
@@ -21,6 +24,29 @@ pub(super) struct Builder<'a> {
     pub(super) seed: u32,
 }
 impl Builder<'_> {
+    fn allows_field(&self, x: i64, z: i64, width: i64, depth: i64) -> bool {
+        let config = self.terrain.config();
+        if config.ecology_revision < 14 || !config.biomes {
+            return true;
+        }
+        let [cx, _, cz] = self.summary.center;
+        [
+            [cx, cz],
+            [x, z],
+            [x + width, z],
+            [x, z + depth],
+            [x + width, z + depth],
+            [x + width / 2, z + depth / 2],
+        ]
+        .into_iter()
+        .all(|[px, pz]| {
+            self.terrain
+                .biome_at(px as f64 + 0.5, pz as f64 + 0.5)
+                .weights
+                .dominant()
+                != terra_core::BiomeKind::Plains
+        })
+    }
     fn uses_lantern(&self, material: u16) -> bool {
         material == 40
             && self.terrain.config().structures_revision >= 8
@@ -572,8 +598,35 @@ impl Builder<'_> {
         Some(())
     }
     fn ruin(&mut self, x: i64, z: i64) -> Option<()> {
+        let center = [x + 7, z + 6];
+        if self.terrain.config().ecology_revision >= 12
+            && self
+                .terrain
+                .biome_at(center[0] as f64 + 0.5, center[1] as f64 + 0.5)
+                .weights
+                .blood_forest
+                > 0.60
+            && let Some(floor) = self.fit(center[0] - 8, center[1] - 10, 16, 18)
+        {
+            blood_sanctuary::build(self, center[0], floor, center[1]);
+            return Some(());
+        }
         let detailed = self.terrain.config().structures_revision >= 3;
         let y = self.fit(x, z, 14, 12)?;
+        if self.terrain.desert_overhaul()
+            && self
+                .terrain
+                .biome_at(center[0] as f64 + 0.5, center[1] as f64 + 0.5)
+                .aridity()
+                > 0.55
+        {
+            desert::ruin(self, center[0], y, center[1]);
+            return Some(());
+        }
+        if plains::active(self, center[0], center[1]) {
+            plains::arcade(self, center[0], y, center[1]);
+            return Some(());
+        }
         self.fill([x - 1, y, z - 1], [x + 15, y + 12, z + 13], 0);
         for dx in 0..=14 {
             for dz in 0..=12 {
@@ -753,6 +806,7 @@ impl Builder<'_> {
         self.summary.bounds = bounds;
         let settlement = super::settlement::describe(&self.summary, &sections, self.seed);
         Some(Site {
+            tidal_nest: false,
             summary: self.summary,
             sections,
             settlement,
@@ -866,14 +920,16 @@ pub(super) fn plan_legacy(terrain: &TerraGenerator, region: [i64; 2], seed: u32)
             for (dx, dz, w, d, h, role) in buildings {
                 b.building(x + dx, z + dz, w, d, h, role)?;
             }
-            b.farm(x - 38, z - 8)?;
-            let farm_y = b
-                .summary
-                .buildings
-                .iter()
-                .find(|building| building.role == BuildingRole::Farm)?
-                .entrance[1];
-            b.road([x, y, z], [x - 32, farm_y, z - 10])?;
+            if b.allows_field(x - 38, z - 8, 12, 8) {
+                b.farm(x - 38, z - 8)?;
+                let farm_y = b
+                    .summary
+                    .buildings
+                    .iter()
+                    .find(|building| building.role == BuildingRole::Farm)?
+                    .entrance[1];
+                b.road([x, y, z], [x - 32, farm_y, z - 10])?;
+            }
             for (dx, dz) in [(-3, -4), (4, 5)] {
                 let py = b.ground(x + dx, z + dz);
                 b.fill([x + dx, py, z + dz], [x + dx, py + 2, z + dz], 43);
@@ -887,6 +943,7 @@ pub(super) fn plan_legacy(terrain: &TerraGenerator, region: [i64; 2], seed: u32)
         | StructureKind::Cemetery
         | StructureKind::GraveDungeon
         | StructureKind::DarkDragonLair
+        | StructureKind::FireDragonLair
         | StructureKind::EarthDragonLair
         | StructureKind::WaterDragonLair => return None,
     }

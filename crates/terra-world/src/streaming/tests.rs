@@ -953,7 +953,7 @@ fn fluid_only_jobs_preserve_terrain_and_replay_after_section_eviction() {
     let before = &app.world().resource::<ChunkStore>().loaded[&owner];
     let terrain_epoch = before.mesh_epoch;
     let terrain_revision = before.data.revision();
-    let terrain_vertices = before.mesh.as_ref().unwrap().positions.clone();
+    let terrain_faces = before.mesh.as_ref().unwrap().faces.clone();
     let fluid = FluidCell {
         amount: 7,
         flow: [1, 0],
@@ -991,7 +991,7 @@ fn fluid_only_jobs_preserve_terrain_and_replay_after_section_eviction() {
     let section = &app.world().resource::<ChunkStore>().loaded[&owner];
     assert_eq!(section.mesh_epoch, terrain_epoch);
     assert_eq!(section.data.revision(), terrain_revision);
-    assert_eq!(section.mesh.as_ref().unwrap().positions, terrain_vertices);
+    assert_eq!(section.mesh.as_ref().unwrap().faces, terrain_faces);
     app.world_mut().resource_mut::<ChunkFocus>().0 = [1000.0, 14.0, 1000.0];
     wait(&mut app, ready);
     assert!(
@@ -1027,7 +1027,7 @@ fn streaming_eviction_replays_edits_and_remeshes_boundary_neighbors() {
         .mesh
         .as_ref()
         .unwrap()
-        .indices
+        .faces
         .len();
     app.world_mut().write_message(BlockEditRequest {
         position,
@@ -1042,7 +1042,7 @@ fn streaming_eviction_replays_edits_and_remeshes_boundary_neighbors() {
     assert_eq!(chunks.loaded[&owner].mesh_epoch, 1);
     assert_eq!(chunks.loaded[&SectionPos::new(1, 0, 0)].mesh_epoch, 1);
     assert_eq!(chunks.loaded[&SectionPos::new(0, 0, 1)].mesh_epoch, 1);
-    assert!(chunks.loaded[&owner].mesh.as_ref().unwrap().indices.len() > faces);
+    assert!(chunks.loaded[&owner].mesh.as_ref().unwrap().faces.len() > faces);
     assert_eq!(app.world().resource::<EditJournal>().edited_blocks(), 1);
     app.world_mut().resource_mut::<ChunkFocus>().0 = [1000.0, 10.0, 1000.0];
     app.update();

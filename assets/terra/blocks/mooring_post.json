@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 785,
+  "name": "Mooring Post",
+  "description": "Mooring Post",
+  "creative_category": "decoration",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.2,
+  "resistance": 3.8,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/mooring_post.glb",
+  "struct_block": true,
+  "textures": {
+    "drift": "textures/misty_coast/harbor_timber.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.295,
+        0.0,
+        0.295
+      ],
+      "maximum": [
+        0.705,
+        0.975,
+        0.705
+      ]
+    }
+  ]
+}

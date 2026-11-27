@@ -16,7 +16,11 @@ pub(super) fn build(
     }
     let (ground, column) = habitat.ground(point)?;
     let biome = column.biome.weights;
-    if biome.ocean > 0.2 || column.oasis_moisture > 0.15 {
+    if biome.crystal_highlands > 0.4
+        || biome.petrified_forest > 0.4
+        || biome.ocean > 0.2
+        || column.oasis_moisture > 0.15
+    {
         return None;
     }
     // Most tiles remain empty. Ridges and dry cliffs favor exposed rock;
@@ -30,7 +34,9 @@ pub(super) fn build(
     if f64::from(seed >> 16) / 65536.0 >= probability {
         return None;
     }
-    let material = if biome.blood_forest > 0.6 {
+    let material = if biome.ashlands > 0.5 {
+        MaterialId::ColumnarBasalt
+    } else if biome.blood_forest > 0.6 {
         MaterialId::BloodStone
     } else if biome.spirit_blossom > 0.6 {
         MaterialId::SpiritStone

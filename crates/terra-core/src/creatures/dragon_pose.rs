@@ -11,6 +11,7 @@ pub enum Joint {
     Neck,
     Skull,
     Eyes,
+    Frill(i8),
     Jaw,
     Tail(u8),
     Thigh { side: i8, hind: bool },
@@ -32,6 +33,7 @@ impl Joint {
             Self::Trunk => v(0., 4.2, 0.),
             Self::Neck => v(0., 5.2, -2.5),
             Self::Skull | Self::Eyes => v(0., 8.15, -5.65),
+            Self::Frill(s) => v(f32::from(s) * 1.08, 8.58, -6.48),
             Self::Jaw => v(0., 8.02, -6.45),
             Self::Tail(i) => tail_node(i),
             Self::WingArm(s) | Self::Sail(s) => v(f32::from(s) * 1.82, 5.65, -1.85),
@@ -93,6 +95,7 @@ fn pulse(p: f32, middle: f32, width: f32) -> f32 {
 #[derive(Clone, Copy, Debug)]
 pub struct Pose {
     pub behavior: B,
+    pub kind: super::CreatureKind,
     pub progress: f32,
     pub lineage: Option<dragons::Lineage>,
     pub enraged: bool,
@@ -107,6 +110,7 @@ pub struct Pose {
     collapse: f32,
     wingbeat: f32,
     wristbeat: f32,
+    recovery: f32,
     stroke: f32,
     bank: f32,
     pitch: f32,
@@ -123,15 +127,36 @@ fn clock(age: f64, id: u64) -> f32 {
 }
 
 /// One full downstroke per cycle, shared with the positional wing Foley.
-pub fn wing_angle(age: f64, id: u64) -> f32 {
-    (clock(age, id) * 3.4).rem_euclid(std::f32::consts::TAU)
+pub fn wing_angle(a: &Creature, age: f64) -> f32 {
+    let rate = match a.kind {
+        super::CreatureKind::EarthDragon => 3.16,
+        super::CreatureKind::WaterDragon => 3.62,
+        _ => 3.32,
+    };
+    (clock(age, a.id) * rate).rem_euclid(2. * PI)
+}
+
+// Start the audible beat during the loaded part of the stroke. The long
+// recovery has time for the elbow to sweep back and the sail to feather.
+fn wing_stroke(angle: f32) -> (f32, f32) {
+    let cycle = (angle / (2. * PI) + 0.16).rem_euclid(1.);
+    if cycle < 0.38 {
+        ((PI * cycle / 0.38).cos(), 0.)
+    } else {
+        let recovery = PI * (cycle - 0.38) / 0.62;
+        (-recovery.cos(), recovery.sin().powi(2))
+    }
 }
 
 /// Climbing and hovering need lift. Fast level flight alternates a short set of
 /// strokes with a glide; a descending dragon can keep its wings spread.
 pub fn stroke_strength(a: &Creature, age: f64) -> f32 {
-    let speed = a.velocity[0].hypot(a.velocity[2]);
-    let lift = (a.velocity[1] / 5.).clamp(0., 1.);
+    flight_effort(a, age, a.velocity)
+}
+
+fn flight_effort(a: &Creature, age: f64, velocity: [f32; 3]) -> f32 {
+    let speed = velocity[0].hypot(velocity[2]);
+    let lift = (velocity[1] / 5.).clamp(0., 1.);
     let hover = (1. - speed / 7.).clamp(0., 1.);
     let rate = match a.kind {
         super::CreatureKind::EarthDragon => 0.77,
@@ -139,8 +164,19 @@ pub fn stroke_strength(a: &Creature, age: f64) -> f32 {
         _ => 0.89,
     };
     let burst = ease(((clock(age, a.id) * rate).sin() + 0.38) / 0.85);
-    let dive = 1. - 0.89 * ease(-a.velocity[1] / 4.);
+    let dive = 1. - 0.89 * ease(-velocity[1] / 4.);
     (burst * dive).max(lift).max(hover * 0.86)
+}
+
+/// Change in flight velocity during one stroke. The loaded downstroke peaks
+/// just after midstroke. Each impulse balances across a cycle at constant effort.
+pub fn wing_impulse(a: &Creature, velocity: [f32; 3]) -> [f32; 2] {
+    let phase = wing_angle(a, a.age);
+    let load = flight_effort(a, a.age, velocity);
+    [
+        load * (phase - 0.70).cos() * 1.45,
+        load * (phase - 0.94).cos() * 0.74,
+    ]
 }
 
 impl Pose {
@@ -159,16 +195,21 @@ impl Pose {
         };
         let airborne = match b {
             B::Fly => 1.,
-            B::Spit | B::Ink if ground_speed > 0.6 => 1.,
+            _ if dragons::casting(b)
+                && a.needs
+                    .goal
+                    .is_some_and(|g| g.kind == super::NeedKind::AirborneAttackAim) =>
+            {
+                1.
+            }
             B::Leap => ease((p - 0.15) / 0.65),
             B::Land => 1. - ease(p / 0.82),
             _ => 0.,
         };
-        let angle = wing_angle(age, a.id);
+        let angle = wing_angle(a, age);
         // A loaded downstroke is quicker than recovery. The wrist trails the shoulder.
-        let mut beat = (angle + 0.31 * angle.sin()).sin();
-        let wrist_angle = angle - 0.78;
-        let wristbeat = (wrist_angle + 0.31 * wrist_angle.sin()).sin();
+        let (mut beat, recovery) = wing_stroke(angle);
+        let (wristbeat, _) = wing_stroke(angle - 0.62);
         if b == B::Leap {
             beat = beat * ease(p) + (p * 2. * PI - 0.9).sin() * (1. - ease(p));
         }
@@ -181,7 +222,10 @@ impl Pose {
             .clamp(-0.54, 0.60)
             * airborne;
         let aim = a.needs.goal.filter(|g| {
-            g.kind == super::NeedKind::AttackAim && matches!(b, B::Spit | B::DragonVolley)
+            matches!(
+                g.kind,
+                super::NeedKind::AttackAim | super::NeedKind::AirborneAttackAim
+            ) && matches!(b, B::Spit | B::DragonVolley)
         });
         let (aim_yaw, aim_pitch) = aim.map_or((0., 0.), |goal| {
             let head = Joint::Skull.pivot()
@@ -198,6 +242,7 @@ impl Pose {
         });
         Self {
             behavior: b,
+            kind: a.kind,
             youth: (1. - a.growth()).powi(2),
             feeding: if matches!(b, B::Drink | B::Graze) {
                 1.
@@ -230,10 +275,15 @@ impl Pose {
             } else {
                 0.
             },
-            swim: if b == B::Swim { 1. } else { 0. },
+            swim: if a.kind == super::CreatureKind::WaterDragon {
+                if b == B::Swim { 1. } else { 0.40 }
+            } else {
+                0.
+            },
             collapse,
             wingbeat: beat,
             wristbeat,
+            recovery,
             stroke: if matches!(b, B::Leap | B::Land) {
                 1.
             } else {
@@ -297,10 +347,13 @@ impl Pose {
     pub fn joint_scale(self, joint: Joint) -> Vec3 {
         match joint {
             // The short muzzle and broad cranium give a hatchling its own profile.
-            Joint::Skull | Joint::Jaw | Joint::Eyes => {
+            Joint::Skull | Joint::Jaw | Joint::Eyes | Joint::Frill(_) => {
                 Vec3::ONE + self.youth * v(0.65, 0.46, -0.24)
             }
-            Joint::WingArm(_) | Joint::Sail(_) => Vec3::splat(1. - 0.48 * self.youth),
+            Joint::WingArm(_) | Joint::Sail(_) => {
+                // Finger spars draw together along the flank as the shoulder sweeps aft.
+                v(0.83, 0.34, 0.32).lerp(Vec3::ONE, self.airborne) * (1. - 0.48 * self.youth)
+            }
             Joint::Tail(_) => Vec3::splat(1. - 0.36 * self.youth),
             _ => Vec3::ONE,
         }
@@ -313,13 +366,25 @@ impl Pose {
         }
         let anchor = match joint {
             Joint::Tail(i) if i > 0 => Joint::Tail(0),
-            Joint::Jaw | Joint::Breath => Joint::Skull,
+            Joint::Jaw | Joint::Breath | Joint::Frill(_) => Joint::Skull,
             _ => return frame,
         };
         let attachment = self.rest_bone(anchor);
         let local = Vec3::from(attachment.inverse_transform_point(frame.translation));
         frame.translation = attachment.transform_point(local * self.joint_scale(anchor));
         frame
+    }
+
+    /// Normalized immersion of the whole articulated body in its tunnel or shadow.
+    pub fn submergence(self) -> f32 {
+        let p = self.progress;
+        if self.behavior == B::DragonBurrow {
+            ease((p - 0.04) / 0.24) * (1. - ease((p - 0.70) / 0.27))
+        } else if self.kind == super::CreatureKind::DarkDragon && self.behavior == B::DragonSurge {
+            ease((p - 0.13) / 0.27) * (1. - ease((p - 0.64) / 0.25))
+        } else {
+            0.
+        }
     }
 
     fn rest_bone(self, joint: Joint) -> Isometry3d {
@@ -348,28 +413,42 @@ impl Pose {
             _ => 0.,
         };
         let body_rot = Quat::from_rotation_x(
-            self.pitch + 0.17 * self.smash - 0.10 * self.airborne - 0.11 * self.asleep
+            self.pitch - 0.055 * self.airborne * self.stroke * self.wristbeat + 0.17 * self.smash
+                - 0.10 * self.airborne
+                - 0.11 * self.asleep
                 + 0.15 * land
                 - 0.09 * spring,
         ) * Quat::from_rotation_z(
             self.bank * 0.83 + step.sin() * 0.049 * self.walking + self.collapse * 0.37,
         );
-        let body_rot = body_rot * Quat::from_rotation_y(coil);
+        let swipe = if self.behavior == B::Attack {
+            -0.34 * pulse(p, 0.28, 0.27) + 0.46 * pulse(p, 0.57, 0.18)
+        } else {
+            0.
+        };
+        let body_rot =
+            body_rot * Quat::from_rotation_y(coil + swipe + self.swim * 0.13 * (t * 2.24).sin());
         let trunk = Isometry3d::new(
             Joint::Trunk.pivot()
                 + v(
                     step.sin() * self.walking * 0.085,
-                    0.035 * breathing + 0.14 * step.cos().powi(2) * self.walking
+                    -self.submergence() * 16.0
+                        + 0.035 * breathing
+                        + 0.14 * step.cos().powi(2) * self.walking
                         - 1.98 * self.asleep
                         - 0.40 * land
                         - 0.54 * spring
                         - 1.36 * self.swim
-                        - 0.32 * self.airborne * self.stroke * self.wingbeat,
+                        - 0.42 * self.airborne * self.stroke * self.wristbeat,
                     0.,
                 ),
             body_rot,
         );
-        let neck_carriage = match self.lineage {
+        let neck_carriage = match self.lineage.or(match self.kind {
+            super::CreatureKind::EarthDragon => Some(dragons::Lineage::Stone),
+            super::CreatureKind::WaterDragon => Some(dragons::Lineage::Tidal),
+            _ => None,
+        }) {
             Some(dragons::Lineage::Stone) => {
                 -0.48 * (1. - self.roar * 0.7) * (1. - self.asleep * 0.6)
             }
@@ -426,6 +505,29 @@ impl Pose {
             Joint::Trunk => trunk,
             Joint::Neck => neck(),
             Joint::Skull | Joint::Eyes => skull(),
+            Joint::Frill(side) => {
+                use super::CreatureKind as K;
+                let side = f32::from(side);
+                let threat = self.roar.max(self.breath).max(self.smash.max(0.));
+                // The tidal gill fans pump even at rest; a throat fan opens before
+                // a flame jet, while the ore plates can only spread a little.
+                let motion = match self.kind {
+                    K::WaterDragon => {
+                        0.10 + (0.13 + 0.07 * self.swim) * (t * 1.84 - 0.32 * side).sin()
+                            + 0.35 * threat
+                    }
+                    K::EarthDragon => 0.025 * breathing + 0.14 * threat,
+                    K::DarkDragon => 0.035 * breathing + 0.48 * threat + 0.09 * self.bank * side,
+                    _ => 0.055 * breathing + 0.57 * threat,
+                } * (1. - self.collapse)
+                    - self.asleep * 0.30;
+                Self::child(
+                    skull(),
+                    Joint::Skull,
+                    joint,
+                    Quat::from_rotation_y(side * motion) * Quat::from_rotation_x(-motion * 0.22),
+                )
+            }
             Joint::Jaw => {
                 let snap = if self.behavior == B::Attack {
                     pulse(p, 0.38, 0.27)
@@ -455,7 +557,7 @@ impl Pose {
                     let side = wave
                         * (0.055
                             + self.swim
-                                * if self.lineage == Some(dragons::Lineage::Tidal) {
+                                * if self.kind == super::CreatureKind::WaterDragon {
                                     0.30
                                 } else {
                                     0.16
@@ -479,27 +581,28 @@ impl Pose {
             }
             Joint::WingArm(side) | Joint::Sail(side) => {
                 let s = f32::from(side);
-                let tucked = (1. - self.airborne) * (0.50 + 0.45 * self.asleep + 0.40 * self.swim);
-                let flourish = (self.roar + self.smash.max(0.)).clamp(0., 1.);
-                let lift = 0.50 * tucked
+                let tucked = 1. - self.airborne;
+                let work = self.airborne * self.stroke;
+                let recovery = work * self.recovery;
+                let lift = -0.10 * tucked
                     + self.airborne
-                        * (0.12 + self.wingbeat * 0.64 * self.stroke - s * self.bank * 0.22
+                        * (0.12 + self.wingbeat * 0.71 * self.stroke - s * self.bank * 0.22
                             + 0.24 * land)
-                    + 0.015 * breathing
-                    + 0.22 * flourish;
+                    + 0.012 * breathing;
                 let shoulder = Quat::from_rotation_y(
-                    -s * (tucked * 1.19
-                        + self.airborne * (0.04 + self.wingbeat.max(0.) * self.stroke * 0.18)
-                        - 0.29 * flourish),
-                ) * Quat::from_rotation_z(s * lift);
+                    -s * (tucked * 1.34 + self.airborne * 0.04 + recovery * 0.51 - work * 0.12),
+                ) * Quat::from_rotation_x(0.97 * tucked)
+                    * Quat::from_rotation_z(s * lift);
+                // Rotate the forearm about the shoulder–elbow line. The elbow
+                // stays seated as the wrist sweeps aft during recovery.
+                let humerus = (v(s * 4.75, 8.50, 0.33) - joint.pivot()).normalize();
+                let shoulder = shoulder * Quat::from_axis_angle(humerus, -s * recovery * 0.77);
                 let mut wing = Self::child(trunk, Joint::Trunk, joint, shoulder);
                 if matches!(joint, Joint::Sail(_)) {
-                    let axis = (wrist(s) - joint.pivot()).normalize();
-                    let wrist_fold = tucked * 0.80 - 0.15 * flourish
+                    let axis = ((wrist(s) - joint.pivot()) * self.joint_scale(joint)).normalize();
+                    let wrist_fold = tucked * 0.23
                         + self.airborne
-                            * (0.06
-                                + self.stroke
-                                    * (0.52 * self.wristbeat + 0.14 * self.wingbeat.max(0.))
+                            * (0.06 + self.stroke * (0.42 * self.wristbeat + 0.52 * self.recovery)
                                 - self.pitch * 0.18);
                     wing.rotation *= Quat::from_axis_angle(axis, -s * wrist_fold);
                 }
@@ -543,7 +646,12 @@ impl Pose {
             }
             Joint::Paw { side, hind } => {
                 let knee = Joint::Foot { side, hind };
-                Self::child(self.bone(knee), knee, joint, Quat::IDENTITY)
+                // Talons fold under the ankle on the upstroke and reach forward
+                // as weight returns to the toes; the planted rest pose stays flat.
+                let curl = self.airborne * (0.46 + 0.10 * self.wristbeat) + self.asleep * 0.14
+                    - spring * 0.14
+                    - self.paw_lift(side, hind) * 0.25;
+                Self::child(self.bone(knee), knee, joint, Quat::from_rotation_x(-curl))
             }
             Joint::Breath => Self::child(skull(), Joint::Skull, joint, Quat::IDENTITY),
             Joint::Rune | Joint::Impact | Joint::Missile(_) | Joint::Ward | Joint::Surge => {
@@ -725,8 +833,85 @@ mod tests {
     }
 
     #[test]
+    fn aerial_casts_keep_the_hind_legs_folded_through_hover_and_charge() {
+        let mut a = dragon(K::FireDragon, B::DragonVolley);
+        a.velocity = [0.; 3];
+        a.needs.goal = Some(super::super::NeedGoal {
+            kind: super::super::NeedKind::AirborneAttackAim,
+            position: [4, 12, 0],
+        });
+        let flight = Pose::of(&a, 0.);
+        a.needs.goal.as_mut().unwrap().kind = super::super::NeedKind::AttackAim;
+        let ground = Pose::of(&a, 0.);
+        assert!(flight.airborne > 0.99 && ground.airborne < 0.01);
+        let hip = Joint::Thigh {
+            side: 1,
+            hind: true,
+        };
+        let knee = Joint::Foot {
+            side: 1,
+            hind: true,
+        };
+        let bend = |p: Pose| p.bone(hip).rotation.inverse() * p.bone(knee).rotation;
+        assert!(bend(flight).angle_between(bend(ground)) > 0.4);
+    }
+
+    #[test]
+    fn grounded_dragon_wing_tips_follow_the_flanks_in_every_ground_action() {
+        for kind in [K::FireDragon, K::DarkDragon] {
+            for behavior in [B::Rest, B::Hunt, B::Attack, B::Tremor, B::Sleep] {
+                let pose = Pose::of(&dragon(kind, behavior), 0.);
+                for side in [-1, 1] {
+                    let s = f32::from(side);
+                    let tip = pose.point(Joint::Sail(side), v(s * 18.4, 5., 2.45));
+                    let shoulder = pose.point(Joint::WingArm(side), Joint::WingArm(side).pivot());
+                    let span = pose.bone(Joint::Trunk).rotation.inverse() * (tip - shoulder);
+                    assert!(
+                        span.z > 8. && span.y < 1. && span.x.abs() < 3.4,
+                        "{kind:?} {behavior:?}: {tip:?}, {shoulder:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn power_stroke_opens_the_span_and_drives_lift_before_the_long_folded_recovery() {
+        for kind in [K::FireDragon, K::DarkDragon] {
+            let mut a = dragon(kind, B::Fly);
+            a.velocity = [0., 6., -7.];
+            let shape = |a: &Creature| {
+                let pose = Pose::of(a, 0.);
+                let right = pose.point(Joint::Sail(1), v(18.4, 5., 2.45));
+                let left = pose.point(Joint::Sail(-1), v(-18.4, 5., 2.45));
+                (right.x - left.x, right.y)
+            };
+            let mut loaded = (0., 0.);
+            let mut recovered = (0., 0.);
+            let mut lift = [0.; 2];
+            for sample in 0..400 {
+                a.age = sample as f64 * 0.01;
+                let angle = wing_angle(&a, a.age);
+                if (angle - 0.70).abs() < 0.025 {
+                    loaded = shape(&a);
+                    lift[0] = wing_impulse(&a, a.velocity)[0];
+                }
+                if (angle - 3.32).abs() < 0.025 {
+                    recovered = shape(&a);
+                    lift[1] = wing_impulse(&a, a.velocity)[0];
+                }
+            }
+            assert!(
+                loaded.0 > recovered.0 + 2.,
+                "{kind:?} span {loaded:?}/{recovered:?}"
+            );
+            assert!(lift[0] > 1. && lift[1] < -0.8);
+        }
+    }
+
+    #[test]
     fn bank_follows_the_turn_and_descent_releases_the_wings_into_a_glide() {
-        let mut animal = dragon(K::WaterDragon, B::Fly);
+        let mut animal = dragon(K::FireDragon, B::Fly);
         animal.velocity = [5., 1., -8.];
         let right = Pose::of(&animal, 0.);
         animal.velocity[0] *= -1.;
@@ -744,7 +929,7 @@ mod tests {
 
     #[test]
     fn adult_and_hatchling_heads_and_tails_remain_targetable_as_they_move() {
-        for kind in [K::DarkDragon, K::EarthDragon, K::WaterDragon] {
+        for kind in [K::FireDragon, K::DarkDragon, K::EarthDragon, K::WaterDragon] {
             for b in [B::Rest, B::Fly, B::Sleep, B::Attack, B::Spit, B::Dead] {
                 let mut a = dragon(kind, b);
                 for age in [0., breeding::GROWTH_SECONDS] {
@@ -752,7 +937,14 @@ mod tests {
                     a.yaw = 0.71;
                     let poses = Pose::of(&a, 0.);
                     let boxes = hitboxes::for_creature(&a);
-                    assert_eq!(boxes.iter().count(), 48);
+                    assert_eq!(
+                        boxes.iter().count(),
+                        match kind {
+                            K::WaterDragon => 12,
+                            K::EarthDragon => 24,
+                            _ => 48,
+                        }
+                    );
                     for (bone, center) in [
                         (Joint::Skull, v(0., 8.63, -6.46)),
                         (Joint::Tail(4), tail_node(4).lerp(tail_node(5), 0.5)),

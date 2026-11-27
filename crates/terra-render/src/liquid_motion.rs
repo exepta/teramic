@@ -34,6 +34,7 @@ const MAX_SURFACES: usize = 96;
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub(crate) enum Kind {
     Water,
+    Lava,
     Galle,
     Tar,
 }
@@ -42,12 +43,19 @@ impl Kind {
         match self {
             Self::Water => 0.075,
             Self::Galle => 2. * Self::Water.period(),
-            Self::Tar => 0.34,
+            Self::Tar | Self::Lava => 0.34,
         }
     }
     pub(crate) fn material(templates: &crate::blocks::TemplateSet, slot: usize) -> Option<Self> {
         if templates.bile_material(slot) {
             return Some(Self::Galle);
+        }
+        if templates
+            .blocks
+            .get(&terra_world::lava::LAVA)
+            .is_some_and(|b| b.face_materials.contains(&slot))
+        {
+            return Some(Self::Lava);
         }
         templates
             .blocks
@@ -389,7 +397,7 @@ impl FlowInterpolationStatus {
             let mut flow = Vec2::new(delta.x, delta.z).normalize_or_zero();
             if let Some(VertexAttributeValues::Float32x2(values)) =
                 mesh.attribute(Mesh::ATTRIBUTE_UV_1)
-                && key.1 == Kind::Water
+                && matches!(key.1, Kind::Water | Kind::Lava)
             {
                 let current = Vec2::from_array(values[i]);
                 if current.length_squared() > 0.01 {

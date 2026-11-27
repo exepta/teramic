@@ -648,7 +648,7 @@ fn run(world: &mut World) {
                 }
                 16 => {
                     bounds(world,true)?;
-                    if world.resource::<terra_ui::CraftingView>().wood_options.len()!=4 {return Err("Chest does not expose all four wood types".into());}
+                    if world.resource::<terra_ui::CraftingView>().wood_options.len()!=5 {return Err("Chest does not expose every plank type".into());}
                     shot(world,"chest-oak")?;
                     click_wood(world,&mut state,1,29)?;
                 }

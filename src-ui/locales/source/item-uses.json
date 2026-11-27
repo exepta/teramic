@@ -1,0 +1,22 @@
+[
+  {
+    "source": "Item uses",
+    "de": "Verwendungen",
+    "en": "Item uses"
+  },
+  {
+    "source": "No registered recipe uses this item.",
+    "de": "Kein registriertes Rezept verwendet diesen Gegenstand.",
+    "en": "No registered recipe uses this item."
+  },
+  {
+    "source": "Used in: {used} recipes",
+    "de": "Verwendet in {used} Rezepten",
+    "en": "Used in: {used} recipes"
+  },
+  {
+    "source": "U · Show uses",
+    "de": "U · Verwendungen anzeigen",
+    "en": "U · Show uses"
+  }
+]

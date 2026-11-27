@@ -11,6 +11,8 @@ pub(super) struct Field {
     pub origin: [i64; 2],
     pub heights: [f32; SIZE * SIZE],
     pub weights: [f32; SIZE * SIZE],
+    // Positive in the Blood Forest, negative on wet Mushroom Park banks.
+    pub regional: [f32; SIZE * SIZE],
 }
 impl Default for Field {
     fn default() -> Self {
@@ -18,11 +20,12 @@ impl Default for Field {
             origin: [0; 2],
             heights: [0.; SIZE * SIZE],
             weights: [0.; SIZE * SIZE],
+            regional: [0.; SIZE * SIZE],
         }
     }
 }
 impl Field {
-    pub fn sample(eye: Vec3, mut sample: impl FnMut(i64, i64) -> Option<(f32, f32)>) -> Self {
+    pub fn sample(eye: Vec3, mut sample: impl FnMut(i64, i64) -> Option<(f32, f32, f32)>) -> Self {
         let mut field = Self::default();
         if !eye.is_finite() {
             return field;
@@ -38,23 +41,29 @@ impl Field {
             for x in 0..SIZE {
                 let px = field.origin[0].saturating_add(x as i64 * CELL);
                 let pz = field.origin[1].saturating_add(z as i64 * CELL);
-                if let Some((height, weight)) = sample(px, pz)
+                if let Some((height, weight, regional)) = sample(px, pz)
                     && height.is_finite()
                     && weight.is_finite()
+                    && regional.is_finite()
                 {
                     let i = x + SIZE * z;
                     field.heights[i] = height;
                     let q = ((weight - 0.05) / 0.75).clamp(0., 1.);
                     field.weights[i] = q * q * (3. - 2. * q);
+                    field.regional[i] = regional.clamp(-1., 1.) * (1. - field.weights[i]);
                 }
             }
+        }
+        if field.occupied() == 0 {
+            return field;
         }
         // Missing/foreign-biome cells must not pull the interpolated floor to
         // sea level. Extend nearest valid heights, while their density stays zero.
         for i in 0..SIZE * SIZE {
             if field.weights[i] == 0.
+                && field.regional[i] == 0.
                 && let Some(j) = (0..SIZE * SIZE)
-                    .filter(|&j| field.weights[j] > 0.)
+                    .filter(|&j| field.weights[j] > 0. || field.regional[j] != 0.)
                     .min_by_key(|&j| {
                         (i % SIZE).abs_diff(j % SIZE).pow(2) + (i / SIZE).abs_diff(j / SIZE).pow(2)
                     })
@@ -65,7 +74,11 @@ impl Field {
         field
     }
     pub fn occupied(&self) -> usize {
-        self.weights.iter().filter(|&&w| w > 0.002).count()
+        self.weights
+            .iter()
+            .zip(&self.regional)
+            .filter(|(spirit, regional)| **spirit > 0.002 || regional.abs() > 0.004)
+            .count()
     }
     pub fn bounds(&self) -> (Vec3, Vec3) {
         let min = self.heights.iter().copied().fold(f32::INFINITY, f32::min);
@@ -102,7 +115,7 @@ impl Field {
                 (height >> 8) as u8,
                 height as u8,
                 (self.weights[i] * 255.).round() as u8,
-                255,
+                (128. + 127. * self.regional[i]).round() as u8,
             ]);
         }
         (pixels, base, span)

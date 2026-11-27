@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 651,
+  "name": "Acacia Sapling",
+  "description": "A young acacia with its first umbrella of leaves.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/acacia_sapling.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

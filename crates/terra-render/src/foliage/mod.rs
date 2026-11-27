@@ -1,4 +1,4 @@
-mod mask;
+pub(crate) mod mask;
 mod motes;
 pub(crate) mod packing;
 mod particles;
@@ -10,9 +10,44 @@ use bevy::{
     render::{render_resource::AsBindGroup, storage::ShaderBuffer},
     shader::ShaderRef,
 };
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 pub(crate) use mask::masked_canopy;
+pub(crate) const WIND_LEAF_ROUGHNESS: f32 = 0.91;
+const OAK_WIND: Vec4 = Vec4::new(0.043, 0.010, 0.85, 0.0);
+
+// Only the current transform is certified. Motion vectors always read their
+// real previous matrix, including on the first frame after a rotating fade.
+const TRANSLATED_CROWN: u32 = 0x544c4546;
+
+fn tag_translated_crowns(
+    mut commands: Commands,
+    changed: Query<
+        (Entity, &GlobalTransform, Option<&bevy::mesh::MeshTag>),
+        (
+            Or<(
+                With<WindFoliage>,
+                With<crate::meshing::shadows::LeafShadowProxy>,
+            )>,
+            Changed<GlobalTransform>,
+        ),
+    >,
+) {
+    use bevy::mesh::MeshTag;
+    for (entity, transform, tag) in &changed {
+        let translated = transform.affine().matrix3 == bevy::math::Mat3A::IDENTITY;
+        if translated && tag.is_none() {
+            commands
+                .entity(entity)
+                .insert(MeshTag::with_type::<WindFoliage>(TRANSLATED_CROWN));
+        } else if !translated && tag.is_some_and(|tag| tag.value == TRANSLATED_CROWN) {
+            commands.entity(entity).remove::<MeshTag>();
+        }
+    }
+}
 
 /// Maximum wind displacement, also used to expand the section batch bounds.
 pub(crate) const WIND_BOUNDS: f32 = 0.065 * terra_world::props::MAX_WEATHER_WIND;
@@ -56,15 +91,23 @@ pub(crate) struct LeafExtension {
     wind: Vec4,
     #[storage(101, read_only)]
     weather: Handle<ShaderBuffer>,
+    opaque_paint: bool,
+    profile_shadow: bool,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct LeafKey {
     flame: bool,
+    opaque_paint: bool,
+    profile_shadow: bool,
+    oak_wind: bool,
 }
 impl From<&LeafExtension> for LeafKey {
     fn from(extension: &LeafExtension) -> Self {
         Self {
             flame: extension.wind.w > 1.5,
+            opaque_paint: extension.opaque_paint,
+            profile_shadow: extension.profile_shadow,
+            oak_wind: extension.opaque_paint && extension.wind == OAK_WIND,
         }
     }
 }
@@ -91,6 +134,16 @@ impl MaterialExtension for LeafExtension {
         if key.bind_group_data.flame {
             descriptor.vertex.shader_defs.push("FLAME_GEOMETRY".into());
         }
+        if key.bind_group_data.opaque_paint
+            && let Some(fragment) = &mut descriptor.fragment
+        {
+            fragment.shader_defs.push("OPAQUE_LEAF_PAINT".into());
+        }
+        if key.bind_group_data.profile_shadow
+            && let Some(fragment) = &mut descriptor.fragment
+        {
+            fragment.shader_defs.push("LEAF_SHADOW_PROFILE".into());
+        }
         // Mining pieces and inventory previews share the leaf material but retain
         // float vertex colors. Decode only the packed section vertex layout.
         if layout.0.contains(Mesh::ATTRIBUTE_COLOR)
@@ -105,6 +158,9 @@ impl MaterialExtension for LeafExtension {
                 .vertex
                 .shader_defs
                 .push("PACKED_LEAF_COLOR".into());
+            if key.bind_group_data.oak_wind && !layout.0.contains(Mesh::ATTRIBUTE_UV_1) {
+                descriptor.vertex.shader_defs.push("DRY_OAK_WIND".into());
+            }
         }
         Ok(())
     }
@@ -115,6 +171,11 @@ pub(crate) type LeafMaterial = ExtendedMaterial<StandardMaterial, LeafExtension>
 #[derive(Resource, Default)]
 pub(crate) struct FoliageAssets {
     pub materials: HashMap<usize, Handle<LeafMaterial>>,
+    /// Snapshot shared with chunk workers. Only registered crown materials enter here.
+    pub primary_uv_only: Arc<HashSet<usize>>,
+    /// Leaf material slots with immutable, verified opaque pigment in the depth shader.
+    pub opaque_blades: Arc<HashSet<usize>>,
+    pub profile_shadows: HashMap<usize, Handle<LeafMaterial>>,
     pub fibres: HashMap<usize, Handle<LeafMaterial>>,
     pub flames: HashMap<usize, Handle<LeafMaterial>>,
     pub reference: HashMap<usize, Handle<StandardMaterial>>,
@@ -123,7 +184,11 @@ pub(crate) struct FoliageAssets {
 pub(crate) fn install(app: &mut App) {
     app.add_plugins(MaterialPlugin::<LeafMaterial>::default())
         .init_resource::<FoliageAssets>()
-        .init_resource::<FoliageStatus>();
+        .init_resource::<FoliageStatus>()
+        .add_systems(
+            PostUpdate,
+            tag_translated_crowns.after(TransformSystems::Propagate),
+        );
     particles::install(app);
     motes::install(app);
 }
@@ -162,6 +227,8 @@ pub(crate) fn prepare_materials(
                     extension: LeafExtension {
                         wind: Vec4::new(0.035, 0.050, 4.5, 2.0),
                         weather: crate::weather::storage::WEATHER_BUFFER_HANDLE.clone(),
+                        opaque_paint: false,
+                        profile_shadow: false,
                     },
                 }),
             );
@@ -171,13 +238,24 @@ pub(crate) fn prepare_materials(
         let Some(block) = templates.blocks.get(&id) else {
             continue;
         };
-        for slot in block.face_materials.into_iter().chain(
-            templates
-                .foliage_clusters
-                .get(&id)
-                .into_iter()
-                .flat_map(|cluster| cluster.slots()),
-        ) {
+        for slot in block
+            .face_materials
+            .into_iter()
+            .chain(
+                templates
+                    .sculpted_blocks
+                    .get(&id)
+                    .into_iter()
+                    .flat_map(|s| s.core.face_materials),
+            )
+            .chain(
+                templates
+                    .foliage_clusters
+                    .get(&id)
+                    .into_iter()
+                    .flat_map(|cluster| cluster.slots()),
+            )
+        {
             if assets.materials.contains_key(&slot) {
                 continue;
             }
@@ -189,23 +267,42 @@ pub(crate) fn prepare_materials(
             // Cutout clusters must remain visible through gaps from either side.
             base.double_sided = true;
             base.cull_mode = None;
-            base.perceptual_roughness = 0.91;
+            base.perceptual_roughness = WIND_LEAF_ROUGHNESS;
+            if packing::uses_primary_uv_only(&base) {
+                Arc::make_mut(&mut assets.primary_uv_only).insert(slot);
+            }
+            let opaque_paint = id == 7
+                && block.face_materials.contains(&slot)
+                && base
+                    .base_color_texture
+                    .as_ref()
+                    .is_some_and(|image| Some(image.id()) == blocks.opaque_oak_paint);
+            if opaque_paint {
+                Arc::make_mut(&mut assets.opaque_blades).insert(slot);
+            }
             let handle = materials.add(ExtendedMaterial {
                 base,
                 extension: LeafExtension {
-                    wind: Vec4::new(
-                        0.043,
-                        0.010,
-                        0.85,
-                        if matches!(id, 132 | 133 | 310..=312 | 406) {
+                    wind: OAK_WIND.with_w(
+                        if matches!(id, 132 | 133 | 310..=312 | 606..=607 | 406 | 585..=586 | 644 | 647 | 682) {
                             -1.0
                         } else {
                             0.0
                         },
                     ),
                     weather: crate::weather::storage::WEATHER_BUFFER_HANDLE.clone(),
+                    opaque_paint,
+                    profile_shadow: false,
                 },
             });
+            if opaque_paint {
+                let mut profile = materials
+                    .get(&handle)
+                    .expect("just created foliage material")
+                    .clone();
+                profile.extension.profile_shadow = true;
+                assets.profile_shadows.insert(slot, materials.add(profile));
+            }
             assets.materials.insert(slot, handle);
         }
     }
@@ -229,6 +326,8 @@ pub(crate) fn prepare_materials(
                 extension: LeafExtension {
                     wind: Vec4::new(0.048, 0.009, 0.85, 1.0),
                     weather: crate::weather::storage::WEATHER_BUFFER_HANDLE.clone(),
+                    opaque_paint: false,
+                    profile_shadow: false,
                 },
             });
             assets.fibres.insert(slot, handle);
@@ -264,6 +363,50 @@ mod tests {
     use crate::blocks::{BlockTemplate, TemplateSet, definitions::BlockRenderKind};
 
     #[test]
+    fn translated_crown_tag_follows_the_propagated_transform_and_respects_other_mesh_roles() {
+        use bevy::mesh::MeshTag;
+        let mut app = App::new();
+        app.add_systems(Update, tag_translated_crowns);
+        let exact = app
+            .world_mut()
+            .spawn((WindFoliage, GlobalTransform::IDENTITY))
+            .id();
+        let other = app
+            .world_mut()
+            .spawn((WindFoliage, GlobalTransform::IDENTITY, MeshTag::new(19)))
+            .id();
+        let mining = app.world_mut().spawn(GlobalTransform::IDENTITY).id();
+        app.update();
+        assert_eq!(
+            app.world().get::<MeshTag>(exact).unwrap().value,
+            TRANSLATED_CROWN
+        );
+        assert_eq!(app.world().get::<MeshTag>(other).unwrap().value, 19);
+        assert!(app.world().get::<MeshTag>(mining).is_none());
+        for pose in [
+            Transform::from_rotation(Quat::from_rotation_x(0.2)),
+            Transform::from_scale(Vec3::new(1.0, 0.9, 1.0)),
+            Transform::from_scale(Vec3::new(-1.0, 1.0, 1.0)),
+        ] {
+            app.world_mut()
+                .entity_mut(exact)
+                .insert(GlobalTransform::from(pose));
+            app.update();
+            assert!(app.world().get::<MeshTag>(exact).is_none());
+            app.world_mut()
+                .entity_mut(exact)
+                .insert(GlobalTransform::from_translation(Vec3::new(
+                    -42.0, 3.0, 8.0,
+                )));
+            app.update();
+            assert_eq!(
+                app.world().get::<MeshTag>(exact).unwrap().value,
+                TRANSLATED_CROWN
+            );
+        }
+    }
+
+    #[test]
     fn changing_weather_keeps_leaf_fibre_and_flame_materials_unchanged() {
         use crate::weather::storage::{WEATHER_BUFFER_HANDLE, WeatherPayload};
         let mut app = App::new();
@@ -277,6 +420,8 @@ mod tests {
             extension: LeafExtension {
                 wind: Vec4::ZERO,
                 weather: WEATHER_BUFFER_HANDLE.clone(),
+                opaque_paint: false,
+                profile_shadow: false,
             },
         });
         let fibre = materials.add(LeafMaterial {
@@ -284,6 +429,8 @@ mod tests {
             extension: LeafExtension {
                 wind: Vec4::new(0.048, 0.009, 0.85, 1.0),
                 weather: WEATHER_BUFFER_HANDLE.clone(),
+                opaque_paint: false,
+                profile_shadow: false,
             },
         });
         let flame = materials.add(LeafMaterial {
@@ -291,6 +438,8 @@ mod tests {
             extension: LeafExtension {
                 wind: Vec4::new(0.0, 0.0, 0.0, 2.0),
                 weather: WEATHER_BUFFER_HANDLE.clone(),
+                opaque_paint: false,
+                profile_shadow: false,
             },
         });
         app.update();
@@ -340,6 +489,8 @@ mod tests {
             LeafKey::from(&LeafExtension {
                 wind: Vec4::new(0.04, 0.01, 0.85, mode),
                 weather: crate::weather::storage::WEATHER_BUFFER_HANDLE.clone(),
+                opaque_paint: false,
+                profile_shadow: false,
             })
         };
         assert_eq!(key(0.0), key(1.0));

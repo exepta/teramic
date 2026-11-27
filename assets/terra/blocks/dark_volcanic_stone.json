@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 618,
+  "name": "Dark Volcanic Stone",
+  "description": "Dense purple-black rock with a chipped surface.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.25,
+  "resistance": 2.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "side": {
+      "roughness": 0.84,
+      "normal_texture": "textures/ashlands/dark_volcanic_stone_side_normal.png"
+    }
+  },
+  "textures": {
+    "side": "textures/ashlands/dark_volcanic_stone_side.png"
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

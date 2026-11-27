@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": 696,
+  "name": "Mossy Swamp Boulders",
+  "description": "Moss softens the upper edges of a cluster of broken rocks.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.46,
+  "resistance": 0.62,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/swamp_boulder.glb",
+  "struct_block": true,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.09,
+        0,
+        0.28
+      ],
+      "maximum": [
+        0.61,
+        0.53,
+        0.75
+      ]
+    },
+    {
+      "minimum": [
+        0.53,
+        0,
+        0.38
+      ],
+      "maximum": [
+        0.83,
+        0.34,
+        0.77
+      ]
+    }
+  ],
+  "textures": {}
+}

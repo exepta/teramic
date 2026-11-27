@@ -146,20 +146,23 @@ fn check(world: &mut World, fixture: &mut Fixture) -> Result<(), String> {
         let full = progress.fraction == Some(1.0);
         let reveal = progress.reveal;
         let chunks = world.resource::<terra_world::streaming::ChunkStore>();
+        let rendered = world.resource::<terra_render::RenderedSections>();
+        let visibility = world.get_resource::<terra_render::TerrainVisibility>();
         let scene_ready = world
             .resource::<terra_world::streaming::WorldGeneration>()
             .status
             == terra_world::streaming::GenerationStatus::Ready
-            && chunks
-                .wanted_sections()
-                .all(|position| chunks.loaded.contains_key(&position))
-            && world.resource::<terra_render::RenderStatus>().ready
+            && chunks.wanted_sections().all(|position| {
+                rendered.section_presented(position, chunks.loaded.get(&position), visibility)
+            })
             && world.resource::<terra_render::PropRenderStatus>().ready
             && world.resource::<terra_render::WaterStatus>().initial_ready;
         if scene_ready && !full {
             let since = fixture.ready_since.get_or_insert_with(Instant::now);
             if since.elapsed() > Duration::from_secs(2) {
-                return Err("Loading progress waits for meshes that the ready renderer intentionally culled".into());
+                return Err(
+                    "Loading progress stalled after the requested terrain was presented".into(),
+                );
             }
         } else {
             fixture.ready_since = None;

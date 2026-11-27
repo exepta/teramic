@@ -146,7 +146,7 @@ fn check_with_chest(
     world: &ControlWorld,
     merge: terra_core::containers::ChestMerge,
 ) -> EditOutcome {
-    if matches!(command.action, EditAction::Block { material, .. } if terra_core::roads::is_tar(material) || material==terra_core::bile::FLUID)
+    if matches!(command.action, EditAction::Block { material, .. } if terra_core::roads::is_tar(material) || material==terra_core::bile::FLUID || material==terra_voxel::MaterialId::Lava as u16)
     {
         return EditOutcome::Invalid;
     }
@@ -509,7 +509,7 @@ fn check_with_chest(
             {
                 return EditOutcome::Invalid;
             }
-            if material == 40
+            if terra_core::block_shapes::is_torch(material)
                 && block.is_none_or(|hit| {
                     terra_world::torches::facing(hit.normal).is_none_or(|facing| {
                         terra_world::torches::support(position, facing) != Some(hit.position)
@@ -810,7 +810,7 @@ fn check_with_chest(
                 ),
             );
             let web = kind == terra_core::ResourcePropKind::SpiderWeb;
-            if !matches!(planting_target, Some(WorldTarget::Block(hit)) if hit.position == support && (web || hit.normal == [0, 1, 0]))
+            if !matches!(planting_target, Some(WorldTarget::Block(hit)) if hit.position == support && (web || prop_kind(kind).reef_attachment() || hit.normal == [0, 1, 0]))
             {
                 return EditOutcome::Occluded;
             }
@@ -960,7 +960,10 @@ fn apply_with_chest(
     let torch_facing = if matches!(
         command.action,
         EditAction::Block {
-            material: 40 | terra_core::lantern::LANTERN | terra_core::lantern::CHAIN,
+            material: 40
+                | terra_core::block_shapes::VIOLET_TORCH
+                | terra_core::lantern::LANTERN
+                | terra_core::lantern::CHAIN,
             ..
         }
     ) {
@@ -1389,11 +1392,12 @@ fn apply_with_chest(
                         return EditOutcome::Invalid;
                     }
                 }
-                let incubate = terra_core::creatures::dragon_eggs::kind(material).is_some()
-                    && world
+                let incubate = terra_core::creatures::dragon_eggs::supports_egg(
+                    material,
+                    world
                         .chunks
-                        .block_at([position[0], position[1] - 1, position[2]])
-                        == Some(terra_voxel::MaterialId::StrawBlock as u16);
+                        .block_at([position[0], position[1] - 1, position[2]]),
+                );
                 if incubate
                     && (peer.uuid.is_nil()
                         || world.journal.gameplay().dragon_eggs.len()
@@ -1424,7 +1428,8 @@ fn apply_with_chest(
                     state.revision = state.revision.wrapping_add(1);
                 }
                 if matches!(result, Ok(true))
-                    && (material == 40 || terra_core::lantern::is_part(material))
+                    && (terra_core::block_shapes::is_torch(material)
+                        || terra_core::lantern::is_part(material))
                 {
                     let facing = torch_facing;
                     if let Err(error) = world.journal.set_object_state(
@@ -1465,7 +1470,7 @@ fn apply_with_chest(
             .map_err(|e| e.to_string()),
         EditAction::PlaceProp { support, kind } => {
             let mut prop = placed_prop(support, kind, command.revision);
-            if kind == terra_core::ResourcePropKind::SpiderWeb {
+            if kind == terra_core::ResourcePropKind::SpiderWeb || prop.kind.reef_attachment() {
                 let Ok(body) = world.bodies.get(peer.body) else {
                     return EditOutcome::Invalid;
                 };
@@ -1492,9 +1497,11 @@ fn apply_with_chest(
                 };
                 let face = hit.normal.map(|v| v as i8);
                 let variant = web_variant(face, prop.id.0);
-                let Some(attached) =
+                let Some(attached) = (if prop.kind.reef_attachment() {
+                    terra_world::props::reef_flora::attached(prop.kind, support, face, prop.id)
+                } else {
                     terra_world::props::webs::attached(support, face, variant, prop.id)
-                else {
+                }) else {
                     return EditOutcome::Invalid;
                 };
                 prop = attached;
@@ -1712,6 +1719,19 @@ fn prop_environment_valid_for_face(
     kind: terra_core::ResourcePropKind,
     face: [i8; 3],
 ) -> bool {
+    if prop_kind(kind).reef_attachment() {
+        let Some(prop) = terra_world::props::reef_flora::attached(
+            prop_kind(kind),
+            support,
+            face,
+            terra_world::props::PropId(0),
+        ) else {
+            return false;
+        };
+        return terra_world::props::placement::supported(&prop, |p| chunks.block_at(p))
+            == Some(true)
+            && terra_world::props::reef_flora::submerged(&prop, chunks, journal);
+    }
     if kind == terra_core::ResourcePropKind::SpiderWeb {
         let prop = placed_prop(support, kind, 0);
         return terra_world::props::webs::attached(
@@ -1858,6 +1878,9 @@ fn resource_drop(
                 ItemKind::Block(terra_voxel::MaterialId::Path as u16)
             } else if expected == terra_voxel::MaterialId::Grass as u16 {
                 ItemKind::Block(terra_voxel::MaterialId::Dirt as u16)
+            } else if matches!(expected, 740 | 745..=746 | 750..=751 | 753 | 767..=773 | 793..=796)
+            {
+                ItemKind::Block(terra_voxel::MaterialId::HighlandCrystalShards as u16)
             } else if expected == terra_voxel::MaterialId::SaltCrystal as u16 {
                 ItemKind::Mineral(terra_core::OreKind::Salt.resource())
             } else {
@@ -2270,6 +2293,45 @@ mod tests {
                     &world
                 ));
             }
+        }
+    }
+
+    #[test]
+    fn highland_and_altar_crystals_yield_the_same_craftable_violet_torch() {
+        use terra_core::crafting::{CraftDestination, CraftStation, RecipeBook, recipe_key};
+        for expected in [
+            740, 750, 751, 767, 768, 769, 770, 771, 772, 773, 792, 793, 794, 795, 796,
+        ] {
+            let (_, shard) = resource_drop(
+                EditAction::Block {
+                    position: [1, 2, 3],
+                    expected,
+                    material: 0,
+                },
+                &ChunkStore::default(),
+            )
+            .unwrap();
+            let mut bag = terra_core::Inventory::default();
+            assert_eq!(
+                shard,
+                ItemKind::Block(MaterialId::HighlandCrystalShards as u16)
+            );
+            bag.insert(shard, 1);
+            bag.insert(ItemKind::Stick, 1);
+            RecipeBook::builtins()
+                .craft(
+                    &mut bag,
+                    recipe_key("teramic::violet_torch"),
+                    1,
+                    CraftStation::Hand,
+                    CraftDestination::Inventory,
+                )
+                .unwrap();
+            assert_eq!(
+                bag.count(ItemKind::Block(terra_core::block_shapes::VIOLET_TORCH)),
+                1
+            );
+            assert_eq!(bag.count(shard) + bag.count(ItemKind::Stick), 0);
         }
     }
 

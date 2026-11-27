@@ -8,6 +8,8 @@ fn plantable(material: MaterialId) -> bool {
             | MaterialId::Dirt
             | MaterialId::BloodGrass
             | MaterialId::BloodDirt
+            | MaterialId::CoagulatedMud
+            | MaterialId::BlightedRootSoil
             | MaterialId::BloodMoss
             | MaterialId::CrimsonMycelium
     )
@@ -19,22 +21,24 @@ pub(super) fn build(habitat: &mut Habitat<'_>, tile: Tile, cells: &mut BTreeMap<
     if habitat.terrain.config().blood_forest_revision == 0 {
         return;
     }
+    let modern = habitat.terrain.config().ecology_revision >= 12;
     for gz in 0..4 {
         for gx in 0..4 {
             let grid = [tile[0] * 4 + gx, tile[1] * 4 + gz];
             let seed = ticket(habitat.terrain.config().seed.0, grid, 1510);
-            if !seed.is_multiple_of(3) {
+            if !seed.is_multiple_of(if modern { 2 } else { 3 }) {
                 continue;
             }
+            let x_jitter = if modern { seed >> 13 } else { seed };
             let anchor = [
-                grid[0] * 8 + 3 + i64::from(seed % 2),
+                grid[0] * 8 + 3 + i64::from(x_jitter % 2),
                 grid[1] * 8 + 3 + i64::from((seed >> 8) % 2),
             ];
             let clearing = habitat.terrain.hills.get([
                 anchor[0] as f64 * 0.023 + 47.2,
                 anchor[1] as f64 * 0.023 - 81.8,
             ]);
-            if clearing < -0.12 {
+            if clearing < if modern { -0.36 } else { -0.12 } {
                 continue;
             }
             let Some((_, column)) = habitat.ground(anchor) else {
@@ -43,7 +47,7 @@ pub(super) fn build(habitat: &mut Habitat<'_>, tile: Tile, cells: &mut BTreeMap<
             if !plantable(column.surface_material)
                 || column.biome.weights.blood_forest < 0.35
                 || column.slope > 0.8
-                || habitat.reserved(anchor, 5)
+                || habitat.reserved(anchor, if modern { 2 } else { 5 })
             {
                 continue;
             }
@@ -53,17 +57,22 @@ pub(super) fn build(habitat: &mut Habitat<'_>, tile: Tile, cells: &mut BTreeMap<
                 continue;
             }
             let near_root = habitat.root_distance_squared(anchor);
-            let material = if (9..=81).contains(&near_root) && seed % 5 < 2 {
+            let material = if modern && seed.is_multiple_of(19) {
+                MaterialId::FallenBloodBranches
+            } else if (9..=81).contains(&near_root) && seed % 5 < 2 {
                 MaterialId::BloodMushrooms
             } else if (9..=36).contains(&near_root) {
                 MaterialId::BloodRoots
             } else {
-                match seed % 4 {
+                match (if modern { seed >> 3 } else { seed }) % 4 {
                     0 => MaterialId::BloodThornBush,
                     1 => MaterialId::BloodFlower,
                     _ => MaterialId::BloodFern,
                 }
             };
+            if !habitat.terrain.in_prop_patch(anchor, material as u16) {
+                continue;
+            }
             // One botanical species per group, irregularly feathered at its edge.
             for [dx, dz] in [[0, 0], [1, 0], [-1, 1], [0, -1], [1, 2], [-2, -1]] {
                 if (dx != 0 || dz != 0) && ticket(u64::from(seed), [dx, dz], 1511).is_multiple_of(4)
@@ -113,9 +122,17 @@ pub(super) fn build(habitat: &mut Habitat<'_>, tile: Tile, cells: &mut BTreeMap<
             if c.biome.weights.blood_forest < 0.7 || c.slope > 0.45 {
                 continue;
             }
-            let material = match (seed >> 4) % 3 {
+            let material = match (seed >> 4)
+                % if habitat.terrain.config().ecology_revision >= 12 {
+                    6
+                } else {
+                    3
+                } {
                 0 => MaterialId::BloodRuinedArch,
                 1 => MaterialId::BloodCrystalPillar,
+                3 => MaterialId::BloodCrystalGrowth,
+                4 => MaterialId::WeatheredRibcage,
+                5 => MaterialId::BoneStake,
                 _ => MaterialId::GiantBloodMushroom,
             };
             let cell = [point[0], ground + 1, point[1]];

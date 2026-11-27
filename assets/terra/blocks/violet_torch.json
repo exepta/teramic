@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": 791,
+  "name": "Violet Torch",
+  "description": "A bound quartz flame casts violet light on the floor or wall.",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/violet_torch.glb",
+  "struct_block": true,
+  "hardness": 0.15,
+  "resistance": 2.0,
+  "mining_level": 0,
+  "required_tool": null,
+  "textures": {
+    "inclusion": "textures/crystal_highlands/amethyst_growth.png",
+    "cleavage": "textures/crystal_highlands/amethyst_growth.png",
+    "body": "textures/crystal_highlands/amethyst_growth.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.45,
+        0.0,
+        0.45
+      ],
+      "maximum": [
+        0.55,
+        0.53,
+        0.55
+      ]
+    },
+    {
+      "minimum": [
+        0.35,
+        0.48,
+        0.35
+      ],
+      "maximum": [
+        0.65,
+        0.71,
+        0.65
+      ]
+    }
+  ],
+  "light": {
+    "color": [
+      0.76,
+      0.36,
+      1.0
+    ],
+    "intensity": 1900,
+    "range": 24.0,
+    "falloff": "soft_core",
+    "flicker": 0.0,
+    "shadows": true
+  }
+}

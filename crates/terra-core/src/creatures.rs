@@ -12,9 +12,11 @@ pub mod dragons;
 pub mod drops;
 pub mod ecology;
 pub mod gloom;
+pub mod golem;
 pub mod hitboxes;
 pub mod horses;
 pub mod intentions;
+pub mod lava_worm;
 pub mod sandworm;
 pub mod soldiers;
 pub mod spawning;
@@ -25,6 +27,21 @@ pub mod villagers;
 pub const MAX_CREATURES: usize = 16_384;
 pub const MAX_SPAWN_CELLS: usize = 65_536;
 pub const MAX_VISIBLE_CREATURES: usize = 128;
+
+/// Refill and jet phase shared by squid locomotion and mantle animation.
+pub fn squid_jet(age: f64) -> f32 {
+    let phase = (age * 0.62).fract() as f32;
+    ((phase - 0.20).rem_euclid(1.) * std::f32::consts::TAU)
+        .cos()
+        .max(0.)
+        .powi(2)
+}
+
+pub const SKELETON_RISE_SECONDS: f32 = 3.4;
+pub fn skeleton_rise(remaining: f32) -> f32 {
+    let p = (1.0 - remaining / SKELETON_RISE_SECONDS).clamp(0., 1.);
+    p * p * (3. - 2. * p)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -64,9 +81,14 @@ pub enum CreatureKind {
     DarkDragon,
     EarthDragon,
     WaterDragon,
+    LavaWorm,
+    Elephant,
+    Zebra,
+    FireDragon,
+    StoneGolem,
 }
 impl CreatureKind {
-    pub const ALL: [Self; 34] = [
+    pub const ALL: [Self; 39] = [
         Self::Sheep,
         Self::Cow,
         Self::Pig,
@@ -101,11 +123,16 @@ impl CreatureKind {
         Self::DarkDragon,
         Self::EarthDragon,
         Self::WaterDragon,
+        Self::LavaWorm,
+        Self::Elephant,
+        Self::Zebra,
+        Self::FireDragon,
+        Self::StoneGolem,
     ];
     pub const fn is_dragon(self) -> bool {
         matches!(
             self,
-            Self::DarkDragon | Self::EarthDragon | Self::WaterDragon
+            Self::DarkDragon | Self::EarthDragon | Self::FireDragon | Self::WaterDragon
         )
     }
     pub const fn is_flying(self) -> bool {
@@ -117,6 +144,7 @@ impl CreatureKind {
                 | Self::Raven
                 | Self::BloodWisp
                 | Self::DarkDragon
+                | Self::FireDragon
                 | Self::EarthDragon
                 | Self::WaterDragon
         )
@@ -133,7 +161,11 @@ impl CreatureKind {
             | Self::BloodStalker
             | Self::BloodWisp
             | Self::ThornBrute
-            | Self::SandWorm => 1,
+            | Self::SandWorm
+            | Self::LavaWorm
+            | Self::Elephant
+            | Self::Zebra => 1,
+            Self::StoneGolem => 2,
             Self::Skeleton => 3,
             Self::DarkDragon | Self::WaterDragon => 6,
             _ => 4,
@@ -168,6 +200,7 @@ impl CreatureKind {
         matches!(
             self,
             Self::Bear
+                | Self::StoneGolem
                 | Self::ReefShark
                 | Self::WhaleShark
                 | Self::MediumSpider
@@ -178,7 +211,9 @@ impl CreatureKind {
                 | Self::BloodWisp
                 | Self::ThornBrute
                 | Self::SandWorm
+                | Self::LavaWorm
                 | Self::DarkDragon
+                | Self::FireDragon
                 | Self::EarthDragon
                 | Self::WaterDragon
         )
@@ -313,6 +348,7 @@ pub enum CreatureBehavior {
     DragonVolley,
     DragonWard,
     DragonSurge,
+    DragonBurrow,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -323,6 +359,10 @@ pub enum NeedKind {
     Shelter,
     /// An explicit combat aim, never a food/water/pathfinding intention.
     AttackAim,
+    /// A ranged dragon cast made aloft; persists while the body brakes or hovers.
+    AirborneAttackAim,
+    /// Original resting place of a territorial stone guardian.
+    Territory,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -360,10 +400,12 @@ impl CreatureNeeds {
             && (0.0..=15.0).contains(&self.search_in)
             && self.goal.is_none_or(|goal| {
                 !kind.is_aquatic()
+                    && (goal.kind != NeedKind::Territory || kind == CreatureKind::StoneGolem)
                     && (goal.kind != NeedKind::Tree || kind == CreatureKind::Bear)
                     && (goal.kind != NeedKind::Shelter || kind.is_spider())
+                    && (goal.kind != NeedKind::AirborneAttackAim || kind.is_dragon())
                     && (goal.kind != NeedKind::AttackAim
-                        || kind == CreatureKind::SandWorm
+                        || matches!(kind, CreatureKind::SandWorm | CreatureKind::LavaWorm)
                         || kind.is_spider()
                         || kind.is_dragon())
                     && goal.position.iter().all(|v| v.unsigned_abs() <= 999_000)
@@ -435,7 +477,11 @@ impl Creature {
         }
     }
     pub fn sex(&self) -> CreatureSex {
-        CreatureSex::from_spawn_id(self.id)
+        match (self.kind, self.variant) {
+            (CreatureKind::Villager, villagers::SWAMP_WITCH) => CreatureSex::Female,
+            (CreatureKind::Villager, villagers::SWAMP_WARLOCK) => CreatureSex::Male,
+            _ => CreatureSex::from_spawn_id(self.id),
+        }
     }
     pub fn juvenile(&self) -> bool {
         breeding::is_birth_id(self.id)
@@ -508,6 +554,7 @@ impl Creature {
                 gloom_id(self.home) == Some(self.id)
             } else if self.kind == CreatureKind::Villager {
                 villagers::slot(self.id, self.home).is_some()
+                    || villagers::is_swamp_resident(self.id, self.home)
                     || crate::kingdom::is_starter_id(self.id)
             } else {
                 (0..4).any(|slot| creature_id(self.home, slot) == Some(self.id))

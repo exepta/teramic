@@ -237,3 +237,56 @@ fn rest_commands_finish_a_real_horse_jump_without_cancelling_positive_vertical_v
     assert!(horse.velocity[1] > 3.5);
     assert_eq!(horse.behavior, Behavior::Leap);
 }
+
+#[test]
+fn companion_uses_stairs_when_owner_stands_directly_overhead() {
+    let (terrain, chunks, mut journal, mut pet) = fixture();
+    pet.position = [-23.5, 3.0, -23.5];
+    let owner = [-23.5, 6.0, -23.5];
+    journal
+        .gameplay_mut()
+        .pet_orders
+        .insert(pet.id, CompanionMode::Follow);
+    // A stone balcony above the pet. Three steps beside the balcony can only
+    // be reached by initially moving away from the owner's horizontal position.
+    for x in -24..=-21 {
+        for z in -24..=-21 {
+            journal.record([x, 5, z], 3).unwrap();
+        }
+    }
+    for (x, top) in [(-28, 3), (-27, 3), (-26, 4), (-25, 4)] {
+        for z in -27..=-23 {
+            for y in 3..=top {
+                journal.record([x, y, z], 3).unwrap();
+            }
+        }
+    }
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut nav = navigation::Navigation::default();
+    for tick in 0..700 {
+        let before = pet.position;
+        step(
+            &mut pet,
+            &h,
+            Some(owner),
+            CompanionMode::Follow,
+            0.1,
+            tick % 6 == 0,
+            Some(&mut nav),
+        );
+        assert!((pet.position[0] - before[0]).hypot(pet.position[2] - before[2]) <= 0.101);
+        assert!((pet.position[1] - before[1]).abs() <= 1.001);
+        assert!(h.clear_rotated(pet.position, pet.size(), false, f64::from(pet.yaw)));
+        if pet.position[1] == owner[1] && pet.behavior == Behavior::Rest {
+            break;
+        }
+    }
+    assert_eq!(pet.position[1], owner[1], "pet ended at {:?}", pet.position);
+    let gap = (pet.position[0] - owner[0]).hypot(pet.position[2] - owner[2]);
+    assert!((0.9..=2.0).contains(&gap));
+    assert_eq!(pet.behavior, Behavior::Rest);
+}

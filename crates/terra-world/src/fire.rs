@@ -1,87 +1,168 @@
 use crate::{
     edits::EditJournal,
-    streaming::{ChunkStore, WorldAccess},
+    streaming::{BlockEditRequest, ChunkStore, WorldAccess, commit_block_edit},
 };
 use bevy::prelude::*;
+use std::collections::BTreeMap;
+use terra_voxel::MaterialId as M;
 
-/// Sparse, bounded authority simulation. Clients only consume confirmed journal state.
+fn damp(chunks: &ChunkStore, journal: &EditJournal, p: [i64; 3]) -> bool {
+    let surface = journal.surface_condition(p);
+    surface.wetness > 0.6
+        || surface.snow > 0.25
+        || crate::lava::NEIGHBORS
+            .iter()
+            .any(|d| crate::lava::wet(chunks, journal, std::array::from_fn(|i| p[i] + d[i])))
+}
+
+pub(crate) fn ignite_from_lava(chunks: &ChunkStore, journal: &mut EditJournal, p: [i64; 3]) {
+    let mut s = journal.surface_condition(p);
+    if s.fire == 0.
+        && s.charred < 0.9
+        && !damp(chunks, journal, p)
+        && journal.active_fires().take(256).count() < 256
+    {
+        s.fire = 0.16;
+        if let Err(error) = journal.set_surface_condition(p, s) {
+            tracing::warn!(%error,"Lava ignition failed");
+        }
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct FireStep {
+    last: f64,
+    heat: BTreeMap<[i64; 3], f32>,
+}
+
 pub(crate) fn tick(
     time: Res<Time>,
     access: Res<WorldAccess>,
     config: Option<Res<terra_core::GameConfig>>,
-    chunks: Res<ChunkStore>,
+    mut chunks: ResMut<ChunkStore>,
     mut journal: ResMut<EditJournal>,
-    mut last: Local<f64>,
+    properties: Option<Res<terra_core::block_properties::BlockPropertiesCatalog>>,
+    mut step: Local<FireStep>,
 ) {
-    if !access.authoritative() || time.elapsed_secs_f64() - *last < 1.0 {
+    let now = time.elapsed_secs_f64();
+    if !access.authoritative() || now - step.last < 0.95 {
         return;
     }
-    let elapsed = (time.elapsed_secs_f64() - *last).min(1.0) as f32;
-    *last = time.elapsed_secs_f64();
+    let dt = (now - step.last).min(1.1) as f32;
+    step.last = now;
+    let spread = config
+        .as_ref()
+        .is_none_or(|c| c.world.game_rules.fire_spread);
     let mut active: Vec<_> = journal
         .active_fires()
-        .filter(|(position, _)| chunks.block_at(*position).is_some())
+        .filter(|(p, _)| chunks.block_at(*p).is_some())
         .collect();
     active.sort_by_key(|(p, _)| *p);
     active.truncate(256);
-    let remaining = 256_usize.saturating_sub(journal.active_fires().take(256).count());
-    let mut changes = std::collections::BTreeMap::new();
-    for (position, mut condition) in active {
-        if condition.wetness > 0.6
-            || condition.snow > 0.25
-            || !chunks
-                .block_at(position)
-                .and_then(terra_voxel::MaterialId::from_raw)
-                .is_some_and(terra_voxel::MaterialId::flammable)
-        {
-            condition.fire = 0.0;
+    // Unheated cells cool. Neighbouring flames contribute additively before
+    // deciding which cells have dried and ignited in this step.
+    step.heat.retain(|_, h| {
+        *h *= 0.82;
+        *h > 0.06
+    });
+    let mut capacity = 256usize.saturating_sub(journal.active_fires().take(256).count());
+    for (p, mut s) in active {
+        let Some(material) = chunks.block_at(p).and_then(M::from_raw) else {
+            continue;
+        };
+        if !material.flammable() || damp(&chunks, &journal, p) {
+            s.fire = 0.;
         } else {
-            condition.fire = (condition.fire - 0.125 * elapsed).max(0.0);
-            condition.charred = (condition.charred + 0.13 * elapsed).min(1.0);
-            for offset in [[-1, 0, 0], [1, 0, 0], [0, 0, -1], [0, 0, 1], [0, 1, 0]] {
-                if config
-                    .as_ref()
-                    .is_some_and(|config| !config.world.game_rules.fire_spread)
-                {
-                    break;
+            let quick = M::FOLIAGE.contains(&(material as u16)) || material == M::Grass;
+            s.charred = (s.charred
+                + dt * (if quick { 0.093 } else { 0.045 }) * (0.4 + 0.6 * s.fire))
+                .min(1.);
+            let flame = (1. - s.charred * 0.65).min(0.99);
+            s.fire = (s.fire + 0.18 * dt).min(flame);
+            if spread {
+                for offset in crate::lava::NEIGHBORS {
+                    let target = std::array::from_fn(|i| p[i] + offset[i]);
+                    let Some(fuel) = chunks.block_at(target).and_then(M::from_raw) else {
+                        continue;
+                    };
+                    if !fuel.flammable()
+                        || journal.surface_condition(target).fire > 0.
+                        || damp(&chunks, &journal, target)
+                    {
+                        continue;
+                    }
+                    if !crate::lava::NEIGHBORS.iter().any(|d| {
+                        chunks.block_at(std::array::from_fn(|i| target[i] + d[i])) == Some(0)
+                    }) {
+                        continue;
+                    }
+                    let rise = match offset[1] {
+                        1 => 0.73,
+                        -1 => 0.17,
+                        _ => 0.46,
+                    };
+                    *step.heat.entry(target).or_default() += dt * s.fire * rise;
                 }
-                let target = std::array::from_fn(|i| position[i] + offset[i]);
-                if !chunks
-                    .block_at(target)
-                    .and_then(terra_voxel::MaterialId::from_raw)
-                    .is_some_and(terra_voxel::MaterialId::flammable)
-                    || ![[-1, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1]]
-                        .iter()
-                        .any(|offset| {
-                            chunks.block_at(std::array::from_fn(|i| target[i] + offset[i]))
-                                == Some(0)
-                        })
-                {
+            }
+            if s.charred >= 0.995 {
+                s.fire = 0.;
+                let residue = if quick && material == M::Grass {
+                    M::Dirt
+                } else if matches!(material, M::Wood | M::SpruceLog | M::WeatheredWood) {
+                    M::CharredLog
+                } else {
+                    M::Air
+                };
+                let fallback = terra_core::block_properties::BlockPropertiesCatalog::default();
+                if let Ok(true) = commit_block_edit(
+                    &mut chunks,
+                    &mut journal,
+                    &BlockEditRequest {
+                        position: p,
+                        expected_material: material as u16,
+                        material: residue as u16,
+                    },
+                    properties.as_deref().unwrap_or(&fallback),
+                ) {
                     continue;
-                }
-                let mut neighbor = journal.surface_condition(target);
-                let hash = (target[0] as u64).wrapping_mul(0x9e3779b9)
-                    ^ (target[2] as u64).rotate_left(17)
-                    ^ (*last as u64);
-                if neighbor.fire == 0.0
-                    && neighbor.charred < 0.8
-                    && neighbor.wetness < 0.6
-                    && neighbor.snow < 0.25
-                    && hash.is_multiple_of(4)
-                    && changes.len() < remaining
-                {
-                    neighbor.fire = 1.0;
-                    changes.entry(target).or_insert(neighbor);
                 }
             }
         }
-        changes.insert(position, condition);
-    }
-    for (position, condition) in changes {
-        if let Err(error) = journal.set_surface_condition(position, condition) {
-            tracing::warn!(%error, "Fire update rejected");
+        if let Err(error) = journal.set_surface_condition(p, s) {
+            tracing::warn!(%error,"Fire update rejected");
         }
     }
+    step.heat.retain(|&p, heat| {
+        let Some(fuel) = chunks.block_at(p).and_then(M::from_raw) else {
+            return false;
+        };
+        let mut s = journal.surface_condition(p);
+        if !spread || !fuel.flammable() || damp(&chunks, &journal, p) || s.fire > 0. {
+            return false;
+        }
+        let ignition = if M::FOLIAGE.contains(&(fuel as u16)) || fuel == M::Grass {
+            0.78
+        } else {
+            1.38
+        };
+        if *heat < ignition || capacity == 0 {
+            // Gradual preheating darkens the exposed fuel before a flame transfers.
+            let scorch = 0.13 * (*heat / ignition).clamp(0., 1.);
+            if scorch > s.charred + 0.025 {
+                s.charred = scorch;
+                if let Err(error) = journal.set_surface_condition(p, s) {
+                    tracing::warn!(%error, "Could not update scorched fuel");
+                }
+            }
+            return true;
+        }
+        s.fire = 0.20;
+        s.charred = s.charred.max(0.05);
+        if journal.set_surface_condition(p, s).is_ok() {
+            capacity -= 1;
+        }
+        false
+    });
 }
 
 #[cfg(test)]

@@ -48,6 +48,12 @@ fn visible_ocean_requires_actual_marine_water_not_a_climate_weight_on_dry_land()
         cherry_forest: 0.0,
         spirit_blossom: 0.0,
         blood_forest: 0.0,
+        ashlands: 0.0,
+        savanna: 0.0,
+        swamp: 0.0,
+        petrified_forest: 0.0,
+        crystal_highlands: 0.0,
+        misty_coast: 0.0,
     };
     column.height = 40.0;
     column.river_cavity = None;

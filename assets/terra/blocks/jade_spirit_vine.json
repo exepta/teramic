@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 609,
+  "name": "Jade Spirit Vine",
+  "description": "Paired jade leaflets cascade around an evergreen creeper.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.35,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/jade_spirit_vine.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

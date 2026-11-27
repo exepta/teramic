@@ -702,7 +702,9 @@ fn near_light(h: &Habitat, position: [f64; 3]) -> bool {
                         continue;
                     }
                     let radius = match material {
-                        40 | terra_core::lantern::LANTERN => 14.0,
+                        40
+                        | terra_core::block_shapes::VIOLET_TORCH
+                        | terra_core::lantern::LANTERN => 14.0,
                         28 | 99 => 4.0,
                         59 if h
                             .journal
@@ -726,7 +728,12 @@ fn near_light(h: &Habitat, position: [f64; 3]) -> bool {
                     } else {
                         [
                             p[0] as f64 + 0.5,
-                            p[1] as f64 + if material == 40 { 1.43 } else { 1.17 },
+                            p[1] as f64
+                                + if terra_core::block_shapes::is_torch(material) {
+                                    1.43
+                                } else {
+                                    1.17
+                                },
                             p[2] as f64 + 0.5,
                         ]
                     };

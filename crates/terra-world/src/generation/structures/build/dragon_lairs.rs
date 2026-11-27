@@ -9,11 +9,14 @@ impl StructureKind {
         match self {
             Self::DarkDragonLair => Some(CreatureKind::DarkDragon),
             Self::EarthDragonLair => Some(CreatureKind::EarthDragon),
+            Self::FireDragonLair => Some(CreatureKind::FireDragon),
             Self::WaterDragonLair => Some(CreatureKind::WaterDragon),
             _ => None,
         }
     }
 }
+
+mod tidal_nest;
 
 impl SiteSummary {
     /// The daylit entrance extends further from the platform than the side passages.
@@ -88,6 +91,9 @@ fn choose(terrain: &TerraGenerator, x: i64, z: i64) -> Option<StructureKind> {
         .is_some_and(|level| level > column.height);
     if !flooded {
         match biome {
+            BiomeKind::Ashlands if terrain.config().ecology_revision >= 19 => {
+                return Some(StructureKind::FireDragonLair);
+            }
             BiomeKind::BloodForest => return Some(StructureKind::DarkDragonLair),
             BiomeKind::Highland
                 if column.height > terrain.config().sea_level + 32.0
@@ -104,6 +110,13 @@ fn choose(terrain: &TerraGenerator, x: i64, z: i64) -> Option<StructureKind> {
             }
             _ => {}
         }
+    }
+    if terrain.config().structures_revision >= 16
+        && terrain.config().water
+        && biome == BiomeKind::Ocean
+        && flooded
+    {
+        return Some(StructureKind::WaterDragonLair);
     }
     // Sample actual coast on both sides. Deep ocean and inland lakes cannot claim a water dragon.
     if !terrain.config().water || (column.height - terrain.config().sea_level).abs() > 13.0 {
@@ -222,7 +235,14 @@ fn plan_at(
     let ground = terrain.surface_height(x as f64 + 0.5, z as f64 + 0.5);
     let coast =
         kind == StructureKind::WaterDragonLair && terrain.config().structures_revision >= 13;
-    let ([x, z], forward, y) = if coast {
+    let tidal = coast && terrain.config().structures_revision >= 16;
+    let ([x, z], forward, y) = if tidal {
+        tidal_nest::shelf(
+            terrain,
+            region.map(|v| REGION_SIZE * v + REGION_SIZE / 2),
+            seed,
+        )?
+    } else if coast {
         coastal_bank(
             terrain,
             region.map(|v| REGION_SIZE * v + REGION_SIZE / 2),
@@ -287,8 +307,14 @@ fn plan_at(
         patches: BTreeMap::new(),
         objects: BTreeMap::new(),
     };
-    carve(&mut builder, forward);
-    builder.finish()
+    if tidal {
+        tidal_nest::build(&mut builder, forward);
+    } else {
+        carve(&mut builder, forward);
+    }
+    let mut site = builder.finish()?;
+    site.tidal_nest = tidal;
+    Some(site)
 }
 
 #[derive(Clone, Copy)]
@@ -357,6 +383,17 @@ fn palette(kind: StructureKind) -> Palette {
             accent: M::BloodBones,
             egg: M::DarkDragonEgg,
         },
+        StructureKind::FireDragonLair => Palette {
+            stone: M::ColumnarBasalt,
+            seam: M::DarkVolcanicStone,
+            floor: M::VolcanicGravel,
+            trim: M::ScorchedDirt,
+            nest: M::CompactedAsh,
+            root: M::BlackenedStump,
+            crystal: M::EmberCrystals,
+            accent: M::HornedSkull,
+            egg: M::FireDragonEgg,
+        },
         StructureKind::WaterDragonLair => Palette {
             stone: M::Stone,
             seam: M::SmoothStone,
@@ -390,7 +427,8 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
         match kind {
             StructureKind::DarkDragonLair => p.stone = M::BloodStone,
             StructureKind::EarthDragonLair => p.trim = M::Sand,
-            _ => p.seam = M::MossyStone,
+            StructureKind::WaterDragonLair => p.seam = M::MossyStone,
+            _ => {}
         }
     }
     let at = |u: i64, h: i64, v: i64| [cx + u * fz + v * fx, cy + h, cz - u * fx + v * fz];
@@ -405,6 +443,8 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
     let wet = kind == StructureKind::WaterDragonLair;
     let accessible = b.terrain.config().structures_revision >= 12;
     let concealed = b.terrain.config().structures_revision >= 13;
+    let fire = kind == StructureKind::FireDragonLair;
+    let lining_prop = if fire { M::BurntGrass } else { M::NestStraw };
     let dressed = b.terrain.config().structures_revision >= 14;
     let coastal = concealed && wet;
     let portal_lip = |a: f64| {
@@ -419,6 +459,18 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
     let length = if accessible { 64 } else { 49 };
     let outer = at(0, 0, length);
     let outer_floor = b.ground(outer[0], outer[2]) - cy - 1;
+    let pad = at(0, 0, 54);
+    let lift_ground = b.ground(pad[0], pad[2]) - cy - 1;
+    let graded = varied && b.terrain.config().ecology_revision >= 17;
+    // The inner stairs, exposed mouth and landing pad share one gradient. A
+    // short, steep join between two ramps can strand the dragon on its return.
+    let runway = |d: f64| {
+        if graded {
+            -1. + (lift_ground as f64 + 1.) * ((d - 8.) / 52.).clamp(0., 1.)
+        } else {
+            -1. + (outer_floor as f64 + 1.) * ((d - 8.) / 50.).clamp(0., 1.)
+        }
+    };
     let back = if varied {
         -66
     } else if concealed {
@@ -481,7 +533,7 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
                 ((brow - local_ground as f64).max(0.0) * weight).round() as i64 + local_ground - 1;
             // A new lair never excavates an existing watercourse. Leave its
             // sloping bank alone and try another site if the hall would cut it.
-            if varied && column.water_level.is_some() {
+            if (varied && column.water_level.is_some()) || column.lava_level.is_some() {
                 if shoulder <= 1.07 || entry || tunnel {
                     b.failed = true;
                     return;
@@ -537,8 +589,7 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
                     (uplift * (0.79 + 0.21 * (a * 0.68 + d * 0.28 + phase).sin())).round() as i32;
             }
             if accessible && entry {
-                let rise = ((d - 8.0) / 50.0).clamp(0.0, 1.0);
-                let path = -1.0 + (outer_floor as f64 + 1.0) * rise;
+                let path = runway(d);
                 let apron = ((d - 53.0) / 11.0).clamp(0.0, 1.0);
                 let path = path + (local_ground as f64 - 1.0 - path) * apron;
                 let fill = ((16.0 - a.abs()) / 6.0).clamp(0.0, 1.0);
@@ -590,7 +641,14 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
             } else {
                 nest_radius < 0.84 && (lining > -0.43 || nest_radius < 0.15)
             };
-            let surface = if concealed && bedding {
+            let surface = if fire && bedding {
+                // Narrow cooling fractures interrupt the matte ash bed.
+                if nest_radius < 0.10 || (lining - 0.86).abs() < 0.17 {
+                    M::LavaCrust
+                } else {
+                    M::VolcanicGravel
+                }
+            } else if concealed && bedding {
                 M::StrawBlock
             } else if concealed && v > 32 && entry {
                 column.surface_material
@@ -671,6 +729,9 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
                     && (d > portal_lip(a)
                         || !varied && coastal && d > 17.0 && roof + 1 >= local_ground))
                     || (tunnel && u > 34 && (!dressed || local_ground <= floor + 2))
+                    // A split in the caldera roof admits daylight beside the
+                    // guardian's face. Its bed and the approach remain covered.
+                    || (fire && ((a - 7. - 0.24 * d) / 4.).hypot((d - 6.) / 7.) < 1.)
                     || (!dressed && ((a - 16.0) / 2.6).hypot((d + 13.0) / 3.7) < 1.0)
             } else {
                 (entry && v > 31) || (tunnel && u > 34) || skylight
@@ -723,8 +784,14 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
                         M::BonePile
                     };
                     b.set(at(u, floor + 1, v), bone as u16);
-                } else if windrow > 0.43 && !noise.is_multiple_of(4) {
-                    b.set(at(u, floor + 1, v), M::NestStraw as u16);
+                } else if windrow > 0.43
+                    && if fire {
+                        noise.is_multiple_of(11)
+                    } else {
+                        !noise.is_multiple_of(4)
+                    }
+                {
+                    b.set(at(u, floor + 1, v), lining_prop as u16);
                 }
             }
             // Woven, broken rim. Two gaps towards the entrance let hatchlings walk out.
@@ -734,10 +801,12 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
                 if dressed {
                     // Loose bedding catches on a few exposed roots and stones.
                     // Keep the skull-bearing piles only in the two nearby middens.
-                    if noise.is_multiple_of(5) {
+                    if noise.is_multiple_of(if fire { 23 } else { 5 }) {
                         b.set(at(u, floor + 1, v), p.root as u16);
-                    } else if (a * 0.34 + d * 0.20 + phase).sin() > 0.20 {
-                        b.set(at(u, floor + 1, v), M::NestStraw as u16);
+                    } else if (a * 0.34 + d * 0.20 + phase).sin() > 0.20
+                        && (!fire || noise.is_multiple_of(9))
+                    {
+                        b.set(at(u, floor + 1, v), lining_prop as u16);
                     }
                     continue;
                 }
@@ -753,8 +822,6 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
     // A grassy/sandy opening in the canopy is the runway. Keep the native
     // topsoil and ease the clearing back into the bank at its irregular edge.
     if concealed {
-        let pad = at(0, 0, 54);
-        let lift_ground = b.ground(pad[0], pad[2]) - cy - 1;
         for v in (if varied { 22 } else { 34 })..=84 {
             let half_width = if varied { 39 } else { 31 };
             for u in -half_width..=half_width {
@@ -772,7 +839,7 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
                 let column = b
                     .terrain
                     .surface_column(q[0] as f64 + 0.5, q[2] as f64 + 0.5);
-                if varied && column.water_level.is_some() {
+                if (varied && column.water_level.is_some()) || column.lava_level.is_some() {
                     // The landing apron narrows into wet terrain. Its central path
                     // was already required to be dry when selecting the exit.
                     if u.abs() <= 6 && v <= 70 {
@@ -791,11 +858,14 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
                 } else {
                     ((1. - radial) / 0.26).clamp(0., 1.) * ((d - 34.) / 12.).clamp(0., 1.)
                 };
-                let approach =
-                    (lift_ground as f64 + 1.) * ((v as f64 - 8.) / 46.).clamp(0., 1.) - 1.;
+                let path = runway(d);
+                let approach = if graded {
+                    path
+                } else {
+                    (lift_ground as f64 + 1.) * ((d - 8.) / 46.).clamp(0., 1.) - 1.
+                };
                 let road = v <= length
                     && aisle < 10.7 + 2.1 * (d * 0.095 + phase).sin() + (d / 56.0).min(1.0) * 1.1;
-                let path = -1.0 + (outer_floor as f64 + 1.0) * ((d - 8.0) / 50.0).clamp(0.0, 1.0);
                 let previous_top = bank_heights.get(&[u, v]).copied().unwrap_or(old);
                 let original = if varied {
                     let bank_weight = if bank {
@@ -805,7 +875,15 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
                     } else {
                         0.
                     };
-                    previous_top as f64 + (path - previous_top as f64) * bank_weight
+                    // Beyond the arch the excavated hall switches abruptly to
+                    // natural ground at the aisle edge. Grade against the
+                    // continuous hillside there, retaining the arch overhead.
+                    let bank_top = if graded && bank {
+                        previous_top as f64 + (old - previous_top) as f64 * smooth(daylight / 6.)
+                    } else {
+                        previous_top as f64
+                    };
+                    bank_top + (path - bank_top) * bank_weight
                 } else if road {
                     let apron = ((d - 53.0) / 11.0).clamp(0.0, 1.0);
                     let path = path + (old as f64 - path) * apron;
@@ -877,6 +955,20 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
             );
         }
     }
+    if fire {
+        // Geode-bearing chimneys flank the folded guardian and
+        // illuminate its cheek and near wing without obstructing its path.
+        for (u, v, height) in [(6, 8, 5), (-7, 4, 4), (8, -4, 3)] {
+            for h in -2..height {
+                b.set(at(u, h, v), M::ColumnarBasalt as u16);
+                if h < height - 1 {
+                    b.set(at(u + 1, h, v), M::DarkVolcanicStone as u16);
+                }
+            }
+            b.set(at(u, height, v), M::AmberGeode as u16);
+            b.set(at(u + 1, height - 1, v), M::EmberCrystals as u16);
+        }
+    }
     // Group mineral outcrops into coherent spurs. Taller spires rise at their
     // sheltered steep side with small satellites in the surrounding rubble.
     for (u, v, height) in [(-15, 6, 5_i64), (13, -15, 6), (-18, -12, 5), (9, 20, 3)] {
@@ -936,7 +1028,22 @@ fn carve(b: &mut Builder<'_>, [fx, fz]: [i64; 2]) {
         }
         b.set(at(u, 6, v - 1), p.crystal as u16);
     }
-    let clutch = (b.seed >> 12) % 4;
+    if fire && b.terrain.config().structures_revision >= 16 {
+        // The eggs rest on a hot basalt shelf framed by two pairs of fossil tusks.
+        for (du, dv) in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, -1), (-1, 1)] {
+            b.set(at(-8 + du, -1, -5 + dv), M::LavaCrust as u16);
+        }
+        for sign in [-1, 1] {
+            for (v, height) in [(-8, 4), (-5, 3)] {
+                for h in 0..height {
+                    b.set(at(-8 + sign * (4 - h / 2), h, v), M::SaltStone as u16);
+                }
+            }
+        }
+    }
+    let clutch = ((b.seed >> 12) % 4).max(u32::from(
+        fire && b.terrain.config().structures_revision >= 16,
+    ));
     for &(u, v) in &[(-8, -5), (-7, -6), (-9, -4)][..clutch as usize] {
         b.set(at(u, 0, v), p.egg as u16);
     }
@@ -977,6 +1084,8 @@ mod tests {
         use crate::generation::SectionGenerator;
         let terrain = TerraGenerator::new(terra_core::WorldConfig {
             seed: terra_core::WorldSeed(3809574271049500506),
+            // Reproduce the saved river crossing with its original biome map.
+            ecology_revision: 11,
             structures_revision: 14,
             rivers: true,
             biome_definitions: Some(
@@ -1052,7 +1161,7 @@ mod tests {
     #[test]
     fn lair_aprons_rejoin_the_hillside_on_both_sides_with_supported_treads() {
         let terrain = TerraGenerator::new(Default::default()).unwrap();
-        for region in [[-1, 3], [-1, -5], [-6, 5]] {
+        for region in [[-20, -8], [-1, -5], [-6, 5]] {
             let site = terrain.planned_site(region).unwrap();
             let [cx, cy, cz] = site.summary.center;
             let [fx, fz] = site.summary.dragon_entrance().unwrap();
@@ -1080,7 +1189,12 @@ mod tests {
 
     #[test]
     fn earth_lair_mouth_meets_both_banks_without_a_sheer_cut() {
-        let terrain = TerraGenerator::new(Default::default()).unwrap();
+        // This is the original desert hillside in the pre-savanna biome map.
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            ecology_revision: 11,
+            ..Default::default()
+        })
+        .unwrap();
         let site = terrain.planned_site([-1, 3]).unwrap();
         let [cx, cy, cz] = site.summary.center;
         let [fx, fz] = site.summary.dragon_entrance().unwrap();
@@ -1102,11 +1216,42 @@ mod tests {
     }
 
     #[test]
+    fn ashlands_roost_has_a_clear_guardian_bed_and_an_ember_lined_gallery() {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig {
+            ecology_revision: 19,
+            structures_revision: 15,
+            ..Default::default()
+        })
+        .unwrap();
+        let site = terrain
+            .planned_site([-6, 18])
+            .expect("default seed ashland roost");
+        assert_eq!(site.summary.kind, StructureKind::FireDragonLair);
+        let [x, y, z] = site.summary.center;
+        assert_eq!(
+            terrain.dragon_nest([x.div_euclid(32), z.div_euclid(32)]),
+            Some((CreatureKind::FireDragon, [x, y, z]))
+        );
+        assert_eq!(site.block_at([x, y, z]), Some(M::Air as u16));
+        assert_eq!(site.block_at([x, y - 1, z]), Some(M::LavaCrust as u16));
+        assert!(
+            site.sections
+                .values()
+                .flat_map(|p| &p.cells)
+                .any(|(_, m)| *m == M::EmberCrystals as u16)
+        );
+    }
+
+    #[test]
     fn dragon_lairs_link_generated_grottos_to_unique_ecology_cells() {
         use terra_core::WorldConfig;
-        let generator = TerraGenerator::new(WorldConfig::default()).unwrap();
+        let generator = TerraGenerator::new(WorldConfig {
+            structures_revision: 15,
+            ..Default::default()
+        })
+        .unwrap();
         let samples = [
-            ([-1, 3], StructureKind::EarthDragonLair),
+            ([-20, -8], StructureKind::EarthDragonLair),
             ([-1, -5], StructureKind::DarkDragonLair),
             ([-6, 5], StructureKind::WaterDragonLair),
         ];

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": 660,
+  "name": "Large Savanna Boulder",
+  "description": "A broad grey boulder split down one side.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/large_savanna_boulder.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.16,
+        0,
+        0.25
+      ],
+      "maximum": [
+        0.78,
+        0.54,
+        0.76
+      ]
+    },
+    {
+      "minimum": [
+        0.73,
+        0,
+        0.34
+      ],
+      "maximum": [
+        0.9,
+        0.25,
+        0.63
+      ]
+    }
+  ]
+}

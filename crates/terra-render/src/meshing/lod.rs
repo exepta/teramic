@@ -87,6 +87,123 @@ pub(crate) fn select_configured_micro_detail(
         }
 }
 
+/// Leaf cards outside the close band keep their silhouette and paint. Non-oak
+/// crown pieces retain their section-wide selection. Only octants containing
+/// an exposed oak blade can change the oak mesh.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct FoldedLeaves {
+    pub(crate) nearby: bool,
+    occupied: u8,
+    folded: u8,
+}
+
+impl FoldedLeaves {
+    pub(crate) const FULL: Self = Self {
+        nearby: true,
+        occupied: u8::MAX,
+        folded: u8::MAX,
+    };
+
+    pub(crate) fn at(self, cell: [u32; 3]) -> bool {
+        self.folded & octant_bit(cell) != 0
+    }
+
+    pub(crate) fn at_focus(
+        self,
+        position: SectionPos,
+        focus: [f64; 3],
+        previous: Option<Self>,
+        level: DetailLevel,
+        quality: terra_core::BlockDetailQuality,
+    ) -> Self {
+        select_folded_leaves(position, focus, previous, level, quality, self.occupied)
+    }
+}
+
+fn octant_bit(cell: [u32; 3]) -> u8 {
+    1 << ((cell[0] >> 3) | ((cell[1] >> 3) << 1) | ((cell[2] >> 3) << 2))
+}
+
+/// A greedy face can cross the midpoint on both tangent axes. Its four
+/// corners identify all affected octants without expanding it into cells.
+pub(crate) fn foliage_octants(faces: &[terra_voxel::meshing::BlockFace]) -> Option<u8> {
+    let mut occupied = None;
+    for face in faces {
+        if !terra_voxel::MaterialId::FOLIAGE.contains(&face.material) {
+            continue;
+        }
+        let bits = occupied.get_or_insert(0);
+        if face.material != terra_voxel::MaterialId::Leaves as u16 || face.occupied_neighbor {
+            continue;
+        }
+        for u in [0, face.width - 1] {
+            for v in [0, face.height - 1] {
+                let mut cell = face.minimum;
+                cell[face.u_axis] += u;
+                cell[face.v_axis] += v;
+                *bits |= octant_bit(cell);
+            }
+        }
+        if *bits == u8::MAX {
+            break;
+        }
+    }
+    occupied
+}
+
+fn leaf_radius_squared(previous: Option<bool>) -> f64 {
+    match previous {
+        Some(true) => 36.0 * 36.0,
+        Some(false) => 28.0 * 28.0,
+        None => 32.0 * 32.0,
+    }
+}
+
+pub(crate) fn select_folded_leaves(
+    position: SectionPos,
+    focus: [f64; 3],
+    previous: Option<FoldedLeaves>,
+    level: DetailLevel,
+    quality: terra_core::BlockDetailQuality,
+    occupied: u8,
+) -> FoldedLeaves {
+    let nearby = quality == terra_core::BlockDetailQuality::High
+        && level == DetailLevel::Near
+        && distance_squared(position, focus) < leaf_radius_squared(previous.map(|s| s.nearby));
+    let mut choice = FoldedLeaves {
+        nearby,
+        occupied,
+        folded: 0,
+    };
+    if !nearby || occupied == 0 {
+        return choice;
+    }
+
+    let section = [position.x, position.y, position.z];
+    let delta =
+        std::array::from_fn::<_, 3, _>(|axis| focus[axis] - (section[axis] as f64 * 16.0 + 8.0));
+    if delta.iter().map(|v| (v.abs() + 8.0).powi(2)).sum::<f64>() < 28.0 * 28.0 {
+        choice.folded = occupied;
+        return choice;
+    }
+    let distances =
+        delta.map(|v| [-4.0, 4.0].map(|center| ((v - center).abs() - 4.0).max(0.0).powi(2)));
+    let mut remaining = occupied;
+    while remaining != 0 {
+        let i = remaining.trailing_zeros() as usize;
+        let bit = 1 << i;
+        let prior = previous
+            .filter(|s| s.occupied & bit != 0)
+            .map(|s| s.folded & bit != 0);
+        let d = distances[0][i & 1] + distances[1][(i >> 1) & 1] + distances[2][(i >> 2) & 1];
+        if d < leaf_radius_squared(prior) {
+            choice.folded |= bit;
+        }
+        remaining &= !bit;
+    }
+    choice
+}
+
 pub(crate) fn select_prop_level(
     position: SectionPos,
     focus: [f64; 3],
@@ -141,6 +258,88 @@ pub(crate) fn detail_level(position: SectionPos, focus: [f64; 3]) -> DetailLevel
 #[cfg(test)]
 mod micro_tests {
     use super::*;
+    #[test]
+    fn folded_crowns_keep_player_quality_and_hysteresis_in_three_dimensions() {
+        use terra_core::BlockDetailQuality::{High, Low, Medium};
+
+        let section = SectionPos::new(-1, -1, -1);
+        let near = DetailLevel::Near;
+        let select = |y, prev, level, quality| {
+            select_folded_leaves(section, [-8., y, -8.], prev, level, quality, u8::MAX)
+        };
+        let entered = select(31., None, near, High);
+        assert!(entered.nearby && entered.at([12, 15, 12]));
+        assert!(!entered.at([12, 0, 12]));
+        let far = select(33., None, near, High);
+        assert!(!far.nearby && !far.at([12, 15, 12]));
+        assert!(select(35., Some(entered), near, High).at([12, 15, 12]));
+        assert!(!select(29., Some(far), near, High).at([12, 15, 12]));
+        // Moving through the 28–36 m band retains each half independently.
+        assert!(!select(21., Some(entered), near, High).at([12, 0, 12]));
+        assert!(select(19., Some(entered), near, High).at([12, 0, 12]));
+        for quality in [Medium, Low] {
+            assert!(!select(0., None, near, quality).nearby);
+        }
+        assert!(!select(0., None, DetailLevel::Middle, High).nearby);
+    }
+
+    #[test]
+    fn folded_leaf_selection_preserves_near_diagonal_corners_and_ignores_empty_octants() {
+        use terra_core::BlockDetailQuality::High;
+        let section = SectionPos::new(-1, -1, -1);
+        let select = |focus, prev, mask| {
+            select_folded_leaves(section, focus, prev, DetailLevel::Near, High, mask)
+        };
+        let near = select([18.; 3], None, u8::MAX);
+        assert!(near.at([15; 3]));
+        assert!(!near.at([0; 3]));
+        let unchanged = select([18.; 3], None, 1);
+        assert_eq!(unchanged, select([16.; 3], Some(unchanged), 1));
+        let changed = select([17.; 3], Some(unchanged), u8::MAX);
+        assert!(
+            changed.at([15; 3]),
+            "newly exposed octant uses the 32 m initial band"
+        );
+    }
+
+    #[test]
+    fn folded_leaf_occupancy_counts_greedy_oak_faces_crossing_both_midplanes() {
+        use terra_voxel::meshing::BlockFace;
+        let face = BlockFace {
+            minimum: [7, 1, 7],
+            width: 2,
+            height: 2,
+            u_axis: 0,
+            v_axis: 2,
+            side: 3,
+            material: 7,
+            occupied_neighbor: false,
+            edge_mask: 0,
+        };
+        assert_eq!(foliage_octants(&[face]), Some(0b0011_0011));
+        assert_eq!(
+            foliage_octants(&[BlockFace {
+                occupied_neighbor: true,
+                ..face
+            }]),
+            Some(0)
+        );
+        assert_eq!(
+            foliage_octants(&[BlockFace {
+                material: 8,
+                ..face
+            }]),
+            Some(0)
+        );
+        assert_eq!(
+            foliage_octants(&[BlockFace {
+                material: 1,
+                ..face
+            }]),
+            None
+        );
+    }
+
     #[test]
     fn vertical_distance_limits_detail_without_changing_terrain_column_lod() {
         let section = SectionPos::new(-1, -1, -1);

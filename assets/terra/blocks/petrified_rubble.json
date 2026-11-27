@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 716,
+  "name": "Loose Ruin Rubble",
+  "description": "Small angular fragments collect at the foot of the shelves.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.3,
+  "resistance": 2.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/petrified_rubble.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

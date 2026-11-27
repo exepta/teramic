@@ -41,7 +41,8 @@ pub(in crate::creatures) fn fit(
         let pose = presentation.pose;
         let scale = presentation.scale;
         let vertical = scale * root.scale.y;
-        let walking = matches!(pose.behavior, B::Wander | B::Hunt | B::Rest);
+        let walking = pose.kind != terra_core::creatures::CreatureKind::WaterDragon
+            && matches!(pose.behavior, B::Wander | B::Hunt | B::Rest);
         let mut levels = [None; 4];
         let stance = &mut presentation.ground;
         if let Some(last) = stance.last_root_y {

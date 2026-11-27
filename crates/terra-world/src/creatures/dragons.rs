@@ -9,18 +9,29 @@ use terra_core::{
     },
 };
 
+/// Player UUIDs and persistent creature IDs occupy independent identity spaces.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Target {
+    Player(PlayerUuid),
+    Mob(u64),
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Strike {
     pub dragon: u64,
-    pub target: PlayerUuid,
+    pub target: Target,
     pub damage: f32,
     pub effect: Option<terra_core::EffectKind>,
     pub impulse: [f32; 3],
 }
 
+mod sortie;
+mod species;
+use sortie::AttackRun;
 mod upbringing;
 pub(super) use upbringing::grow;
 mod flight;
+mod landing;
 mod lineages;
 mod patrol;
 pub const ROAM_RADIUS: f64 = 500.0;
@@ -29,18 +40,26 @@ use patrol::Patrol;
 pub struct Encounter {
     home: DVec3,
     keeper: Option<(DVec3, bool)>,
-    pub target: Option<PlayerUuid>,
+    pub target: Option<Target>,
     lost_for: f32,
     attack_number: u32,
+    ground_casts: u8,
+    attack_run: Option<AttackRun>,
+    launch_retry: f32,
     cooldown: f32,
     airborne: bool,
-    volley_hits: std::collections::BTreeSet<PlayerUuid>,
+    attack_pad: Option<(DVec3, DVec3, f64)>,
+    prey_heading: Option<f32>,
+    volley_hits: std::collections::BTreeSet<Target>,
     stopped_missiles: [bool; 3],
     flight_velocity: DVec3,
+    landing: landing::Landing,
     last_sighting: Option<DVec3>,
     prey_velocity: DVec3,
     exit_course: Option<DVec3>,
     patrol: Option<Patrol>,
+    swim_detour: Option<DVec3>,
+    swim_retry: f64,
     course: DVec3,
     steer_time: f64,
 }
@@ -54,39 +73,73 @@ impl Encounter {
         Self {
             home,
             keeper: None,
+            attack_pad: None,
+            prey_heading: None,
             volley_hits: Default::default(),
             stopped_missiles: [false; 3],
             target: None,
             last_sighting: None,
             prey_velocity: DVec3::ZERO,
             exit_course: None,
+            swim_detour: None,
+            swim_retry: 0.,
             course: DVec3::ZERO,
             steer_time: 0.,
             lost_for: 0.0,
             attack_number: 0,
+            ground_casts: 0,
+            attack_run: None,
+            launch_retry: 0.,
             cooldown: 1.0,
-            patrol: nest.map(|(_, direction)| Patrol::new(direction, a.id, home, a.position)),
+            patrol: nest.map(|(_, direction)| Patrol::new(direction, a, home)),
+            landing: Default::default(),
             flight_velocity: DVec3::from_array(a.velocity.map(f64::from)),
-            airborne: matches!(a.behavior, B::Fly | B::Leap | B::Land),
+            airborne: matches!(a.behavior, B::Fly | B::Leap | B::Land)
+                || a.needs
+                    .goal
+                    .is_some_and(|g| g.kind == NeedKind::AirborneAttackAim),
         }
+    }
+    pub fn set_prey_heading(&mut self, yaw: Option<f32>) {
+        self.prey_heading = yaw.filter(|yaw| yaw.is_finite());
     }
     pub fn step(
         &mut self,
         a: &mut Creature,
         h: &Habitat,
         dt: f32,
-        players: &[(PlayerUuid, [f64; 3])],
+        targets: &[(Target, [f64; 3])],
         night: bool,
         friendly: bool,
     ) -> Vec<Strike> {
         let delta = f64::from(dt);
         a.age += delta;
         self.cooldown = (self.cooldown - dt).max(0.0);
+        self.launch_retry = (self.launch_retry - dt).max(0.);
         let old_timer = a.timer;
         a.timer = (a.timer - dt).max(0.0);
         a.velocity = [0.; 3];
         let from = DVec3::from_array(a.position);
         let eye = (from + DVec3::Y * a.size()[1] * 0.82).to_array();
+        if !pose::flies(a.kind) && self.airborne {
+            if a.kind == K::WaterDragon && h.wet(a.position) || on_ground(a, h) {
+                self.airborne = false;
+                set_pose(a, B::Rest);
+            } else {
+                // Bring airborne guardians from older saves safely back to their habitat.
+                let falling = from - DVec3::Y * (6.0 * delta);
+                if h.clear_swimmer_rotated(falling.to_array(), a.size(), f64::from(a.yaw)) {
+                    translate(a, falling, delta);
+                } else if let Some(point) =
+                    h.supported_sized(a.position, a.size(), f64::from(a.yaw))
+                {
+                    translate(a, DVec3::from_array(point), delta);
+                    self.airborne = false;
+                }
+                a.behavior = B::Land;
+                return vec![];
+            }
+        }
         let engaged = self.target;
         let allowed = |p: [f64; 3]| {
             !friendly
@@ -98,7 +151,7 @@ impl Encounter {
                         88.0
                     }
         };
-        let current = players.iter().find(|(id, p)| {
+        let current = targets.iter().find(|(id, p)| {
             Some(*id) == self.target && allowed(*p) && from.distance(DVec3::from_array(*p)) < 70.0
         });
         let mut seen = current.filter(|(_, p)| perception::visible(h, eye, *p));
@@ -113,13 +166,17 @@ impl Encounter {
                         .unwrap()
                         .aggro_radius
                 };
-                seen = players
+                seen = targets
                     .iter()
                     .filter(|(_, p)| allowed(*p) && from.distance(DVec3::from_array(*p)) < radius)
                     .filter(|(_, p)| perception::visible(h, eye, *p))
-                    .min_by(|(_, p), (_, q)| {
-                        from.distance_squared(DVec3::from_array(*p))
-                            .total_cmp(&from.distance_squared(DVec3::from_array(*q)))
+                    .min_by(|(left, p), (right, q)| {
+                        matches!(left, Target::Mob(_))
+                            .cmp(&matches!(right, Target::Mob(_)))
+                            .then_with(|| {
+                                from.distance_squared(DVec3::from_array(*p))
+                                    .total_cmp(&from.distance_squared(DVec3::from_array(*q)))
+                            })
                     });
                 self.target = seen.map(|(id, _)| *id);
             }
@@ -141,16 +198,31 @@ impl Encounter {
             self.lost_for = 0.0;
         }
         if engaged != self.target {
+            self.ground_casts = 0;
+            self.attack_run = None;
+            self.attack_pad = None;
             self.exit_course = None;
+            self.steer_time = 0.;
+            self.landing = Default::default();
+            // Combat may interrupt takeoff or the final flare between animation ticks.
+            if matches!(a.behavior, B::Land | B::Leap) {
+                self.airborne = !on_ground(a, h);
+            }
             a.needs.goal = None;
             if self.target.is_some() {
                 set_pose(a, B::Emerge);
                 return vec![];
             }
+            self.last_sighting = None;
+            self.prey_velocity = DVec3::ZERO;
             set_pose(a, if self.airborne { B::Fly } else { B::Wander });
             if let Some(patrol) = self.patrol.as_mut() {
                 patrol.recall(self.airborne);
             }
+        }
+        if a.behavior == B::DragonBurrow {
+            self.tunnel(a, h, delta);
+            return vec![];
         }
         if pose::casting(a.behavior) && self.target.is_some() {
             let action = a.behavior;
@@ -164,11 +236,21 @@ impl Encounter {
             let strikes = if action == B::DragonVolley
                 && let Some(form) = form
             {
-                self.volley(a, h, form, players, old_timer)
+                self.volley(a, h, form, targets, old_timer)
             } else if old_timer > impact && a.timer <= impact {
-                let hits = self.strikes(a, h, players);
-                if let Some(form) = form {
-                    lineages::resolve(a, h, form, self.airborne, players);
+                let requires_footing = matches!(action, B::Tremor | B::Attack)
+                    || matches!(action, B::Ink | B::DragonSurge) && a.kind != K::WaterDragon;
+                if requires_footing && !on_ground(a, h) {
+                    a.needs.goal = None;
+                    set_pose(a, if self.airborne { B::Fly } else { B::Hunt });
+                    self.cooldown = 0.7;
+                    return vec![];
+                }
+                let hits = self.strikes(a, h, targets);
+                if let Some(form) =
+                    form.or((a.kind == K::DarkDragon).then_some(pose::Lineage::Shadow))
+                {
+                    lineages::resolve(a, h, form, self.airborne, targets, self.prey_heading);
                 }
                 hits
             } else {
@@ -178,6 +260,9 @@ impl Encounter {
                 set_pose(a, if self.airborne { B::Fly } else { B::Hunt });
                 a.needs.goal = None;
                 if self.airborne {
+                    if matches!(self.attack_run, Some(AttackRun::Pass)) {
+                        self.attack_run = Some(AttackRun::Touchdown);
+                    }
                     let yaw = f64::from(a.yaw);
                     let forward = DVec3::new(-yaw.sin(), 0., -yaw.cos());
                     let lateral = DVec3::new(-forward.z, 0., forward.x)
@@ -212,7 +297,7 @@ impl Encounter {
                 let push = ((phase - 0.18) / 0.28).clamp(0., 1.) as f64;
                 (7.8 * push, 4.0 * push)
             } else {
-                (-5.6 + 2.4 * f64::from(phase), 2.6 * f64::from(1. - phase))
+                (-5.6 + 2.4 * f64::from(phase), 0.)
             };
             let floor = h.supported_sized(a.position, a.size(), f64::from(a.yaw));
             let mut next = from + (DVec3::Y * lift.0 + forward * lift.1) * delta;
@@ -220,7 +305,12 @@ impl Encounter {
                 next.y = next.y.max(footing[1]);
             }
             let yaw = f64::from(a.yaw);
-            if flight::passage(h, a, from, next, yaw) {
+            let clear = if rising {
+                flight::passage(h, a, from, next, yaw)
+            } else {
+                flight::flare_clear(a, h, from, next)
+            };
+            if clear {
                 translate(a, next, delta);
             }
             let landed = !rising
@@ -229,6 +319,7 @@ impl Encounter {
                 });
             if !rising && !landed && floor.is_some_and(|p| a.position[1] <= p[1] + 0.1) {
                 self.airborne = true;
+                self.landing.reject();
                 self.steer_time = 0.;
                 self.flight_velocity = DVec3::ZERO;
                 set_pose(a, B::Fly);
@@ -247,6 +338,7 @@ impl Encounter {
             }
             if a.timer <= 0.0 && (rising || landed) {
                 self.airborne = rising;
+                self.landing = Default::default();
                 self.flight_velocity = if rising {
                     forward * 5.0 + DVec3::Y * 2.0
                 } else {
@@ -256,6 +348,9 @@ impl Encounter {
             } else if !rising && a.timer <= 0.0 && a.velocity == [0.; 3] && !landed {
                 // Something entered the descent path, or the next section unloaded.
                 self.airborne = true;
+                self.landing.reject();
+                self.steer_time = 0.;
+                self.flight_velocity = DVec3::ZERO;
                 set_pose(a, B::Fly);
             }
             return vec![];
@@ -281,6 +376,10 @@ impl Encounter {
                 }
                 return vec![];
             }
+            if !pose::flies(a.kind) {
+                self.territory(a, h, delta);
+                return vec![];
+            }
             if self.patrol.is_none() && !friendly && !a.juvenile() && flight::can_launch(a, h) {
                 self.patrol = Some(Patrol::open_country(a, self.home));
             }
@@ -291,8 +390,10 @@ impl Encounter {
             let to_home = from.distance(self.home);
             let cycle = (a.age + (a.id % 37) as f64).rem_euclid(68.0);
             if self.airborne {
-                if (self.home - from).with_y(0.0).length() < 9.0 {
-                    set_pose(a, B::Land);
+                if (self.home - from).with_y(0.0).length() < 9.0
+                    || self.landing.active_at(self.home)
+                {
+                    self.approach_pad(a, h, self.home, DVec3::NEG_Z, delta);
                 } else {
                     self.travel(a, h, self.home + DVec3::Y * 4.0, delta, 6.0);
                 }
@@ -315,6 +416,20 @@ impl Encounter {
         };
         let target = DVec3::from_array(*point);
         let dist = from.distance(target);
+        if let Some((pad, direction, time)) = self.attack_pad {
+            if self.airborne && time < 10. {
+                self.attack_pad = Some((pad, direction, time + delta));
+                self.approach_pad(a, h, pad, direction, delta);
+                return vec![];
+            }
+            self.attack_pad = None;
+            if self.airborne {
+                // A moving target over an inaccessible cliff cannot pin the guardian in a holding pattern.
+                self.attack_number = self.attack_number.wrapping_add(1);
+                self.attack_run = None;
+                self.cooldown = 0.8;
+            }
+        }
         if let Some(exit) = self.exit_course {
             if self.airborne && self.cooldown > 0.45 && from.distance_squared(exit) > 4. {
                 self.travel(a, h, exit, delta, 13.);
@@ -322,7 +437,8 @@ impl Encounter {
             }
             self.exit_course = None;
         }
-        if !self.airborne
+        if pose::flies(a.kind)
+            && !self.airborne
             && let Some(doorway) = self
                 .patrol
                 .as_ref()
@@ -331,14 +447,31 @@ impl Encounter {
             self.travel(a, h, doorway, delta, a.kind.speed());
             return vec![];
         }
-        if !self.airborne {
+        if self.steer_attack_run(a, h, target, delta) {
+            return vec![];
+        }
+        let swimming = a.kind == K::WaterDragon && h.wet(a.position);
+        if swimming {
+            Self::turn_swimmer(a, h, target, delta * 1.7);
+        } else if !self.airborne {
             turn(a, target, delta * 2.7);
         }
         if self.cooldown <= 0.0
             && dist < 45.0
             && facing(a, target)
-            && (!self.airborne || !self.attack_number.is_multiple_of(4) || dist > 24.0)
+            && (!self.airborne
+                || self.attack_run.is_some()
+                || !self.attack_number.is_multiple_of(4)
+                || dist > 24.0)
         {
+            if a.kind == K::EarthDragon
+                && self.attack_number % 4 == 1
+                && dist > 6.
+                && self.begin_tunnel(a, h, target)
+            {
+                self.attack_number = self.attack_number.wrapping_add(1);
+                return vec![];
+            }
             let action = pose::lineage(a.kind, a.variant).map_or_else(
                 || self.choose(a.kind, dist),
                 |form| {
@@ -350,23 +483,62 @@ impl Encounter {
                     )
                 },
             );
-            let clustered = players.iter().any(|(id, p)| {
+            let clustered = targets.iter().any(|(id, p)| {
                 Some(*id) != self.target
                     && DVec3::from_array(*p).distance_squared(target) < 5.0_f64.powi(2)
             });
-            let too_high = self.airborne && from.y - target.y > 5.5;
-            let action = if too_high && matches!(action, B::Tremor | B::Attack) {
-                B::Spit
-            } else if clustered && self.attack_number % 3 == 1 {
+            let action = if clustered && self.attack_number % 3 == 1 {
                 B::Ink
             } else {
                 action
             };
+            let action = if a.kind == K::DarkDragon && self.attack_number % 4 == 2 {
+                B::DragonSurge
+            } else {
+                action
+            };
+            let action = match self.attack_run {
+                Some(AttackRun::Pass) => B::Spit,
+                Some(AttackRun::Touchdown) if !self.airborne && dist < 13. => B::Tremor,
+                _ => action,
+            };
+            let in_water = a.kind == K::WaterDragon && h.wet(a.position);
+            // The tidal geyser and whirlpool rise through water, the other species root these casts at the ground.
+            let ground_spell = matches!(action, B::Tremor | B::Attack)
+                || !in_water && matches!(action, B::Ink | B::DragonSurge);
+            let ground_aim = matches!(action, B::Ink | B::DragonSurge) && ground_spell;
+            let target_floor = ground_aim
+                .then(|| h.paw_surface(target.to_array(), 3.0))
+                .flatten();
+            if ground_spell && self.airborne {
+                let outward = (from - target).with_y(0.).normalize_or(DVec3::Z);
+                let radius = (from - target).with_y(0.).length().clamp(7., 11.);
+                let pad = target + outward * radius;
+                self.attack_pad = Some((pad, outward, 0.));
+                self.approach_pad(a, h, pad, outward, delta);
+                return vec![];
+            }
+            let action = if ground_spell
+                && (self.airborne || !on_ground(a, h) || (ground_aim && target_floor.is_none()))
+            {
+                B::Spit
+            } else {
+                action
+            };
+            if !self.airborne {
+                self.ground_casts = self.ground_casts.saturating_add(1);
+                self.attack_run = None;
+            }
             self.volley_hits.clear();
             self.stopped_missiles = [false; 3];
             self.attack_number = self.attack_number.wrapping_add(1);
             let aim = if matches!(action, B::Tremor | B::Attack | B::DragonWard) {
                 a.position
+            } else if ground_aim
+                && action != B::Spit
+                && let Some(floor) = target_floor
+            {
+                target.with_y(floor).to_array()
             } else {
                 // Read lateral motion before committing, then lock the warned
                 // location. A mid-cast dodge still works for every bloodline.
@@ -384,23 +556,34 @@ impl Encounter {
                 }
             };
             a.needs.goal = Some(NeedGoal {
-                kind: NeedKind::AttackAim,
+                kind: if self.airborne {
+                    NeedKind::AirborneAttackAim
+                } else {
+                    NeedKind::AttackAim
+                },
                 position: aim.map(|v| v.floor() as i64),
             });
             set_pose(a, action);
         } else if !self.airborne
-            && (self.attack_number % 4 == 2 || target.y > from.y + a.size()[1] + 2.)
+            && target.y > from.y + a.size()[1] + 2.
             && dist > 9.0
             && flight::can_launch(a, h)
         {
             set_pose(a, B::Leap);
         } else if self.airborne
+            && self.attack_run.is_none()
             && self.attack_number.is_multiple_of(4)
             && dist < 25.0
             && h.supported_sized([from.x, target.y + 0.3, from.z], a.size(), f64::from(a.yaw))
                 .is_some_and(|g| flight::clean_landing(a, h, g))
         {
-            set_pose(a, B::Land);
+            self.approach_pad(
+                a,
+                h,
+                DVec3::new(from.x, target.y, from.z),
+                DVec3::NEG_Z,
+                delta,
+            );
         } else {
             let offset = if self.airborne {
                 let direction = (target - from).with_y(0.0).normalize_or_zero();
@@ -423,7 +606,13 @@ impl Encounter {
             } else {
                 DVec3::ZERO
             };
-            if dist > 9.0 || self.airborne {
+            if swimming && dist < 13. && self.cooldown > 0. {
+                let outward = (from - target).with_y(0.).normalize_or(DVec3::Z);
+                let side = if self.attack_number % 4 < 2 { 1. } else { -1. };
+                let flank =
+                    target + outward * 9. + DVec3::new(-outward.z, -0.3, outward.x) * side * 6.;
+                self.travel(a, h, flank, delta, a.kind.speed());
+            } else if dist > 9.0 || self.airborne {
                 self.travel(
                     a,
                     h,
@@ -458,6 +647,24 @@ impl Encounter {
             self.fly(a, h, goal, dt, speed);
             return;
         }
+        if a.kind == K::WaterDragon && self.dive(a, h, goal, dt, speed) {
+            return;
+        }
+        self.walk(a, h, goal, dt, speed, true);
+    }
+
+    /// Returns true while walking or turning into an available route.
+    fn walk(
+        &mut self,
+        a: &mut Creature,
+        h: &Habitat,
+        goal: DVec3,
+        dt: f64,
+        speed: f64,
+        allow_launch: bool,
+    ) -> bool {
+        let from = DVec3::from_array(a.position);
+        let direction = goal - from;
         turn(a, goal, dt * 2.0);
         let yaw = f64::from(a.yaw);
         let forward = DVec3::new(-yaw.sin(), 0., -yaw.cos());
@@ -467,55 +674,30 @@ impl Encounter {
         let alignment = forward.dot(horizontal.normalize_or_zero());
         if alignment < 0.35 {
             a.velocity = [0.; 3];
-            return;
+            return horizontal.length_squared() > 0.01;
         }
         let step = horizontal.length().min(speed * dt * alignment);
         let next = from + forward * step;
-        let swim_surface = (a.kind == K::WaterDragon && !self.airborne)
-            .then(|| {
-                [next, next - DVec3::Y * 0.9]
-                    .into_iter()
-                    .find_map(|p| h.water_surface(p.to_array()))
-            })
-            .flatten();
-        let mut swimming = false;
-        let candidate = if let Some(surface) = swim_surface {
-            let draft = a.size()[1] * 0.28;
-            let mut afloat =
-                next.with_y(from.y + (surface - draft - from.y).clamp(-2.8 * dt, 2.8 * dt));
-            if !h.clear_swimmer_rotated(afloat.to_array(), a.size(), yaw) {
-                afloat.y = from.y;
-            }
-            swimming = h.clear_swimmer_rotated(afloat.to_array(), a.size(), yaw);
-            if swimming {
-                Some(afloat.to_array())
-            } else {
-                h.supported_sized(next.to_array(), a.size(), yaw)
-            }
-        } else {
-            h.supported_sized(next.to_array(), a.size(), yaw)
-        };
         let scale = f64::from(pose::model_scale(a.kind, a.variant)) * a.growth_scale();
-        let candidate = candidate.filter(|&p| swimming || walkable_treads(h, p, yaw, scale));
+        let candidate = h
+            .supported_sized(next.to_array(), a.size(), yaw)
+            .filter(|&p| walkable_treads(h, p, yaw, scale));
         if let Some(next) = candidate {
             translate(a, DVec3::from_array(next), dt);
-            a.behavior = if swimming {
-                B::Swim
-            } else if self.target.is_some() {
+            a.behavior = if self.target.is_some() {
                 B::Hunt
             } else {
                 B::Wander
             };
-        } else if flight::can_launch(a, h) {
+            true
+        } else if allow_launch && flight::can_launch(a, h) {
             set_pose(a, B::Leap);
+            true
+        } else {
+            false
         }
     }
-    fn strikes(
-        &self,
-        a: &Creature,
-        h: &Habitat,
-        players: &[(PlayerUuid, [f64; 3])],
-    ) -> Vec<Strike> {
+    fn strikes(&self, a: &Creature, h: &Habitat, targets: &[(Target, [f64; 3])]) -> Vec<Strike> {
         let Some(goal) = a.needs.goal else {
             return vec![];
         };
@@ -530,7 +712,7 @@ impl Encounter {
         {
             return vec![];
         }
-        players
+        targets
             .iter()
             .filter_map(|(id, p)| {
                 let p = DVec3::from_array(*p);
@@ -578,6 +760,9 @@ impl Encounter {
                             (K::DarkDragon, B::Ink | B::Spit) => {
                                 Some(terra_core::EffectKind::Rotten)
                             }
+                            (K::FireDragon, B::Spit | B::Ink | B::Tremor) => {
+                                Some(terra_core::EffectKind::OnFire)
+                            }
                             (K::WaterDragon, B::Tremor) => Some(terra_core::EffectKind::Freeze),
                             (K::WaterDragon, B::Ink) => Some(terra_core::EffectKind::Slow),
                             _ => None,
@@ -615,6 +800,11 @@ fn walkable_treads(h: &Habitat, p: [f64; 3], yaw: f64, scale: f64) -> bool {
     })
 }
 
+fn on_ground(a: &Creature, h: &Habitat) -> bool {
+    h.supported_sized(a.position, a.size(), f64::from(a.yaw))
+        .is_some_and(|floor| (a.position[1] - floor[1]).abs() < 0.18)
+}
+
 fn set_pose(a: &mut Creature, b: B) {
     a.behavior = b;
     a.timer = pose::duration(b);
@@ -628,6 +818,9 @@ fn translate(a: &mut Creature, p: DVec3, dt: f64) {
 }
 fn turn(a: &mut Creature, p: DVec3, max: f64) {
     let d = DVec3::from_array(a.position) - p;
+    if d.x * d.x + d.z * d.z < 0.0025 {
+        return;
+    }
     let desired = d.x.atan2(d.z);
     let yaw = f64::from(a.yaw);
     let diff = (desired - yaw + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU)

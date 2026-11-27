@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": 729,
+  "name": "Ember Rune Stone",
+  "description": "Two burning diamonds mark the path to a fire shrine.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.4,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "bevel_width": 0.018,
+  "textures": {
+    "side": "textures/relics/pyric_rune_stone.png",
+    "sidewall": "textures/relics/scoria_bricks.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.88,
+      "reflectance": 0.13,
+      "normal_texture": "textures/relics/pyric_rune_stone_normal.png"
+    },
+    "sidewall": {
+      "roughness": 0.87,
+      "normal_texture": "textures/relics/scoria_bricks_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "sidewall",
+    "sidewall",
+    "side",
+    "side"
+  ],
+  "light": {
+    "color": [
+      1.0,
+      0.48,
+      0.14
+    ],
+    "intensity": 96,
+    "range": 4.0,
+    "falloff": "soft_core",
+    "flicker": 0.025,
+    "shadows": false
+  }
+}

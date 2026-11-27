@@ -32,7 +32,7 @@ PROFILES = [
     (310, 'pink_blossom_leaves', 'spirit_pink', [188, 97, 177], [235, 157, 221]),
     (311, 'white_blossom_leaves', 'spirit_pearl', [111, 188, 202], [226, 244, 250]),
     (312, 'lavender_blossom_leaves', 'spirit_lavender', [158, 103, 212], [204, 163, 239]),
-    (406, 'blood_leaves', 'blood', [223, 101, 123], None),
+    (406, 'blood_leaves', 'blood', [224, 82, 104], None),
 ]
 
 
@@ -245,7 +245,14 @@ def image(profile, top=False):
             stem(canvas, base, tip, stem_color, .0015)
             tint = rgb(color, .88 + n * .20)
             leaf(canvas, anchor, length, width, angle, tint, style, salt + k)
-        if petals and index % 3 != 1:
+        if style.startswith('cherry_'):
+            # Five-flowered spurs collect at the ends of branches. One deeper
+            # bud shadows the centre; pale outer flowers catch the overhead light.
+            offsets = [(0.,0.,1.08),(-.078,-.044,.72),(.080,.034,.69),(.017,.084,.54)]
+            for j,(dx,dy,scale) in enumerate(offsets):
+                pigment = mix(petals,[255,232,213],.19 * (j % 3)) if j else rgb(petals,.92)
+                flower(canvas,(center[0]+dx,center[1]+dy),pigment,style,salt+19*j,scale)
+        elif petals and index % 3 != 1:
             flower(canvas, center, petals, style, salt, .72 + noise(index, 7, salt) * .30)
             if index % 4 == 0:
                 flower(canvas, (center[0] + .10, center[1] + .08), petals, style, salt + 3, .48)

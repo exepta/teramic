@@ -48,6 +48,7 @@ impl BossBar {
         let health = (a.health / a.kind.health()).clamp(0.0, 1.0);
         let face = match a.kind {
             CreatureKind::DarkDragon => "dark",
+            CreatureKind::FireDragon => "fire",
             CreatureKind::WaterDragon => "water",
             _ => "earth",
         };
@@ -203,6 +204,8 @@ fn update(scene: Scene, mut hud: ResMut<MobHealthHud>, mut cache: Local<SightCac
     for track in creatures.creatures.values() {
         if Some(track.current.id) == creatures.boss
             || track.current.health <= 0.0
+            || track.current.kind == terra_core::creatures::CreatureKind::LavaWorm
+                && track.current.behavior == terra_core::creatures::CreatureBehavior::Burrowed
             || track.current.behavior == terra_core::creatures::CreatureBehavior::InNest
             || ridden == Some(track.current.id)
         {
@@ -450,6 +453,7 @@ mod tests {
             .mob_health_bars = MobHealthBars::None;
         for (kind, face) in [
             (DarkDragon, "dark"),
+            (FireDragon, "fire"),
             (EarthDragon, "earth"),
             (WaterDragon, "water"),
         ] {

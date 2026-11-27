@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": 769,
+  "name": "Amethyst Prism Tip",
+  "description": "Amethyst Prism Tip",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/amethyst_prism_tip.glb",
+  "struct_block": true,
+  "hardness": 1.2,
+  "resistance": 4.0,
+  "required_tool": null,
+  "mining_level": 0,
+  "textures": {
+    "inclusion": "textures/crystal_highlands/amethyst_growth.png",
+    "body": "textures/crystal_highlands/amethyst_growth.png",
+    "cleavage": "textures/crystal_highlands/amethyst_growth.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.16,
+        0.0,
+        0.16
+      ],
+      "maximum": [
+        0.84,
+        0.98,
+        0.84
+      ]
+    }
+  ],
+  "light": {
+    "color": [
+      0.76,
+      0.36,
+      1.0
+    ],
+    "intensity": 1900,
+    "range": 14.0,
+    "falloff": "soft_core",
+    "flicker": 0.0,
+    "shadows": false,
+    "offset": [
+      0.5,
+      0.55,
+      0.5
+    ]
+  }
+}

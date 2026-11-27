@@ -46,6 +46,7 @@ impl Lake {
             distance,
             level: self.level,
             depth: self.depth,
+            spring: None,
         }
     }
 }
@@ -57,8 +58,9 @@ impl TerraGenerator {
         seed: u32,
     ) -> Option<Lake> {
         let biome = self.climate_biome_at(center[0], center[1]);
-        let center_height = self.base_height_with_biome(center[0], center[1], biome);
+        let center_height = self.watershed_ground(center[0], center[1], biome);
         if !self.config().biomes
+            || self.volcanic_watershed(biome)
             || biome.aridity() > 0.40
             || biome.weights.ocean > 0.65
             || center_height < self.config().sea_level + 5.0
@@ -101,7 +103,11 @@ impl TerraGenerator {
                     if lake.sample(x, z).distance < lake.radius - 1.0 {
                         continue;
                     }
-                    let height = self.base_height_with_biome(x, z, self.climate_biome_at(x, z));
+                    let climate = self.climate_biome_at(x, z);
+                    if self.volcanic_watershed(climate) {
+                        return None;
+                    }
+                    let height = self.watershed_ground(x, z, climate);
                     spill = spill.min(height);
                     high = high.max(height);
                 }

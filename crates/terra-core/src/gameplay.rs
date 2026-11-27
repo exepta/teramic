@@ -58,9 +58,13 @@ pub enum ResourcePropKind {
     AppleSapling,
     /// Internal derived fruit target; never an inventory/placement item.
     AppleFruit,
+    Coconut,
+    ReefFan,
+    HangingPearlKelp,
+    AcaciaSapling,
 }
 impl ResourcePropKind {
-    pub const ALL: [Self; 24] = [
+    pub const ALL: [Self; 28] = [
         Self::Grass,
         Self::Flower,
         Self::Bush,
@@ -85,6 +89,10 @@ impl ResourcePropKind {
         Self::BirchSapling,
         Self::CherrySapling,
         Self::AppleSapling,
+        Self::Coconut,
+        Self::ReefFan,
+        Self::HangingPearlKelp,
+        Self::AcaciaSapling,
     ];
     pub fn slug(self) -> &'static str {
         match self {
@@ -113,6 +121,10 @@ impl ResourcePropKind {
             Self::CherrySapling => "cherry_sapling",
             Self::AppleSapling => "apple_sapling",
             Self::AppleFruit => "apple_fruit",
+            Self::Coconut => "coconut",
+            Self::ReefFan => "reef_fan",
+            Self::HangingPearlKelp => "hanging_pearl_kelp",
+            Self::AcaciaSapling => "acacia_sapling",
         }
     }
     pub fn label(self) -> &'static str {
@@ -142,6 +154,10 @@ impl ResourcePropKind {
             Self::CherrySapling => "Cherry sapling",
             Self::AppleSapling => "Apple sapling",
             Self::AppleFruit => "Apple fruit",
+            Self::Coconut => "Coconut",
+            Self::ReefFan => "Reef fan",
+            Self::HangingPearlKelp => "Hanging pearl kelp",
+            Self::AcaciaSapling => "Acacia sapling",
         }
     }
 }
@@ -211,6 +227,8 @@ pub enum ItemKind {
     GloomEssence,
     LightSplitter,
     DragonLoot(crate::creatures::dragons::DragonLoot),
+    RuneCore,
+    ForestCrystal,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -323,6 +341,7 @@ pub enum ToolKind {
     GoldSpoon,
     TarBucket,
     BileBucket,
+    LavaBucket,
 }
 impl ToolKind {
     /// Uses per log for productive woodcutters. Other tools have no wear model yet.
@@ -337,7 +356,7 @@ impl ToolKind {
             _ => 0,
         }
     }
-    pub const ALL: [Self; 43] = [
+    pub const ALL: [Self; 44] = [
         Self::WoodPickaxe,
         Self::StonePickaxe,
         Self::StoneAxe,
@@ -381,6 +400,7 @@ impl ToolKind {
         Self::GoldSpoon,
         Self::TarBucket,
         Self::BileBucket,
+        Self::LavaBucket,
     ];
     pub fn slug(self) -> &'static str {
         match self {
@@ -427,6 +447,7 @@ impl ToolKind {
             Self::GoldSpoon => "gold_spoon",
             Self::TarBucket => "tar_bucket",
             Self::BileBucket => "bile_bucket",
+            Self::LavaBucket => "lava_bucket",
         }
     }
     pub const fn class(self) -> Option<crate::block_properties::ToolClass> {
@@ -595,6 +616,7 @@ impl ItemKind {
                 | ToolKind::WaterBucket
                 | ToolKind::TarBucket
                 | ToolKind::BileBucket
+                | ToolKind::LavaBucket
                 | ToolKind::Wrench
                 | ToolKind::WoodSpoon
                 | ToolKind::StoneSpoon
@@ -648,7 +670,7 @@ impl ItemKind {
             Self::WoodenBlock { material, wood }
         }
     }
-    pub const EXTRA: [Self; 227] = [
+    pub const EXTRA: [Self; 230] = [
         Self::GlassBottle,
         Self::WaterBottle,
         Self::Potion(1),
@@ -671,6 +693,7 @@ impl ItemKind {
         Self::Tool(ToolKind::WaterBucket),
         Self::Tool(ToolKind::TarBucket),
         Self::Tool(ToolKind::BileBucket),
+        Self::Tool(ToolKind::LavaBucket),
         Self::Tool(ToolKind::WoodWateringCan),
         Self::Tool(ToolKind::IronWateringCan),
         Self::Tool(ToolKind::GoldWateringCan),
@@ -1073,6 +1096,8 @@ impl ItemKind {
         Self::RoadAggregate,
         Self::GloomEssence,
         Self::LightSplitter,
+        Self::RuneCore,
+        Self::ForestCrystal,
         Self::DragonLoot(crate::creatures::dragons::DragonLoot::DarkScale),
         Self::DragonLoot(crate::creatures::dragons::DragonLoot::EarthScale),
         Self::DragonLoot(crate::creatures::dragons::DragonLoot::WaterScale),
@@ -1137,6 +1162,8 @@ impl ItemKind {
             Self::RoadAggregate => "teramic::road_aggregate".into(),
             Self::GloomEssence => "teramic::gloom_essence".into(),
             Self::DragonLoot(loot) => format!("teramic::{}", loot.slug()),
+            Self::RuneCore => "teramic::rune_core".into(),
+            Self::ForestCrystal => "teramic::forest_crystal".into(),
             Self::LightSplitter => "teramic::light_splitter".into(),
             Self::Apple => "teramic::apple".into(),
             Self::AppleCore => "teramic::apple_core".into(),
@@ -1218,6 +1245,8 @@ impl ItemKind {
             | Self::Bitumen
             | Self::RoadAggregate
             | Self::GloomEssence
+            | Self::RuneCore
+            | Self::ForestCrystal
             | Self::LightSplitter
             | Self::DragonLoot(_) => true,
             Self::Dye(_) => true,
@@ -1835,6 +1864,16 @@ impl GameplayState {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn acacia_sapling_item_identifier_selects_the_plantable_sapling() {
+        let plantable = super::ItemKind::Prop(super::ResourcePropKind::AcaciaSapling);
+        assert_eq!(plantable.identifier(), "teramic::acacia_sapling");
+        assert_ne!(
+            plantable.identifier(),
+            super::ItemKind::Block(terra_voxel::MaterialId::AcaciaSapling as u16).identifier()
+        );
+    }
+
     #[test]
     fn placeable_salt_segments_do_not_shadow_the_existing_harvest_resource_identifier() {
         assert_ne!(

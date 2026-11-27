@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 514,
+  "name": "Meadow Sunflowers",
+  "description": "Ochre seed heads surrounded by golden ray florets.",
+  "creative_category": "nature",
+  "hardness": 0.15,
+  "resistance": 0.3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/meadow_sunflowers.glb",
+  "textures": {},
+  "collision_boxes": [],
+  "struct_block": true
+}

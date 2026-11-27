@@ -6,10 +6,12 @@ use terra_core::creatures::{
     CreatureNeeds, CreaturePopulation, NeedGoal, NeedKind, soldiers::SoldierLoadout, villagers,
 };
 pub(super) mod patrol;
+mod swamp;
 
 #[derive(Default)]
 pub struct Residents {
     sites: BTreeMap<u64, ResidentSite>,
+    swamp: swamp::HutResidents,
 }
 
 fn home(site: &ResidentSite) -> [i64; 2] {
@@ -31,6 +33,7 @@ impl Residents {
         h: &Habitat,
         players: &[[f64; 3]],
     ) {
+        self.swamp.discover(population, h, players);
         self.sites.retain(|_, site| {
             players.iter().any(|p| {
                 let center = site.village_center.map(|v| v as f64);
@@ -188,6 +191,10 @@ impl Residents {
                 }
                 return patrol::step(resident, habitat, dt, search, navigation, actor);
             }
+        }
+        if let Some(anchor) = self.swamp.anchor(resident) {
+            swamp::step(resident, habitat, anchor, dt, search, navigation);
+            return None;
         }
         let Some(site) = self.sites.get(&resident.id) else {
             resident.velocity[0] = 0.0;

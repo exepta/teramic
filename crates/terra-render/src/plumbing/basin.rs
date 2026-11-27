@@ -1,7 +1,7 @@
 //! Reservoir surfaces use the exact material and vertex contracts of river water.
 use crate::particle_fluids::{FluidMaterial, HydraulicMaterials};
 use crate::water::{
-    biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_BLOOD_WEIGHT, WaterTint},
+    biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_MEDIUM_WEIGHTS, WaterTint},
     material::ATTRIBUTE_WAVE_WEIGHT,
 };
 use bevy::{
@@ -22,7 +22,7 @@ struct SurfaceGeometry {
     positions: Vec<[f32; 3]>,
     depth_shore: Vec<[f32; 2]>,
     tints: Vec<[f32; 4]>,
-    blood: Vec<f32>,
+    medium_weights: Vec<[f32; 2]>,
     waves: Vec<f32>,
     indices: Vec<u32>,
 }
@@ -41,7 +41,7 @@ impl SurfaceGeometry {
         .with_inserted_attribute(Mesh::ATTRIBUTE_UV_1, vec![[0.0; 2]; self.positions.len()])
         .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, vec![[0.0; 4]; self.positions.len()])
         .with_inserted_attribute(ATTRIBUTE_BIOME_TINT, self.tints.clone())
-        .with_inserted_attribute(ATTRIBUTE_BLOOD_WEIGHT, self.blood.clone())
+        .with_inserted_attribute(ATTRIBUTE_MEDIUM_WEIGHTS, self.medium_weights.clone())
         .with_inserted_attribute(ATTRIBUTE_WAVE_WEIGHT, self.waves.clone())
         .with_inserted_indices(Indices::U32(self.indices.clone()))
     }
@@ -111,7 +111,7 @@ impl SurfaceGeometry {
                                 0.0,
                                 pz - origin[2] as f32,
                             ]));
-                            self.blood.push(tint.blood_at([
+                            self.medium_weights.push(tint.medium_at([
                                 px - origin[0] as f32,
                                 0.0,
                                 pz - origin[2] as f32,
@@ -156,7 +156,7 @@ fn setup(
             positions: vec![[0.0; 3]; 3],
             depth_shore: vec![[0.0; 2]; 3],
             tints: vec![[0.0; 4]; 3],
-            blood: vec![0.0; 3],
+            medium_weights: vec![[0.; 2]; 3],
             waves: vec![0.0; 3],
             indices: vec![0, 1, 2],
         }
@@ -344,7 +344,7 @@ mod tests {
             Mesh::ATTRIBUTE_UV_1,
             Mesh::ATTRIBUTE_COLOR,
             ATTRIBUTE_BIOME_TINT,
-            ATTRIBUTE_BLOOD_WEIGHT,
+            ATTRIBUTE_MEDIUM_WEIGHTS,
             ATTRIBUTE_WAVE_WEIGHT,
         ] {
             assert!(mesh.attribute(attribute).is_some());

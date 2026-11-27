@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 642,
+  "name": "Ochre Stone",
+  "description": "Golden stone from the dry escarpment.",
+  "creative_category": "terrain",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.85,
+  "resistance": 2.2,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/savanna/ochre_stone_side.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.91,
+      "reflectance": 0.09,
+      "normal_texture": "textures/savanna/ochre_stone_side_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

@@ -149,10 +149,24 @@ pub(super) fn head(mesh: &mut Builder, c: Coat, joint: Joint) -> Result<(), Stri
         for s in [-1., 1.] {
             let pos = eye_position(s);
             let tilt = Quat::from_rotation_x(-0.14);
-            block(mesh, pos, v(0.22, 0.33, 0.51), tilt, c.light)?;
+            block(mesh, pos, v(0.26, 0.39, 0.66), tilt, tint(c.growth, 0.68))?;
+            block(
+                mesh,
+                pos + v(s * 0.10, 0., -0.02),
+                v(0.16, 0.31, 0.42),
+                tilt,
+                c.light,
+            )?;
+            block(
+                mesh,
+                pos + v(s * 0.18, 0.10, -0.16),
+                v(0.08, 0.09, 0.095),
+                tilt,
+                [0.99, 0.96, 0.87],
+            )?;
             mesh.rotated(
-                (pos + v(s * 0.12, 0., -0.025)).to_array(),
-                [0.035, 0.20, 0.07],
+                (pos + v(s * 0.19, 0., -0.025)).to_array(),
+                [0.08, 0.27, 0.11],
                 tint(c.shadow, 0.60),
                 tilt,
             )?;
@@ -208,6 +222,14 @@ pub(super) fn head(mesh: &mut Builder, c: Coat, joint: Joint) -> Result<(), Stri
             Quat::from_rotation_x(-0.18),
             tint(c.shadow, 0.64),
         )?;
+        // The iris closes into a scaled lid set inside the darker orbital rim.
+        block(
+            mesh,
+            pos + v(s * 0.025, 0., 0.015),
+            v(0.14, 0.44, 0.70),
+            Quat::from_rotation_x(-0.14),
+            c.scale,
+        )?;
         block(
             mesh,
             pos + v(-s * 0.04, 0.31, 0.03),
@@ -222,6 +244,20 @@ pub(super) fn head(mesh: &mut Builder, c: Coat, joint: Joint) -> Result<(), Stri
             Quat::from_rotation_x(-0.2),
             c.shadow,
         )?;
+        if c.kind == Kind::FireDragon {
+            for i in 0..=c.variant {
+                let t = f32::from(i) / 3.;
+                let cheek = pos + v(-s * 0.17, -0.14 + 0.32 * t, 0.36 + 0.70 * t);
+                horn(
+                    mesh,
+                    cheek,
+                    cheek + v(s * 0.46, 0.20 + t * 0.2, 0.52),
+                    cheek + v(s * (0.72 + t * 0.35), 0.28 + t * 0.5, 1.27),
+                    0.20,
+                    c.horn,
+                )?;
+            }
+        }
         let crown = v(s * 0.83, 9.28, -6.25);
         let reach = if c.kind == Kind::DarkDragon && c.variant != 0 {
             1.48

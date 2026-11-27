@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 635,
+  "name": "Savanna Loam",
+  "description": "Russet clay from the floodplain.",
+  "creative_category": "terrain",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/savanna/savanna_loam_side.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.91,
+      "reflectance": 0.09,
+      "normal_texture": "textures/savanna/savanna_loam_side_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": 578,
+  "name": "Reef Arch",
+  "description": "Water has worn a passage through the reef.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 0.7,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/reef_arch.glb",
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.08,
+        0,
+        0.35
+      ],
+      "maximum": [
+        0.22999999999999998,
+        0.36,
+        0.65
+      ]
+    },
+    {
+      "minimum": [
+        0.77,
+        0,
+        0.35
+      ],
+      "maximum": [
+        0.92,
+        0.36,
+        0.65
+      ]
+    }
+  ],
+  "textures": {}
+}

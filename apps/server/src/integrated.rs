@@ -134,8 +134,13 @@ impl IntegratedServer {
                 Ok(())
             })
             .map_err(|e| e.to_string())?;
-        match receiver.recv_timeout(Duration::from_secs(10)) {
-            Ok(Ok((address, token))) => Ok((
+        // The first update selects a safe spawn before binding. Its cost depends
+        // on the saved world; the worker reports either readiness or the actual error.
+        let ready = receiver.recv().unwrap_or_else(|_| {
+            Err("Integrated server exited before reporting readiness".to_string())
+        });
+        match ready {
+            Ok((address, token)) => Ok((
                 Self {
                     stop,
                     thread: Some(thread),
@@ -144,14 +149,11 @@ impl IntegratedServer {
                 },
                 token,
             )),
-            result => {
-                stop.store(true, Ordering::Release);
-                let _ = thread.join();
-                Err(match result {
-                    Ok(Err(error)) => error,
-                    Err(error) => error.to_string(),
-                    _ => "Integrated server failed".into(),
-                })
+            Err(error) => {
+                thread
+                    .join()
+                    .map_err(|_| "Integrated server thread terminated during startup")??;
+                Err(error)
             }
         }
     }

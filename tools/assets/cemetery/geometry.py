@@ -57,8 +57,3 @@ def leaf(mesh,center,scale,material='leaf'):
     x,y,z=center
     a=[x-scale*.2,y-scale*.5,z];b=[x+scale*.5,y,z];c=[x+scale*.2,y+scale*.5,z];d=[x-scale*.5,y,z];m=[x,y,z-.025]
     for p,q in [(a,b),(b,c),(c,d),(d,a)]:mesh.polygon([p,q,m],material);mesh.polygon([q,p,[x,y,z+.004]],material)
-
-def crystal(mesh,center,radius,height):
-    x,y,z=center
-    cylinder(mesh,[x,y,z],[x,y+height*.68,z],radius,'crystal',6,end_radius=radius*.8)
-    cylinder(mesh,[x,y+height*.68,z],[x,y+height,z],radius*.8,'crystal',6,end_radius=.001)

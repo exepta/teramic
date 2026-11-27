@@ -29,7 +29,16 @@ impl TerraGenerator {
     ) -> GroundCover {
         let (patch, path) = self.climate.ground_masks(x, z);
         let [glade, meadow, shrubs, tufts] = self.climate.vegetation_masks(x, z);
-        let land = (1.0 - biome.ocean - biome.desert - biome.cliffted_desert).clamp(0.0, 1.0);
+        let land = (1.0
+            - biome.ocean
+            - biome.desert
+            - biome.cliffted_desert
+            - biome.petrified_forest
+            - biome.crystal_highlands
+            - biome.ashlands
+            - biome.savanna
+            - biome.swamp)
+            .clamp(0.0, 1.0);
         let cover = ((0.24 + patch * 0.76) * path * land * glade * (0.65 + tufts * 0.55)) as f32;
         GroundCover {
             grass: (cover * (0.88 + biome.plains as f32 * 0.12)).clamp(0.0, 1.0),
@@ -91,7 +100,17 @@ impl TerraGenerator {
             } else {
                 return None;
             }
-        } else if material == MaterialId::Grass as u16 && !underwater {
+        } else if matches!(
+            MaterialId::from_raw(material),
+            Some(
+                MaterialId::Grass
+                    | MaterialId::PetalTurf
+                    | MaterialId::WoodlandLitter
+                    | MaterialId::MyceliumTurf
+                    | MaterialId::SporeSoil
+            )
+        ) && !underwater
+        {
             if ticket >= (cover.grass * 0.95).clamp(0.0, 0.95) {
                 return None;
             }
@@ -121,6 +140,9 @@ impl TerraGenerator {
         } else {
             return None;
         };
+        if kind != PropKind::Grass && !self.in_prop_patch([support[0], support[2]], kind as u16) {
+            return None;
+        }
         let stone = kind == PropKind::SmallPlant && !reed;
         let scale = if desert {
             0.55 + random(seed, 6) * 0.32
@@ -175,8 +197,11 @@ impl TerraGenerator {
         // unrelated species or promotes a replacement into the vacant slot.
         for prop in &mut props {
             if prop.as_ref().is_some_and(|prop| {
-                matches!(prop.kind, PropKind::Flower | PropKind::Mushroom)
-                    && mix(prop.id.0 ^ 0x7468_696e_5072_6f70) & 3 != 0
+                prop.kind == PropKind::Flower
+                    && self.surface_biome(&column)
+                        == crate::generation::biomes::BiomeKind::PetrifiedForest
+                    || matches!(prop.kind, PropKind::Flower | PropKind::Mushroom)
+                        && mix(prop.id.0 ^ 0x7468_696e_5072_6f70) & 3 != 0
             }) {
                 *prop = None;
             }
@@ -691,6 +716,12 @@ mod tests {
                 cherry_forest: 0.0,
                 spirit_blossom: 0.0,
                 blood_forest: 0.0,
+                ashlands: 0.0,
+                savanna: 0.0,
+                swamp: 0.0,
+                petrified_forest: 0.0,
+                crystal_highlands: 0.0,
+                misty_coast: 0.0,
             };
             let mut counts = [[0_usize; 2]; 2];
             for z in -64..64 {
@@ -847,6 +878,12 @@ mod tests {
             cherry_forest: 0.0,
             spirit_blossom: 0.0,
             blood_forest: 0.0,
+            ashlands: 0.0,
+            savanna: 0.0,
+            swamp: 0.0,
+            petrified_forest: 0.0,
+            crystal_highlands: 0.0,
+            misty_coast: 0.0,
         };
         let mut dense = 0;
         let mut clear = 0;
@@ -931,6 +968,12 @@ mod tests {
             cherry_forest: 0.0,
             spirit_blossom: 0.0,
             blood_forest: 0.0,
+            ashlands: 0.0,
+            savanna: 0.0,
+            swamp: 0.0,
+            petrified_forest: 0.0,
+            crystal_highlands: 0.0,
+            misty_coast: 0.0,
         };
         let mut bushes = 0;
         let mut grasses = 0;
@@ -982,6 +1025,12 @@ mod tests {
             cherry_forest: 0.0,
             spirit_blossom: 0.0,
             blood_forest: 0.0,
+            ashlands: 0.0,
+            savanna: 0.0,
+            swamp: 0.0,
+            petrified_forest: 0.0,
+            crystal_highlands: 0.0,
+            misty_coast: 0.0,
         };
         let mut colors = HashSet::new();
         let mut count = 0;

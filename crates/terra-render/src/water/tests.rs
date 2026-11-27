@@ -641,14 +641,14 @@ fn biome_upload_keeps_flow_foam_and_the_shared_material() {
         panic!("water must carry its own biome tint, not reuse current/foam attributes");
     };
     let palette = super::biome::WaterTint::new(&world.resource::<WorldTerrain>().0, [0; 3]);
-    let Some(VertexAttributeValues::Float32(blood)) =
-        mesh.attribute(super::biome::ATTRIBUTE_BLOOD_WEIGHT)
+    let Some(VertexAttributeValues::Float32x2(blood)) =
+        mesh.attribute(super::biome::ATTRIBUTE_MEDIUM_WEIGHTS)
     else {
-        panic!("blood viscosity must use its own scalar vertex format");
+        panic!("water must carry blood viscosity and swamp sediment");
     };
     assert_eq!(blood.len(), colors.len());
     for (value, point) in blood.iter().zip([[0., 8., 0.], [0., 8., 1.], [1., 8., 0.]]) {
-        assert_eq!(*value, palette.blood_at(point));
+        assert_eq!(*value, palette.medium_at(point));
     }
     for (color, point) in colors
         .iter()

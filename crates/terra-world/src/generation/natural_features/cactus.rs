@@ -24,8 +24,10 @@ pub(super) fn build(
                 continue;
             };
             let dry = column.biome.weights.desert + column.biome.weights.cliffted_desert;
-            if column.surface_material != MaterialId::Sand
-                || column.biome.temperature < 0.50
+            if !matches!(
+                column.surface_material,
+                MaterialId::Sand | MaterialId::DuneSand | MaterialId::RedDuneSand
+            ) || column.biome.temperature < 0.50
                 || column.oasis_moisture > 0.22
                 || column.slope > 0.65
                 || f64::from(seed >> 16) / 65536.0

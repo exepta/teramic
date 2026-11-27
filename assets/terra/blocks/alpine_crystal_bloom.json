@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 754,
+  "name": "Alpine Crystal Bloom",
+  "description": "Pink saxifrage opens among wind-sheltered stones.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.65,
+  "resistance": 1.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/alpine_crystal_bloom.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 591,
+  "name": "Moraine Rocks",
+  "description": "A cluster of grey, snow-capped boulders.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/moraine_rocks.glb",
+  "collision_boxes": [],
+  "struct_block": true,
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "textures": {}
+}

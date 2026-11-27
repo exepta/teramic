@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 543,
+  "name": "Reef Stone",
+  "description": "A porous reef skeleton cut by holes and channels.",
+  "creative_category": "nature",
+  "hardness": 1.6,
+  "resistance": 2.5,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "reef_stone": "textures/ocean/reef_stone.png"
+  },
+  "face_materials": [
+    "reef_stone",
+    "reef_stone",
+    "reef_stone",
+    "reef_stone",
+    "reef_stone",
+    "reef_stone"
+  ],
+  "materials": {
+    "reef_stone": {
+      "roughness": 0.72,
+      "normal_texture": "textures/ocean/reef_stone_normal.png"
+    }
+  },
+  "surface": "rock"
+}

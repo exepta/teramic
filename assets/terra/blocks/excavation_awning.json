@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 718,
+  "name": "Canvas Awning",
+  "description": "Heavy linen sags between the shelter posts.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.3,
+  "resistance": 2.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/excavation_awning.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

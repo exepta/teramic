@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 502,
+  "name": "Hanging Blood Lantern",
+  "description": "A ruby lantern hangs from a rusted iron loop.",
+  "creative_category": "nature",
+  "hardness": 0.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/hanging_blood_lantern.glb",
+  "textures": {},
+  "struct_block": true,
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      1.0,
+      0.075,
+      0.1
+    ],
+    "intensity": 155,
+    "range": 6,
+    "falloff": "soft_core",
+    "flicker": 0,
+    "cave_intensity": 0.8,
+    "shadows": false
+  }
+}

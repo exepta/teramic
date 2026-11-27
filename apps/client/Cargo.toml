@@ -23,3 +23,6 @@ tilt-ui.workspace=true
 tilt-ui-runtime.workspace=true
 serde_json.workspace=true
 indexmap = "2"
+
+[target.'cfg(all(target_os = "linux", target_env = "gnu"))'.dependencies]
+tikv-jemallocator = "0.5.4"

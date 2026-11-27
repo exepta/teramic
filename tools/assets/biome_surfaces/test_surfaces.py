@@ -9,6 +9,8 @@ import zlib
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from biome_surfaces import SIZE, field, leaf, stone
 from build_blood_forest import NAMES, SURFACES as BLOOD_SURFACES
+from build_block_palette import FAMILIES, SIZE as WOOD_SIZE
+from biome_surfaces.foliage import SIZE as FOLIAGE_SIZE
 from build_spirit_blossom import DEFINITIONS, SURFACES as SPIRIT_SURFACES
 
 BLOCKS = Path(__file__).resolve().parents[3] / 'assets/terra/blocks'
@@ -47,7 +49,7 @@ class BiomeSurfaceArt(unittest.TestCase):
         for name in sorted(files):
             with self.subTest(texture=name):
                 width, height, rows = pixels(BLOCKS / name)
-                size = 512 if name.startswith("textures/foliage/") else 256
+                size = {'foliage': FOLIAGE_SIZE, 'block_palette': WOOD_SIZE}.get(Path(name).parent.name, SIZE)
                 self.assertEqual((width, height), (size, size))
                 foliage = name.startswith('textures/foliage/')
                 if foliage:
@@ -71,10 +73,11 @@ class BiomeSurfaceArt(unittest.TestCase):
         styles = SPIRIT_SURFACES | BLOOD_SURFACES
         for spec in self.cube_specs():
             self.assertEqual(spec['render_kind'], 'cube')
-            self.assertEqual(spec['bevel_width'], 0)
+            palette_wood = spec['id'] in FAMILIES['blood'] + FAMILIES['ghost']
+            self.assertEqual(spec['bevel_width'], .025 if palette_wood else 0)
             self.assertEqual(len(spec['face_materials']), 6)
             self.assertEqual(spec.get('model', ''), '')
-            self.assertEqual(spec.get('surface'), styles.get(spec['id']))
+            self.assertEqual(spec.get('surface'), None if palette_wood else styles.get(spec['id']))
 
     def test_biome_turf_side_caps_join_the_upper_face_with_positive_world_y_uvs(self):
         def chroma(values):

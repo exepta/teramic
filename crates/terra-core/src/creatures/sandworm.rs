@@ -1,6 +1,16 @@
 //! Replicated worm phases use the existing saved behavior/timer contract.
 use super::{Creature, CreatureBehavior as B, CreatureKind};
 
+/// Exposed desert sediment in which a worm can travel and leave a surface wake.
+pub fn burrowable_ground(id: u16, edited: bool) -> bool {
+    use terra_voxel::MaterialId::*;
+    match terra_voxel::MaterialId::from_raw(id) {
+        Some(Sand | DuneSand | RedDuneSand) => true,
+        Some(Sandstone | BandedSandstone | RedSandstone) => !edited,
+        _ => false,
+    }
+}
+
 pub const WARNING_SECONDS: f32 = 1.8;
 pub const LEAP_SECONDS: f32 = 5.0;
 pub const LEAP_RADIUS: f32 = 7.0;

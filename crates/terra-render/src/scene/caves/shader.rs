@@ -20,7 +20,7 @@ use bevy::{
     },
 };
 
-#[derive(Component, Clone, Copy, ExtractComponent, ShaderType)]
+#[derive(Component, Clone, Copy, PartialEq, ExtractComponent, ShaderType)]
 #[extract_app(bevy::render::RenderApp)]
 pub(crate) struct CaveSettings {
     pub view_from_clip: Mat4,
@@ -37,6 +37,8 @@ pub(crate) struct CaveSettings {
     pub beam_radii: Vec4,
     pub beam_cross_radii: Vec4,
     pub gallery_dust: f32,
+    pub lava_depth: f32,
+    pub sediment: f32,
 }
 impl Default for CaveSettings {
     fn default() -> Self {
@@ -55,6 +57,8 @@ impl Default for CaveSettings {
             beam_radii: Vec4::ZERO,
             beam_cross_radii: Vec4::ZERO,
             gallery_dust: 1.,
+            lava_depth: 0.,
+            sediment: 0.,
         }
     }
 }
@@ -169,6 +173,7 @@ fn draw(
         && settings.waterline.y <= 0.001
         && settings.ink.x <= 0.001
         && settings.smoke.x <= 0.001
+        && settings.lava_depth <= 0.0
     {
         return;
     }

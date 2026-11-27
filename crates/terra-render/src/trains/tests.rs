@@ -516,9 +516,7 @@ fn water_refilling_a_removed_source_cell_does_not_hide_the_mounted_model() {
     let mut journal = EditJournal::default();
     journal.record(cell, 27).unwrap();
     let mut rendered = RenderedSections::default();
-    rendered
-        .block_revisions
-        .insert(owner, journal.revision(owner));
+    rendered.record_presentation(owner, journal.revision(owner), Some(0));
     assert!(terrain_retired(cell, &[part], &chunks, &journal, &rendered));
     chunks
         .loaded
@@ -541,7 +539,7 @@ fn water_refilling_a_removed_source_cell_does_not_hide_the_mounted_model() {
         .data
         .set_block(local, 27)
         .unwrap();
-    rendered.block_revisions.clear();
+    rendered = RenderedSections::default();
     assert!(!terrain_retired(
         cell,
         &[part],

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 494,
+  "name": "Bloodstained Bricks",
+  "description": "Weathered masonry stained by iron-red runoff.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "surface": "rock",
+  "materials": {
+    "bloodstained_bricks": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.84,
+      "reflectance": 0.28
+    }
+  },
+  "textures": {
+    "bloodstained_bricks": "textures/bloodstained_bricks.png"
+  },
+  "face_materials": [
+    "bloodstained_bricks",
+    "bloodstained_bricks",
+    "bloodstained_bricks",
+    "bloodstained_bricks",
+    "bloodstained_bricks",
+    "bloodstained_bricks"
+  ]
+}

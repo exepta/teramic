@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 490,
+  "name": "Pond Blossoms",
+  "description": "Pink water lilies on a pair of notched pads.",
+  "creative_category": "nature",
+  "hardness": 0.65,
+  "resistance": 1.2,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/pond_blossoms.glb",
+  "textures": {},
+  "collision_boxes": []
+}

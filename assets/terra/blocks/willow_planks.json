@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 681,
+  "name": "Willow Planks",
+  "description": "Pale brown willow boards are used for huts and jetties.",
+  "creative_category": "wood",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.6,
+  "resistance": 2.2,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/swamp/willow_planks_side.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.94,
+      "reflectance": 0.09,
+      "normal_texture": "textures/swamp/willow_planks_side_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

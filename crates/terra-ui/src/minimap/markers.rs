@@ -149,6 +149,32 @@ const SPIDER: Sprite = [
     " b   b   b ",
     "b         b",
 ];
+const ELEPHANT: Sprite = [
+    "  mmmmmmm  ",
+    " mmbbbbbmm ",
+    "mmmbbbbbmmm",
+    "mbbebbbebbm",
+    "mbbbbbb bmm",
+    " mbibbbibm ",
+    "  ibbbbbi  ",
+    "  i bbb i  ",
+    "    bb     ",
+    "    bbb    ",
+    "     bb    ",
+];
+const ZEBRA: Sprite = [
+    " bb     bb ",
+    " bib   bib ",
+    "  bibbbib  ",
+    "  ibi ibi  ",
+    " biebibieb ",
+    "  ibibibi  ",
+    "   ibibi   ",
+    "   bibib   ",
+    "   bbbbb   ",
+    "   bmbmb   ",
+    "    bbb    ",
+];
 const HORSE: Sprite = [
     " bb     bb ",
     " bbb   bbb ",
@@ -362,6 +388,8 @@ pub(super) fn creature(
         CreatureKind::HammerheadShark => &HAMMERHEAD,
         CreatureKind::WhaleShark => &WHALESHARK,
         CreatureKind::Horse => &HORSE,
+        CreatureKind::Zebra => &ZEBRA,
+        CreatureKind::Elephant => &ELEPHANT,
         CreatureKind::Stalker => &STALKER,
         CreatureKind::Villager => &VILLAGER,
         CreatureKind::Butterfly => &BUTTERFLY,
@@ -372,9 +400,12 @@ pub(super) fn creature(
         CreatureKind::BloodSlime => &SLIME,
         CreatureKind::BloodStalker => &SPIDER,
         CreatureKind::BloodWisp => &GLOOM,
-        CreatureKind::ThornBrute => &STALKER,
-        CreatureKind::SandWorm => &SAND_WORM,
-        CreatureKind::DarkDragon | CreatureKind::EarthDragon | CreatureKind::WaterDragon => &DRAGON,
+        CreatureKind::StoneGolem | CreatureKind::ThornBrute => &STALKER,
+        CreatureKind::LavaWorm | CreatureKind::SandWorm => &SAND_WORM,
+        CreatureKind::DarkDragon
+        | CreatureKind::EarthDragon
+        | CreatureKind::FireDragon
+        | CreatureKind::WaterDragon => &DRAGON,
         CreatureKind::SmallSpider | CreatureKind::MediumSpider | CreatureKind::LargeSpider => {
             &SPIDER
         }
@@ -430,8 +461,11 @@ fn sample(sprite: &Sprite, x: i32, y: i32) -> u8 {
 fn palette(kind: CreatureKind, variant: u8, glyph: u8) -> [u8; 4] {
     let rgb = match (kind, glyph) {
         (CreatureKind::DarkDragon, b'y') => [175, 91, 220],
+        (CreatureKind::FireDragon, b'y') => [235, 94, 43],
         (CreatureKind::EarthDragon, b'y') => [208, 148, 75],
         (CreatureKind::WaterDragon, b'y') => [71, 166, 222],
+        (CreatureKind::LavaWorm, b'y') => [255, 106, 24],
+        (CreatureKind::LavaWorm, b'o') => [105, 50, 48],
         (CreatureKind::SandWorm, b'y') => [240, 178, 66],
         (CreatureKind::SandWorm, b'o') => [182, 88, 28],
         (CreatureKind::Raven, b'b') => [60, 40, 80],
@@ -439,6 +473,8 @@ fn palette(kind: CreatureKind, variant: u8, glyph: u8) -> [u8; 4] {
         (CreatureKind::BloodStalker | CreatureKind::ThornBrute, b'b' | b'm' | b'o') => {
             [109, 29, 45]
         }
+        (CreatureKind::StoneGolem, b'e') => [208, 85, 244],
+        (CreatureKind::StoneGolem, b'b' | b'm' | b'o') => [120, 108, 104],
         (CreatureKind::BloodStalker | CreatureKind::ThornBrute, b'e') => [255, 52, 73],
         (CreatureKind::SpiritGloom, b'g' | b'w') if variant == 1 => [175, 95, 229],
         (CreatureKind::Butterfly, b'p') => [
@@ -476,6 +512,10 @@ fn palette(kind: CreatureKind, variant: u8, glyph: u8) -> [u8; 4] {
         (CreatureKind::Cow, b'm') => [190, 144, 127],
         (CreatureKind::Pig, b'p') => [229, 151, 146],
         (CreatureKind::Pig, b'm') => [187, 106, 112],
+        (CreatureKind::Elephant, b'b') => [135, 128, 125],
+        (CreatureKind::Elephant, b'm') => [164, 145, 140],
+        (CreatureKind::Elephant | CreatureKind::Zebra, b'i') => [240, 230, 207],
+        (CreatureKind::Zebra, b'b' | b'm') => [56, 49, 48],
         (CreatureKind::Bear, b'b') => [115, 79, 53],
         (CreatureKind::Bear, b'm') => [181, 141, 102],
         (CreatureKind::Bee, b'y') => [239, 194, 54],

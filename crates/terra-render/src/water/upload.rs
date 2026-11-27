@@ -14,7 +14,7 @@ use terra_world::{
     streaming::{ChunkStore, SectionPublished, SectionRemoved, WaterPublished},
 };
 
-use super::biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_BLOOD_WEIGHT, WaterTint};
+use super::biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_MEDIUM_WEIGHTS, WaterTint};
 
 pub(super) use super::WaterStatus;
 
@@ -328,18 +328,12 @@ pub(super) fn upload_water(
                         effect[2] = tint.ocean_at(*point);
                     }
                 }
-                (
-                    patch
-                        .positions
-                        .iter()
-                        .map(|&p| tint.payload(p))
-                        .collect::<Vec<_>>(),
-                    patch
-                        .positions
-                        .iter()
-                        .map(|&p| tint.blood_at(p))
-                        .collect::<Vec<_>>(),
-                )
+                let prepared = world.chunks.prepared_column([position.x, position.z]);
+                patch
+                    .positions
+                    .iter()
+                    .map(|&p| tint.optics(origin, p, prepared.as_deref()))
+                    .unzip::<_, _, Vec<_>, Vec<_>>()
             });
             let mut mesh = Mesh::new(
                 PrimitiveTopology::TriangleList,
@@ -359,9 +353,9 @@ pub(super) fn upload_water(
                 },
             )
             .with_inserted_indices(Indices::U32(patch.indices));
-            if let Some((tints, blood)) = biome_tints {
+            if let Some((tints, medium_weights)) = biome_tints {
                 mesh.insert_attribute(ATTRIBUTE_BIOME_TINT, tints);
-                mesh.insert_attribute(ATTRIBUTE_BLOOD_WEIGHT, blood);
+                mesh.insert_attribute(ATTRIBUTE_MEDIUM_WEIGHTS, medium_weights);
             }
             if world.journal.fluid_epoch(position) > 0
                 && let Some(history) = motion.as_deref_mut()

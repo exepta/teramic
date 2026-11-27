@@ -1,5 +1,5 @@
 //! Static scene models occupy editable cells but do not hide neighboring surfaces.
-use super::builder::{MeshBatch, RenderOptions, compose_section_with_segments};
+use super::builder::{MeshBatch, RenderOptions};
 use crate::blocks::TemplateSet;
 #[path = "custom_bile.rs"]
 mod bile_surface;
@@ -9,10 +9,14 @@ mod castle;
 mod filling;
 #[path = "custom_heraldry.rs"]
 mod heraldry;
+#[path = "custom_palm.rs"]
+pub(crate) mod palm;
 #[path = "custom_pipe_surround.rs"]
 mod pipe_surround;
 #[path = "custom_plumbing.rs"]
 pub(crate) mod plumbing;
+#[path = "custom_quartz.rs"]
+mod quartz;
 #[path = "custom_rails.rs"]
 mod rails;
 #[path = "custom_water_contacts.rs"]
@@ -357,6 +361,10 @@ pub(crate) struct ModelSnapshot {
 }
 
 impl ModelSnapshot {
+    pub(crate) fn cell_material(&self, index: u16) -> Option<u16> {
+        self.blocks.get(usize::from(index)).copied()
+    }
+
     fn preview(&self) -> bool {
         self.standalone && self.source_position.is_none()
     }
@@ -605,6 +613,7 @@ pub(crate) fn isolate_model(
     templates: &TemplateSet,
     section: SectionPos,
     options: &RenderOptions,
+    folded: super::lod::FoldedLeaves,
     cell: [u32; 3],
     half: Option<terra_world::slabs::HalfRemoval>,
 ) -> Result<(Vec<MeshBatch>, Vec<MeshBatch>), String> {
@@ -627,7 +636,9 @@ pub(crate) fn isolate_model(
     }
     // Its supporting terrain must stay exposed after removing the scene model.
     remaining.border_models.push(cell);
-    let section_geometry = compose(geometry, &remaining, templates, section, options)?;
+    let section_geometry = compose_with_leaf_detail(
+        geometry, &remaining, templates, section, options, folded, None,
+    )?;
     let isolated = ModelSnapshot {
         standalone: true,
         source_position: None,
@@ -661,11 +672,14 @@ pub(crate) fn compose_without_cell(
     templates: &TemplateSet,
     section: SectionPos,
     options: &RenderOptions,
+    folded: super::lod::FoldedLeaves,
     cell: [u32; 3],
 ) -> Result<Vec<MeshBatch>, String> {
     let mut snapshot = snapshot.clone();
     snapshot.blocks[cell[0] as usize + 16 * (cell[1] as usize + 16 * cell[2] as usize)] = 0;
-    compose(geometry, &snapshot, templates, section, options)
+    compose_with_leaf_detail(
+        geometry, &snapshot, templates, section, options, folded, None,
+    )
 }
 
 pub(crate) fn compose_without_cells(
@@ -705,7 +719,66 @@ pub(crate) fn capture(
     section: &BlockSection,
     templates: &TemplateSet,
     journal: &terra_world::edits::EditJournal,
+    sample_neighbor: impl FnMut([i64; 3]) -> Option<u16>,
+) -> Option<ModelSnapshot> {
+    capture_with_states(section, templates, journal, sample_neighbor, |p| {
+        journal.object_state(p)
+    })
+}
+
+pub(super) fn capture_prepared(
+    section: &BlockSection,
+    templates: &TemplateSet,
+    journal: &terra_world::edits::EditJournal,
+    column: Option<&terra_world::PreparedColumn>,
+    edits: &terra_world::generation::sections::BlockOverrides,
+    loaded_block: impl Fn([i64; 3]) -> Option<u16>,
+) -> Option<ModelSnapshot> {
+    if section.is_empty() {
+        return None;
+    }
+    // A replica draws the deterministic world beyond its subscription to server
+    // edits. Keep prediction local to this mesh. Even a recorded default pose
+    // or an explicit air cell must take precedence over the generated object.
+    let mut generated = HashMap::new();
+    for object in column
+        .into_iter()
+        .flat_map(|c| c.model_objects_in_halo(section.position()))
+    {
+        if let Some(state) = &object.state
+            && !edits.contains_key(&object.position)
+            && loaded_block(object.position).is_none_or(|id| id == object.material)
+        {
+            generated
+                .entry(object.position)
+                .or_insert((object.material, state));
+        }
+    }
+    capture_with_states(
+        section,
+        templates,
+        journal,
+        |p| {
+            edits
+                .get(&p)
+                .copied()
+                .or_else(|| loaded_block(p))
+                .or_else(|| generated.get(&p).map(|o| o.0))
+        },
+        |p| {
+            journal
+                .object_state(p)
+                .or_else(|| generated.get(&p).map(|o| *o.1))
+        },
+    )
+}
+
+fn capture_with_states(
+    section: &BlockSection,
+    templates: &TemplateSet,
+    journal: &terra_world::edits::EditJournal,
     mut sample_neighbor: impl FnMut([i64; 3]) -> Option<u16>,
+    state_at: impl Fn([i64; 3]) -> Option<terra_world::edits::BlockObjectState>,
 ) -> Option<ModelSnapshot> {
     let _scope = terra_core::profiling::ScopeTimer::new("terrain.model_snapshot");
     if section.is_empty() {
@@ -730,7 +803,7 @@ pub(crate) fn capture(
                         ][i],
                     )
             });
-            let state = journal.object_state(position).unwrap_or_default();
+            let state = state_at(position).unwrap_or_default();
             Some(ModelCell {
                 cell: [
                     (index % 16) as i32,
@@ -742,7 +815,7 @@ pub(crate) fn capture(
                 neighbor_facing: std::array::from_fn(|side| {
                     let mut p = position;
                     p[side / 2] += if side % 2 == 0 { -1 } else { 1 };
-                    let neighbor = journal.object_state(p).unwrap_or_default();
+                    let neighbor = state_at(p).unwrap_or_default();
                     if material == terra_core::bile::FLUID {
                         neighbor
                             .liquid
@@ -763,7 +836,7 @@ pub(crate) fn capture(
                 }),
                 peer_wood: state
                     .peer
-                    .and_then(|peer| journal.object_state(peer))
+                    .and_then(&state_at)
                     .map_or(state.wood, |peer| peer.wood),
             })
         })
@@ -800,12 +873,8 @@ pub(crate) fn capture(
                     let position = std::array::from_fn(|axis| {
                         origin[axis] + i64::from(model.cell[axis]) + offset[axis]
                     });
-                    sample_neighbor(position).map(|id| {
-                        (
-                            id,
-                            journal.object_state(position).unwrap_or_default().facing,
-                        )
-                    })
+                    sample_neighbor(position)
+                        .map(|id| (id, state_at(position).unwrap_or_default().facing))
                 });
             (model.cell, pieces)
         })
@@ -895,6 +964,26 @@ pub(crate) fn compose(
     section: SectionPos,
     options: &RenderOptions,
 ) -> Result<Vec<MeshBatch>, String> {
+    compose_with_leaf_detail(
+        geometry,
+        snapshot,
+        templates,
+        section,
+        options,
+        super::lod::FoldedLeaves::FULL,
+        None,
+    )
+}
+
+pub(crate) fn compose_with_leaf_detail(
+    geometry: &BlockMesh,
+    snapshot: &ModelSnapshot,
+    templates: &TemplateSet,
+    section: SectionPos,
+    options: &RenderOptions,
+    folded_leaves: super::lod::FoldedLeaves,
+    prepared: Option<&terra_world::generation::PreparedColumn>,
+) -> Result<Vec<MeshBatch>, String> {
     let mut faces: Vec<_> = geometry
         .faces
         .iter()
@@ -960,13 +1049,15 @@ pub(crate) fn compose(
         }
     }
     let faces = water_contacts::visible_faces(faces, &snapshot.water_contacts);
-    let terrain = compose_section_with_segments(
+    let terrain = super::builder::compose_section_with_leaf_detail(
         &faces,
         templates,
         section,
         options,
         &geometry.mineral_growth,
         &geometry.segments,
+        folded_leaves,
+        prepared,
     )?;
     let mut batches: BTreeMap<_, _> = terrain
         .into_iter()
@@ -989,7 +1080,40 @@ pub(crate) fn compose(
             batches.insert(material, batch);
         }
     }
+    let origin = section.origin().map_err(|e| e.to_string())?;
+    let palm_trees = (!snapshot.standalone
+        && snapshot
+            .models
+            .iter()
+            .any(|m| MaterialId::is_palm_frond(m.material)))
+    .then(|| {
+        options
+            .terrain
+            .as_ref()
+            .map(|terrain| terrain.tree_appearance(origin))
+    })
+    .flatten();
     for model in &snapshot.models {
+        if let Some(slice) = terra_core::quartz_prisms::slice(model.material, model.state.facing) {
+            quartz::append(
+                &mut batches,
+                model,
+                slice,
+                &templates.blocks[&model.material].model,
+            );
+            continue;
+        }
+        if MaterialId::is_palm_frond(model.material)
+            && let Some(trees) = &palm_trees
+        {
+            let global = std::array::from_fn(|i| origin[i] + i64::from(model.cell[i]));
+            let spans = trees.palm_spans(global, model.material);
+            if !spans.is_empty() {
+                let slot = templates.blocks[&model.material].model[0].material;
+                palm::append(&mut batches, slot, model.cell, &spans);
+                continue;
+            }
+        }
         if model.material == terra_core::bile::FLUID && snapshot.bile_surface.is_some() {
             continue;
         }
@@ -1415,7 +1539,7 @@ pub(crate) fn compose(
             batch
                 .positions
                 .extend(primitive.positions.iter().map(|point| {
-                    if model.material == 40 {
+                    if terra_core::block_shapes::is_torch(model.material) {
                         let p = terra_core::block_shapes::torch_point(
                             model.state.facing,
                             point.map(f64::from),
@@ -1439,7 +1563,7 @@ pub(crate) fn compose(
                     .to_array()
                 }));
             batch.normals.extend(primitive.normals.iter().map(|normal| {
-                if model.material == 40 {
+                if terra_core::block_shapes::is_torch(model.material) {
                     return terra_core::block_shapes::torch_vector(
                         model.state.facing,
                         normal.map(f64::from),
@@ -1464,7 +1588,7 @@ pub(crate) fn compose(
                         let mut direction =
                             bevy::math::Vec3::from_array([tangent[0], tangent[1], tangent[2]]);
                         let mut normal = bevy::math::Vec3::from_array(primitive.normals[index]);
-                        if model.material == 40 {
+                        if terra_core::block_shapes::is_torch(model.material) {
                             direction = bevy::math::Vec3::from_array(
                                 terra_core::block_shapes::torch_vector(
                                     model.state.facing,
@@ -2250,6 +2374,7 @@ mod wood_tests {
             &templates,
             SectionPos::default(),
             &options,
+            crate::meshing::lod::FoldedLeaves::FULL,
             [0; 3],
             None,
         )
@@ -2558,6 +2683,7 @@ mod wood_tests {
                     tints: Default::default(),
                     conditions: Default::default(),
                 },
+                crate::meshing::lod::FoldedLeaves::FULL,
                 [0; 3],
                 None,
             )
@@ -2748,6 +2874,7 @@ mod tests {
                     &templates,
                     SectionPos::new(-1, 0, 1),
                     &options,
+                    crate::meshing::lod::FoldedLeaves::FULL,
                     cell,
                     Some(half),
                 )

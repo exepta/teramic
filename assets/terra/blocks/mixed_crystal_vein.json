@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": 753,
+  "name": "Mixed Crystal Vein",
+  "description": "Gold and violet minerals occupy the same fissure.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.65,
+  "resistance": 1.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/mixed_crystal_vein.glb",
+  "struct_block": true,
+  "textures": {
+    "aqua_inclusion": "textures/crystal_highlands/raw_aquamarine.png",
+    "aqua_body": "textures/crystal_highlands/raw_aquamarine.png",
+    "aqua_cleavage": "textures/crystal_highlands/raw_aquamarine.png"
+  },
+  "collision_boxes": []
+}

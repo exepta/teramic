@@ -18,6 +18,7 @@ pub(crate) const ATTRIBUTE_WAVE_WEIGHT: bevy::mesh::MeshVertexAttribute =
 #[bind_group_data(WaterKey)]
 pub(crate) struct WaterExtension {
     pub native_depth_filter: bool,
+    pub regional_seas: bool,
     #[uniform(100)]
     pub tint: Vec4,
     #[uniform(101)]
@@ -36,12 +37,14 @@ pub(crate) struct WaterExtension {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct WaterKey {
     native_depth_filter: bool,
+    regional_seas: bool,
 }
 
 impl From<&WaterExtension> for WaterKey {
     fn from(extension: &WaterExtension) -> Self {
         Self {
             native_depth_filter: extension.native_depth_filter,
+            regional_seas: extension.regional_seas,
         }
     }
 }
@@ -73,10 +76,16 @@ impl MaterialExtension for WaterExtension {
                 .push("WATER_NATIVE_DEPTH_FILTER".into());
         }
         let biome = layout.0.contains(super::biome::ATTRIBUTE_BIOME_TINT);
+        if biome
+            && key.bind_group_data.regional_seas
+            && let Some(fragment) = &mut descriptor.fragment
+        {
+            fragment.shader_defs.push("WATER_REGIONAL_SEAS".into());
+        }
         let waves = layout.0.contains(ATTRIBUTE_WAVE_WEIGHT);
-        let blood = layout.0.contains(super::biome::ATTRIBUTE_BLOOD_WEIGHT);
+        let medium_weights = layout.0.contains(super::biome::ATTRIBUTE_MEDIUM_WEIGHTS);
         let liquid = layout.0.contains(crate::liquid_motion::FROM);
-        if biome || waves || blood || liquid {
+        if biome || waves || medium_weights || liquid {
             let mut attributes = vec![
                 Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
                 Mesh::ATTRIBUTE_NORMAL.at_shader_location(1),
@@ -101,12 +110,12 @@ impl MaterialExtension for WaterExtension {
                     .shader_defs
                     .push("WATER_WAVE_WEIGHT".into());
             }
-            if blood {
-                attributes.push(super::biome::ATTRIBUTE_BLOOD_WEIGHT.at_shader_location(10));
+            if medium_weights {
+                attributes.push(super::biome::ATTRIBUTE_MEDIUM_WEIGHTS.at_shader_location(10));
                 descriptor
                     .vertex
                     .shader_defs
-                    .push("WATER_BLOOD_WEIGHT".into());
+                    .push("WATER_MEDIUM_WEIGHTS".into());
             }
             for (attribute, location) in [
                 (Mesh::ATTRIBUTE_UV_1, 3),
@@ -158,6 +167,7 @@ impl WaterExtension {
             };
         Self {
             native_depth_filter: false,
+            regional_seas: false,
             tint: Vec3::from_array(super::biome::DEFAULT_TINT).extend(1.0),
             // Speed, absorption density, refraction, shallow foam width in meters.
             settings: Vec4::new(0.6, 0.62, refraction, 0.65),
@@ -184,6 +194,7 @@ type WaterEnvironment<'w> = (
     Option<Res<'w, Time>>,
     Option<Res<'w, crate::ParticleFluidInput>>,
     Option<Res<'w, crate::ParticleFluidStatus>>,
+    Option<Res<'w, terra_world::streaming::WorldTerrain>>,
 );
 
 pub(super) fn update_water_settings(
@@ -197,7 +208,8 @@ pub(super) fn update_water_settings(
 ) {
     let weather = water_weather(visual.as_deref());
     let native_depth_filter = raymarch.as_ref().is_some_and(|state| state.ready);
-    let (daylight, cave, wakes, time, _, _) = environment;
+    let (daylight, cave, wakes, time, _, _, terrain) = environment;
+    let regional_seas = terrain.is_some_and(|terrain| terrain.0.marine_overhaul());
     let solar = daylight.as_ref().map_or(1.0, |day| day.daylight)
         * cave
             .as_ref()
@@ -249,9 +261,10 @@ pub(super) fn update_water_settings(
     let Some(current) = materials.get(&assets.0) else {
         return;
     };
-    if config.is_changed() {
+    if config.is_changed() || current.extension.regional_seas != regional_seas {
         let mut next = WaterExtension::from_config(&config.client);
         next.native_depth_filter = native_depth_filter;
+        next.regional_seas = regional_seas;
         if current.extension != next
             && let Some(mut material) = materials.get_mut(&assets.0)
         {

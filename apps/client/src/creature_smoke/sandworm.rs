@@ -13,7 +13,11 @@ pub(super) fn setup(
                     .record(
                         [x, y, z],
                         if y <= 31 || y == 32 && z >= 35 {
-                            terra_voxel::MaterialId::Sand as u16
+                            match z {
+                                ..=12 => terra_voxel::MaterialId::Sand as u16,
+                                13..=34 => terra_voxel::MaterialId::RedDuneSand as u16,
+                                _ => terra_voxel::MaterialId::DuneSand as u16,
+                            }
                         } else {
                             0
                         },

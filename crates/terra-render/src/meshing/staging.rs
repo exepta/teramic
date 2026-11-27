@@ -4,7 +4,7 @@ use bevy::{camera::primitives::Aabb, prelude::*};
 #[derive(Debug)]
 pub(crate) struct StagedMesh {
     pub handle: Handle<Mesh>,
-    /// Retained only for liquid batches until atomic publication starts their tween.
+    /// While present, the handle is reserved and the mesh lives here until commit.
     pub liquid: Option<Mesh>,
     pub bounds: Option<Aabb>,
     pub rooted: bool,

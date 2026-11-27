@@ -672,7 +672,8 @@ pub(crate) fn edit_target_block(
     if let Some(ItemKind::Tool(
         tool @ (terra_core::ToolKind::Bucket
         | terra_core::ToolKind::WaterBucket
-        | terra_core::ToolKind::BileBucket),
+        | terra_core::ToolKind::BileBucket
+        | terra_core::ToolKind::LavaBucket),
     )) = selected
         && (keys.pressed(Action::Place) || keys.pressed(Action::Use))
         && !keys.pressed(Action::Break)
@@ -685,13 +686,28 @@ pub(crate) fn edit_target_block(
         ) {
             let origin = target.origin(camera);
             let bile_filled = tool == terra_core::ToolKind::BileBucket;
-            let filled = tool == terra_core::ToolKind::WaterBucket || bile_filled;
+            let lava_filled = tool == terra_core::ToolKind::LavaBucket;
+            let filled = tool == terra_core::ToolKind::WaterBucket || bile_filled || lava_filled;
             let ray_origin = origin.to_array().map(f64::from);
             let ray_direction = (look.rotation() * Vec3::NEG_Z).to_array().map(f64::from);
             let acid_target =
                 terra_world::bile::target(&chunks, journal, ray_origin, ray_direction, bile_filled);
             let using_bile = bile_filled || !filled && acid_target.is_some();
-            let position = if using_bile {
+            let lava_target = (!filled || lava_filled)
+                .then(|| {
+                    terra_world::lava::target(
+                        &chunks,
+                        journal,
+                        ray_origin,
+                        ray_direction,
+                        lava_filled,
+                    )
+                })
+                .flatten();
+            let using_lava = lava_filled || !filled && lava_target.is_some();
+            let position = if using_lava {
+                lava_target
+            } else if using_bile {
                 acid_target
             } else if filled {
                 terra_world::water::buckets::target(
@@ -735,9 +751,18 @@ pub(crate) fn edit_target_block(
                         false
                     };
                 if ready {
+                    if filled && using_lava {
+                        presentation.vessel.pour(position);
+                    }
                     requests.farming.write(FarmToolRequest {
                         position,
-                        action: if using_bile {
+                        action: if using_lava {
+                            if filled {
+                                terra_core::farming::FarmingAction::EmptyLavaBucket
+                            } else {
+                                terra_core::farming::FarmingAction::FillLavaBucket
+                            }
+                        } else if using_bile {
                             if filled {
                                 terra_core::farming::FarmingAction::EmptyBileBucket
                             } else {
@@ -1120,7 +1145,9 @@ pub(crate) fn edit_target_block(
             return;
         }
         if let Some(hit) = target.block.0
-            && (hit.normal == [0, 1, 0] || kind == terra_core::ResourcePropKind::SpiderWeb)
+            && (hit.normal == [0, 1, 0]
+                || kind == terra_core::ResourcePropKind::SpiderWeb
+                || terra_world::props::PropKind::from(kind).reef_attachment())
         {
             let has_item = creative
                 || target
@@ -2476,7 +2503,7 @@ mod tests {
 
     #[test]
     fn placing_a_block_replaces_a_source_instead_of_stacking_on_it() {
-        for liquid in [MaterialId::FluidWater, MaterialId::Bile] {
+        for liquid in [MaterialId::FluidWater, MaterialId::Bile, MaterialId::Lava] {
             let mut app = app();
             app.world_mut()
                 .resource_mut::<ChunkStore>()

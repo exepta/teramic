@@ -98,7 +98,8 @@ fn ground_below(
         // Never look through an unknown section and mistake deeper loaded
         // terrain for the missing hillside. Unknown uses the base fallback.
         let material = chunks.block_at([column[0], y, column[1]])?;
-        if !matches!(material, 0 | 7..=9 | 132 | 133 | 195 | 310..=312 | 14 | 27 | 40 | 50..=56) {
+        if !matches!(material, 0 | 7..=9 | 132 | 133 | 195 | 310..=312 | 606..=607 | 644 | 647 | 682 | 537..=540 | 585..=586 | 14 | 27 | 40 | 50..=56)
+        {
             return Some(y as f32 + 1.0);
         }
     }
@@ -138,20 +139,29 @@ pub(super) fn prepare(
                 u32::from(index / 16 % 16),
                 u32::from(index / 256),
             ];
-            let faces = super::super::mining_geometry::full_faces(
-                local,
-                if wood {
-                    event.wood_material
-                } else {
-                    event.leaves_material
-                },
-            );
-            let batches = crate::meshing::builder::compose_section_with_options(
-                &faces,
-                templates,
-                section.position,
-                &options,
-            )?;
+            let material = if wood {
+                event.wood_material
+            } else {
+                event.leaves_material
+            };
+            let batches = if terra_voxel::MaterialId::is_palm_frond(material) {
+                super::geometry::palm_piece(
+                    templates,
+                    snapshots,
+                    section.position,
+                    index,
+                    local,
+                    material,
+                )
+            } else {
+                let faces = super::super::mining_geometry::full_faces(local, material);
+                crate::meshing::builder::compose_section_with_options(
+                    &faces,
+                    templates,
+                    section.position,
+                    &options,
+                )?
+            };
             let center =
                 std::array::from_fn::<_, 3, _>(|axis| (cell[axis] - pivot[axis]) as f32 + 0.5);
             let distance = (cell[1] as f32

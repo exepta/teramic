@@ -130,7 +130,7 @@ pub(super) fn build_checked(
         let step = track.step;
         let forward = step.forward.normalize_or(Vec2::Y);
         let side = Vec2::new(forward.y, -forward.x);
-        let snow = matches!(step.material, 5 | 98);
+        let snow = TrackSurface::from_block(step.material) == Some(TrackSurface::Snow);
         let opacity = alpha(track, now);
         let mut imprint = |offset: Vec2, half: Vec2| {
             let xz = side * offset.x + forward * offset.y;
@@ -146,6 +146,25 @@ pub(super) fn build_checked(
         if matches!(step.walker, Walker::Player | Walker::Stalker) {
             imprint(Vec2::new(sign * 0.13, 0.07), Vec2::new(0.065, 0.105));
             imprint(Vec2::new(sign * 0.13, -0.12), Vec2::new(0.055, 0.055));
+        } else if step.walker == Walker::Spider {
+            for i in 0..4 {
+                let flank = if i % 2 == 0 { sign } else { -sign };
+                imprint(
+                    Vec2::new(flank * 0.27, (i as f32 - 1.5) * 0.16),
+                    Vec2::new(0.023, 0.038),
+                );
+            }
+        } else if step.walker == Walker::Slime {
+            imprint(Vec2::ZERO, Vec2::new(0.20, 0.17));
+        } else if step.walker == Walker::Dragon {
+            let heel = Vec2::new(sign * 0.40, 0.05);
+            imprint(heel, Vec2::new(0.13, 0.15));
+            for toe in -1..=1 {
+                imprint(
+                    heel + Vec2::new(toe as f32 * 0.12, 0.23),
+                    Vec2::new(0.035, 0.11),
+                );
+            }
         } else if step.walker == Walker::Bear {
             for (x, z) in [(sign * 0.30, 0.40), (-sign * 0.30, -0.40)] {
                 imprint(Vec2::new(x, z), Vec2::new(0.095, 0.10));

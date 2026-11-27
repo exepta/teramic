@@ -10,6 +10,8 @@ mod reference_gear;
 #[path = "villager/sculpt.rs"]
 mod sculpt;
 use sculpt::Sculpt;
+mod swamp;
+use terra_core::creatures::villagers::{SWAMP_HERMIT, SWAMP_WARLOCK, SWAMP_WITCH};
 
 const SKIN: [f32; 3] = [0.99, 0.70, 0.48];
 const LIGHT: [f32; 3] = [1.0, 0.77, 0.55];
@@ -27,6 +29,9 @@ fn tint(color: [f32; 3], amount: f32) -> [f32; 3] {
 }
 fn cloth(role: u8) -> [f32; 3] {
     match role {
+        SWAMP_WITCH => [0.27, 0.19, 0.34],
+        SWAMP_WARLOCK => [0.17, 0.31, 0.27],
+        SWAMP_HERMIT => [0.49, 0.39, 0.24],
         2 | 13 => [0.19, 0.19, 0.29],
         4 => [0.20, 0.29, 0.48],
         5 | 18 | 22 => PURPLE,
@@ -39,7 +44,7 @@ fn cloth(role: u8) -> [f32; 3] {
     }
 }
 pub(super) fn female(role: u8) -> bool {
-    matches!(role, 1 | 3 | 7 | 17 | 20 | 21 | 22)
+    matches!(role, 1 | 3 | 7 | 17 | 20 | 21 | 22 | SWAMP_WITCH)
 }
 fn armored(role: u8) -> bool {
     matches!(role, 2 | 4)
@@ -153,7 +158,7 @@ fn body(role: u8, female: bool) -> Sculpt {
         0.44
     };
     let base = match role {
-        0 | 15 => fabric,
+        0 | 15 | SWAMP_WITCH | SWAMP_WARLOCK | SWAMP_HERMIT => fabric,
         9 => RED,
         13 => fabric,
         14 => [0.38, 0.29, 0.20],
@@ -191,10 +196,13 @@ fn body(role: u8, female: bool) -> Sculpt {
     };
     b.ellipsoid([0.0, 0.685, 0.0], [width * 0.49, 0.145, 0.15], pants);
     b.ellipsoid([0.0, 1.215, 0.0], [0.10, 0.095, 0.10], SKIN);
-    if matches!(role, 1 | 5 | 7 | 17 | 20 | 22) {
+    if matches!(role, 1 | 5 | 7 | 17 | 20 | 22 | SWAMP_WITCH | SWAMP_WARLOCK) {
         robe(&mut b, role, if role == 1 { GREEN } else { fabric }, 0.20);
     }
-    if matches!(role, 3 | 4 | 18 | 19 | 20 | 21 | 22) {
+    if matches!(
+        role,
+        3 | 4 | 18 | 19 | 20 | 21 | 22 | SWAMP_WARLOCK | SWAMP_HERMIT
+    ) {
         cape(&mut b, role, fabric, if role == 3 { 0.65 } else { 0.95 });
     }
     // Open waistcoats expose the shirt and define a shaped, layered chest.
@@ -321,6 +329,7 @@ fn body(role: u8, female: bool) -> Sculpt {
         pouch(&mut b, -0.24, 0.72, -0.06, LEATHER);
     }
     reference_gear::body(&mut b, role);
+    swamp::costume(&mut b, role);
     b
 }
 fn leg(role: u8) -> (Sculpt, Sculpt) {
@@ -467,6 +476,9 @@ fn arm(role: u8, side: f32) -> (Sculpt, Sculpt) {
         b.block([0.0, -0.42, -0.025], [0.045, 0.23, 0.045], LEATHER);
         b.block([0.0, -0.49, -0.025], [0.20, 0.10, 0.11], [0.52, 0.36, 0.19]);
     }
+    if side > 0. {
+        swamp::tool(&mut b, role);
+    }
     reference_gear::hand(&mut b, role, side);
     (sleeve, b)
 }
@@ -502,7 +514,7 @@ mod tests {
                 if matches!(part, Part::VillagerArm(side) if side > 0.0) {
                     let (minimum_y, maximum_y, maximum_x, maximum_z) = match role {
                         1 => (-0.55, 0.15, 0.56, 0.50),
-                        5 => (-1.10, 1.0, 0.26, 0.20),
+                        5 | SWAMP_WARLOCK | SWAMP_HERMIT => (-1.10, 1.0, 0.26, 0.20),
                         8 => (-0.64, 0.15, 0.20, 0.20),
                         16 | 17 => (-0.55, 0.15, 0.26, 0.40),
                         18 => (-0.72, 0.15, 0.20, 0.25),

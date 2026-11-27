@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 657,
+  "name": "Small Savanna Cactus",
+  "description": "A squat ribbed cactus.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/small_savanna_cactus.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

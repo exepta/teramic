@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 728,
+  "name": "Ruined Basalt Masonry",
+  "description": "Ancient masons dressed the cinderstone into dark courses.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.4,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "bevel_width": 0.018,
+  "textures": {
+    "side": "textures/relics/scoria_bricks.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.88,
+      "reflectance": 0.13,
+      "normal_texture": "textures/relics/scoria_bricks_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

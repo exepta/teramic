@@ -40,7 +40,7 @@ pub struct Profile {
     pub cherry: f32,
     pub mushroom: f32,
 }
-pub fn profile(weights: [f64; 10], cave: f32, phase: f32, altitude: f32, rain: f32) -> Profile {
+pub fn profile(weights: [f64; 16], cave: f32, phase: f32, altitude: f32, rain: f32) -> Profile {
     let mut w = weights.map(|w| {
         if w.is_finite() {
             w.clamp(0.0, 1.0) as f32
@@ -61,11 +61,20 @@ pub fn profile(weights: [f64; 10], cave: f32, phase: f32, altitude: f32, rain: f
     let outside = 1.0 - cave;
     let ground = (1.0 - (altitude.max(0.0) - 5.0) / 45.0).clamp(0.0, 1.0);
     let day = ((((phase - 0.25) * std::f32::consts::TAU).sin() + 0.12) / 0.36).clamp(0.0, 1.0);
-    let life = (w[1] + w[2] + w[5] + w[7]).min(1.0) * outside * ground;
+    let life =
+        (w[1] + w[2] + w[5] + w[7] + w[11] * 0.75 + w[12] * 0.85).min(1.0) * outside * ground;
     let weather = 1.0 - finite(rain).clamp(0.0, 1.0) * 0.72;
     // Real birds/insects remain the foundation even in magical forests. Dark
     // regions are quieter, rather than replaced with a sustained synthetic tone.
-    let natural = (w[1] + w[2] + w[5] * 0.50 + w[7] * 0.90 + w[8] * 0.18 + w[9] * 0.06).min(1.0);
+    let natural = (w[1]
+        + w[2]
+        + w[5] * 0.50
+        + w[11] * 0.65
+        + w[12] * 0.80
+        + w[7] * 0.90
+        + w[8] * 0.18
+        + w[9] * 0.06)
+        .min(1.0);
     let outdoor = |weight: f32| weight.min(1.0).sqrt() * outside;
     // A player's eye height is not exposure to mountain wind. Flying can add
     // a restrained highland layer, while haunted forests retain their hush.
@@ -75,13 +84,16 @@ pub fn profile(weights: [f64; 10], cave: f32, phase: f32, altitude: f32, rain: f
         levels: [
             outdoor(natural) * ground * day.sqrt() * weather * 0.075,
             outdoor(natural) * ground * (1.0 - day).sqrt() * weather * 0.085,
-            cave * 0.13,
+            (cave + outside * w[10] * 0.28) * 0.13,
             outdoor(w[9]) * ground * 0.16,
             outdoor(w[8]) * ground * 0.15,
-            outdoor(w[3] + w[6]) * 0.065,
-            outdoor(w[0]) * 0.15,
-            outdoor(w[4] + exposed * 0.25 * (1.0 - haunted)) * 0.060,
-            outdoor(w[1] + w[2] + w[5] + w[7]) * ground * weather * 0.025,
+            outdoor(w[3] + w[6] + w[11] * 0.35 + w[10] * 0.68 + w[13] * 0.7) * 0.065,
+            outdoor(w[0] + w[15] * 0.82) * 0.15,
+            outdoor(w[4] + w[14] + w[15] * 0.30 + exposed * 0.25 * (1.0 - haunted)) * 0.060,
+            outdoor(w[1] + w[2] + w[5] + w[7] + w[11] * 0.75 + w[12] * 0.85)
+                * ground
+                * weather
+                * 0.025,
             outdoor(w[7]) * ground * (0.72 + day * 0.28) * 0.13,
             outdoor(w[5]) * ground * (1.0 - day * 0.22) * 0.14,
         ],
@@ -303,8 +315,8 @@ mod tests {
     use super::*;
     #[test]
     fn regions_keep_natural_day_night_life_and_suppress_it_below_ground() {
-        for biome in 0..10 {
-            let mut weights = [0.0; 10];
+        for biome in 0..12 {
+            let mut weights = [0.0; 16];
             weights[biome] = 1.0;
             let day = profile(weights, 0.0, 0.5, 2.0, 0.0);
             let cave = profile(weights, 1.0, 0.5, -20.0, 0.0);
@@ -315,14 +327,14 @@ mod tests {
                 assert_eq!(day.levels[0], 0.0);
             }
         }
-        let mut forest = [0.0; 10];
+        let mut forest = [0.0; 16];
         forest[2] = 1.0;
         assert!(profile(forest, 0.0, 0.0, 2.0, 0.0).levels[1] > 0.0);
         assert_eq!(profile(forest, 0.0, 0.0, 2.0, 0.0).levels[0], 0.0);
         assert!(profile(forest, 0.0, 0.5, 60.0, 0.0).levels[7] > 0.0);
         assert_eq!(profile(forest, 0.0, 0.5, 60.0, 0.0).levels[0], 0.0);
         for biome in [8, 9] {
-            let mut dark = [0.0; 10];
+            let mut dark = [0.0; 16];
             dark[biome] = 1.0;
             let p = profile(dark, 0.0, 0.5, 2.0, 0.0);
             assert!(
@@ -336,7 +348,7 @@ mod tests {
     fn details_have_irregular_bounded_spacing_panning_and_correct_volume_category() {
         let controls = Controls::default();
         let mut cadence = Cadence::default();
-        let mut weights = [0.0; 10];
+        let mut weights = [0.0; 16];
         weights[8] = 1.0;
         let p = profile(weights, 0.0, 0.5, 1.0, 0.0);
         let mut details = Vec::new();
@@ -405,8 +417,8 @@ mod tests {
 
     #[test]
     fn walking_does_not_add_highland_wind_and_haunted_forests_remain_hushed_at_height() {
-        for biome in 0..10 {
-            let mut weights = [0.0; 10];
+        for biome in 0..12 {
+            let mut weights = [0.0; 16];
             weights[biome] = 1.0;
             let walking = profile(weights, 0.0, 0.5, 1.7, 0.0);
             if biome != 4 {
@@ -419,7 +431,7 @@ mod tests {
                 assert_eq!(elevated.levels[7], 0.0, "haunted forest wind bleed");
             }
         }
-        let mut woods = [0.0; 10];
+        let mut woods = [0.0; 16];
         woods[2] = 1.0;
         let p = profile(woods, 0.0, 0.5, 1.7, 0.0);
         assert!(
@@ -438,7 +450,7 @@ mod tests {
             (3, 5, DESERT, 0.87, 1600.0, 0.86, 31000, 0.15),
             (4, 7, HIGHLAND, 1.03, 6500.0, 1.0, 97000, 0.16),
         ] {
-            let mut weights = [0.0; 10];
+            let mut weights = [0.0; 16];
             weights[biome] = 1.0;
             let current = rms(&bank[clip]) * profile(weights, 0.0, 0.5, 1.7, 0.0).levels[layer];
             let previous = rms(&filtered(
@@ -458,15 +470,15 @@ mod tests {
 
     #[test]
     fn unrelated_region_beds_preserve_power_at_the_boundary() {
-        let mut blood = [0.0; 10];
+        let mut blood = [0.0; 16];
         blood[9] = 1.0;
-        let mut spirit = [0.0; 10];
+        let mut spirit = [0.0; 16];
         spirit[8] = 1.0;
         let left = profile(blood, 0.0, 0.5, 0.0, 0.0);
         let right = profile(spirit, 0.0, 0.5, 0.0, 0.0);
         for step in 0..=100 {
             let t = step as f64 / 100.0;
-            let mut weights = [0.0; 10];
+            let mut weights = [0.0; 16];
             weights[9] = 1.0 - t;
             weights[8] = t;
             let mixed = profile(weights, 0.0, 0.5, 0.0, 0.0);
@@ -478,7 +490,7 @@ mod tests {
 
     #[test]
     fn invalid_environment_inputs_and_duplicate_weights_remain_finite_and_bounded() {
-        for weights in [[f64::NAN; 10], [f64::INFINITY; 10], [-1.0; 10], [1.0; 10]] {
+        for weights in [[f64::NAN; 16], [f64::INFINITY; 16], [-1.0; 16], [1.0; 16]] {
             let p = profile(weights, f32::NAN, f32::INFINITY, f32::NAN, f32::INFINITY);
             assert!(
                 p.levels

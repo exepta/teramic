@@ -25,6 +25,8 @@ impl Plugin for TerraRenderPlugin {
         crate::transitions::install(app);
         crate::scene::horizon::install(app);
         crate::scene::daylight::install(app);
+        crate::scene::shadow_receivers::install(app);
+        crate::scene::leaf_profiles::install(app);
         crate::scene::caves::install(app);
         crate::water::install(app);
         crate::liquid_motion::install(app);
@@ -40,6 +42,8 @@ impl Plugin for TerraRenderPlugin {
         app.add_plugins(MaterialPlugin::<crate::PlacementOutlineMaterial>::default());
         crate::building::install(app);
         crate::furnaces::install(app);
+        crate::meshing::lava::install_lights(app);
+        crate::volcanoes::install(app);
         crate::plumbing::install(app);
         crate::crushers::install_materials(app);
         crate::crushers::install(app);

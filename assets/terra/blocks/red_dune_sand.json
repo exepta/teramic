@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 528,
+  "name": "Red Dune Sand",
+  "description": "Iron-rich ochre grains at the foot of desert mesas.",
+  "creative_category": "terrain",
+  "hardness": 0.55,
+  "resistance": 2,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "face_materials": [
+    "side",
+    "side",
+    "top",
+    "top",
+    "side",
+    "side"
+  ],
+  "textures": {
+    "side": "textures/desert/red_dune_sand_side.png",
+    "top": "textures/desert/red_dune_sand_top.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.94,
+      "reflectance": 0.14,
+      "normal_texture": "textures/desert/red_dune_sand_side_normal.png"
+    },
+    "top": {
+      "roughness": 0.94,
+      "reflectance": 0.14,
+      "normal_texture": "textures/desert/red_dune_sand_top_normal.png"
+    }
+  }
+}

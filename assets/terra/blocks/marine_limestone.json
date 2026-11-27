@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 542,
+  "name": "Marine Limestone",
+  "description": "Pale limestone laid down in an ancient sea.",
+  "creative_category": "nature",
+  "hardness": 1.6,
+  "resistance": 2.5,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "marine_limestone": "textures/ocean/marine_limestone.png"
+  },
+  "face_materials": [
+    "marine_limestone",
+    "marine_limestone",
+    "marine_limestone",
+    "marine_limestone",
+    "marine_limestone",
+    "marine_limestone"
+  ],
+  "materials": {
+    "marine_limestone": {
+      "roughness": 0.72,
+      "normal_texture": "textures/ocean/marine_limestone_normal.png"
+    }
+  },
+  "surface": "rock"
+}

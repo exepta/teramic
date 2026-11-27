@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 521,
+  "name": "Woodland Bramble",
+  "description": "Arching canes bear clusters of red forest berries.",
+  "creative_category": "nature",
+  "hardness": 0.42,
+  "resistance": 0.9,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/forest_bramble.glb",
+  "textures": {},
+  "collision_boxes": [],
+  "struct_block": true
+}

@@ -409,6 +409,7 @@ fn cleared_tree_roots_remove_branched_crowns_outside_the_site_and_adjacent_secti
         grave: None,
     };
     let site = Arc::new(Site {
+        tidal_nest: false,
         summary,
         settlement: None,
         sections: BTreeMap::from([(
@@ -496,6 +497,7 @@ fn building_tree_clearance_queries_the_full_band_across_a_section_boundary() {
     let root = [111, 16, 176];
     let bounds = [[119, 16, 176], [123, 28, 180]];
     let site = Arc::new(Site {
+        tidal_nest: false,
         settlement: None,
         summary: SiteSummary {
             id: 1,
@@ -556,6 +558,7 @@ fn per_kind_generation_switches_preserve_other_seeded_sites_in_every_contract() 
                 | StructureKind::Cemetery
                 | StructureKind::GraveDungeon
                 | StructureKind::DarkDragonLair
+                | StructureKind::FireDragonLair
                 | StructureKind::EarthDragonLair
                 | StructureKind::WaterDragonLair => config.structures.ruins = false,
                 StructureKind::Mine => config.structures.mines = false,

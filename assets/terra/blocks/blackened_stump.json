@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 626,
+  "name": "Blackened Tree Stump",
+  "description": "Burnt roots and a ringed stump.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.25,
+  "resistance": 2.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/blackened_stump.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.23,
+        0,
+        0.23
+      ],
+      "maximum": [
+        0.77,
+        0.59,
+        0.77
+      ]
+    }
+  ]
+}

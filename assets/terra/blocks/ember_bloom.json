@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 732,
+  "name": "Ember Flowers",
+  "description": "Clusters of orange flowers grow in warm ash.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.4,
+  "resistance": 3.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/ember_bloom.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

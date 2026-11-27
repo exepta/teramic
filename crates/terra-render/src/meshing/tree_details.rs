@@ -28,8 +28,17 @@ pub(super) fn append_crown(
     level: DetailLevel,
     style: CrownStyle,
 ) -> Result<(), String> {
-    if let Some(TreeAppearance::Spruce | TreeAppearance::Fir) = style.species
-        && style.cluster.and_then(|cluster| cluster.needles).is_none()
+    // Fine cutout needles occupy only fractions of a pixel at middle distance.
+    // The closed bough body uses the same snow shelves as the far cube.
+    // Generated snowy and green crowns both carry their source tree species.
+    // A loose building block has no crown owner and keeps its full block faces.
+    let conifer = matches!(
+        style.species,
+        Some(TreeAppearance::Spruce | TreeAppearance::Fir)
+    );
+    if conifer
+        && (level == DetailLevel::Middle
+            || style.cluster.and_then(|cluster| cluster.needles).is_none())
     {
         return needles::append(
             batches,

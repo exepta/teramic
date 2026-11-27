@@ -103,6 +103,82 @@ fn wet_noise(p: vec2<f32>) -> f32 {
     return mix(mix(wet_hash(cell), wet_hash(cell + vec2<f32>(1.0, 0.0)), t.x),
         mix(wet_hash(cell + vec2<f32>(0.0, 1.0)), wet_hash(cell + vec2<f32>(1.0)), t.x), t.y);
 }
+// A warped, folded skin. Ropy folds travel with the melt while broken rafts
+// gather in the slower bands. All scales are in world metres.
+fn molten_skin(p: vec2<f32>, footprint: f32) -> vec3<f32> {
+    // Long shear bands move far enough to read across an entire river seen
+    // from a cliff. Fine crust and folds fade as the pixel footprint widens.
+    let large = wet_noise(p * 0.105);
+    let bend = vec2<f32>(large, wet_noise(p * 0.16 + vec2<f32>(11.8, 9.2))) - 0.5;
+    let folded = p + 3.7 * bend;
+    let stream = wet_noise(folded * vec2<f32>(0.34, 0.61));
+    let fine = 1.0 - smoothstep(0.07, 0.50, footprint);
+    let grain = (wet_noise(folded * 5.7) - 0.5) * fine;
+    let ridges = 0.5 + 0.5 * sin(15.0 * stream + folded.y * 0.98 + large * 3.0 + grain * 0.56);
+    let seam = smoothstep(0.56, 0.95, ridges) * (0.44 + 0.52 * stream);
+    let cooled = wet_noise(folded * 0.63 + bend) + grain * 0.18;
+    let rafts = smoothstep(0.54, 0.74, cooled) * smoothstep(0.39, 0.67, large)
+        * (1.0 - smoothstep(0.16, 0.69, seam));
+    return vec3<f32>(stream + grain * 0.16, seam, rafts);
+}
+
+// Fractured basalt rafts are carried on a slower skin above the sheared melt.
+// The difference of the nearest two sites yields fissures that meet at triple points.
+fn basalt_raft(p: vec2<f32>, footprint: f32) -> vec3<f32> {
+    let warp = vec2<f32>(wet_noise(p * 0.65), wet_noise(p * 0.61 + vec2<f32>(13., 7.))) - 0.5;
+    let fractures = vec2<f32>(wet_noise(p * 3.15 + warp), wet_noise(p * 3.42 - warp)) - 0.5;
+    let site = (p + 1.35 * warp + 0.24 * fractures) * vec2<f32>(0.73, 1.19);
+    let cell = floor(site);
+    let local = fract(site);
+    var nearest = 8.0;
+    var second = 8.0;
+    var plate = 0.0;
+    for (var z = -1; z <= 1; z++) {
+        for (var x = -1; x <= 1; x++) {
+            let n = vec2<f32>(f32(x), f32(z));
+            let id = cell + n;
+            let salt = wet_hash(id);
+            let jitter = vec2<f32>(salt, wet_hash(id + vec2<f32>(41., 23.)));
+            let delta = n + 0.17 + jitter * 0.66 - local;
+            let d = dot(delta, delta);
+            if d < nearest {
+                second = nearest;
+                nearest = d;
+                plate = salt;
+            } else { second = min(second, d); }
+        }
+    }
+    let edge = sqrt(second) - sqrt(nearest);
+    let aa = min(0.15, footprint * 0.58);
+    let seam = 1.0 - smoothstep(0.01 - aa, 0.084 + aa, edge);
+    let flank = smoothstep(0.036 - aa, 0.27 + aa, edge);
+    return vec3<f32>(seam, flank, plate);
+}
+
+fn transported_skin(p: vec2<f32>, angle: f32, phase: f32, footprint: f32) -> vec3<f32> {
+    let offset = vec2<f32>(cos(angle), sin(angle)) * 11.4;
+    let a = molten_skin(p - offset * phase, footprint);
+    let b = molten_skin(p - offset * fract(phase + 0.5), footprint);
+    return mix(a, b, abs(phase * 2.0 - 1.0));
+}
+
+// A pocket briefly tears the skin, exposing its incandescent interior. The
+// coarse gas activity also renders on distant terrain without particle emitters.
+fn molten_vent_flash(p: vec2<f32>, time: f32, footprint: f32) -> f32 {
+    let grid = p / 5.6;
+    let cell = floor(grid);
+    let seed = wet_hash(cell);
+    let offset = 0.23 + 0.54 * vec2<f32>(seed, wet_hash(cell + vec2<f32>(9.0, 21.0)));
+    let period = 12.0 + 9.0 * seed;
+    let age = fract((time + seed * 61.0) / period) * period;
+    let delta = (fract(grid) - offset) * vec2<f32>(5.6, 6.5);
+    let radius = 0.10 + 0.46 * smoothstep(0.03, 0.44, age);
+    let lip = length(delta) + 0.12 * (wet_noise(p * 3.8) - 0.5);
+    let aa = clamp(footprint, 0.05, 0.32);
+    let opening = 1.0 - smoothstep(radius - aa, radius + aa, lip);
+    return opening * smoothstep(0.0, 0.10, age) * (1.0 - smoothstep(0.40, 1.02, age));
+}
+
 fn shore_pulse(p: vec2<f32>, time: f32) -> f32 {
     return smoothstep(-0.35, 0.95, sin(time * 0.48 + wet_noise(p * 0.035) * 1.4));
 }
@@ -114,7 +190,7 @@ fn authored_grass_top_palette(color: vec3<f32>) -> vec3<f32> {
 
 // Height, contact occlusion and albedo variation. World-anchored features survive
 // greedy faces, negative coordinates, section reloads and terrain LOD changes.
-fn block_profile(p: vec2<f32>, family: f32) -> vec3<f32> {
+fn block_profile(p: vec2<f32>, family: f32, upward: f32) -> vec3<f32> {
     let grain = wet_hash(floor(p * 96.0));
     var height = 0.0;
     var contact = 1.0;
@@ -163,7 +239,7 @@ fn block_profile(p: vec2<f32>, family: f32) -> vec3<f32> {
         height = turf*0.0008 + grain*0.00015;
         tint = 0.985 + turf*0.03;
     } else if family < 4.5 {
-        let ripple = sin(p.y * 31.0 + sin(p.x * 7.0) * 0.6);
+        let ripple = upward * sin(p.y * 31.0 + sin(p.x * 7.0) * 0.6);
         let grains = wet_noise(p * 64.0 + vec2<f32>(11.7, 4.3));
         let packed = wet_hash(floor(p * 24.0) + vec2<f32>(19.0, 7.0));
         height = ripple * 0.0018 + grains * 0.0012 + grain * 0.00035;
@@ -222,6 +298,58 @@ fn fragment(input: VertexOutput, @builtin(front_facing) front: bool) -> Fragment
     // Dry meshes share this material for correct roof shadows, but retain the
     // original StandardMaterial color path without procedural detail work.
     let climate = terra_weather.surface;
+    if terra_detail.x == -15.0 {
+        let pos = input.world_position.xyz;
+        let n = normalize(input.world_normal);
+        let top = abs(n.y) > 0.5;
+        let coord = select(vec2<f32>(pos.x + pos.z, -pos.y), pos.xz, top);
+        let stream = input.uv_b;
+        let slope = length(stream);
+        let convection = vec2<f32>(0.39 + 0.20 * sin(coord.y * 0.052),
+            0.13 + 0.18 * sin(coord.x * 0.065 + 1.1));
+        let velocity = select(vec2<f32>(0.04, 1.12), mix(convection,
+            0.89 * stream / max(slope, 0.001), smoothstep(0.02, 0.35, slope)), top);
+        // Blend two independently moving skins, rather than scaling the UV
+        // offset by a rapidly changing corner vector. Even at an abrupt turn
+        // or a player-built wall this cannot fold a triangle's texture over.
+        let phase = fract(globals.time / 17.0);
+        let footprint = max(length(dpdx(coord)), length(dpdy(coord)));
+        let step_angle = 0.78539816;
+        let heading = atan2(velocity.y, velocity.x + 0.00001) / step_angle;
+        let angle = floor(heading) * step_angle;
+        let blend = smoothstep(0.08, 0.92, fract(heading));
+        let a = transported_skin(coord, angle, phase, footprint);
+        var skin = a;
+        if blend > 0.0 {
+            skin = mix(a, transported_skin(coord, angle + step_angle, phase, footprint), blend);
+        }
+        let opening = select(0.0, molten_vent_flash(coord, globals.time, footprint), top);
+        let raft = basalt_raft(coord - globals.time * select(vec2<f32>(0.0, 0.14), vec2<f32>(0.062, -0.031), top), footprint);
+        let current_fold = smoothstep(0.22, 0.74, skin.y);
+        let banks = wet_noise(coord * 0.22 + vec2<f32>(globals.time * 0.018, 4.7));
+        // Cooling is patchy: broad molten channels sweep between groups of
+        // rafts, while individual broken plates drift along their banks.
+        let cooling = smoothstep(0.35, 0.66, banks * 0.64 + raft.z * 0.28 + skin.x * 0.08);
+        let crust = cooling * raft.y * (1.0 - 0.67 * current_fold) * (1.0 - opening);
+        let heat = clamp(0.26 + 0.52 * current_fold + raft.x * 0.43 * cooling + opening * 0.78, 0.0, 1.0);
+        let red = vec3<f32>(1.04, 0.074, 0.005);
+        let amber = vec3<f32>(2.25, 0.41, 0.021);
+        let liquid = mix(mix(red, amber, smoothstep(0.21, 0.77, heat)),
+            vec3<f32>(3.05, 1.05, 0.16), smoothstep(0.73, 1.0, heat));
+        let basalt = mix(vec3<f32>(0.038, 0.013, 0.017), vec3<f32>(0.13, 0.039, 0.027), raft.z);
+        pbr.material.base_color = vec4<f32>(mix(liquid * 0.054, basalt, crust), 1.0);
+        pbr.material.emissive = vec4<f32>(mix(liquid, basalt * 0.30, crust * (2.0 - crust)), 0.0);
+        pbr.material.perceptual_roughness = mix(0.32, 0.89, crust);
+        // The same height signal drives highlights on both banks and falls.
+        let derivative = dpdx(pos);
+        let cross_derivative = dpdy(pos);
+        let r1 = cross(cross_derivative, n);
+        let r2 = cross(n, derivative);
+        let det = dot(derivative, r1);
+        let ridge = (skin.x * 0.038 + skin.y * 0.026 + crust * 0.085);
+        let tilt = (dpdx(ridge) * r1 + dpdy(ridge) * r2) * sign(det) / max(abs(det), 0.000001);
+        pbr.N = normalize(n - tilt / max(1.0, length(tilt) * 2.5));
+    }
     if terra_detail.x == -14.0 && input.uv_b.y < -3.5 {
         // Slow travelling capillary folds, anchored in world space across cells.
         // Surface volume stays authoritative; animated reflection is continuous.
@@ -251,7 +379,7 @@ fn fragment(input: VertexOutput, @builtin(front_facing) front: bool) -> Fragment
             pbr.material.base_color.a);
     }
     var calendar_turf = false;
-    if terra_detail.x == -6.0 || terra_detail.x == -8.0 || terra_detail.x == -9.0 {
+    if terra_detail.x == -6.0 || terra_detail.x == -8.0 || terra_detail.x == -9.0 || terra_detail.x == -16.0 {
         var vertex_tint = vec3<f32>(1.0);
 @if(VERTEX_COLORS) {
         vertex_tint = max(input.color.rgb, vec3<f32>(0.0001));
@@ -263,10 +391,22 @@ fn fragment(input: VertexOutput, @builtin(front_facing) front: bool) -> Fragment
         let top_face = normalize(input.world_normal).y > 0.86
             && abs(input.world_position.y - round(input.world_position.y)) < 0.035;
         let side_face = abs(normalize(input.world_normal).y) < 0.86;
+        // Vertex color carries the grass climate and the local ground shading.
+        // Keep the latter on exposed earth without dyeing the entire bank.
+        let soil_shade = min(1.0, dot(vertex_tint, vec3<f32>(0.2126, 0.7152, 0.0722)));
+        if terra_detail.x == -16.0 {
+            calendar_turf = top_face || green_texel;
+            if !calendar_turf {
+                pbr.material.base_color = vec4<f32>(source_color * soil_shade, pbr.material.base_color.a);
+            }
+        }
         if terra_detail.x == -6.0 && green_texel && (top_face || side_face) {
             calendar_turf = true;
             pbr.material.base_color = vec4<f32>(authored_grass_top_palette(source_color)
                 * vertex_tint, pbr.material.base_color.a);
+        }
+        if terra_detail.x == -6.0 && side_face && !green_texel {
+            pbr.material.base_color = vec4<f32>(source_color * soil_shade, pbr.material.base_color.a);
         }
         if terra_detail.x == -8.0 || terra_detail.x == -9.0 {
             // Spirit/Blood turf used to bypass the climate field and jump at
@@ -274,15 +414,15 @@ fn fragment(input: VertexOutput, @builtin(front_facing) front: bool) -> Fragment
             // grain/vein, then apply the same interpolated tint as meadow turf.
             let spirit = terra_detail.x == -8.0;
             let cap_texel = select(source_color.b > source_color.g * 1.24,
-                source_color.g > source_color.r * 1.6 && source_color.b > source_color.r * 1.6,
+                source_color.g > source_color.r * 1.08 && source_color.b > source_color.r * 1.04,
                 spirit);
             let turf = top_face || (side_face && cap_texel);
             calendar_turf = turf;
             if top_face || side_face {
                 let reference = select(vec3<f32>(0.423243, 0.103447, 0.157820),
-                    vec3<f32>(0.081140, 0.450920, 0.386200), spirit);
-                let soil_reference = select(vec3<f32>(0.204663, 0.089321, 0.098386),
-                    vec3<f32>(0.319667, 0.157852, 0.270654), spirit);
+                    vec3<f32>(0.218538, 0.278136, 0.261420), spirit);
+                let soil_reference = select(vec3<f32>(0.205716, 0.087239, 0.096256),
+                    vec3<f32>(0.223032, 0.145819, 0.211654), spirit);
                 let meadow_turf = vec3<f32>(0.155556, 0.275173, 0.033548);
                 let meadow_soil = vec3<f32>(0.245898, 0.130539, 0.055692);
                 let normalized = source_color * select(meadow_soil / soil_reference,
@@ -298,7 +438,7 @@ fn fragment(input: VertexOutput, @builtin(front_facing) front: bool) -> Fragment
         pbr.material.base_color = vec4<f32>(pbr.material.base_color.rgb * terra_weather.grass.rgb,
             pbr.material.base_color.a);
     }
-    if terra_detail.y < 0.5 && terra_detail.x != -14.0 {
+    if terra_detail.y < 0.5 && terra_detail.x != -14.0 && terra_detail.x != -15.0 {
         pbr.N = normalize(input.world_normal);
     }
     if terra_detail.x > 0.5 {
@@ -314,7 +454,7 @@ fn fragment(input: VertexOutput, @builtin(front_facing) front: bool) -> Fragment
         // profile work branches: derivatives stay in the reconverged scope.
         var profile = vec3<f32>(0.0, 1.0, 1.0);
         if detail_fade > 0.0001 && (terra_detail.y > 0.0 || terra_detail.z > 0.0) {
-            profile = block_profile(uv,terra_detail.x);
+            profile = block_profile(uv,terra_detail.x,smoothstep(0.72, 0.94, input.world_normal.y));
         }
         let height = profile.x * detail_fade;
         let dx = dpdx(input.world_position.xyz);
@@ -331,6 +471,7 @@ fn fragment(input: VertexOutput, @builtin(front_facing) front: bool) -> Fragment
             pbr.material.perceptual_roughness = max(pbr.material.perceptual_roughness,0.86);
         }
     }
+    if terra_detail.x != -15.0 {
     // The mesher carries authoritative, roof-aware surface water in UV1.
     // Indoor stone stays matte even while the surrounding biome is raining.
     let exposed = clamp(input.uv_b.y, 0.0, 1.0);
@@ -393,6 +534,7 @@ fn fragment(input: VertexOutput, @builtin(front_facing) front: bool) -> Fragment
             pbr.material.base_color.a);
         pbr.material.perceptual_roughness = mix(pbr.material.perceptual_roughness, 0.92, snow_cover);
         pbr.material.reflectance = mix(pbr.material.reflectance, vec3<f32>(0.45), snow_cover);
+    }
     }
 }
 @if(PREPASS_PIPELINE) {

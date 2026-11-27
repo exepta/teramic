@@ -38,6 +38,8 @@ pub struct Controls {
     pub ambient: [AtomicU32; super::ambience::LAYERS],
     pub fire: [AtomicU32; 2],
     pub furnace: [AtomicU32; 2],
+    pub eruption: [AtomicU32; 2],
+    pub lava: [AtomicU32; 2],
     pub faucet: [AtomicU32; 2],
     pub faucet_rms: AtomicU32,
     pub rain: [AtomicU32; 2],
@@ -54,6 +56,8 @@ impl Default for Controls {
             ambient: Default::default(),
             fire: Default::default(),
             furnace: Default::default(),
+            eruption: Default::default(),
+            lava: Default::default(),
             faucet: Default::default(),
             faucet_rms: AtomicU32::new(0),
             rain: Default::default(),
@@ -110,6 +114,10 @@ impl Decodable for RecordedSoundscape {
             beds: super::beds::Beds::default(),
             fire: [0.0; 2],
             fire_phase: 0.0,
+            eruption: [0.; 2],
+            eruption_phase: 0.,
+            lava: [0.; 2],
+            lava_phase: 0.,
             furnace: [0.0; 2],
             furnace_phase: 0.0,
             faucet: [0.0; 2],
@@ -148,6 +156,10 @@ pub struct Stream {
     fire_phase: f32,
     furnace: [f32; 2],
     furnace_phase: f32,
+    eruption: [f32; 2],
+    eruption_phase: f32,
+    lava: [f32; 2],
+    lava_phase: f32,
     faucet: [f32; 2],
     faucet_phase: f32,
     faucet_energy: f32,
@@ -284,6 +296,23 @@ impl Iterator for Stream {
                 self.pair[channel] += value * self.furnace[channel] * environment;
             }
         }
+        if let Some(clip) = self.bank.get(super::volcanic::RUMBLE) {
+            let value = loop_sample(clip, &mut self.eruption_phase);
+            for channel in 0..2 {
+                let target =
+                    f32::from_bits(self.controls.eruption[channel].load(Ordering::Relaxed));
+                self.eruption[channel] += (target - self.eruption[channel]) * 0.00015;
+                self.pair[channel] += value * self.eruption[channel] * environment;
+            }
+        }
+        if let Some(clip) = self.bank.get(super::volcanic::FLOW) {
+            let value = loop_sample(clip, &mut self.lava_phase);
+            for channel in 0..2 {
+                let target = f32::from_bits(self.controls.lava[channel].load(Ordering::Relaxed));
+                self.lava[channel] += (target - self.lava[channel]) * 0.00012;
+                self.pair[channel] += value * self.lava[channel] * environment;
+            }
+        }
         // The existing close, detailed water recording forms one crossfaded loop.
         // All taps share this bounded stereo layer; changing sources only changes gains.
         if let Some(clip) = self.bank.get(RAIN_DETAIL_CLIP) {
@@ -341,8 +370,41 @@ impl Source for Stream {
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::*;
+
+    #[test]
+    fn nearby_molten_rock_has_a_stereo_bed_between_discrete_breaches() {
+        let controls = Arc::new(Controls::default());
+        controls.configure(&terra_core::AudioConfig::default(), true);
+        for (channel, gain) in controls.lava.iter().zip([0.28_f32, 0.12]) {
+            channel.store(gain.to_bits(), Ordering::Relaxed);
+        }
+        let mut stream = RecordedSoundscape {
+            bank: super::super::clips::load().unwrap(),
+            controls: controls.clone(),
+        }
+        .decoder();
+        let mut energies = [0.; 2];
+        for frame in 0..24_000 {
+            for energy in &mut energies {
+                let value = stream.next().unwrap();
+                assert!(value.is_finite() && value.abs() < 0.9);
+                if frame >= 12_000 {
+                    *energy += value * value;
+                }
+            }
+        }
+        assert!(
+            energies[1] > 0.01 && energies[0] > 2. * energies[1],
+            "{energies:?}"
+        );
+        for target in &controls.lava {
+            target.store(0, Ordering::Relaxed);
+        }
+        let tail: Vec<_> = stream.skip(192_000).take(256).collect();
+        assert!(tail.iter().all(|sample| sample.abs() < 0.0001));
+    }
 
     #[test]
     fn actual_biome_beds_mix_in_stereo_crossfade_and_respect_live_mute() {
@@ -362,7 +424,7 @@ mod tests {
         ] {
             let controls = Arc::new(Controls::default());
             controls.configure(&terra_core::AudioConfig::default(), true);
-            let mut weights = [0.0; 10];
+            let mut weights = [0.0; 16];
             weights[biome] = 1.0;
             let p = super::super::ambience::profile(weights, cave, 0.5, 1.5, 0.0);
             for (gain, target) in p.levels.into_iter().zip(&controls.ambient) {
@@ -411,29 +473,7 @@ mod tests {
                 "{name}: mute tail"
             );
             if let Some(root) = &export {
-                std::fs::create_dir_all(root).unwrap();
-                let pcm: Vec<i16> = samples
-                    .into_iter()
-                    .map(|s| (s.clamp(-1.0, 1.0) * 32767.0) as i16)
-                    .collect();
-                let bytes = (pcm.len() * 2) as u32;
-                let mut wav = Vec::with_capacity(bytes as usize + 44);
-                wav.extend(b"RIFF");
-                wav.extend((bytes + 36).to_le_bytes());
-                wav.extend(b"WAVEfmt ");
-                wav.extend(16_u32.to_le_bytes());
-                wav.extend(1_u16.to_le_bytes());
-                wav.extend(2_u16.to_le_bytes());
-                wav.extend(48_000_u32.to_le_bytes());
-                wav.extend(192_000_u32.to_le_bytes());
-                wav.extend(4_u16.to_le_bytes());
-                wav.extend(16_u16.to_le_bytes());
-                wav.extend(b"data");
-                wav.extend(bytes.to_le_bytes());
-                for sample in pcm {
-                    wav.extend(sample.to_le_bytes());
-                }
-                std::fs::write(root.join(format!("{name}.wav")), wav).unwrap();
+                export_stereo(root, name, &samples);
             }
         }
     }
@@ -450,7 +490,7 @@ mod tests {
         let mut samples = Vec::new();
         let mut cadence = super::super::ambience::Cadence::default();
         for (region, biome) in [2, 7, 8, 5, 9, 3, 0].into_iter().enumerate() {
-            let mut weights = [0.0; 10];
+            let mut weights = [0.0; 16];
             weights[biome] = 1.0;
             let profile = super::super::ambience::profile(weights, 0.0, 0.5, 2.0, 0.0);
             for (target, gain) in controls.ambient.iter().zip(profile.levels) {
@@ -483,27 +523,34 @@ mod tests {
         stream.by_ref().take(48_000).for_each(drop);
         assert!(stream.take(12_000).all(|sample| sample.abs() < 0.00001));
         if let Some(root) = std::env::var_os("TERRA_AUDIO_EXPORT_DIR") {
-            let path = std::path::PathBuf::from(root);
-            std::fs::create_dir_all(&path).unwrap();
-            let size = (samples.len() * 2) as u32;
-            let mut wav = Vec::with_capacity(size as usize + 44);
-            wav.extend(b"RIFF");
-            wav.extend((size + 36).to_le_bytes());
-            wav.extend(b"WAVEfmt ");
-            wav.extend(16_u32.to_le_bytes());
-            wav.extend(1_u16.to_le_bytes());
-            wav.extend(2_u16.to_le_bytes());
-            wav.extend(48_000_u32.to_le_bytes());
-            wav.extend(192_000_u32.to_le_bytes());
-            wav.extend(4_u16.to_le_bytes());
-            wav.extend(16_u16.to_le_bytes());
-            wav.extend(b"data");
-            wav.extend(size.to_le_bytes());
-            for sample in samples {
-                wav.extend(((sample.clamp(-1.0, 1.0) * 32767.0) as i16).to_le_bytes());
-            }
-            std::fs::write(path.join("biome-journey.wav"), wav).unwrap();
+            export_stereo(&std::path::PathBuf::from(root), "biome-journey", &samples);
         }
+    }
+
+    pub(in crate::creature_audio) fn export_stereo(
+        path: &std::path::Path,
+        name: &str,
+        samples: &[f32],
+    ) {
+        std::fs::create_dir_all(path).unwrap();
+        let size = (samples.len() * 2) as u32;
+        let mut wav = Vec::with_capacity(size as usize + 44);
+        wav.extend(b"RIFF");
+        wav.extend((size + 36).to_le_bytes());
+        wav.extend(b"WAVEfmt ");
+        wav.extend(16_u32.to_le_bytes());
+        wav.extend(1_u16.to_le_bytes());
+        wav.extend(2_u16.to_le_bytes());
+        wav.extend(48_000_u32.to_le_bytes());
+        wav.extend(192_000_u32.to_le_bytes());
+        wav.extend(4_u16.to_le_bytes());
+        wav.extend(16_u16.to_le_bytes());
+        wav.extend(b"data");
+        wav.extend(size.to_le_bytes());
+        for sample in samples {
+            wav.extend(((sample.clamp(-1.0, 1.0) * 32767.0) as i16).to_le_bytes());
+        }
+        std::fs::write(path.join(format!("{name}.wav")), wav).unwrap();
     }
 
     fn queued_constant_voice(

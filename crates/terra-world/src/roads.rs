@@ -64,7 +64,7 @@ fn exposed(chunks: &ChunkStore, journal: &EditJournal, position: [i64; 3]) -> bo
                     chunks
                         .surface_column_at(p[0], p[2])
                         .map_or_else(Default::default, |surface| {
-                            crate::water::fluid::from_columns(surface.water_columns(), p[1])
+                            crate::water::falls::sampled(surface.water_columns(), p, journal)
                         })
                 })
                 .amount

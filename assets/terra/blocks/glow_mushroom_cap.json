@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": 507,
+  "name": "Luminous Lilac Cap",
+  "description": "Soft amber light glimmers between lilac scales.",
+  "creative_category": "nature",
+  "hardness": 0.65,
+  "resistance": 1.2,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "top": {
+      "roughness": 0.84,
+      "normal_texture": "textures/mushroom_park/amethyst_top_normal.png",
+      "emission": [
+        0.14,
+        0.066,
+        0.021
+      ]
+    },
+    "side": {
+      "roughness": 0.84,
+      "normal_texture": "textures/mushroom_park/amethyst_side_normal.png",
+      "emission": [
+        0.14,
+        0.066,
+        0.021
+      ]
+    },
+    "gills": {
+      "roughness": 0.91,
+      "normal_texture": "textures/mushroom_park/gill_side_normal.png"
+    }
+  },
+  "textures": {
+    "top": "textures/mushroom_park/amethyst_top.png",
+    "side": "textures/mushroom_park/amethyst_side.png",
+    "gills": "textures/mushroom_park/gill_side.png"
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "gills",
+    "top",
+    "side",
+    "side"
+  ],
+  "surface": "mushroom"
+}

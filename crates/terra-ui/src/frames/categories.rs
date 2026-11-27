@@ -5,20 +5,6 @@
 use bevy::{prelude::*, text::TextLayoutInfo};
 use tilt_ui::{ElementClasses, ElementKind, TiltElement};
 
-fn category_group(classes: &ElementClasses) -> bool {
-    classes.classes.iter().any(|class| {
-        matches!(
-            class.as_str(),
-            "copper-options-tabs"
-                | "kingdom-tabs"
-                | "character-tabs"
-                | "world-create-tabs"
-                | "build-mode-categories"
-                | "editor-categories"
-        )
-    })
-}
-
 fn has_class(world: &World, entity: Entity, class: &str) -> bool {
     world
         .get::<ElementClasses>(entity)
@@ -145,12 +131,16 @@ fn intrinsic_width(world: &World, entity: Entity) -> Option<f32> {
 }
 
 pub(super) fn equalize_category_widths(world: &mut World) {
-    let targets: Vec<_> = world
-        .query::<(Entity, &ElementClasses)>()
-        .iter(world)
-        .filter_map(|(entity, classes)| category_group(classes).then_some(entity))
-        .collect();
-    for group in targets {
+    world.resource_scope(|world, index: Mut<crate::layout_classes::LayoutClasses>| {
+        equalize(world, &index.groups, &index.descriptions);
+    });
+}
+
+fn equalize(world: &mut World, groups: &[Entity], descriptions: &[Entity]) {
+    for &group in groups {
+        if world.get::<tilt_ui::ParkedUi>(group).is_some() {
+            continue;
+        }
         let buttons = buttons_in(world, group);
         let widths: Option<Vec<_>> = buttons
             .iter()
@@ -181,18 +171,10 @@ pub(super) fn equalize_category_widths(world: &mut World) {
     }
     // Reserve the real width of a settings title. The row's normal flex-wrap
     // can move its controls below it instead of splitting a German compound.
-    let descriptions: Vec<_> = world
-        .query::<(Entity, &ElementClasses)>()
-        .iter(world)
-        .filter_map(|(entity, classes)| {
-            classes
-                .classes
-                .iter()
-                .any(|class| class == "setting-description")
-                .then_some(entity)
-        })
-        .collect();
-    for entity in descriptions {
+    for &entity in descriptions {
+        if world.get::<tilt_ui::ParkedUi>(entity).is_some() {
+            continue;
+        }
         let width = world
             .get::<Children>(entity)
             .into_iter()

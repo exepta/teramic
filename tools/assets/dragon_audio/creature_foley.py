@@ -142,96 +142,6 @@ def rasp(shot, at, duration, seed, throat, grain, gain):
     shot.mix[start : start + n] += gain * (0.43 * grit + air) * env * flow
 
 
-def dragon_voice(species, cue):
-    # Distinct jaw attacks, then a fraying tail of the dragon's own element.
-    durations = {"roar": (2.72, 3.15, 2.77), "hurt": (0.76, 0.89, 0.78), "death": (3.72, 3.93, 3.51)}
-    duration = durations[cue][species]
-    shot = Shot(duration)
-    seed = 701 + species * 31 + ("roar", "hurt", "death").index(cue)
-    is_hurt = cue == "hurt"
-    start = 0.052 if is_hurt else 0.21
-    length = duration * (0.69 if cue == "death" else 0.82)
-    shot.add("air", 0, 0.01, start + 0.15, (1.62, 1.12), 0.62, 760, 6800, 0.016, 0.07)
-    shot.add("wood", start - 0.018, 0, 0.13, 1.23, 0.64, 200, 3900, 0.002, 0.045)
-    rasp(shot, start, length, seed, (730, 475, 1080)[species], (69, 44, 86)[species], 1.0)
-    # Use brief high-passed snarls as transients. Weight comes from moving
-    # air and rock, leaving the nasal 150–400 Hz animal call out of the body.
-    for j, phase in enumerate((0.0, 0.24, 0.52)):
-        shot.add("tiger", start + phase * length, 1.24 + 0.16 * j,
-                 min(length * 0.44, 0.38), (1.45 - 0.12 * j, 1.12),
-                 0.49 - j * 0.09, 630 + 115 * j, 5900, 0.025, 0.085)
-    if species == 0:
-        shot.add("wind", start, 2.1, length, (1.27, 0.58), 0.54, 58, 420, 0.05, 0.24)
-        for j, phase in enumerate((0.08, 0.42, 0.69)):
-            shot.add("creak", start + length * phase, 0.20, 0.48, (1.8, 1.15),
-                     0.47 - 0.08 * j, 1050, 6400, 0.012, 0.12)
-    elif species == 1:
-        shot.add("surf", start, 6.82, length, (0.75, 0.57), 0.76, 48, 320, 0.045, 0.33)
-        for j, phase in enumerate((0.04, 0.29, 0.52, 0.72)):
-            shot.add("gravel", start + length * phase, 0, 0.54, (0.56 + j * 0.09, 0.69),
-                     0.62 - 0.08 * j, 310, 4100, 0.006, 0.12)
-    else:
-        shot.add("surf", start, 6.9, length, (1.32, 0.70), 0.85, 180, 5400, 0.08, 0.21)
-        for j, phase in enumerate((0.12, 0.23, 0.58)):
-            shot.add("shard", start + phase * length, 0, 0.30, 0.9 + 0.23 * j,
-                     0.39 - 0.07 * j, 1500, 8700, 0.003, 0.06)
-    if cue == "death":
-        shot.add("air", duration * 0.60, 0.035, 0.90, 0.79, 0.56, 340, 4100, 0.07, 0.26)
-        shot.add(("wood", "rock", "splash")[species], duration * 0.81, 0, 0.7,
-                 0.59, 0.78, 50, 3400, 0.005, 0.18)
-    return shot
-
-
-def dragon_foley(species, cue):
-    if cue in ("roar", "hurt", "death"):
-        return dragon_voice(species, cue)
-    s = Shot({"wing": 1.14, "land": 1.62, "cast": 2.28}[cue])
-    material = ["creak", "gravel", "splash"][species]
-    if cue == "wing":
-        s.add("feathers", 0.02, 0.02, 0.61, (0.64, 1.20), 0.82, 85, 5200, 0.09, 0.12)
-        s.add("leaves", 0.08, 1.12, 0.46, (1.65, 1.03), 0.39, 550, 6900, 0.09, 0.09)
-        s.add("wind", 0.09, 2.4, 0.85, (1.27, 0.66), 0.65, 65, 980, 0.19, 0.32)
-        s.add(material, 0.46, 0.00, 0.45, (0.72, 0.95), 0.26, 150, 4700, 0.025, 0.19)
-    elif cue == "land":
-        for j, (at, amp) in enumerate([(0.02, 1), (0.093, 0.86), (0.28, 0.49), (0.43, 0.27)]):
-            s.add("rock", at, 0, 0.59, (0.49 + j * 0.07, 0.64), amp, 42, 2600, 0.006, 0.21)
-            s.add(
-                material, at + 0.016, 0, 0.61, 0.71 + j * 0.07, 0.47 * amp, 120, 4800, 0.007, 0.13
-            )
-        s.add("wind", 0.06, 1.3, 0.95, 0.60, 0.36, 44, 330, 0.08, 0.44)
-    elif species == 0:
-        s.add("air", 0.015, 0.05, 0.57, (0.79, 1.29), 0.71, 240, 6500, 0.10, 0.09)
-        rasp(s, 0.24, 1.21, 831, 882, 55, 0.80)
-        s.add("wind", 0.34, 1.32, 1.73, (1.32, 0.68), 0.82, 125, 3200, 0.22, 0.51)
-        for j, t in enumerate([0.31, 0.58, 0.83]):
-            s.add("shard", t, 0, 0.54, 0.73 - 0.07 * j, 0.24, 840, 6700)
-    elif species == 1:
-        rasp(s, 0.02, 0.66, 832, 480, 41, 0.75)
-        for j, t in enumerate([0.17, 0.34, 0.43, 0.59, 0.85, 1.19]):
-            s.add(
-                ["wood", "rock", "gravel"][j % 3],
-                t,
-                0,
-                0.88,
-                (0.48 + j * 0.09, 0.69),
-                1 - j * 0.11,
-                50,
-                5000,
-                0.004,
-                0.24,
-            )
-        s.add("dunes", 1.25, 0, 0.9, 0.63, 0.31, 160, 2800)
-    else:
-        s.add("tiger", 0.0, 1.04, 0.73, (0.74, 1.12), 0.45, 470, 4700)
-        s.add("surf", 0.09, 4.5, 1.9, (1.38, 0.71), 1.01, 140, 6100, 0.19, 0.35)
-        s.add("splash", 0.26, 0.02, 0.85, (1.12, 0.96), 0.73, 70, 3800, 0.02, 0.25)
-        for j, t in enumerate([0.15, 0.43, 0.62, 0.95, 1.52]):
-            s.add(
-                ["ice", "shard"][j % 2], t, 0.0, 0.59, 1.11 + j * 0.12, 0.29 - j * 0.032, 720, 9200
-            )
-    return s
-
-
 def worm(cue, take):
     dur, peak = {
         "roar": (2.73, 0.67),
@@ -315,9 +225,8 @@ def worm(cue, take):
 
 if __name__ == "__main__":
     fetch()
-    for i, family in enumerate(("dark", "earth", "water")):
-        for cue in ("roar", "wing", "land", "cast", "hurt", "death"):
-            dragon_foley(i, cue).save(OUT / f"{family}-{cue}.wav", 0.77 if cue == "roar" else 0.67)
+    from dragon_voices import render_all
+    render_all()
     dest = ROOT / "assets/audio/sandworm"
     dest.mkdir(exist_ok=True)
     for take in range(3):

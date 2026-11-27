@@ -1,6 +1,6 @@
 //! A single bounded, transient mesh for soft-ground sole and cloven-hoof tracks.
 use bevy::{asset::RenderAssetUsages, light::NotShadowCaster, prelude::*};
-use terra_core::footsteps::{Footstep, FootstepSet, Walker};
+use terra_core::footsteps::{Footstep, FootstepSet, TrackSurface, Walker};
 use terra_world::{
     edits::EditJournal,
     streaming::{ChunkStore, WorldAccess},
@@ -115,10 +115,7 @@ fn update(
             && now - track.born < track.lifetime
             && chunks.block_at(p).map(|b| journal.block(p).unwrap_or(b))
                 == Some(track.step.material)
-            && chunks
-                .block_at([p[0], p[1] + 1, p[2]])
-                .map(|b| journal.block([p[0], p[1] + 1, p[2]]).unwrap_or(b))
-                == Some(0)
+            && track_space(&chunks, &journal, [p[0], p[1] + 1, p[2]])
     });
     let removed = state.marks.len() != previous_count;
     state.dirty |= removed;
@@ -154,12 +151,15 @@ fn update(
     }
     *status = FootprintStatus::default();
     for track in &state.marks {
-        match (track.step.walker, track.step.material) {
-            (Walker::Player, 4) => status.player_sand += 1,
-            (Walker::Player, 5 | 98) => status.player_snow += 1,
-            (_, 4) => status.animal_sand += 1,
-            (_, 5 | 98) => status.animal_snow += 1,
-            _ => {}
+        match (
+            track.step.walker,
+            TrackSurface::from_block(track.step.material),
+        ) {
+            (Walker::Player, Some(TrackSurface::Sand)) => status.player_sand += 1,
+            (Walker::Player, Some(TrackSurface::Snow)) => status.player_snow += 1,
+            (_, Some(TrackSurface::Sand)) => status.animal_sand += 1,
+            (_, Some(TrackSurface::Snow)) => status.animal_snow += 1,
+            (_, None) => {}
         }
     }
     refresh_mesh(&mut state, &mut meshes, now, &chunks, &journal);
@@ -258,7 +258,9 @@ fn supported_patch(
             let Some(actual) = chunks.block_at(p).map(|b| journal.block(p).unwrap_or(b)) else {
                 return false;
             };
-            if actual != material {
+            if actual != material
+                && TrackSurface::from_block(actual) != TrackSurface::from_block(material)
+            {
                 return false;
             }
             let height = y as f32
@@ -272,17 +274,21 @@ fn supported_patch(
                     1.0
                 };
             let above = [x, y + 1, z];
-            if (height - center.y).abs() >= 0.006
-                || chunks
-                    .block_at(above)
-                    .map(|b| journal.block(above).unwrap_or(b))
-                    != Some(0)
-            {
+            if (height - center.y).abs() >= 0.006 || !track_space(chunks, journal, above) {
                 return false;
             }
         }
     }
     true
+}
+
+fn track_space(chunks: &ChunkStore, journal: &EditJournal, above: [i64; 3]) -> bool {
+    // Low non-colliding flowers and snow mounds leave the surrounding snow walkable.
+    use terra_voxel::MaterialId;
+    chunks
+        .block_at(above)
+        .and_then(|block| MaterialId::from_raw(journal.block(above).unwrap_or(block)))
+        .is_some_and(|block| !block.is_solid() && block != MaterialId::FluidWater)
 }
 
 #[cfg(test)]
@@ -373,6 +379,7 @@ mod tests {
 
     fn step(walker: Walker, alternate: bool) -> Footstep {
         Footstep {
+            creature: None,
             position: Vec3::new(-0.5, 1.0, -0.5),
             forward: Vec2::Y,
             walker,
@@ -597,9 +604,13 @@ mod tests {
             Walker::Pig,
             Walker::Bear,
             Walker::Stalker,
+            Walker::Spider,
+            Walker::Dragon,
+            Walker::Slime,
         ] {
             let track = Track {
                 step: Footstep {
+                    creature: None,
                     position: Vec3::new(-5.0, 2.0, -3.0),
                     forward: Vec2::Y,
                     walker,

@@ -36,20 +36,20 @@ fn eight_biome_cache_keeps_exploration_and_fractions_when_read_as_ten_biomes() {
     assert_eq!(source.palette, 917);
     for (index, sample) in source.cells.iter().enumerate() {
         assert_eq!(sample.biome_weights[..8], fractions[..8]);
-        assert_eq!(sample.biome_weights[8], 0.0);
-        assert_eq!(sample.biome_weights[9], 0.0);
+        assert!(sample.biome_weights[8..].iter().all(|&w| w == 0.0));
         assert_eq!(sample.shore, 0.375);
         assert_eq!(sample.snow, 0.625);
         assert_eq!(sample.height, -12);
         assert_eq!(sample.known, index == 0);
     }
     let mut migrated = cached;
-    migrated.source.as_mut().unwrap().cells[0].biome_weights =
-        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.75, 0.0];
+    let weights = &mut migrated.source.as_mut().unwrap().cells[0].biome_weights;
+    weights.fill(0.0);
+    weights[7..9].copy_from_slice(&[0.25, 0.75]);
     save_cached(&root, &migrated).unwrap();
     assert_eq!(
         &fs::read(path(&root, coordinate)).unwrap()[..8],
-        b"TRMAP005"
+        b"TRMAP011"
     );
     assert_eq!(load_cached(&root, coordinate).unwrap(), Some(migrated));
     fs::remove_dir_all(root).unwrap();

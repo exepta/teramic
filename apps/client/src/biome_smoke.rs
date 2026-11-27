@@ -98,6 +98,12 @@ impl Scene {
                 terra_core::BiomeKind::CherryForest => "picker-cherry-forest",
                 terra_core::BiomeKind::SpiritBlossom => "picker-spirit-blossom",
                 terra_core::BiomeKind::BloodForest => "picker-blood-forest",
+                terra_core::BiomeKind::Ashlands => "picker-ashlands",
+                terra_core::BiomeKind::Savanna => "picker-savanna",
+                terra_core::BiomeKind::Swamp => "picker-swamp",
+                terra_core::BiomeKind::PetrifiedForest => "picker-petrified-forest",
+                terra_core::BiomeKind::CrystalHighlands => "picker-crystal-highlands",
+                terra_core::BiomeKind::MistyCoast => "picker-misty-coast",
             },
         }
     }
@@ -194,6 +200,7 @@ pub(crate) fn install(app: &mut App) {
         Ok("kingdom-winter") => (Scene::KingdomWinter, false),
         Ok("outpost") => (Scene::Outpost, false),
         Ok("dragon-lair-dark") => (Scene::DragonLair(dragon_lairs::Kind::Dark), false),
+        Ok("dragon-lair-fire") => (Scene::DragonLair(dragon_lairs::Kind::Fire), false),
         Ok("dragon-lair-earth") => (Scene::DragonLair(dragon_lairs::Kind::Earth), false),
         Ok("dragon-lair-water") => (Scene::DragonLair(dragon_lairs::Kind::Water), false),
         Ok("cemetery") => (Scene::Grave(graves::Kind::Cemetery), false),
@@ -211,6 +218,17 @@ pub(crate) fn install(app: &mut App) {
         }
         Ok("picker-cherry-forest") => (Scene::Picker(terra_core::BiomeKind::CherryForest), false),
         Ok("picker-spirit-blossom") => (Scene::Picker(terra_core::BiomeKind::SpiritBlossom), false),
+        Ok("picker-swamp") => (Scene::Picker(terra_core::BiomeKind::Swamp), false),
+        Ok("picker-misty-coast") => (Scene::Picker(terra_core::BiomeKind::MistyCoast), false),
+        Ok("picker-crystal-highlands") => (
+            Scene::Picker(terra_core::BiomeKind::CrystalHighlands),
+            false,
+        ),
+        Ok("picker-petrified-forest") => {
+            (Scene::Picker(terra_core::BiomeKind::PetrifiedForest), false)
+        }
+        Ok("picker-savanna") => (Scene::Picker(terra_core::BiomeKind::Savanna), false),
+        Ok("picker-ashlands") => (Scene::Picker(terra_core::BiomeKind::Ashlands), false),
         Ok("picker-blood-forest") => (Scene::Picker(terra_core::BiomeKind::BloodForest), false),
         _ => (Scene::Cave, true),
     };
@@ -1121,7 +1139,26 @@ fn find_material(
 }
 
 fn giant_cave_views(terrain: &TerraGenerator) -> Option<Views> {
-    let center = [98_i64, -25, -92];
+    // Prefer the original control chamber when measuring an older generator.
+    // New cave revisions move chambers. Resolve an actual roofed one in the
+    // same seeded world and retain the width, floor and camera checks below.
+    if let Some(views) = giant_chamber_views(terrain, [98, -25, -92]) {
+        return Some(views);
+    }
+    (-4..=4)
+        .flat_map(|z| (-4..=4).map(move |x| (x, z)))
+        .find_map(|(x, z)| {
+            let center =
+                terrain.cave_chamber_center(f64::from(x * 192 + 96), f64::from(z * 192 + 96))?;
+            let room = terrain.cave_structure_at(center[0], center[2]);
+            if !room.active() || room.ceiling + 6. > terrain.surface_height(center[0], center[2]) {
+                return None;
+            }
+            giant_chamber_views(terrain, center.map(|axis| axis.floor() as i64))
+        })
+}
+
+fn giant_chamber_views(terrain: &TerraGenerator, center: [i64; 3]) -> Option<Views> {
     let generator = SectionGenerator::new(terrain.clone());
     let air_width = (-40..=40)
         .filter(|dx| {
@@ -1276,6 +1313,9 @@ fn cherry_brook_views(terrain: &TerraGenerator) -> Option<Views> {
 }
 
 fn highland_views(terrain: &TerraGenerator) -> Option<Views> {
+    if terrain.config().ecology_revision >= 15 && terrain.config().landscape_revision >= 9 {
+        return picker_views(terrain, terra_core::BiomeKind::Highland);
+    }
     let generator = SectionGenerator::new(terrain.clone());
     for anchor in [[512.0, -512.0], [1024.0, 768.0], [-256.0, 256.0]] {
         let mut snow = None;
@@ -1710,6 +1750,7 @@ fn run(world: &mut World) {
                     },
                 )
             || render.error.is_some()
+            || world.resource::<terra_render::PropRenderStatus>().error.is_some()
             || matches!(generation.status, GenerationStatus::Failed(_))
         {
             error!(
@@ -1743,9 +1784,16 @@ fn run(world: &mut World) {
             ) && !world.resource::<terra_render::PropRenderStatus>().ready
             || generation.status != GenerationStatus::Ready
         {
-            state.since = Instant::now();
+            // A stationary chooser scene can schedule small lighting refreshes every
+            // couple of seconds. Take its photo on a fully ready frame after warmup.
+            if !matches!(state.scene, Scene::Picker(_)) {
+                state.since = Instant::now();
+            }
             return;
         }
+        let natural_close = state.stage == 1
+            && matches!(state.scene, Scene::DragonLair(_) | Scene::GiantCave)
+            && std::env::var_os("TERRA_CAVE_NATURAL").is_some();
         if matches!(state.scene, Scene::DragonLair(_)) {
             match dragon_lairs::guardian_ready(world) {
                 Ok(true) => {}
@@ -1757,8 +1805,19 @@ fn run(world: &mut World) {
                 }
             }
             if state.started.elapsed()<Duration::from_secs(8) { return; }
-        } else if state.since.elapsed() < Duration::from_secs(3) {
+        } else if !natural_close && state.since.elapsed() < Duration::from_secs(3) {
             return;
+        }
+        if natural_close && !state.requested {
+            match light_timing::natural_exposure_ready(world, state.scene) {
+                Ok(true) => {}
+                Ok(false) => return,
+                Err(reason) => {
+                    error!(%reason, "Unstable natural underground lighting");
+                    state.failed = true;
+                    return;
+                }
+            }
         }
         let Some(views) = &state.views else {
             state.failed = true;
@@ -2146,12 +2205,13 @@ mod tests {
         let terrain = TerraGenerator::new(terra_core::WorldConfig::default()).unwrap();
         let views = picker_views(&terrain, terra_core::BiomeKind::Highland)
             .expect("fresh world has a genuine snowy mountain photo candidate");
-        assert_eq!(views.probes[0].1, MaterialId::Snow as u16);
+        assert!(views.anchor.y >= 110.0);
+        assert!(picker::snowfield_surface(views.probes[0].1));
         assert!(
             views
                 .probes
                 .iter()
-                .filter(|(_, m)| *m == MaterialId::Snow as u16)
+                .filter(|(_, m)| picker::snowfield_surface(*m))
                 .count()
                 >= 3,
             "snow must occupy the anchor and multiple neighbouring columns"

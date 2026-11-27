@@ -145,7 +145,7 @@ pub(super) fn append(
     level: DetailLevel,
     material: u16,
 ) -> Result<(), String> {
-    let index = usize::from(material == 9) * 512
+    let index = usize::from(matches!(material, 9 | 586)) * 512
         + usize::from(level == DetailLevel::Middle) * 256
         + usize::from(exposure) * 4
         + (variation(global, 0x004c_414d_494e) % 4) as usize;

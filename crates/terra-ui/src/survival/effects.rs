@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use serde::Serialize;
 use terra_core::{EffectKind, SurvivalVitals, effect_definition};
 use terra_network::client::ClientSession;
-use tilt_ui::{ElementId, html_shared};
+use tilt_ui::{ElementClasses, ElementId, html_shared};
 
 #[derive(Debug, Clone, Default, Serialize, PartialEq)]
 pub struct EffectCardView {
@@ -11,7 +11,7 @@ pub struct EffectCardView {
     pub name: String,
     pub time_label: String,
     pub level: u8,
-    pub icon: String,
+    pub icon_class: String,
     pub night_vision: bool,
     pub tooltip: String,
     pub class: String,
@@ -94,7 +94,7 @@ fn describe(vitals: SurvivalVitals, compact: bool) -> StatusEffectView {
             name: definition.name.clone(),
             time_label,
             level: effect.level,
-            icon: format!("Status effect {}", effect.kind.index()),
+            icon_class: format!("atlas-cell-{}", effect.kind.index()),
             night_vision: effect.kind == EffectKind::NightVision,
             tooltip,
             class: format!(
@@ -162,22 +162,21 @@ fn update(
 type IconChanges<'w, 's> = Query<
     'w,
     's,
+    (Entity, &'static ElementClasses, Option<&'static EffectIcon>),
     (
-        Entity,
-        &'static tilt_ui::ImageMetadata,
-        Option<&'static EffectIcon>,
+        With<ImageNode>,
+        Or<(Added<ImageNode>, Changed<ElementClasses>)>,
     ),
-    Or<(Added<ImageNode>, Changed<tilt_ui::ImageMetadata>)>,
 >;
 
 fn tag_icons(mut commands: Commands, images: IconChanges) {
-    for (entity, metadata, current) in &images {
-        let Some(index) = metadata
-            .alt
-            .as_deref()
-            .and_then(|alt| alt.strip_prefix("Status effect "))
+    for (entity, classes, current) in &images {
+        let Some(index) = classes
+            .classes
+            .iter()
+            .find_map(|class| class.strip_prefix("atlas-cell-"))
             .and_then(|index| index.parse::<usize>().ok())
-            .filter(|index| *index < terra_core::effects::EFFECT_COUNT)
+            .filter(|index| *index <= EffectKind::ShieldPower.index())
         else {
             if current.is_some() {
                 commands.entity(entity).remove::<EffectIcon>();
@@ -237,6 +236,41 @@ mod tests {
     use super::*;
 
     #[test]
+    fn translated_alt_text_still_renders_only_the_active_atlas_cell() {
+        let mut app = App::new();
+        app.init_resource::<Assets<Image>>()
+            .add_systems(Update, (tag_icons, atlas_frames).chain());
+        let mut image = Image::default();
+        image.resize(bevy::render::render_resource::Extent3d {
+            width: 1254,
+            height: 1254,
+            depth_or_array_layers: 1,
+        });
+        let handle = app.world_mut().resource_mut::<Assets<Image>>().add(image);
+        let mut vitals = SurvivalVitals::default();
+        vitals.effects.apply(EffectKind::Bleeding, 5.0, 1);
+        let card = describe(vitals, false).cards.pop().unwrap();
+        let entity = app
+            .world_mut()
+            .spawn((
+                ImageNode::new(handle),
+                ElementClasses {
+                    classes: vec!["status-effect-icon".into(), card.icon_class],
+                },
+                tilt_ui::ImageMetadata {
+                    alt: Some("Blutung".into()),
+                    ..default()
+                },
+            ))
+            .id();
+        app.update();
+        assert_eq!(
+            app.world().get::<ImageNode>(entity).unwrap().rect,
+            Some(Rect::new(627.0, 0.0, 940.5, 313.5))
+        );
+    }
+
+    #[test]
     fn cards_are_bounded_and_keep_all_remaining_effects_in_overflow() {
         let mut vitals = SurvivalVitals::default();
         for kind in EffectKind::ALL {
@@ -265,7 +299,7 @@ mod tests {
         assert!(view.expanded && !view.regeneration);
         assert_eq!(view.cards[0].time_label, "--:--");
         assert!(view.cards[0].tooltip.contains("While in smoke"));
-        assert_eq!(view.cards[1].icon, "Status effect 11");
+        assert_eq!(view.cards[1].icon_class, "atlas-cell-11");
         vitals.effects.set_smoke_exposure(false);
         assert!(describe(vitals, false).regeneration);
         assert_eq!(duration_label(0.05, false), "00:01");

@@ -17,6 +17,9 @@ pub mod funnels;
 #[cfg(feature = "bevy")]
 pub mod furnaces;
 pub mod generation;
+pub use generation::{
+    CoastalLandmarkKind, CoastalLandmarkSite, CrystalLandmarkKind, CrystalLandmarkSite,
+};
 #[cfg(feature = "bevy")]
 mod growth;
 pub mod hazards;
@@ -30,6 +33,8 @@ pub mod kingdom_access;
 pub mod kingdom_starter;
 #[cfg(feature = "bevy")]
 pub mod lanterns;
+#[cfg(feature = "bevy")]
+pub mod lava;
 #[cfg(feature = "bevy")]
 pub mod npc_work;
 pub mod objects;
@@ -63,6 +68,7 @@ pub mod trains;
 pub mod tree_felling;
 #[cfg(feature = "bevy")]
 pub mod viscous;
+pub mod volcano;
 pub mod water;
 pub mod weather;
 #[cfg(feature = "bevy")]

@@ -65,9 +65,7 @@ type LampEntities<'w, 's> = Query<
 pub(crate) struct ApplyLocalLights;
 
 fn configure_light_updates(app: &mut App) {
-    // Daylight writes a provisional outdoor exposure during Update; caves
-    // replace it in PostUpdate. Reading the provisional value makes a noon
-    // torch up to 208 times too bright after cave eye adaptation.
+    // Lamps use the eye adaptation of the frame they illuminate.
     app.configure_sets(
         PostUpdate,
         ApplyLocalLights
@@ -229,7 +227,10 @@ fn sync_lamps(
                 lamp.1,
                 location(
                     lamp.0,
-                    journal.block(lamp.0).or_else(|| chunks.block_at(lamp.0)) == Some(40),
+                    journal
+                        .block(lamp.0)
+                        .or_else(|| chunks.block_at(lamp.0))
+                        .is_some_and(terra_core::block_shapes::is_torch),
                     |p| chunks.block_at(p).map(|m| journal.block(p).unwrap_or(m)),
                 ),
             );
@@ -246,7 +247,10 @@ fn sync_lamps(
             light,
             location(
                 p,
-                journal.block(p).or_else(|| chunks.block_at(p)) == Some(40),
+                journal
+                    .block(p)
+                    .or_else(|| chunks.block_at(p))
+                    .is_some_and(terra_core::block_shapes::is_torch),
                 |p| chunks.block_at(p).map(|m| journal.block(p).unwrap_or(m)),
             ),
         );
@@ -293,27 +297,56 @@ fn select_emitters(
     forward: Vec3,
     budget: usize,
 ) -> BTreeMap<[i64; 3], BlockLight> {
+    if emitters.is_empty() {
+        return BTreeMap::new();
+    }
     let mut candidates: Vec<_> = emitters
         .iter()
         .filter_map(|&(cell, light)| {
             let section = global_to_section(cell).0;
             let delta = Vec3::from_array(cell.map(|v| v as f32)) - focus;
-            chunks
-                .loaded
-                .contains_key(&section)
-                .then_some((delta.length_squared(), cell, light))
+            chunks.loaded.contains_key(&section).then_some((
+                delta.length_squared(),
+                cell,
+                light,
+                None,
+            ))
         })
         .collect();
     candidates.sort_unstable_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
     candidates.dedup_by_key(|candidate| candidate.1);
 
     let exposed = |cell, light| {
-        let block = |p| chunks.block_at(p).map(|id| journal.block(p).unwrap_or(id));
+        // Most sight lines repeatedly sample clean generated voxels from one
+        // section. The fallback retains the same per-cell edit and unknown-base rules.
+        let mut previous = None;
+        let mut clean_voxels = None;
+        let mut block = |p| {
+            let (section, local) = global_to_section(p);
+            if previous != Some(section) {
+                previous = Some(section);
+                clean_voxels =
+                    if journal.revision(section) == 0 && !chunks.voxel_base_pending(section) {
+                        chunks.loaded.get(&section).map(|s| s.data.blocks())
+                    } else {
+                        None
+                    };
+            }
+            if let Some(voxels) = clean_voxels {
+                Some(voxels[local[0] + 16 * (local[1] + 16 * local[2])])
+            } else {
+                chunks.block_at(p).map(|id| journal.block(p).unwrap_or(id))
+            }
+        };
         let source = emitter_location(
             journal,
             cell,
             light,
-            location(cell, block(cell) == Some(40), block),
+            location(
+                cell,
+                block(cell).is_some_and(terra_core::block_shapes::is_torch),
+                &mut block,
+            ),
         );
         visible(
             focus,
@@ -326,11 +359,11 @@ fn select_emitters(
     // A dense near wall of crystals must not leave the next chamber completely dark.
     let mut selected = BTreeMap::new();
     let mut sampled = HashMap::<SectionPos, u8>::new();
-    for &(_, cell, _) in candidates.iter().take(budget - budget / 4) {
+    for &(_, cell, _, _) in candidates.iter().take(budget - budget / 4) {
         sampled.insert(global_to_section(cell).0, 3);
     }
     let mut probes = 0;
-    for &(distance, cell, light) in &candidates {
+    for &mut (distance, cell, light, ref mut visibility) in &mut candidates {
         if selected.len() >= budget / 4 || probes >= 32 {
             break;
         }
@@ -345,14 +378,16 @@ fn select_emitters(
         }
         *count += 1;
         probes += 1;
-        if exposed(cell, light) {
+        let clear = exposed(cell, light);
+        *visibility = Some(clear);
+        if clear {
             selected.insert(cell, light);
             *count = 3;
         }
     }
     let mut ranked = Vec::with_capacity(64);
-    for (distance, cell, light) in candidates.into_iter().take(64) {
-        let clear = exposed(cell, light);
+    for (distance, cell, light, visibility) in candidates.into_iter().take(64) {
+        let clear = visibility.unwrap_or_else(|| exposed(cell, light));
         if !clear && distance > (light.range + 2.0).powi(2) {
             continue;
         }
@@ -566,7 +601,10 @@ fn mounted_location(journal: &EditJournal, p: [i64; 3], ordinary: Vec3) -> Vec3 
                 .map(|v| v as f32),
         ) + Vec3::from_array(p.map(|v| v as f32));
     }
-    if journal.block(p) != Some(40) {
+    if !journal
+        .block(p)
+        .is_some_and(terra_core::block_shapes::is_torch)
+    {
         return ordinary;
     }
     let facing = journal.object_state(p).map_or(0, |s| s.facing);
@@ -641,11 +679,13 @@ fn exposed_sources(
     sources
         .iter()
         .filter_map(|&(p, material, light)| {
-            (matches!(material, 40 | terra_core::lantern::LANTERN)
-                || NEIGHBORS.into_iter().any(|d| {
-                    let q = std::array::from_fn(|i| p[i] + d[i]);
-                    chunks.block_at(q).map(|m| journal.block(q).unwrap_or(m)) == Some(0)
-                }))
+            (matches!(
+                material,
+                40 | terra_core::block_shapes::VIOLET_TORCH | terra_core::lantern::LANTERN
+            ) || NEIGHBORS.into_iter().any(|d| {
+                let q = std::array::from_fn(|i| p[i] + d[i]);
+                chunks.block_at(q).map(|m| journal.block(q).unwrap_or(m)) == Some(0)
+            }))
             .then_some((p, light))
         })
         .collect()
@@ -680,6 +720,29 @@ fn visible(from: Vec3, to: Vec3, mut block: impl FnMut([i64; 3]) -> Option<u16>)
         return true;
     }
     let direction = delta / distance;
+    let opaque = |cell: Option<u16>| {
+        cell.is_none_or(|id| {
+            id != 0
+                && terra_voxel::MaterialId::from_raw(id)
+                    .is_none_or(terra_voxel::MaterialId::is_opaque)
+        })
+    };
+    // A distant underground source is often hidden just beyond its own cave
+    // ceiling. Prove occlusion inside a crossed voxel before walking from the
+    // camera. Points on grid planes are left to the picker’s exact tie rules.
+    for offset in [3.5, 12.5, 32.5] {
+        if offset >= distance {
+            break;
+        }
+        let probe = to.as_dvec3() - direction * offset;
+        let frac = probe - probe.floor();
+        if frac.min_element() > 1.0e-6
+            && frac.max_element() < 1.0 - 1.0e-6
+            && opaque(block(probe.floor().as_i64vec3().to_array()))
+        {
+            return false;
+        }
+    }
     let mut travelled = 0.0;
     // The shared voxel picker accepts rays up to 128 m. Split the sight line
     // so a longer, rejected query cannot accidentally report an open tunnel.
@@ -689,12 +752,7 @@ fn visible(from: Vec3, to: Vec3, mut block: impl FnMut([i64; 3]) -> Option<u16>)
             (from.as_dvec3() + direction * travelled).to_array(),
             direction.to_array(),
             length,
-            |p| {
-                Some(u16::from(block(p).is_none_or(|id| {
-                    terra_voxel::MaterialId::from_raw(id)
-                        .is_none_or(terra_voxel::MaterialId::is_opaque)
-                })))
-            },
+            |p| Some(u16::from(opaque(block(p)))),
         );
         if hit.is_some() {
             return false;
@@ -725,7 +783,7 @@ fn location(p: [i64; 3], torch: bool, mut block: impl FnMut([i64; 3]) -> Option<
     center + Vec3::from_array(normal.map(|v| v as f32)) * 1.0
 }
 
-fn exposure_gain(exposure: f32) -> f32 {
+pub(crate) fn exposure_gain(exposure: f32) -> f32 {
     2.0_f32.powf(exposure - 6.0).clamp(1.0, 256.0)
 }
 fn cave_gain(light: BlockLight, blend: f32) -> f32 {
@@ -863,17 +921,18 @@ fn held(
             && session.ready
             && !session.dead()
             && session.game_mode != terra_core::GameMode::Spectator
-            && selected
+            && let Some(terra_core::ItemKind::Block(material)) = selected
                 .0
                 .and_then(|slot| session.inventory.slot(usize::from(slot)))
-                .is_some_and(|s| {
-                    matches!(
-                        s.item,
-                        terra_core::ItemKind::Block(40 | terra_core::lantern::LANTERN)
-                    )
-                })
+                .map(|stack| stack.item)
+            && (terra_core::block_shapes::is_torch(material)
+                || material == terra_core::lantern::LANTERN)
         {
-            desired.push((None, body.translation + Vec3::new(0.3, 0.45, -0.25)));
+            desired.push((
+                None,
+                body.translation + Vec3::new(0.3, 0.45, -0.25),
+                material,
+            ));
         }
         if let Some(remotes) = remotes.as_ref() {
             let eye = cameras
@@ -884,7 +943,22 @@ fn held(
                 .players
                 .iter()
                 .filter(|(_, t)| t.current.held_torch)
-                .map(|(&id, t)| (Some(id), t.position() + Vec3::new(0.3, 0.45, -0.25)))
+                .map(|(&id, t)| {
+                    (
+                        Some(id),
+                        t.position() + Vec3::new(0.3, 0.45, -0.25),
+                        if matches!(
+                            t.current.held_item,
+                            Some(terra_core::ItemKind::Block(
+                                terra_core::block_shapes::VIOLET_TORCH
+                            ))
+                        ) {
+                            terra_core::block_shapes::VIOLET_TORCH
+                        } else {
+                            40
+                        },
+                    )
+                })
                 .collect();
             remote.sort_by(|a, b| {
                 a.1.distance_squared(eye)
@@ -901,19 +975,38 @@ fn held(
     });
     sources.0.dedup_by(|a, b| a.abs_diff_eq(*b, 0.02));
     let gain = exposure_gain(cameras.iter().next().map_or(6.0, |(_, e)| e.ev100));
-    let Some((_, definition)) = assets.lights().find(|(material, _)| *material == 40) else {
-        return;
+    let palette = |id| {
+        let id = if id == terra_core::block_shapes::VIOLET_TORCH {
+            id
+        } else {
+            40
+        };
+        assets
+            .lights()
+            .find(|(material, _)| *material == id)
+            .map(|(_, def)| def)
     };
-    let intensity = definition.intensity
-        * soft_core.flux(definition)
-        * gain
-        * cave_gain(definition, cave.blend)
-        * (1.0 + definition.flicker * (time.elapsed_secs() * 5.7).sin());
+    let intensity = |definition: BlockLight| {
+        definition.intensity
+            * soft_core.flux(definition)
+            * gain
+            * cave_gain(definition, cave.blend)
+            * (1.0 + definition.flicker * (time.elapsed_secs() * 5.7).sin())
+    };
     for (entity, id, mut transform, mut light) in &mut lights {
-        if let Some(index) = desired.iter().position(|(key, _)| *key == id.0) {
-            let (_, position) = desired.remove(index);
+        if let Some(index) = desired.iter().position(|(key, _, _)| *key == id.0) {
+            let (_, position, material) = desired.remove(index);
+            let Some(definition) = palette(material) else {
+                continue;
+            };
+            light.color = Color::srgb(
+                definition.color[0],
+                definition.color[1],
+                definition.color[2],
+            );
+            light.range = definition.range;
             transform.translation = position;
-            light.intensity = intensity;
+            light.intensity = intensity(definition);
             light.radius = soft_core.radius(definition);
             light.shadow_maps_enabled =
                 source_shadows(definition, id.0.is_none(), graphics.as_deref());
@@ -921,7 +1014,10 @@ fn held(
             commands.entity(entity).despawn();
         }
     }
-    for (id, position) in desired {
+    for (id, position, material) in desired {
+        let Some(definition) = palette(material) else {
+            continue;
+        };
         commands.spawn((
             Name::new("Carried torch light"),
             HeldLamp(id),
@@ -934,7 +1030,7 @@ fn held(
                     definition.color[1],
                     definition.color[2],
                 ),
-                intensity,
+                intensity: intensity(definition),
                 range: definition.range,
                 radius: soft_core.radius(definition),
                 shadow_maps_enabled: source_shadows(definition, id.is_none(), graphics.as_deref()),
@@ -1861,6 +1957,23 @@ mod tests {
         assert!(visible(a, far, |_| Some(0)));
         assert!(!visible(a, far, |p| Some(if p[0] == 150 { 3 } else { 0 })));
     }
+    #[test]
+    fn distant_sight_lines_reject_an_opaque_interior_near_the_emitter_without_a_long_walk() {
+        let start = Vec3::new(-192.75, 0.35, 0.8);
+        let end = Vec3::new(33.25, 0.35, 0.8);
+        let mut samples = 0;
+        assert!(!visible(start, end, |cell| {
+            samples += 1;
+            Some(if cell[0] == 29 { 3 } else { 0 })
+        }));
+        assert_eq!(samples, 1);
+        // A line following a face keeps the voxel picker's side convention.
+        let on_plane = Vec3::new(0.0, 0.65, 0.0);
+        assert!(visible(start + on_plane, end + on_plane, |cell| {
+            Some(if cell[1] == 0 { 3 } else { 0 })
+        }));
+    }
+
     #[test]
     fn emitters_clear_their_opaque_flame_and_crystal_geometry() {
         let p = location([-1, 0, 0], false, |p| Some(if p[0] == 0 { 0 } else { 3 }));

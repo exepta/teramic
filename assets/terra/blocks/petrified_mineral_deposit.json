@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 713,
+  "name": "Mineral Deposit",
+  "description": "Turquoise and citrine prisms grow from one stone matrix.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.3,
+  "resistance": 2.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/petrified_mineral_deposit.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

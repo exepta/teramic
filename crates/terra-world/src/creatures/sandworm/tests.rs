@@ -334,7 +334,7 @@ fn generated_desert(terrain: &TerraGenerator) -> ([i64; 2], ChunkStore) {
             let surface = terrain.surface_column(px, pz);
             let biome = super::super::biome_slug(terrain.surface_biome(&surface));
             if surface_species(biome, seed).is_none()
-                || surface.surface_material != MaterialId::Sand
+                || !burrowable_ground(surface.surface_material as u16, false)
                 || surface.slope > 0.25
                 || terrain.water_column(px, pz).is_some()
             {
@@ -446,19 +446,23 @@ fn natural_spawner_creates_a_worm_in_generated_desert_and_repairs_old_empty_habi
     assert_eq!(a.behavior, B::Burrowed);
     assert!(a.valid());
     assert_eq!(surface(&habitat, a.position), Some(a.position));
-    assert_eq!(
-        habitat.block([
-            a.position[0].floor() as i64,
-            a.position[1] as i64 - 1,
-            a.position[2].floor() as i64
-        ]),
-        Some(MaterialId::Sand as u16)
+    assert!(
+        habitat
+            .block([
+                a.position[0].floor() as i64,
+                a.position[1] as i64 - 1,
+                a.position[2].floor() as i64
+            ])
+            .is_some_and(|ground| burrowable_ground(ground, false))
     );
     assert!(
         chunks
             .loaded
             .values()
-            .any(|s| s.data.blocks().contains(&(MaterialId::Sandstone as u16)))
+            .any(|s| s.data.blocks().iter().any(|&id| matches!(
+                MaterialId::from_raw(id),
+                Some(MaterialId::Sandstone | MaterialId::BandedSandstone)
+            )))
     );
     let saved = population.clone();
     assert!(!super::super::spawn_cell(&mut population, &habitat, home));

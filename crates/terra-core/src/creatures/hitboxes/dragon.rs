@@ -35,6 +35,9 @@ pub(super) fn add(boxes: &mut Hitboxes, dragon: &Creature) {
     }
     for s in [-1i8, 1] {
         let side = f32::from(s);
+        if dragon.kind == crate::creatures::CreatureKind::WaterDragon {
+            continue;
+        }
         for hind in [false, true] {
             let upper = Joint::Thigh { side: s, hind };
             let foot = Joint::Foot { side: s, hind };
@@ -43,6 +46,9 @@ pub(super) fn add(boxes: &mut Hitboxes, dragon: &Creature) {
             seg(boxes, upper, upper.pivot(), foot.pivot(), 1.40);
             seg(boxes, foot, foot.pivot(), ankle, 1.18);
             seg(boxes, paw, ankle, ankle - v(0., 0.38, 1.72), 1.13);
+        }
+        if !dragons::flies(dragon.kind) {
+            continue;
         }
         let arm = Joint::WingArm(s);
         let wing_factor = dragons::wing_scale(dragon.kind, dragon.variant);

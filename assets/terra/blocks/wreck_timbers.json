@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 568,
+  "name": "Wreck Timbers",
+  "description": "Broken timbers from a stranded hull.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 0.7,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/wreck_timbers.glb",
+  "collision_boxes": [],
+  "textures": {}
+}

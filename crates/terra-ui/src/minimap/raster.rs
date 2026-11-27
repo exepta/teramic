@@ -417,45 +417,27 @@ pub(super) fn albedo(sample: &MapSample, palette: &MapPalette, layer: MapLayer) 
         let attenuation = 1.0 - (f32::from(sample.water_depth).min(18.0) * 0.022);
         return rgb.map(|v| v * attenuation);
     }
-    if matches!(sample.material, 1 | 4 | 5)
-        || layer == MapLayer::Surface && matches!(sample.material, 306 | 400)
-    {
-        let grass: [f32; 3] = std::array::from_fn(|a| {
+    let climate = || {
+        std::array::from_fn(|a| {
             sample
                 .biome_weights
                 .iter()
                 .zip(palette.biome_colors)
                 .map(|(w, c)| w * c[a])
-                .sum()
-        });
+                .sum::<f32>()
+        })
+    };
+    if matches!(sample.material, 1 | 306 | 400) {
+        let grass = climate();
         if layer == MapLayer::Surface
-            && matches!(sample.material, 1 | 306 | 400)
             && palette.authored_grass
             && let Some(top) = palette.surface_grass
         {
-            let tint = palette.authored_grass_tint(
-                grass,
-                sample.biome_weights[7] + sample.biome_weights[8] + sample.biome_weights[9],
-            );
+            let tint = palette.authored_grass_tint(grass, sample.biome_weights[7..10].iter().sum());
             return std::array::from_fn(|axis| top[axis] * tint[axis]);
         }
-        let turf = palette.colors.get(1).copied().unwrap_or([0.38; 3]);
-        let sand = palette.colors.get(4).copied().unwrap_or([0.72, 0.60, 0.34]);
-        let snow = palette.colors.get(5).copied().unwrap_or([0.94, 0.97, 1.0]);
-        let shore = sample.shore.clamp(0.0, 1.0);
-        let aridity = sample.biome_weights[3] + sample.biome_weights[6];
-        let snow_cover =
-            sample.snow.clamp(0.0, 1.0) * (1.0 - ((aridity - 0.35) / 0.30).clamp(0.0, 1.0));
-        let blend = match sample.material {
-            4 => (shore / 0.35).clamp(0.0, 1.0),
-            5 => (snow_cover / 0.35).clamp(0.0, 1.0),
-            _ => 1.0,
-        };
-        for a in 0..3 {
-            let natural = turf[a] * grass[a];
-            let natural = natural + (sand[a] - natural) * shore;
-            let natural = natural + (snow[a] - natural) * snow_cover;
-            rgb[a] += (natural - rgb[a]) * blend;
+        if sample.material == 1 {
+            return std::array::from_fn(|axis| rgb[axis] * grass[axis]);
         }
     }
     rgb
@@ -1483,7 +1465,7 @@ mod tests {
     fn colors_follow_actual_palette_and_different_materials() {
         let mut palette = MapPalette {
             colors: vec![[0.3, 0.3, 0.3]; 44],
-            biome_colors: [[0.2, 0.6, 0.1]; 10],
+            biome_colors: [[0.2, 0.6, 0.1]; 16],
             ..Default::default()
         };
         let sample = MapSample {
@@ -1521,7 +1503,7 @@ mod tests {
     fn authored_palette() -> MapPalette {
         let mut palette = MapPalette {
             colors: vec![[0.15, 0.09, 0.03]; 44],
-            biome_colors: [[0.28, 0.40, 0.08]; 10],
+            biome_colors: [[0.28, 0.40, 0.08]; 16],
             authored_grass: true,
             surface_grass: Some([0.28, 0.46, 0.08]),
             ..Default::default()
@@ -1536,24 +1518,28 @@ mod tests {
         let palette = authored_palette();
         let forest = MapSample {
             material: 1,
-            biome_weights: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            biome_weights: [
+                0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ],
             shore: 0.8,
             snow: 0.9,
             known: true,
             ..Default::default()
         };
-        // Authored world grass uses its own top, including at transition bands.
+        // Pure forest keeps its painted top. The dry fringe follows the grass pigment.
         assert_eq!(
             albedo(&forest, &palette, MapLayer::Surface),
             palette.surface_grass.unwrap()
         );
         let blend = MapSample {
-            biome_weights: [0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            biome_weights: [
+                0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ],
             ..forest
         };
         for (actual, expected) in albedo(&blend, &palette, MapLayer::Surface)
             .into_iter()
-            .zip([0.448, 0.506, 0.06])
+            .zip(std::array::from_fn::<_, 3, _>(|i| [0.448, 0.506, 0.06][i]))
         {
             assert!((actual - expected).abs() < 1e-6);
         }

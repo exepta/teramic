@@ -53,7 +53,7 @@ def noise(x, y, salt=0):
 # Full-resolution, code-authored art. The cube silhouette remains closed and the
 # surface detail is inward-only; none of these settings affect collision.
 PATTERNS = {
-    306: ([80, 178, 166], 'grass'), 307: ([151, 109, 140], 'dirt'),
+    306: ([128, 143, 139], 'grass'), 307: ([128, 105, 125], 'dirt'),
     308: ([160, 143, 181], 'stone'), 309: ([237, 119, 177], 'petal'),
     310: ([243, 157, 200], 'pink'), 311: ([224, 222, 248], 'white'),
     312: ([181, 138, 226], 'lavender'), 313: ([137, 83, 111], 'bark'),
@@ -64,7 +64,7 @@ SURFACES = {306: 'turf', 307: 'earth', 308: 'rock', 313: 'wood', 314: 'wood', 31
 
 def texture_pixel(x, y, color, pattern):
     if pattern in ('grass', 'grass_side'):
-        return turf(x, y, [80, 178, 166], [151, 109, 140], side=pattern == 'grass_side')
+        return turf(x, y, [128, 143, 139], [128, 105, 125], side=pattern == 'grass_side')
     if pattern == 'dirt':
         return soil(x, y, color)
     if pattern in ('pink', 'white', 'lavender', 'petal'):
@@ -95,8 +95,8 @@ def cube_art_only():
         color, pattern = PATTERNS[material]
         texture(slug, color, pattern)
         if material == 306:
-            texture(slug + '_side', [151, 109, 140], 'grass_side')
-            texture(slug + '_bottom', [151, 109, 140], 'dirt')
+            texture(slug + '_side', [128, 105, 125], 'grass_side')
+            texture(slug + '_bottom', [128, 105, 125], 'dirt')
         elif material == 313:
             texture(slug + '_end', [209, 142, 170], 'end')
         if material in SURFACES:
@@ -265,8 +265,8 @@ def main():
             texture(slug, color, pattern)
             names = [slug] * 6
             if material == 306:
-                texture(slug + '_side', [151, 109, 140], 'grass_side')
-                texture(slug + '_bottom', [151, 109, 140], 'dirt')
+                texture(slug + '_side', [128, 105, 125], 'grass_side')
+                texture(slug + '_bottom', [128, 105, 125], 'dirt')
                 names = [slug + '_side', slug + '_side', slug + '_bottom', slug, slug + '_side', slug + '_side']
             elif material == 313:
                 texture(slug + '_end', [209, 142, 170], 'end')

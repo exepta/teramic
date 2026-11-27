@@ -151,7 +151,10 @@ pub fn update_debug_overlay(
             terra_core::creatures::CreatureBehavior::DragonVolley => "Wirft eine Salve",
             terra_core::creatures::CreatureBehavior::DragonWard => "Baut einen Schild auf",
             terra_core::creatures::CreatureBehavior::DragonSurge => "Bündelt Elementarkraft",
-            terra_core::creatures::CreatureBehavior::Spit if animal.kind.is_dragon() => "Speit Elementaratem",
+            terra_core::creatures::CreatureBehavior::Spit if animal.kind.is_dragon() => {
+                "Speit Elementaratem"
+            }
+            terra_core::creatures::CreatureBehavior::DragonBurrow => "Gräbt sich ein",
             terra_core::creatures::CreatureBehavior::Spit => "Speit Galle",
         }
         .into();
@@ -462,6 +465,12 @@ pub fn update_debug_overlay(
                     BiomeKind::CherryForest => "Cherry Forest",
                     BiomeKind::SpiritBlossom => "Spirit Blossom",
                     BiomeKind::BloodForest => "Blood Forest",
+                    BiomeKind::Ashlands => "Ashlands",
+                    BiomeKind::Savanna => "Savanna",
+                    BiomeKind::Swamp => "Swamp",
+                    BiomeKind::PetrifiedForest => "Petrified Forest",
+                    BiomeKind::CrystalHighlands => "Crystal Highlands",
+                    BiomeKind::MistyCoast => "Misty Coast",
                 }
                 .into()
             },

@@ -111,3 +111,24 @@ fn raycast_rebases_large_coordinates_and_stops_at_unloaded_sections() {
         .is_none()
     );
 }
+
+#[test]
+fn uniform_sections_share_readonly_voxels_and_edit_independently() {
+    for material in [MaterialId::Air as u16, MaterialId::Stone as u16] {
+        let mut a =
+            BlockSection::from_blocks(SectionPos::default(), 7, vec![material; SECTION_VOLUME])
+                .unwrap();
+        let b = a.clone();
+        assert_eq!(a.blocks().as_ptr(), b.blocks().as_ptr());
+        a.set_block([15; 3], 259).unwrap();
+        assert_eq!(b.block([15; 3]).unwrap(), material);
+        assert_eq!(a.block([15; 3]).unwrap(), 259);
+        assert_eq!(a.revision(), 8);
+        assert!(a.may_contain(259));
+        a.set_block([15; 3], material).unwrap();
+        assert_eq!(a.blocks(), b.blocks());
+        if material == 0 {
+            assert_eq!(a.blocks().as_ptr(), b.blocks().as_ptr());
+        }
+    }
+}

@@ -396,3 +396,50 @@ fn arbitrary_course_frames_preserve_world_flow_and_cross_chunk_coordinates() {
         }
     }
 }
+
+#[test]
+fn lake_inlet_grades_both_banks_in_the_reported_world() {
+    let terrain = TerraGenerator::new(WorldConfig {
+        seed: WorldSeed(691981809961697191),
+        ecology_revision: 19,
+        rivers: true,
+        biome_definitions: Some(terra_core::BiomeDefinitions::default()),
+        ..Default::default()
+    })
+    .unwrap();
+    // These adjacent columns in the player's exploration map went from a
+    // 58 m grass shelf to the 21 m riverbed outside the lake at (352, -352).
+    for x in 448..=454 {
+        for z in -410..=-397 {
+            let at =
+                |x: i32, z: i32| terrain.surface_height(f64::from(x) + 0.5, f64::from(z) + 0.5);
+            let h = at(x, z);
+            for (nx, nz) in [(x + 1, z), (x, z + 1)] {
+                let next = at(nx, nz);
+                assert!((next - h).abs() < 5.0, "({x},{z}) {h} -> {next}");
+            }
+        }
+    }
+    // The exterior banks of the covered tributary and waterfall also
+    // intersect uphill. Both erosion profiles must survive their join.
+    for x in 425..=434 {
+        let higher = terrain.surface_height(f64::from(x) + 0.5, -432.5);
+        let lower = terrain.surface_height(f64::from(x) + 0.5, -433.5);
+        assert!(
+            (higher - lower).abs() < 4.0,
+            "main/tributary edge {x}: {lower} -> {higher}"
+        );
+    }
+    // The actual waterfall still steps down. On its dry flank the partially
+    // lake-fed hydraulic head must not leave a second step facing upstream.
+    for x in 432..=436 {
+        let at = |z| terrain.surface_height(f64::from(x) + 0.5, z);
+        assert!((at(-443.5) - at(-442.5)).abs() < 5.0, "fall flank {x}");
+    }
+    let channel = terrain.surface_column(451.5, -405.5);
+    assert!(
+        channel
+            .water_level
+            .is_some_and(|level| level > channel.height)
+    );
+}

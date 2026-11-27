@@ -314,6 +314,9 @@ impl TerraGenerator {
                 0 => PropKind::Mushroom,
                 1 | 2 => PropKind::Fern,
                 5 => PropKind::Bush,
+                6 if self.surface_biome(&c) == super::biomes::BiomeKind::PetrifiedForest => {
+                    PropKind::Mushroom
+                }
                 6 => PropKind::Flower,
                 7 => PropKind::SmallPlant,
                 _ => PropKind::Grass,

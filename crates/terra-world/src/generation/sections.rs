@@ -295,10 +295,28 @@ pub struct GeneratedSection {
 #[derive(Clone)]
 pub struct SectionGenerator {
     terrain: TerraGenerator,
+    faces_only: bool,
 }
 impl SectionGenerator {
     pub fn new(terrain: TerraGenerator) -> Self {
-        Self { terrain }
+        Self {
+            terrain,
+            faces_only: false,
+        }
+    }
+    #[cfg(feature = "bevy")]
+    pub(crate) fn for_streaming(terrain: TerraGenerator) -> Self {
+        Self {
+            terrain,
+            faces_only: true,
+        }
+    }
+    fn section_mesh(&self, padded: &[u16]) -> Result<BlockMesh, MeshError> {
+        if self.faces_only {
+            terra_voxel::meshing::mesh_section_faces(padded)
+        } else {
+            mesh_section(padded)
+        }
     }
     pub fn terrain(&self) -> &TerraGenerator {
         &self.terrain
@@ -385,7 +403,7 @@ impl SectionGenerator {
                 blocks.extend_from_slice(&padded[start..start + SECTION_SIZE]);
             }
         }
-        let mut mesh = mesh_section(&padded)?;
+        let mut mesh = self.section_mesh(&padded)?;
         for (index, &material) in blocks.iter().enumerate() {
             if !crate::segments::is_segment(material) {
                 continue;
@@ -491,11 +509,22 @@ impl SectionGenerator {
                 .structures
                 .iter()
                 .find_map(|site| site.block_at(p))
-                .or_else(|| self.terrain.natural_material_at(p))
+                .or_else(|| {
+                    if (start[0]..start[0] + size as i64).contains(&p[0])
+                        && (start[2]..start[2] + size as i64).contains(&p[2])
+                    {
+                        column
+                            .natural_features
+                            .iter()
+                            .find_map(|patch| patch.block_at(p))
+                    } else {
+                        self.terrain.natural_material_at(p)
+                    }
+                })
         };
         if edits.is_empty() && start[1] as f64 + 0.5 > column.maximum {
             return Ok(GeneratedSection {
-                data: BlockSection::from_blocks(position, revision, vec![0; SECTION_VOLUME])?,
+                data: BlockSection::empty_at_revision(position, revision)?,
                 mesh: with_mesh.then(BlockMesh::default),
                 water: None,
                 props: Vec::new(),
@@ -586,6 +615,50 @@ impl SectionGenerator {
         }
         let mut blocks = vec![0; SECTION_VOLUME];
         let mut props = Vec::new();
+        if self.terrain.config().ecology_revision >= 16
+            && self.terrain.config().water
+            && columns.iter().any(|c| {
+                c.water_columns()
+                    .intervals
+                    .into_iter()
+                    .flatten()
+                    .any(|w| w.level > origin[1] as f64 - 1. && w.bed < origin[1] as f64 + 17.)
+                    && c.biome_kind(self.terrain.config().sea_level)
+                        == super::biomes::BiomeKind::Ocean
+            })
+        {
+            let surface = |p: [i64; 3]| {
+                let (x, z) = (p[0] - start[0], p[2] - start[2]);
+                if [x, z].iter().all(|v| (0..size as i64).contains(v)) {
+                    columns[x as usize + z as usize * size]
+                } else {
+                    self.terrain
+                        .surface_column(p[0] as f64 + 0.5, p[2] as f64 + 0.5)
+                }
+            };
+            crate::props::reef_flora::colonize(
+                origin,
+                self.terrain.config().seed.0,
+                |p| {
+                    let c = surface(p);
+                    c.biome_kind(self.terrain.config().sea_level) == super::biomes::BiomeKind::Ocean
+                        && crate::water::fluid::from_columns(c.water_columns(), p[1]).amount >= 7
+                },
+                |p| {
+                    let [x, y, z] = std::array::from_fn(|i| p[i] - start[i]);
+                    if [x, y, z].iter().all(|v| (0..size as i64).contains(v)) {
+                        padded[x as usize + size * (y as usize + size * z as usize)]
+                    } else {
+                        edits
+                            .get(&p)
+                            .copied()
+                            .or_else(|| structure_at(p))
+                            .unwrap_or_else(|| self.terrain_block(p, surface(p)))
+                    }
+                },
+                &mut props,
+            );
+        }
         if self.terrain.config().cave_structure_revision >= 4 {
             props.extend(super::webs::generate(
                 position,
@@ -653,7 +726,7 @@ impl SectionGenerator {
             }
         }
         let mesh = if with_mesh {
-            let mut mesh = mesh_section(&padded)?;
+            let mut mesh = self.section_mesh(&padded)?;
             for z in 0..16 {
                 for y in 0..16 {
                     for x in 0..16 {
@@ -894,6 +967,7 @@ impl SectionGenerator {
                     MaterialId::CoralPurple as u16,
                 ]
                 .contains(&material)
+                    && !(matches!(material, 541..=544) && column.water_level.is_some())
                 {
                     continue;
                 }
@@ -906,13 +980,6 @@ impl SectionGenerator {
                         .get(&above)
                         .copied()
                         .or_else(|| structure_at(above))
-                        .or_else(|| {
-                            if self.terrain.config().ecology_revision >= 6 {
-                                self.terrain.natural_material_at(above)
-                            } else {
-                                None
-                            }
-                        })
                         .unwrap_or_else(|| {
                             trees
                                 .iter()
@@ -992,7 +1059,9 @@ impl SectionGenerator {
             }
         }
         let mut fluid_wake = Vec::new();
-        if self.terrain.config().water {
+        // A pristine prepared column already owns all of its grounded flow.
+        // Only a modified channel can expose a new unplanned opening.
+        if self.terrain.config().water && !edits.is_empty() {
             for z in padding..size - padding {
                 for x in padding..size - padding {
                     let c = columns[x + size * z];
@@ -1155,7 +1224,7 @@ impl SectionGenerator {
             .or_else(|| trees.iter().find_map(|tree| tree.leaves_at(global)))
             .map_or(0, |material| material as u16))
     }
-    fn terrain_block(&self, global: [i64; 3], column: SurfaceColumn) -> u16 {
+    pub(super) fn terrain_block(&self, global: [i64; 3], column: SurfaceColumn) -> u16 {
         let material = self.unchecked_terrain_block(global, column);
         // Validate after all cave, connector, roof and surface clipping, against
         // unfiltered terrain. This also repairs isolated growth in old seeds.

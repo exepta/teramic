@@ -371,20 +371,20 @@ pub(super) fn inspect(world: &mut World, stage: usize) -> Result<(), String> {
 pub(super) fn inspect_picker(world: &World, name: &str, views: &Views) -> Result<(), String> {
     let terrain = &world.resource::<WorldTerrain>().0;
     let chunks = world.resource::<ChunkStore>();
-    if terrain.config().ecology_revision != 9
+    if terrain.config().ecology_revision < 9
         || views
             .probes
             .iter()
             .any(|(p, m)| chunks.block_at(*p) != Some(*m))
     {
         return Err(
-            "biome panorama was not loaded with ecology nine and matching voxel probes".into(),
+            "biome panorama requires surface ecology and matching loaded voxel probes".into(),
         );
     }
     if let Some(directory) = std::env::var_os("TERRA_CAPTURE_DIR").map(PathBuf::from) {
         std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
         let report = serde_json::json!({"status":"passed","scene":name,"seed":terrain.config().seed.0,
-            "ecology_revision":9,"fixture_edits":0,"camera":views.overview.translation.to_array(),
+            "ecology_revision":terrain.config().ecology_revision,"fixture_edits":0,"camera":views.overview.translation.to_array(),
             "anchor":views.anchor.to_array(),"source_cells":views.probes,"verified_voxel_probes":views.probes.len(),
             "biome_weights":terrain.biome_at(f64::from(views.anchor.x),f64::from(views.anchor.z)).weights.values()});
         std::fs::write(

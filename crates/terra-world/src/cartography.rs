@@ -28,7 +28,7 @@ pub struct MapSample {
     pub water_depth: u8,
     pub known: bool,
     pub canopy: bool,
-    pub biome_weights: [f32; 10],
+    pub biome_weights: [f32; 16],
     pub shore: f32,
     pub snow: f32,
 }
@@ -41,7 +41,9 @@ impl Default for MapSample {
             water_depth: 0,
             known: false,
             canopy: false,
-            biome_weights: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            biome_weights: [
+                0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ],
             shore: 0.0,
             snow: 0.0,
         }
@@ -133,6 +135,13 @@ fn color(surface: &SurfaceColumn) -> [u8; 4] {
         [183.0, 151.0, 104.0],
         [145.0, 207.0, 99.0],
         [153.0, 204.0, 135.0],
+        [115., 64., 68.],
+        [91., 77., 75.],
+        [167., 157., 77.],
+        [80., 92., 60.],
+        [159., 139., 141.],
+        [150., 134., 174.],
+        [114., 134., 127.],
     ];
     let mut rgb: [f64; 3] =
         std::array::from_fn(|i| weights.iter().zip(palette).map(|(w, c)| w * c[i]).sum());
@@ -149,7 +158,7 @@ fn color(surface: &SurfaceColumn) -> [u8; 4] {
         }
         for i in 0..3 {
             rgb[i] +=
-                ([151.0, 118.0, 145.0][i] - rgb[i]) * surface.biome.weights.cherry_forest * 0.35;
+                ([53.0, 185.0, 183.0][i] - rgb[i]) * surface.biome.weights.cherry_forest * 0.35;
         }
         for (i, channel) in rgb.iter_mut().enumerate() {
             *channel +=
@@ -164,7 +173,9 @@ fn color(surface: &SurfaceColumn) -> [u8; 4] {
         let relief =
             (0.93 + surface.height * 0.0008 - surface.slope.min(4.0) * 0.035).clamp(0.68, 1.12);
         for (v, sand) in rgb.iter_mut().zip([214.0, 189.0, 128.0]) {
-            *v += (sand - *v) * surface.shore_cover;
+            if matches!(surface.surface_material as u16, 4 | 527 | 528) {
+                *v = sand;
+            }
             *v = (*v + (229.0 - *v) * snow) * relief;
         }
     }
@@ -192,6 +203,7 @@ mod tests {
         shore.water_level = None;
         shore.snow_cover = 0.0;
         shore.shore_cover = 1.0;
+        shore.surface_material = terra_voxel::MaterialId::Sand;
         let sand = color(&shore);
         assert!(sand[0] > sand[1] && sand[1] > sand[2]);
         shore.biome.weights.desert = 1.0;
@@ -200,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn cherry_exploration_tiles_keep_grass_and_subtle_pink_water_colors() {
+    fn cherry_exploration_tiles_keep_grass_and_jade_stream_colors() {
         let generator = crate::SectionGenerator::new(
             crate::TerraGenerator::new(terra_core::WorldConfig::default()).unwrap(),
         );
@@ -217,21 +229,25 @@ mod tests {
             cherry_forest: 1.0,
             spirit_blossom: 0.0,
             blood_forest: 0.0,
+            ashlands: 0.0,
+            savanna: 0.0,
+            swamp: 0.0,
+            petrified_forest: 0.0,
+            crystal_highlands: 0.0,
+            misty_coast: 0.0,
         };
         surface.shore_cover = 0.0;
         surface.snow_cover = 0.0;
         surface.water_level = None;
+        surface.surface_material = terra_voxel::MaterialId::PetalTurf;
         let grass = color(&surface);
         assert!(grass[1] > 100 && grass[1] > grass[0] && grass[0] > grass[2]);
         surface.water_level = Some(surface.height + 2.0);
-        let pink = color(&surface);
+        let stream = color(&surface);
         surface.biome.weights.cherry_forest = 0.0;
         surface.biome.weights.forest = 1.0;
         let blue = color(&surface);
-        assert!(
-            pink[0] > blue[0] && pink[2] > pink[0],
-            "subtle tint, not opaque pink"
-        );
-        assert_eq!(pink[3], 255);
+        assert!(stream[1] > blue[1] && stream[2] > stream[0]);
+        assert_eq!(stream[3], 255);
     }
 }

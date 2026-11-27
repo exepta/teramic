@@ -102,6 +102,7 @@ pub enum InventoryAction {
     Close,
     Select(String),
     Recipe(String),
+    Uses(String),
     Focus(String),
     Cycle(i32),
     Search(String),
@@ -502,6 +503,8 @@ pub(crate) fn preview_key(item: ItemKind) -> String {
         | ItemKind::Bitumen
         | ItemKind::GloomEssence
         | ItemKind::DragonLoot(_)
+        | ItemKind::RuneCore
+        | ItemKind::ForestCrystal
         | ItemKind::LightSplitter
         | ItemKind::RoadAggregate => {
             format!("Item preview {}", item.identifier())
@@ -1113,6 +1116,13 @@ fn keyboard(
         }
     } else if !typing {
         if state.open
+            && input.keys.just_pressed(KeyCode::KeyU)
+            && let Some(item) = pointer.usage_item()
+        {
+            actions.write(InventoryAction::Uses(item.into()));
+            return;
+        }
+        if state.open
             && input.keys.just_pressed(KeyCode::KeyR)
             && let Some(item) = pointer.recipe_item()
             && (pointer.recipe_is_preview()
@@ -1396,6 +1406,8 @@ impl InventorySelection<'_> {
                 | ItemKind::Bitumen
                 | ItemKind::GloomEssence
                 | ItemKind::DragonLoot(_)
+                | ItemKind::RuneCore
+                | ItemKind::ForestCrystal
                 | ItemKind::LightSplitter
                 | ItemKind::RoadAggregate => None,
             })
@@ -2226,6 +2238,8 @@ fn item_id(item: ItemKind) -> String {
         | ItemKind::Bitumen
         | ItemKind::GloomEssence
         | ItemKind::DragonLoot(_)
+        | ItemKind::RuneCore
+        | ItemKind::ForestCrystal
         | ItemKind::LightSplitter
         | ItemKind::RoadAggregate => {
             format!("item-{}", item.identifier().trim_start_matches("teramic::"))
@@ -2244,7 +2258,7 @@ pub(crate) fn available_items(
             .filter(|choice| {
                 !terra_core::castle::retired_item(choice.id)
                     && terra_core::construction::obtainable(choice.id)
-                    && !matches!(choice.id, 197..=201 | 204..=205)
+                    && !matches!(choice.id, 197..=201 | 204..=205 | 651)
             })
             .map(|choice| ItemKind::Block(choice.id))
             .chain(
@@ -2281,6 +2295,7 @@ fn inspectable_item(session: &ClientSession, palette: &BlockPalette, id: &str) -
                 .map(|stack| stack.item),
         )
         .chain(session.inventory.cursor.map(|stack| stack.item))
+        .chain(session.stats.equipment.iter().map(|(_, item)| item))
         .chain(
             session
                 .container
@@ -2300,7 +2315,7 @@ fn catalog_item(item: ItemKind) -> bool {
             !terra_core::textiles::is_dyed(material)
                 && terra_core::construction::obtainable(material)
                 && !terra_core::castle::retired_item(material)
-                && !matches!(material, 197..=201 | 204..=205)
+                && !matches!(material, 197..=201 | 204..=205 | 651)
         })
         && !matches!(item, ItemKind::DyedBed { .. })
         && !matches!(item, ItemKind::TintedBlock { .. })

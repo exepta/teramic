@@ -200,7 +200,7 @@ struct AudioWorld<'w, 's> {
     access: Res<'w, WorldAccess>,
     journal: Res<'w, EditJournal>,
     menu: Option<Res<'w, MenuState>>,
-    config: Option<Res<'w, AudioConfig>>,
+    preferences: crate::audio_preferences::AudioPreferences<'w>,
     session: Option<Res<'w, ClientSession>>,
     bodies: Query<'w, 's, &'static Transform, With<PlayerBody>>,
     cameras: Query<'w, 's, &'static Transform, With<TerraCamera>>,
@@ -243,6 +243,7 @@ fn update(
         *status = CrusherAudioStatus::default();
         return;
     }
+    let config = world.preferences.current();
     let (mut gains, counts) = mix(
         world
             .session
@@ -254,7 +255,7 @@ fn update(
             .iter()
             .next()
             .map_or(Vec3::X, |camera| *camera.right()),
-        world.config.as_deref().unwrap_or(&AudioConfig::default()),
+        config,
         &world.journal,
     );
     let (gears, kinetic_parts, rate) = mix_kinetics(
@@ -264,7 +265,7 @@ fn update(
             .map_or(&[], |s| s.kinetics.as_slice()),
         listener.unwrap_or_default(),
         world.cameras.iter().next().map_or(Vec3::X, |c| *c.right()),
-        world.config.as_deref().unwrap_or(&AudioConfig::default()),
+        config,
         &world.journal,
     );
     for (gain, gear) in gains[0].iter_mut().zip(gears) {

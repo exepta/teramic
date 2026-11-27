@@ -187,20 +187,7 @@ fn dead_bush(
     let yaw = Quat::from_rotation_y(variant as f32 * 0.61);
     let stretch = [0.82, 1.04, 0.92, 1.12][variant % 4];
     let warp = |p: Vec3| yaw * Vec3::new(p.x, p.y * stretch, p.z);
-    let profile: &[[f32; 2]] = if level == PropDetail::Far {
-        &[[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]]
-    } else {
-        &[
-            [-0.65, -1.],
-            [0.65, -1.],
-            [1., -0.65],
-            [1., 0.65],
-            [0.65, 1.],
-            [-0.65, 1.],
-            [-1., 0.65],
-            [-1., -0.65],
-        ]
-    };
+    let profile = [[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]];
     let mut branch = |points: &[(Vec3, f32)]| -> Result<(), String> {
         let ring = |point: Vec3, radius: f32| -> Vec<Vec3> {
             profile
@@ -237,7 +224,7 @@ fn dead_bush(
                 let next = (edge + 1) % a.len();
                 face(
                     &[a[edge], b[edge], b[next], a[next]],
-                    [0.92, 1.02, 1.08, 0.97, 0.87, 0.96, 1.05, 1.0][edge]
+                    [0.92, 1.08, 0.97, 0.87][edge]
                         * (0.97 + index as f32 * 0.015),
                 )?;
             }

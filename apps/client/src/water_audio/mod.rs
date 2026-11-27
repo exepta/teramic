@@ -2,6 +2,7 @@
 pub(crate) mod scene;
 mod smoke;
 mod source;
+pub(crate) use source::WaterAudioSource;
 
 use bevy::{audio::AddAudioSource, prelude::*};
 

@@ -2,7 +2,7 @@
 import json
 import math
 from build_castle import Mesh, BLOCKS
-from build_spirit_blossom import export
+from voxel_props.surface import export_voxels
 
 SHELLS = [
     ("dark", "Dunkel", [0.115,0.055,0.17], [0.72,0.15,0.95]),
@@ -10,6 +10,8 @@ SHELLS = [
     ("water", "Wasser", [0.18,0.52,0.8], [0.48,0.92,1.0]),
 ]
 DESCRIPTION = "Collect the egg, then place it on a straw block with room around it to hatch it."
+FIRE_DESCRIPTION = "Place the egg on straw or cooled lava crust with room around it to hatch it."
+DE_FIRE_DESCRIPTION = "Setze das Ei zum Ausbrüten auf Stroh oder abgekühlte Lavakruste mit Platz ringsum."
 DE_DESCRIPTION = "Nimm das Ei mit und setze es zum Ausbrüten auf einen Strohblock mit Platz ringsum."
 
 def ring(y, radius, count, twist):
@@ -39,13 +41,14 @@ def build(slug, number, shell, light):
                 model.polygon([inset[k],inset[end],ridge],shell_key)
                 model.polygon([face[k],face[end],inset[end],inset[k]],
                               'vein' if (i+j//2)%5 == 0 or j==3 and i%3==0 else 'shell0')
-    export(model,slug,('vein',))
+    export_voxels(model, slug, ('vein',), resolution=16)
     name=slug.replace('_',' ').title()
     bounds=[dict(minimum=[.24,.0,.24],maximum=[.76,.13,.76]),
             dict(minimum=[.16,.13,.16],maximum=[.84,.63,.84]),
             dict(minimum=[.23,.63,.23],maximum=[.77,.82,.77]),
             dict(minimum=[.33,.82,.33],maximum=[.67,.975,.67])]
-    definition=dict(schema_version=1,id=number,name=name,description=DESCRIPTION,creative_category='nature',
+    description = FIRE_DESCRIPTION if slug == 'fire_dragon_egg' else DESCRIPTION
+    definition=dict(schema_version=1,id=number,name=name,description=description,creative_category='nature',
                     hardness=.45,resistance=1,required_tool=None,mining_level=0,render_kind='custom_mesh',
                     model_layout='scene',model=f'models/{slug}.glb',struct_block=True,
                     textures={},collision_boxes=bounds)
@@ -57,6 +60,9 @@ if __name__ == '__main__':
     for number,(key,de,shell,light) in enumerate(SHELLS,449):
         name=build(key+'_dragon_egg',number,shell,light)
         entries.append(dict(source=name,en=name,de=de+'drachenei'))
+    name = build("fire_dragon_egg", 702, [0.24, 0.07, 0.034], [1.0, 0.29, 0.018])
+    entries.append(dict(source=name, en=name, de="Feuerdrachenei"))
+    entries.append(dict(source=FIRE_DESCRIPTION, en=FIRE_DESCRIPTION, de=DE_FIRE_DESCRIPTION))
     entries.append(dict(source=DESCRIPTION,en=DESCRIPTION,de=DE_DESCRIPTION))
     path=BLOCKS.parents[2]/'src-ui/locales/source/dragon-eggs.json'
     path.write_text(json.dumps(entries,ensure_ascii=False,indent=2)+'\n')

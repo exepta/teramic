@@ -1,9 +1,18 @@
 //! Nonspatial, rate-limited UI feedback. Gameplay audio continues to use body listeners.
+mod preview;
+
+use crate::audio_preferences::AudioPreferences;
 use bevy::prelude::*;
 use terra_core::footsteps::UiSound;
 
 pub(crate) fn install(app: &mut App) {
-    app.add_systems(Update, play);
+    app.add_systems(
+        PostUpdate,
+        (
+            play,
+            preview::update.run_if(resource_exists::<Messages<terra_ui::menu::AudioAudition>>),
+        ),
+    );
 }
 fn play(
     mut messages: MessageReader<UiSound>,
@@ -16,11 +25,7 @@ fn play(
         ),
     >,
     parents: Query<&ChildOf>,
-    (time, config, assets): (
-        Res<Time>,
-        Option<Res<terra_core::AudioConfig>>,
-        Res<AssetServer>,
-    ),
+    (time, preferences, assets): (Res<Time>, AudioPreferences, Res<AssetServer>),
     mut commands: Commands,
     mut last: Local<[f64; 2]>,
 ) {
@@ -38,7 +43,7 @@ fn play(
             entity = parent.parent();
         }
     }
-    let gain = ui_gain(config.as_deref());
+    let gain = preferences.master_gain();
     if gain == 0.0 {
         return;
     }
@@ -60,31 +65,9 @@ fn play(
     }
 }
 
-fn ui_gain(config: Option<&terra_core::AudioConfig>) -> f32 {
-    config.map_or(1.0, |c| if c.muted { 0.0 } else { c.master_volume })
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bevy::audio::{AudioSource, Decodable};
-    #[test]
-    fn category_sliders_never_change_ui_feedback_but_master_and_mute_do() {
-        let mut config = terra_core::AudioConfig {
-            master_volume: 0.4,
-            ambience_volume: 0.0,
-            animals_volume: 0.0,
-            footsteps_volume: 0.0,
-            water_volume: 0.0,
-            river_volume: 0.0,
-            waterfall_volume: 0.0,
-            ..default()
-        };
-        assert_eq!(ui_gain(None), 1.0);
-        assert_eq!(ui_gain(Some(&config)), 0.4);
-        config.muted = true;
-        assert_eq!(ui_gain(Some(&config)), 0.0);
-    }
     #[test]
     fn short_ui_cues_decode_with_quiet_faded_boundaries() {
         for name in ["click", "mention"] {

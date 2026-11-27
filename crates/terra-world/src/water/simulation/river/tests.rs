@@ -126,6 +126,30 @@ fn step(
     .unwrap()
 }
 #[test]
+fn a_falling_jet_stays_narrow_above_a_wide_receiving_pool() {
+    let base = [15, 15];
+    let (terrain, chunks, mut journal, mut columns) = fixture(base, false);
+    for ([_, z], c) in &mut columns {
+        if *z > base[1] {
+            c.water_level = Some(16.);
+        }
+    }
+    for _ in 0..160 {
+        step(&terrain, &chunks, &mut journal, &columns);
+    }
+    assert!(
+        journal
+            .fluid([base[0], 18, base[1] + 1])
+            .is_some_and(|c| c.amount > 0)
+    );
+    assert!(
+        !journal
+            .fluid_cells()
+            .any(|(p, c)| p[0] != base[0] && p[1] > 16 && c.amount > 0)
+    );
+}
+
+#[test]
 fn river_can_feed_a_connected_passage_under_its_bank() {
     let base = [15, 15];
     let (terrain, chunks, mut journal, mut columns) = fixture(base, false);

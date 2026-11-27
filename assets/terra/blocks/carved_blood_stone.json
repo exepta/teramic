@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 495,
+  "name": "Carved Blood Stone",
+  "description": "A spiral seal cut into violet-black shrine stone.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "surface": "rock",
+  "materials": {
+    "carved_blood_stone": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.76,
+      "reflectance": 0.31
+    }
+  },
+  "textures": {
+    "carved_blood_stone": "textures/carved_blood_stone.png"
+  },
+  "face_materials": [
+    "carved_blood_stone",
+    "carved_blood_stone",
+    "carved_blood_stone",
+    "carved_blood_stone",
+    "carved_blood_stone",
+    "carved_blood_stone"
+  ]
+}

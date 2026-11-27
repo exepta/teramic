@@ -7,7 +7,6 @@ fn membrane(
     a: Vec3,
     b: Vec3,
     color: Rgb,
-    mirrored: bool,
     edge_bend: [Vec3; 2],
 ) -> Result<(), String> {
     let surface = |r: f32, t: f32| {
@@ -20,13 +19,6 @@ fn membrane(
             + edge_bend[0].lerp(edge_bend[1], t) * (PI * radial).sin()
             + Vec3::Y * (arch * (r * PI).sin() * 0.49)
     };
-    let tri = |m: &mut Builder, mut p: [Vec3; 3], tint: Rgb| {
-        if mirrored {
-            p.swap(0, 1);
-        }
-        m.triangle(p, tint)?;
-        m.triangle([p[1], p[0], p[2]], tint)
-    };
     for ring in 0..4 {
         let r = ring as f32 * 0.25;
         let next = r + 0.25;
@@ -37,9 +29,9 @@ fn membrane(
             let a = surface(r, u);
             let b = surface(next, u);
             let c = surface(next, w);
-            tri(mesh, [a, b, c], tint(color, shade))?;
+            mesh.triangle([a, b, c], tint(color, shade))?;
             if ring > 0 {
-                tri(mesh, [a, c, surface(r, w)], tint(color, shade * 1.018))?;
+                mesh.triangle([a, c, surface(r, w)], tint(color, shade * 1.018))?;
             }
         }
     }
@@ -53,15 +45,7 @@ pub(super) fn wing(mesh: &mut Builder, c: Coat, joint: Joint, s: f32) -> Result<
     if matches!(joint, Joint::WingArm(_)) {
         // Arm and fan meet along the shoulder–wrist line, which is the axis
         // of the fan's fold. Both sides of that seam stay attached in flight.
-        membrane(
-            mesh,
-            anchor,
-            elbow,
-            knuckle,
-            c.wing,
-            s < 0.,
-            [Vec3::ZERO; 2],
-        )?;
+        membrane(mesh, anchor, elbow, knuckle, c.wing, [Vec3::ZERO; 2])?;
         let path = [
             sec(anchor, 0.90, 0.89),
             sec(anchor.lerp(elbow, 0.56), 0.76, 0.72),
@@ -97,9 +81,22 @@ pub(super) fn wing(mesh: &mut Builder, c: Coat, joint: Joint, s: f32) -> Result<
             tip,
             fingers[i + 1],
             tint(c.wing, 1. - i as f32 * 0.035),
-            s < 0.,
             [bend, if i < 4 { bend } else { Vec3::ZERO }],
         )?;
+        if c.kind == Kind::FireDragon {
+            // A hotter translucent-looking fringe follows the heated outer web,
+            // framed by the darker structural fingers.
+            let next = fingers[i + 1];
+            let middle = tip.lerp(next, 0.53).lerp(knuckle, 0.13) + Vec3::Y * 0.20;
+            forms::blade(
+                mesh,
+                tip + Vec3::Y * 0.12,
+                next + Vec3::Y * 0.12,
+                middle,
+                0.14,
+                tint(c.light, 0.86),
+            )?;
+        }
         // Flesh on the leading edge is thicker; the trailing fingers taper.
         let width = if i == 0 {
             0.52
@@ -145,6 +142,16 @@ pub(super) fn wing(mesh: &mut Builder, c: Coat, joint: Joint, s: f32) -> Result<
     beam(mesh, knuckle, anchor, 0.21, 0.35, c.scale)
 }
 
+fn vein(m: &mut Builder, a: Vec3, b: Vec3, width: f32, color: Rgb) -> Result<(), String> {
+    let delta = b - a;
+    m.rotated(
+        ((a + b) * 0.5).to_array(),
+        [width, 0.10, delta.length() + 0.04],
+        color,
+        Quat::from_rotation_arc(Vec3::Z, delta.normalize()),
+    )
+}
+
 /// The light follows the wing's scallops and tapers into the finger tips.
 pub(super) fn lit_rims(mesh: &mut Builder, c: Coat, s: f32) -> Result<(), String> {
     let tips = [
@@ -163,22 +170,25 @@ pub(super) fn lit_rims(mesh: &mut Builder, c: Coat, s: f32) -> Result<(), String
             let offset = bend.lerp(if i == 4 { Vec3::ZERO } else { bend }, t) * (PI * radial).sin();
             knuckle.lerp(pair[0].lerp(pair[1], t), radial) + offset
         };
-        for j in 0..5 {
-            let a = on_rim(j as f32 / 5.);
-            let b = on_rim((j + 1) as f32 / 5.);
-            beam(mesh, a, b, 0.058, 0.055, c.light)?;
+        // Restrict the shine to the exposed portion between two fingers. A
+        // full bright outline washed out the local colour of folded wings.
+        for j in 0..3 {
+            let t = j as f32 * 0.15 + 0.14;
+            let upper = Vec3::Y * 0.20;
+            let a = on_rim(t) + upper;
+            let b = on_rim(t + 0.15) + upper;
+            vein(mesh, a, b, 0.13, tint(c.light, 0.81))?;
         }
         // Fissures branch part way back into the membrane; keep the opposing
         // faces connected in silhouette instead of floating a second sail.
         let tip = pair[0];
         let lit = |t: f32| knuckle.lerp(tip, t) + bend * (PI * t).sin() + Vec3::Y * 0.09;
-        beam(mesh, lit(0.79), lit(0.93), 0.065, 0.037, c.light)?;
-        beam(
+        vein(mesh, lit(0.79), lit(0.93), 0.13, tint(c.light, 0.76))?;
+        vein(
             mesh,
             lit(0.90),
             lit(0.83) + v(s * 0.14, 0.01, 0.28),
-            0.038,
-            0.011,
+            0.085,
             c.light,
         )?;
     }

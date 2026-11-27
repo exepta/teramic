@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 724,
+  "name": "Fossil-Streaked Stone",
+  "description": "An ammonite lies embedded in the ancient seabed.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.4,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/relics/fossiliferous_stone.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.88,
+      "reflectance": 0.13,
+      "normal_texture": "textures/relics/fossiliferous_stone_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

@@ -67,6 +67,82 @@ fn preserve_coverage(image: &mut Image, target: f32) {
     }
 }
 
+/// For leaf art painted against a solid background, recover the gaps from its
+/// darkest recesses. Existing artist-authored alpha always takes precedence.
+pub(crate) fn cutout_from_paint(image: &Image) -> Result<Option<Image>, String> {
+    let data = image.data.as_deref().ok_or("Missing canopy paint")?;
+    if data.chunks_exact(4).any(|px| px[3] < 255) {
+        return Ok(None);
+    }
+    let luminance =
+        |p: &[u8]| (54 * u16::from(p[0]) + 183 * u16::from(p[1]) + 19 * u16::from(p[2])) >> 8;
+    let mut histogram = [0usize; 256];
+    for p in data.chunks_exact(4) {
+        histogram[luminance(p) as usize] += 1;
+    }
+    let target = data.len() / 4 / 4;
+    let mut below = 0;
+    let cutoff = histogram
+        .iter()
+        .position(|n| {
+            below += n;
+            below >= target
+        })
+        .unwrap_or(0) as i32;
+    let mut cutout = image.clone();
+    for pixel in cutout.data.as_mut().unwrap().chunks_exact_mut(4) {
+        pixel[3] = (128 + 32 * (i32::from(luminance(pixel)) - cutoff)).clamp(0, 255) as u8;
+    }
+    masked_canopy(cutout).map(Some)
+}
+
+/// A conservative hole for the near mesh. All base texels in the returned
+/// square are transparent. Retain a one-texel apron for bilinear filtering.
+pub(crate) fn mesh_opening(image: &Image) -> Option<[f32; 3]> {
+    const GRID: usize = 64;
+    let (width, height) = (image.width() as usize, image.height() as usize);
+    if width < GRID || height < GRID || width != height || width % GRID != 0 {
+        return None;
+    }
+    let data = image.data.as_deref()?.get(..width * height * 4)?;
+    let mut solid = [0u64; GRID];
+    let cell = width / GRID;
+    for (y, row) in data.chunks_exact(width * 4).enumerate() {
+        for (x, tile) in row.chunks_exact(cell * 4).enumerate() {
+            if tile.chunks_exact(4).any(|px| px[3] >= 128) {
+                solid[y / cell] |= 1 << x;
+            }
+        }
+    }
+    let mut side = [0u8; GRID + 1];
+    let mut best = (0, 0, 0u8);
+    for (y, &row) in solid.iter().enumerate() {
+        let mut diagonal = 0;
+        for x in 0..GRID {
+            let above = side[x + 1];
+            side[x + 1] = if row & (1 << x) == 0 {
+                1 + above.min(diagonal).min(side[x])
+            } else {
+                0
+            };
+            if side[x + 1] > best.2 {
+                best = (x + 1, y + 1, side[x + 1]);
+            }
+            diagonal = above;
+        }
+    }
+    let (x, y, n) = best;
+    let n = usize::from(n);
+    let guard = 1.0 / width as f32;
+    (n > 0).then(|| {
+        [
+            (x - n) as f32 / GRID as f32 + guard,
+            (y - n) as f32 / GRID as f32 + guard,
+            n as f32 / GRID as f32 - 2.0 * guard,
+        ]
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -63,7 +63,6 @@ F68 mit Asphalt-Herstellung, Straßenformen und Rückbau steht in
 
 - [ ] **F39 Skelettkrieger:** Nachts im Spirit Blossom ungeruestete Schwertkaempfer, Kaempfer mit Eisenruestung/Eisenschwert und unbewaffnete Varianten ergaenzen. Bei Tagesanbruch sichtbar eingraben und danach despawnen; bestehende KI, Navigation, Ausruestung und Spawn-Budgets verwenden.
 
-- [ ] **F70 Weitere Unterwasserpflanzen:** Zusaetzliche Wand-/Deckenpflanzen fuer geeignete Unterwasserbereiche ergaenzen. Bestehende Prop-/Habitatregeln fuer Halt, Wasser, Sichtbarkeit, Entnahme und Darstellung erweitern.
 
 - [ ] **F71 Hoehlenoekologie Und Unterirdische Wasserlaeufe:** Hoehlenbegruenung mit Wachstumszyklen sowie zusammenhaengende unterirdische Wasserlaeufe ueber einzelne lokale Reservoirs hinaus ergaenzen. Vorhandene Kammern, Feuchtigkeit, Hoehenprofile und Fluidpersistenz verbinden; Generierungsaenderungen versionieren.
 
@@ -73,7 +72,6 @@ F68 mit Asphalt-Herstellung, Straßenformen und Rückbau steht in
 - [ ] **F15 Schaeden An Weltobjekten:** Brand-/Lebenspunktschaeden fuer geeignete Objekte ergaenzen. Treffer, Feuer, Zustand, Zerstoerung und Drops an vorhandene autoritative Welt-/Inventarpfade anbinden.
 - [ ] **F85 Feuer und Drachenatem.** Brennbare Weltblöcke entzünden, Feuer ausbreiten und ausbrennen lassen. Feuerangriffe von Drachen sollen am Einschlag brennende Stellen hinterlassen.
 - [ ] **F86 Feuer mit Wasser löschen.** Platziertes und fließendes Wasser soll Feuer bei Kontakt löschen und die Ausbreitung an dieser Stelle beenden.
-- [ ] **F87 Lava.** Lava als eigene leuchtende, zähflüssige Flüssigkeit mit Quellen, Fluss und Hitzeschaden umsetzen.
 
 - [ ] **F24 Entfernte 3D-Karte:** Budgetierte entfernte 3D-Rekonstruktion mit getrennten Boden-/Kronenhoehen oder echten Mesh-LODs ergaenzen. Vorhandene gespeicherte Kartendaten nutzen; Hoehlenkarten bleiben flach.
 
@@ -120,3 +118,7 @@ F68 mit Asphalt-Herstellung, Straßenformen und Rückbau steht in
 - [x] **F83 Pull-Request-Prüfung einrichten.** Auf einem frischen GitHub-Actions-Runner die in der README festgelegte TiltUI-Revision am von Cargo erwarteten Pfad auschecken und die Toolchain aus `rust-toolchain.toml` verwenden. Formatierung, Clippy und Workspace-Tests mit `Cargo.lock` ausführen.
 - [x] **F84 Release-Pakete aus einem Versionstag bauen.** Client, Dedicated Server und Gebäudeeditor für die unterstützten Zielplattformen im Release-Profil bauen. Die jeweils benötigten Assets, Standardkonfigurationen und Lizenzen beilegen. Pakete versionieren und SHA-256-Prüfsummen erzeugen.
 - [x] **A08 Release-Kandidaten abnehmen und veröffentlichen.** Die Pakete für Linux, macOS und Windows haben jeweils eine Welt gespeichert und neu geladen, einen Client mit dem Server verbunden und ein Gebäude im Editor geöffnet. Alle drei geprüften Archive sind mit SHA-256-Prüfsummen und Versionshinweisen veröffentlicht. [Teramic 1.0.0](https://github.com/exepta/teramic/releases/tag/v1.0.0) · [Native Paketabnahme und Veröffentlichung](https://github.com/exepta/teramic/actions/runs/45068635638)
+
+## 8. Verbesserungen
+- [x] **B01** Beim Ziehen der Audioregler ändern sich die laufenden Spielgeräusche. Jeder Regler spielt eine passende Hörprobe. „Übernehmen“ speichert die Pegel, „Verwerfen“ stellt sie zurück.
+- [ ] **B02** Windows Schwere Render FPS probleme bei einer 3060TI 20 - 30 FPS manchmal auch 5FPS.

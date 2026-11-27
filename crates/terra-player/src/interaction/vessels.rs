@@ -37,25 +37,27 @@ impl VesselMotion {
         self.progress = 0.0;
         self.target = None;
         self.item = item.filter(|item| is_vessel(*item));
-        self.fill =
-            match self.item {
-                Some(
-                    ItemKind::WaterBottle
-                    | ItemKind::Tool(
-                        ToolKind::WaterBucket | ToolKind::TarBucket | ToolKind::BileBucket,
-                    ),
-                ) => 1.0,
-                Some(item)
-                    if item
-                        .tool_kind()
-                        .is_some_and(|tool| tool.watering_capacity() > 0) =>
-                {
-                    f32::from(item.watering_units())
-                        / f32::from(item.tool_kind().unwrap().watering_capacity())
-                }
-                _ => 0.0,
+        self.fill = match self.item {
+            Some(
+                ItemKind::WaterBottle
+                | ItemKind::Tool(
+                    ToolKind::WaterBucket
+                    | ToolKind::TarBucket
+                    | ToolKind::BileBucket
+                    | ToolKind::LavaBucket,
+                ),
+            ) => 1.0,
+            Some(item)
+                if item
+                    .tool_kind()
+                    .is_some_and(|tool| tool.watering_capacity() > 0) =>
+            {
+                f32::from(item.watering_units())
+                    / f32::from(item.tool_kind().unwrap().watering_capacity())
             }
-            .clamp(0.0, 1.0);
+            _ => 0.0,
+        }
+        .clamp(0.0, 1.0);
         if !enabled
             || !held
             || self
@@ -155,6 +157,7 @@ fn is_vessel(item: ItemKind) -> bool {
                     | ToolKind::WaterBucket
                     | ToolKind::TarBucket
                     | ToolKind::BileBucket
+                    | ToolKind::LavaBucket
             )
         )
         || item

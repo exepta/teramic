@@ -9,6 +9,10 @@ impl Tree {
         ) {
             return None;
         }
+        self.branch_lantern()
+    }
+
+    pub(super) fn branch_lantern(&self) -> Option<[i64; 3]> {
         let hash = mix(self.origin[0] as u64 ^ (self.origin[2] as u64).rotate_left(31));
         if !hash.is_multiple_of(3) {
             return None;

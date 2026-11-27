@@ -8,10 +8,13 @@ use bevy::{
 use terra_core::GameConfig;
 use terra_player::TerraCamera;
 use terra_world::streaming::ChunkFocus;
-mod biome_atmosphere;
+pub(crate) mod biome_atmosphere;
 pub(crate) mod caves;
 pub(crate) mod daylight;
 pub(crate) mod horizon;
+pub(crate) mod leaf_profiles;
+pub(crate) mod shadow_receivers;
+mod sky_reflections;
 pub(crate) mod view_range;
 
 pub(crate) const SURFACE_FOG: Vec3 = Vec3::new(0.58, 0.73, 0.87);

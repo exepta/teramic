@@ -1,0 +1,14 @@
+{
+  "biome": "savanna",
+  "selection_weight": 1.0,
+  "terrain": {
+    "min_height": 18.0,
+    "max_height": 98.0,
+    "horizontal_scale": 1050.0,
+    "detail_strength": 0.24,
+    "relief_strength": 0.58,
+    "soil_depth": 3.8,
+    "tree_density": 0.42,
+    "terrace_strength": 0.4
+  }
+}

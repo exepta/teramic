@@ -329,12 +329,9 @@ fn terrain_retired(
         }
         owners.insert(owner);
     }
-    owners.into_iter().all(|owner| {
-        rendered
-            .block_revisions
-            .get(&owner)
-            .is_some_and(|revision| *revision == journal.revision(owner))
-    })
+    owners
+        .into_iter()
+        .all(|owner| rendered.block_revision(owner) == Some(journal.revision(owner)))
 }
 
 #[derive(SystemParam)]

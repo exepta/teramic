@@ -289,7 +289,7 @@ fn cave_or_underwater_view_restores_sunlit_source_shadows_without_waiting_for_ex
             0 => {
                 app.world_mut()
                     .resource_mut::<crate::scene::caves::CaveState>()
-                    .target = 0.1
+                    .roof_coverage = 0.1
             }
             1 => {
                 app.world_mut()

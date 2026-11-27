@@ -119,7 +119,7 @@ pub(super) fn ward(m: &mut Builder, c: Coat) -> Result<(), String> {
 }
 
 pub(super) fn surge(m: &mut Builder, c: Coat) -> Result<(), String> {
-    match lineage(c.kind, c.variant).expect("surge belongs to a greater dragon") {
+    match lineage(c.kind, c.variant).unwrap_or(Lineage::Shadow) {
         Lineage::Tidal => {
             for i in 0..6 {
                 let h = 5. + (i % 3) as f32 * 1.13;

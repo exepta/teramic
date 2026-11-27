@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": 762,
+  "name": "Highland Lantern",
+  "description": "Highland Lantern",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crystal_lantern.glb",
+  "struct_block": true,
+  "hardness": 1.2,
+  "resistance": 4.0,
+  "required_tool": null,
+  "mining_level": 0,
+  "textures": {},
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      1.0,
+      0.64,
+      0.28
+    ],
+    "intensity": 560,
+    "range": 9.0,
+    "falloff": "soft_core",
+    "flicker": 0.012,
+    "shadows": false
+  }
+}

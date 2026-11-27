@@ -26,7 +26,7 @@ pub(super) fn update(
     selected: Option<Res<SelectedInventorySlot>>,
     blocked: Option<Res<terra_player::PlayerInputBlock>>,
     keys: terra_core::GameplayInput,
-    config: Option<Res<terra_core::AudioConfig>>,
+    preferences: crate::audio_preferences::AudioPreferences,
     mut playing: Query<(Entity, &EatingSound, Option<&mut AudioSink>)>,
 ) {
     let drinking = session
@@ -46,13 +46,7 @@ pub(super) fn update(
             })
     }) && !blocked.as_ref().is_some_and(|blocked| blocked.0)
         && keys.consume_pressed();
-    let gain = config.as_ref().map_or(1.0, |config| {
-        if config.muted {
-            0.0
-        } else {
-            config.master_volume
-        }
-    }) * 0.12;
+    let gain = preferences.master_gain() * 0.12;
     if !active || gain <= 0.0 {
         for (entity, _, sink) in &mut playing {
             if let Some(sink) = sink {

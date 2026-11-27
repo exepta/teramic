@@ -19,8 +19,8 @@ SPECIES = {
     'oak': ([143, 96, 53], [204, 151, 85], [186, 128, 65]),
     'birch': ([223, 213, 184], [239, 208, 156], [212, 173, 116]),
     'spruce': ([95, 64, 41], [151, 91, 49], [167, 113, 65]),
-    'blood': ([117, 62, 51], [119, 51, 49], [137, 61, 55]),
-    'ghost': ([112, 133, 143], [133, 159, 165], [105, 160, 174]),
+    'blood': ([141, 84, 75], [119, 51, 49], [137, 61, 55]),
+    'ghost': ([83, 72, 69], [133, 159, 165], [105, 160, 174]),
     'sakura': ([116, 67, 63], [216, 133, 137], [206, 130, 121]),
 }
 FAMILIES = {'oak': (6, 16), 'birch': (10, 17), 'spruce': (36, 18),
@@ -81,7 +81,41 @@ def wood_form(x, y, form):
             .33+shoulder*.095+lip*.018-dx*.012)
 
 
+def spruce_boards(x, y):
+    # Four quarter-sawn faces with distinct heartwood tones. Long fibres and
+    # broad growth rings remain visible even when a block spans only 8 texels.
+    row = int(y // 64)
+    v = y % 64
+    along = x * math.tau / 256
+    joint = edge_distance(x, (0, 165, 233, 99)[row])
+    seam = min(v, 64 - v, abs(joint))
+    bevel = max(0., 1. - seam / 2.6)
+    lip = max(0., 1. - abs(seam - 3.2) / 2.1)
+    base = ([134, 97, 70], [164, 125, 89], [119, 89, 68], [151, 109, 76])[row]
+    bend = (1.9 * math.sin(along + row * 1.6)
+            + 1.1 * math.sin(2 * along - row * 0.8))
+    # Fibres sweep around the knot, with a short oval of darker latewood.
+    knot = 0.
+    if row in (0, 2):
+        cx, cy = (66, 23) if row == 0 else (182, 41)
+        dx, dy = edge_distance(x, cx) / 20, (v - cy) / 7.5
+        radius = math.hypot(dx, dy)
+        bend += 5.2 * dy * math.exp(-0.64 * dx * dx - 0.38 * dy * dy)
+        if radius < 1.4:
+            knot = (1. - radius / 1.4) * (0.12 + 0.11 * math.cos(radius * 11))
+    cut = v + bend + row * 2.3
+    ring = math.cos(cut * math.tau / (16.5 + row * 1.55))
+    latewood = max(0., ring) ** 3
+    grain = math.sin(cut * 2.15 + 0.8 * math.sin(3 * along + row))
+    shade = (1.01 + 0.045 * math.sin(cut * 0.19 + row) - 0.16 * latewood
+             + 0.018 * grain - 0.48 * bevel + 0.075 * lip - knot)
+    height = 0.44 - 0.095 * bevel + 0.014 * lip - 0.016 * latewood - 0.025 * knot
+    return rgb(base, shade), height
+
+
 def wood_pixel(species, form, x, y):
+    if species == 'spruce' and form == 'planks':
+        return spruce_boards(x, y)
     colors = SPECIES[species]
     base = colors[{'bark': 0, 'planks': 1, 'end': 2}[form]]
     shade, height = wood_form(x, y, form)
@@ -95,6 +129,23 @@ def wood_pixel(species, form, x, y):
         moss = field(x, y, 8, 819) * .7 + field(x, y, 16, 823) * .3
         if moss > .78:
             base = mix(base, [106, 121, 45], min(.65, (moss - .78) * 4))
+    if species == 'sakura':
+        if form == 'bark':
+            # Short copper lenticels arranged in staggered bands on old cherry bark.
+            band = int(y // 16)
+            xx = (x + noise(band, 0, 782) * 109) % 61
+            yy = y % 16 - 4 - 1.4 * math.sin(x * math.tau / 128)
+            if -.9 < yy < 1.2 and xx < 14 + noise(band, 1, 783) * 15:
+                base = [161, 108, 95]
+                height += .014
+        elif form == 'planks':
+            # Successive quartersawn boards alternate between rose and peach heartwood.
+            board = int(y // 64)
+            base = mix(base, [241,172,152], (.12,.44,.05,.29)[board])
+            swirl = math.sin(y * .118 + math.sin(x * math.tau / 128) * 1.1)
+            shade += .060 * swirl
+        else:
+            base = mix(base,[244,183,151],.30)
     if species == 'ghost':
         seam = abs(math.sin((x + math.sin(y * math.tau / 128) * 3) * math.tau / 64))
         if form == 'end':
@@ -108,13 +159,13 @@ def wood_pixel(species, form, x, y):
 
 def mineral_pixel(kind, x, y):
     if kind == 'sand':
-        ripple = math.sin(y * math.tau / 32 + math.sin(x * math.tau / 128) * .55)
         broad = field(x, y, 4, 419)
-        # Fine pale beige grains; broad ochre bands made a beach read as rock.
+        # The same paint wraps all six faces. Only the exposed top receives
+        # wind ripples from the material shader and its directional relief.
         grain = noise(int(x*2), int(y*2), 3)
-        height = .43 + ripple * .0045 + broad * .004 + (grain-.5) * .0015
+        height = .43 + broad * .004 + (grain-.5) * .0015
         return rgb(mix([232, 211, 175], [241, 223, 191], broad),
-                   .975 + ripple * .008 + grain * .03), height
+                   .975 + grain * .03), height
     cells = 5 if kind == 'stone' else 8 if kind == 'cobble' else 15
     pitch = 256 / cells
     cx, cy = int(x // pitch), int(y // pitch)

@@ -673,7 +673,7 @@ impl EditJournal {
         Ok(true)
     }
     #[cfg(feature = "bevy")]
-    pub(crate) fn blocks_in_section(
+    pub fn blocks_in_section(
         &self,
         section: SectionPos,
     ) -> impl Iterator<Item = ([usize; 3], u16)> + '_ {
@@ -963,7 +963,7 @@ impl EditJournal {
         Ok(())
     }
 
-    pub(super) fn invalidate_generated_water_sections(
+    pub(crate) fn invalidate_generated_water_sections(
         &mut self,
         sections: &std::collections::BTreeSet<SectionPos>,
     ) -> Result<(), BlockError> {
@@ -1139,7 +1139,7 @@ impl EditJournal {
         {
             edits.tints.remove(&local);
         }
-        if !(matches!(material, 28..=29 | 40 | 49 | 59..=73 | 99..=100 | 131 | 141..=172)
+        if !(matches!(material, 28..=29 | 40 | terra_core::block_shapes::VIOLET_TORCH | 49 | 59..=73 | 99..=100 | 131 | 141..=172)
             || crate::objects::is_opening(material)
             || terra_core::construction::is_shape(material)
             || terra_core::castle::is_castle(material)
@@ -1261,9 +1261,8 @@ impl EditJournal {
                 },
                 wake_simulation,
             )?;
-        } else if !(50..=55).contains(&material)
-            && !crate::water::space::partial(material)
-            && (material != 0 || previous == Some(terra_voxel::MaterialId::FluidWater as u16))
+        } else if !crate::water::can_hold_fluid(material)
+            || (material == 0 && previous == Some(terra_voxel::MaterialId::FluidWater as u16))
         {
             self.write_fluid_with_wake(global, FluidCell::default(), wake_simulation)?;
         }

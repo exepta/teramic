@@ -159,14 +159,100 @@ impl Surface {
                 Self::Stone
             }
             Some(
-                Grass | SpiritBlossomGrass | BloodGrass | BloodMoss | CaveGrass | CaveMoss
-                | GlowMoss,
+                Grass | PetalTurf | SpiritBlossomGrass | BloodGrass | BloodMoss | CaveGrass
+                | CaveMoss | GlowMoss | CushionMoss,
             ) => Self::Grass,
-            Some(DeadGrass) => Self::Grass,
+            Some(SwampTurf | MossyPeat | SwampSedge | MarshFireflies) => Self::Grass,
+            Some(SwampMud | Peat | SwampClay | SwampMushrooms | SwampToadstools) => Self::Dirt,
+            Some(DustyGround | ExcavationAwning | ExcavationStandard | TemplePennant) => Self::Dirt,
+            Some(MineralStrata | PetrifiedRubble | CrackedStoneSoil) => Self::Gravel,
+            Some(FallenCharredLog | CinderRoot | ExcavationCrate) => Self::Wood,
+            Some(
+                PetrifiedMineralDeposit
+                | CrystalOre
+                | AmethystSpire
+                | CyanSpire
+                | CrystalShardCluster
+                | CrystalCrown
+                | MixedCrystalVein
+                | CrystalObservatoryLens,
+            ) => Self::Glass,
+            Some(
+                CrystalStone | PolishedHighlandRock | AuriciteOre | HighlandCliffStone
+                | CrystalAshlar | GildedRunestone | VioletRoofSlate | AuriciteDeposit
+                | GlacierBoulder | VaultKeystone | CrystalLantern | VaultSigil | AmethystCapital
+                | AmethystPrismFoot | AmethystPrismShaft | AmethystPrismTip | MassiveAmethyst
+                | MassiveAquamarine | AmethystLance | AquamarineLance,
+            ) => Self::Stone,
+            Some(HarborTimber | MooringPost | HarborSign | SaltCrate) => Self::Wood,
+            Some(
+                BeaconLens
+                | HighlandCrystalShards
+                | AltarCrystalFoot
+                | AltarCrystalHeart
+                | AltarCrystalCrown
+                | TempleCrystalCluster,
+            ) => Self::Glass,
+            Some(VioletTorch) => Self::Wood,
+            Some(SeaThrift) => Self::Leaves,
+            Some(DuneGrassTuft) => Self::Grass,
+            Some(CoarseShoreSand) => Self::Sand,
+            Some(
+                CoastalGranite | TidewornRock | SaltStainedStone | MossyCoastalStone
+                | LichenCoastalStone | WhitewashedPlaster | LighthouseStripe | HarborRoofTiles,
+            ) => Self::Stone,
+            Some(BeachShingle | CrystalGravel | HighlandScree) => Self::Gravel,
+            Some(CrystalPennant) => Self::Dirt,
+            Some(CrystalMineCart | MineToolRack) => Self::Wood,
+            Some(AlpineCrystalBloom) => Self::Leaves,
+            Some(HighlandTussock | FrostedMoss) => Self::Grass,
+            Some(SmallDryShrub | LargeDryShrub | EmberBloom) => Self::Leaves,
+            Some(StonySwampMud) => Self::Gravel,
+            Some(SwampStone | MossySwampStone | SwampRuinedBricks | SwampBoulder) => Self::Stone,
+            Some(
+                WillowLog | MossyWillowLog | WillowPlanks | MossyStump | FallenWillow | WillowRoots
+                | RootArch | WillowBoat | SwampLanternPost | SwampBanner,
+            ) => Self::Wood,
+            Some(
+                WillowLeaves | HangingMoss | SwampReeds | SwampCattails | SwampFern | BogIris
+                | SwampGlowcaps | BogLoosestrife,
+            ) => Self::Leaves,
+            Some(SavannaTurf | DrySavannaTurf | SavannaShortGrass | SavannaTallGrass) => {
+                Self::Grass
+            }
+            Some(AcaciaLog | BaobabLog | AcaciaPlanks | DryAcaciaSnag | WeatheredAcaciaStump) => {
+                Self::Wood
+            }
+            Some(
+                AcaciaLeaves
+                | BaobabLeaves
+                | AcaciaSapling
+                | SavannaThornBush
+                | YellowSavannaFlower
+                | RedSavannaFlower
+                | SavannaAloe
+                | SavannaAgave
+                | SavannaSucculent
+                | SmallSavannaCactus
+                | FloweringSavannaCactus,
+            ) => Self::Leaves,
+            Some(
+                Ash | CompactedAsh | ScorchedDirt | AshMushrooms | DrySavannaSoil | SavannaLoam
+                | SmallTermiteMound | TallTermiteMound,
+            ) => Self::Dirt,
+            Some(VolcanicGravel) => Self::Gravel,
+            Some(CharredLog | CharredPlanks | BlackenedStump | CharredSapling) => Self::Wood,
+            Some(AshBush | BurntGrass) => Self::Leaves,
+            Some(EmberCrystalOre | EmberCrystals) => Self::Glass,
+            Some(
+                Lava | ColumnarBasalt | DarkVolcanicStone | LavaCrust | Fumarole | FossilBones,
+            ) => Self::Stone,
+            Some(DeadGrass | FrostedTussock) => Self::Grass,
             Some(
                 BlueClay | RedClay | GreenClay | YellowClay | WhiteClay | BlackClay | GrayClay
                 | DarkGrayClay | PurpleClay | PinkClay | LimeClay | TurquoiseClay | OrangeClay
-                | CryptHeraldicBanner | CryptTornBanner | CryptCurtain | CryptCandles | CryptBooks,
+                | CryptHeraldicBanner | CryptTornBanner | CryptCurtain | CryptCandles | CryptBooks
+                | SakuraSilkBanner,
             ) => Self::Dirt,
             Some(OrnateCryptChest | CryptWallTorch) => Self::Wood,
             Some(
@@ -175,11 +261,21 @@ impl Surface {
                 | GraveMoss
                 | DarkMushrooms
                 | GlowingPurpleMushrooms
-                | BlossomingVines,
+                | BlossomingVines
+                | SakuraBellflowers
+                | SakuraFlowerTuft
+                | FallenCherryPetals
+                | SakuraPetalShrub
+                | TealSpiritLeaves
+                | MoonlitSpiritLeaves
+                | WisteriaTassel
+                | JadeSpiritVine
+                | WispMushrooms,
             ) => Self::Leaves,
-            Some(SoulCrystalSmall | SoulCrystalLarge | BloodCrystalBlock | BloodCrystalPillar) => {
-                Self::Glass
-            }
+            Some(
+                SoulCrystalSmall | SoulCrystalLarge | BloodCrystalBlock | BloodCrystalPillar
+                | BloodCrystalGrowth | SpiritGeode,
+            ) => Self::Glass,
             Some(
                 SaltCrystalCluster
                 | SaltStalactite
@@ -193,10 +289,19 @@ impl Surface {
                 | FrostCluster
                 | GlacialCrystalCluster,
             ) => Self::Glass,
-            Some(SaltRubble | CavePebbles) => Self::Gravel,
-            Some(Sand | SaltDustFloor) => Self::Sand,
+            Some(
+                SaltRubble | CavePebbles | WoodlandStones | MoraineRocks | ClamShell | ReefOyster
+                | SpiralShell | ConeShell | ScallopShell | SandDollar,
+            ) => Self::Gravel,
+            Some(Sand | WetSand | SaltDustFloor | DuneSand | RedDuneSand) => Self::Sand,
             Some(
                 Dirt
+                | WoodlandLitter
+                | WoodlandTrail
+                | SunBanner
+                | FishingNet
+                | Starfish
+                | SeaUrchin
                 | Farmland
                 | Path
                 | Clay
@@ -204,6 +309,14 @@ impl Surface {
                 | CaveMud
                 | RootedCaveDirt
                 | NestStraw
+                | CoagulatedMud
+                | BlightedRootSoil
+                | TornBloodBanner
+                | MyceliumTurf
+                | SporeSoil
+                | MushroomGill
+                | BrownMushroomCap
+                | GlowMushroomCap
                 | MushroomStem
                 | PurpleMushroomCap
                 | RedMushroomCap
@@ -221,9 +334,13 @@ impl Surface {
                 | GiantBloodMushroom
                 | WetTar
                 | Bile
+                | BoundHayBale
                 | StrawBlock,
             ) => Self::Dirt,
-            Some(Snow | SnowLayer | CastleSnowWall | SnowDustStone) => Self::Snow,
+            Some(
+                Snow | SnowLayer | CastleSnowWall | SnowDustStone | Firn | IcySnow | SnowCoveredSod
+                | SnowMound,
+            ) => Self::Snow,
             Some(material) if terra_core::rails::is_rail(material as u16) => Self::Wood,
             Some(
                 Wood
@@ -245,6 +362,19 @@ impl Surface {
                 | BirchBed
                 | SpruceBed
                 | HandCrank
+                | ParkCedarShingles
+                | ParkTimber
+                | WindfallTwigs
+                | DeadWinterBush
+                | PineCones
+                | MarineDriftwood
+                | WreckTimbers
+                | LobsterPot
+                | BarnacledBarrel
+                | ButtressStump
+                | FallenBloodBranches
+                | MossyNurseLog
+                | AmberShelfStump
                 | CherryLog
                 | CherryPlanks
                 | CherryDoor
@@ -278,7 +408,9 @@ impl Surface {
                 | Cactus,
             ) => Self::Wood,
             Some(Gravel | Ballast | BallastStairs | BallastSlab) => Self::Gravel,
-            Some(Glass | GlassPipe | Ice | SaltCrystal | IceCrystal) => Self::Glass,
+            Some(
+                Glass | GlassPipe | Ice | SaltCrystal | IceCrystal | SeaCrystal | AlpineIcicles,
+            ) => Self::Glass,
             Some(
                 Leaves
                 | AutumnLeaves
@@ -311,6 +443,37 @@ impl Surface {
                 | AlpineHeather
                 | DesertShrub
                 | ShoreReeds
+                | WoodlandToadstools
+                | ForestBramble
+                | TawnyMilkcaps
+                | DesertAgave
+                | FloweringYucca
+                | PricklyPear
+                | SnowySpruceLeaves
+                | WinterBirchBranches
+                | AlpineConifer
+                | FrozenShrub
+                | MountainFlowerRemnants
+                | SeaFan
+                | MushroomCoral
+                | CoralBush
+                | LuminousCoral
+                | RibbonKelp
+                | GiantKelp
+                | RedAlgae
+                | BrownAlgae
+                | GreenAlgae
+                | Bladderwrack
+                | PalmFrondEast
+                | PalmFrondNorthEast
+                | PalmFrondNorth
+                | PalmFrondNorthWest
+                | GoldenSporePods
+                | PondBlossoms
+                | ExposedMycelialRoots
+                | MeadowSunflowers
+                | RoseFoxgloves
+                | MushroomMossTuft
                 | CaveWildflowers
                 | GlowVine
                 | FrostVine,
@@ -320,6 +483,10 @@ impl Surface {
             Some(
                 Air
                 | Stone
+                | BandedSandstone
+                | CarvedSunstone
+                | OasisMosaic
+                | PaintedAmphora
                 | DriedTar
                 | Sandstone
                 | SmoothStone
@@ -528,6 +695,14 @@ pub fn load() -> Result<Bank, String> {
             clips.push(recording(&root, &format!("dragons/{family}-{cue}.wav"))?);
         }
     }
+    super::lava_worm::append(&mut clips);
+    for path in super::volcanic::CLIPS
+        .into_iter()
+        .chain(super::savanna::CLIPS)
+        .chain(super::golem::CLIPS)
+    {
+        clips.push(recording(&root, path)?);
+    }
     Ok(Arc::new(clips))
 }
 
@@ -644,6 +819,73 @@ mod tests {
             Stone, Stone, Dirt, Grass, Grass, Grass, Glass, Glass, Glass, Stone, Snow, Glass,
             Leaves, Leaves, Glass, Glass, Leaves,
         ]);
+        // Gills, spore pods, floating blooms and fallen timber (488–491).
+        expected.extend([Dirt, Leaves, Leaves, Wood]);
+        // Blood Forest ground, masonry, cloth, lanterns, bones, crystals and branches.
+        expected.extend([
+            Dirt, Dirt, Stone, Stone, Dirt, Stone, Stone, Stone, Stone, Glass, Stone, Wood,
+        ]);
+        // Mushroom Park caps, soil, flora and wooden structures (504–513).
+        expected.extend([
+            Dirt, Dirt, Dirt, Dirt, Leaves, Wood, Leaves, Leaves, Wood, Wood,
+        ]);
+        expected.extend([Leaves, Leaves, Stone, Dirt, Stone]);
+        expected.extend([Dirt, Dirt, Leaves, Wood, Grass, Gravel, Leaves, Wood]); // Forest floor and understory (519–526).
+        expected.extend([
+            Sand, Sand, Stone, Stone, Stone, Leaves, Leaves, Leaves, Stone, Dirt,
+        ]); // Desert sand, ruins and vegetation (527–536).
+        expected.extend([Leaves; 4]); // Orientations of the palm fronds (537–540).
+        expected.extend([Sand, Stone, Stone, Stone]); // Marine substrate.
+        expected.extend([Stone; 4]); // Coral heads.
+        expected.extend([Leaves; 10]); // Fans, soft coral, kelp and algae.
+        expected.extend([Gravel, Gravel, Gravel, Gravel, Gravel, Dirt, Dirt, Gravel]);
+        expected.extend([Wood, Wood, Stone, Dirt, Wood, Stone, Wood, Glass]);
+        expected.extend([Stone; 6]); // Reef formations and bubble vent.
+        expected.extend([
+            Snow, Snow, Stone, Snow, Leaves, Leaves, Leaves, Wood, Leaves, Glass, Gravel, Snow,
+            Wood, Grass, Leaves,
+        ]); // Highlands.
+        expected.extend([
+            Grass, Stone, Stone, Leaves, Leaves, Leaves, Stone, Stone, Dirt, Leaves,
+        ]); // Cherry grove.
+        expected.extend([Leaves, Leaves, Leaves, Leaves, Glass, Leaves, Stone]); // Spirit grove.
+        expected.extend([
+            Stone, Dirt, Dirt, Dirt, Stone, Stone, Gravel, Glass, Wood, Wood, Stone, Leaves,
+            Leaves, Wood, Wood, Glass, Stone, Stone, Dirt,
+        ]); // Ashlands.
+        expected.extend([Grass, Grass, Dirt, Dirt]); // Savanna grass, soil and loam.
+        expected.extend([Stone; 7]); // Carved sandstone through ochre stone.
+        expected.extend([Wood, Leaves, Wood, Wood, Leaves]); // Acacia and baobab.
+        expected.extend([Grass, Grass]);
+        expected.extend([Leaves; 9]); // Thorn bush, sapling, succulents, flowers and cacti.
+        expected.extend([Stone; 4]); // Boulders, rock pile and ribs.
+        expected.extend([Dirt, Dirt, Wood, Wood, Stone, Stone, Stone]);
+        expected.extend([
+            Grass, Dirt, Dirt, Gravel, Grass, Dirt, Stone, Stone, Stone, Wood, Wood, Wood, Leaves,
+            Leaves, Leaves, Leaves, Leaves, Leaves, Leaves, Dirt, Grass, Leaves, Grass, Dirt, Wood,
+            Wood, Stone, Wood, Wood, Wood, Wood, Wood,
+        ]); // Swamp.
+        expected.push(Stone); // Fire dragon egg.
+        expected.extend([
+            Dirt, Gravel, Stone, Stone, Stone, Stone, Stone, Stone, Stone, Stone, Glass, Leaves,
+            Leaves, Gravel, Wood, Dirt, Dirt, Stone, Stone, Stone, Stone,
+        ]); // Petrified Forest.
+        expected.extend([
+            Stone, Stone, Stone, Stone, Stone, Stone, Stone, Stone, Leaves, Wood, Wood, Gravel,
+            Stone, Stone, Dirt,
+        ]);
+        expected.extend([
+            Stone, Glass, Stone, Stone, Gravel, Stone, Glass, Glass, Stone, Stone, Stone, Glass,
+            Glass, Stone, Glass, Leaves, Grass, Grass, Gravel, Stone, Stone, Dirt, Wood, Stone,
+            Stone, Stone, Wood, Glass,
+        ]); // Crystal Highlands, quarry and observatory.
+        expected.extend([Stone; 3]); // Stackable structural prisms.
+        expected.extend([Stone; 4]); // Sliceable quartz and lance crystals.
+        expected.extend([
+            Stone, Stone, Stone, Gravel, Sand, Stone, Stone, Stone, Wood, Stone, Stone,
+        ]);
+        expected.extend([Wood, Wood, Glass, Leaves, Grass, Wood]); // Dock fittings and dune plants.
+        expected.extend([Wood, Glass, Glass, Glass, Glass, Glass]); // Highland crystal carvings.
         assert_eq!(
             expected.len(),
             usize::from(terra_voxel::MaterialId::LAST) + 1
@@ -776,9 +1018,7 @@ mod tests {
         let clips = load().unwrap();
         assert_eq!(
             clips.len(),
-            super::super::worm::FIRST
-                + super::super::worm::BANK_LEN
-                + super::super::dragons::FAMILIES.len() * super::super::dragons::CUES.len()
+            super::super::golem::FIRST + super::super::golem::CLIPS.len()
         );
         for (name, clip) in PATHS.iter().zip(clips.iter()) {
             let rms = (clip.iter().map(|s| s * s).sum::<f32>() / clip.len() as f32).sqrt();

@@ -32,6 +32,11 @@ for (const [index, [wood, tint]] of species.entries()) {
     }
     materials.push({name:'leaf_glass', alphaMode:'BLEND', doubleSided:true,
       pbrMetallicRoughness:{baseColorFactor:[.68,.85,.91,.12],roughnessFactor:.14,metallicFactor:0}});
+    if (wood === 'cherry') {
+      for (const [part, color] of [['silk',[.99,.87,.74]], ['petal',[.99,.54,.65]], ['brass',[.88,.57,.27]]]) {
+        materials.push({name:'leaf_'+part,pbrMetallicRoughness:{baseColorFactor:[...color,1],roughnessFactor:.74,metallicFactor:part==='brass'?.35:0}});
+      }
+    }
     const groups = materials.map(() => ({p:[], n:[], i:[]}));
     const collision = [];
     const box = (x,y,z,w,h,d,material,solid=false,hinged=false) => {
@@ -110,6 +115,29 @@ for (const [index, [wood, tint]] of species.entries()) {
       box(.77,.41,.55,.035,.12,.025,8);
       box(.76,.45,.575,.06,.025,.025,9);
       box(.01,.02,.275,.98,.07,.45,2);
+    }
+    if (wood === 'cherry') {
+      if (!window) {
+        // Cream shoji panels between dark stiles, with a five-petal inlay below.
+        box(.237,1.13,.606,.486,.57,.014,11);
+        for (const x of [.23,.39,.55,.71]) box(x,1.12,.622,.025,.60,.014,6);
+        for (const y of [1.12,1.30,1.49,1.69]) box(.23,y,.622,.505,.025,.014,7);
+        for (let i=0;i<5;i++) {
+          const phase=i*Math.PI*2/5;
+          box(.461+.059*Math.sin(phase),.61+.063*Math.cos(phase),.617,.052,.055,.01,12);
+        }
+        box(.47,.625,.632,.037,.037,.009,13);
+      } else {
+        // Open asymmetric kumiko lattice, with a rose blossom in the corner.
+        for(const z of [.443,.552]) {
+          for (const x of [.31,.66]) box(x,.15,z,.02,.65,.012,7);
+          for (const y of [.255,.675]) box(.20,y,z,.60,.018,.012,7);
+          for (let i=0;i<5;i++) {
+            const a=i*Math.PI*2/5;
+            box(.294+.031*Math.sin(a),.652+.031*Math.cos(a),z,.034,.032,.015,12);
+          }
+        }
+      }
     }
     for(const y of [height*.24,height*.76]) {
       box(.125,y,.555,.025,.13,.045,3);

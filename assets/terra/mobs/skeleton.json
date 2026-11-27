@@ -20,7 +20,8 @@
   "spawn": {
     "biomes": [
       "spirit_blossom",
-      "blood_forest"
+      "blood_forest",
+      "ashlands"
     ],
     "herd_size": [
       1,

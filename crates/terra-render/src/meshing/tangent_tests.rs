@@ -111,7 +111,8 @@ fn final_worker_packing_preserves_tangents_and_fills_later_procedural_vertices()
     crate::foliage::packing::pack(&mut batch);
     batch.compact_indices();
     assert!(batch.normals.is_empty());
-    assert_eq!(batch.tangents, vec![[1.0, 0.0, 0.0, 1.0]; 4]);
+    assert!(batch.tangents.is_empty());
+    assert_eq!(batch.packed_tangents, vec![[127, 0, 0, 127]; 4]);
     assert_eq!(batch.compact_indices, [0, 1, 2]);
 }
 

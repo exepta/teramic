@@ -147,7 +147,7 @@ pub fn food_gain(kind: Kind, item: ItemKind) -> Option<u8> {
             item,
             ItemKind::Animal(AnimalProduct::Fish | AnimalProduct::Clownfish)
         ),
-        Kind::EarthDragon | Kind::DarkDragon => matches!(
+        Kind::EarthDragon | Kind::FireDragon | Kind::DarkDragon => matches!(
             item,
             ItemKind::Animal(AnimalProduct::Beef | AnimalProduct::Mutton | AnimalProduct::Pork)
         ),

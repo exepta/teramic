@@ -1,5 +1,6 @@
 //! Replicated furnace fire and smoke share two meshes and a fixed local light budget.
 mod alchemy;
+pub(crate) mod molten;
 use bevy::{
     asset::RenderAssetUsages,
     camera::Exposure,
@@ -51,6 +52,7 @@ struct Effects {
     visible: bool,
     vents: Vec<Vent>,
     next_vents: f32,
+    previous_thermal_time: f64,
 }
 
 struct Vent {
@@ -74,7 +76,8 @@ fn vent_strength(smoke_cells: usize) -> f32 {
 struct FurnaceLamp([i64; 3]);
 
 pub(crate) fn install(app: &mut App) {
-    app.add_plugins(MaterialPlugin::<SmokeMaterial>::default())
+    molten::install(app);
+    crate::material_work::add::<SmokeMaterial>(app)
         .add_systems(Startup, setup)
         .add_systems(Update, update_haze.after(crate::water::environment::update))
         .add_systems(
@@ -153,6 +156,7 @@ fn setup(
         visible: false,
         vents: Vec::new(),
         next_vents: 0.0,
+        previous_thermal_time: -1.,
     });
 }
 
@@ -237,7 +241,7 @@ impl Geometry {
         true
     }
 
-    fn upload(self, meshes: &mut Assets<Mesh>, handle: &Handle<Mesh>) -> bool {
+    pub(crate) fn upload(self, meshes: &mut Assets<Mesh>, handle: &Handle<Mesh>) -> bool {
         use bevy::mesh::VertexAttributeValues as V;
         if self.positions.is_empty() || self.indices.is_empty() {
             return false;
@@ -466,6 +470,8 @@ fn update(
     mut commands: Commands,
     time: Res<Time>,
     access: Res<WorldAccess>,
+    sources: Res<molten::VolcanicSources>,
+    mut sounds: MessageWriter<molten::VolcanicSound>,
     session: Option<Res<ClientSession>>,
     journal: Res<EditJournal>,
     chunks: Res<ChunkStore>,
@@ -562,7 +568,7 @@ fn update(
             .iter()
             .any(|furnace| !furnace.smoke_cells.is_empty())
     });
-    let active = !nearby.is_empty() || has_smoke || alchemy.active();
+    let active = !nearby.is_empty() || has_smoke || alchemy.active() || sources.visible();
     if !active && !effects.visible {
         return;
     }
@@ -628,7 +634,8 @@ fn update(
             }
         }
     }
-    effects.visible = !nearby.is_empty() || !cells.is_empty() || alchemy.active();
+    effects.visible =
+        !nearby.is_empty() || !cells.is_empty() || alchemy.active() || sources.visible();
     effects.next = time.elapsed_secs() + 0.05;
     let mut fire = Geometry::default();
     let mut smoke = Geometry::default();
@@ -638,6 +645,40 @@ fn update(
         (&chunks, &journal),
         (time.elapsed_secs(), right, up),
     );
+    let seconds = sources.seconds;
+    sources.append(
+        &mut fire,
+        &chunks,
+        &journal,
+        effects.previous_thermal_time,
+        &mut sounds,
+    );
+    sources.append_geysers(&mut smoke, &chunks, &journal, right, up);
+    effects.previous_thermal_time = seconds;
+    for &cell in &sources.fumaroles {
+        if !molten::exposed(&chunks, cell, terra_world::lava::FUMAROLE) {
+            continue;
+        }
+        let height = terra_world::lava::plume_height(cell, seconds) as f32;
+        let origin = Vec3::from_array(cell.map(|v| v as f32)) + Vec3::new(0.5, 1.015, 0.5);
+        for i in 0..14 {
+            let age = (time.elapsed_secs() * 0.72 + i as f32 / 14.).fract();
+            let drift = age * age * 0.30;
+            let phase = i as f32 * 2.4 + seconds as f32;
+            let p = origin + Vec3::new(drift * phase.cos(), height * age, drift * phase.sin());
+            let top = p.y.floor() as i64;
+            if ((cell[1] + 1)..=top).any(|y| block([cell[0], y, cell[2]]) != Some(0)) {
+                continue;
+            }
+            smoke.wisp(
+                p,
+                0.07 + age * 0.31,
+                right,
+                up,
+                [0.74, 0.67, 0.64, (1. - age) * 0.48],
+            );
+        }
+    }
     for furnace in nearby {
         let facing = journal
             .object_state(furnace.position)

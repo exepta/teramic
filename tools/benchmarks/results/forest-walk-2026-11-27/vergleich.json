@@ -1,0 +1,613 @@
+{
+  "world": "Test",
+  "seed": "9890475192252935834",
+  "hardware": "AMD Radeon RX 6950 XT / Vulkan, Ryzen 9 5900X",
+  "frame_budget_ms": 16.666666666666668,
+  "start": [
+    -219.5,
+    58,
+    -155.5
+  ],
+  "route": "64 m eastward, return, continue; grounded player input, acknowledged by integrated server",
+  "runs": [
+    {
+      "sample_frames": 1621,
+      "sample_window_seconds": 36.0,
+      "average_fps": 45.02651003887736,
+      "p50_frame_ms": null,
+      "p95_frame_ms": 35.000206999999996,
+      "p99_frame_ms": 43.273711,
+      "worst_frame_ms": 116.35911,
+      "frames_over_60_fps_budget": null,
+      "retained_draw_entities": null,
+      "reused_wind_meshes": null,
+      "reused_wind_bytes": null,
+      "initial_load_seconds": 52.231695109,
+      "run": "play-baseline",
+      "completed_return_m": 63.2645263671875,
+      "profiling": false,
+      "resolution": [
+        2560,
+        1440
+      ],
+      "shadow": "high",
+      "view_distance": 16,
+      "leaf_quality": "high",
+      "block_quality": "high",
+      "gpu": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "within_60_fps_percent": null,
+      "shadow_map_resolution_px": 2048,
+      "process_peak_drm_vram_GiB": 8.38,
+      "wall_time_measurement": "36 s Spielzeit nach Ladephase; Fenster-Auflösung physisch, FPS ohne VSync.",
+      "source": "../../../../target/forest-60-1127/play-baseline/native.log",
+      "process_peak_rss_MiB": 5013.0,
+      "peak_deferred_resident_bytes": null,
+      "workers": {
+        "compute": 4,
+        "async_compute": 4,
+        "io": 4
+      },
+      "p95_delta_from_baseline_ms": 0,
+      "three_slowest_frames": [
+        {
+          "frame_ms": 116.36,
+          "at_seconds": 15.43,
+          "generation_jobs": 0,
+          "mesh_jobs": 5,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 0
+        },
+        {
+          "frame_ms": 67.25,
+          "at_seconds": 14.26,
+          "generation_jobs": 0,
+          "mesh_jobs": 8,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 127996
+        },
+        {
+          "frame_ms": 65.04,
+          "at_seconds": 15.31,
+          "generation_jobs": 0,
+          "mesh_jobs": 8,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 102914
+        }
+      ],
+      "beschreibung": "Ausgangsstand mit denselben Vergleichs-Workern"
+    },
+    {
+      "sample_frames": 2142,
+      "sample_window_seconds": 36.0,
+      "average_fps": 59.51415966672892,
+      "p50_frame_ms": 15.964470000000002,
+      "p95_frame_ms": 24.62804,
+      "p99_frame_ms": 29.733122,
+      "worst_frame_ms": 50.669031000000004,
+      "frames_over_60_fps_budget": 925,
+      "retained_draw_entities": 9265,
+      "reused_wind_meshes": 4725,
+      "reused_wind_bytes": 2590929064,
+      "initial_load_seconds": 50.396228235,
+      "run": "release7-play",
+      "completed_return_m": 63.22515869140625,
+      "profiling": false,
+      "resolution": [
+        2560,
+        1440
+      ],
+      "shadow": "high",
+      "view_distance": 16,
+      "leaf_quality": "high",
+      "block_quality": "high",
+      "gpu": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "within_60_fps_percent": 56.82,
+      "shadow_map_resolution_px": 2048,
+      "process_peak_drm_vram_GiB": 9.12,
+      "wall_time_measurement": "36 s Spielzeit nach Ladephase; Fenster-Auflösung physisch, FPS ohne VSync.",
+      "source": "../../../../target/forest-60-1127/release7-play/native.log",
+      "process_peak_rss_MiB": 3600.2,
+      "peak_deferred_resident_bytes": 193890106,
+      "device_busy_during_walk": {
+        "adapter_device": "card1",
+        "driver_counter": "gpu_busy_percent",
+        "period_seconds": 0.25,
+        "count": 143,
+        "mean": 86.4895104895105,
+        "p50": 93,
+        "p95": 99,
+        "share_at_95_percent": 0.48951048951048953
+      },
+      "workers": {
+        "compute": 4,
+        "async_compute": 4,
+        "io": 4
+      },
+      "p95_delta_from_baseline_ms": -10.37,
+      "three_slowest_frames": [
+        {
+          "frame_ms": 50.67,
+          "at_seconds": 12.03,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 4,
+          "preceding_upload_vertices": 80632
+        },
+        {
+          "frame_ms": 37.55,
+          "at_seconds": 15.3,
+          "generation_jobs": 0,
+          "mesh_jobs": 2,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 0
+        },
+        {
+          "frame_ms": 37.24,
+          "at_seconds": 13.05,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 0
+        }
+      ],
+      "beschreibung": "Bereinigter Client mit denselben Vergleichs-Workern"
+    },
+    {
+      "sample_frames": 2107,
+      "sample_window_seconds": 36.0,
+      "average_fps": 58.514461539364916,
+      "p50_frame_ms": 16.271555,
+      "p95_frame_ms": 25.14172,
+      "p99_frame_ms": 29.759821,
+      "worst_frame_ms": 48.712196,
+      "frames_over_60_fps_budget": 969,
+      "retained_draw_entities": 9589,
+      "reused_wind_meshes": 4252,
+      "reused_wind_bytes": 2315587370,
+      "initial_load_seconds": 49.154251462,
+      "run": "interactivefinal7-play",
+      "completed_return_m": 63.22515869140625,
+      "profiling": false,
+      "resolution": [
+        2560,
+        1440
+      ],
+      "shadow": "high",
+      "view_distance": 16,
+      "leaf_quality": "high",
+      "block_quality": "high",
+      "gpu": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "within_60_fps_percent": 54.01,
+      "shadow_map_resolution_px": 2048,
+      "process_peak_drm_vram_GiB": 9.12,
+      "wall_time_measurement": "36 s Spielzeit nach Ladephase; Fenster-Auflösung physisch, FPS ohne VSync.",
+      "source": "../../../../target/forest-60-1127/interactivefinal7-play/native.log",
+      "process_peak_rss_MiB": 3448.4,
+      "peak_deferred_resident_bytes": 211152298,
+      "device_busy_during_walk": {
+        "adapter_device": "card1",
+        "driver_counter": "gpu_busy_percent",
+        "period_seconds": 0.25,
+        "count": 144,
+        "mean": 88.70833333333333,
+        "p50": 97,
+        "p95": 99,
+        "share_at_95_percent": 0.5347222222222222
+      },
+      "workers": {
+        "compute": 4,
+        "async_compute": 3,
+        "io": 3
+      },
+      "p95_delta_from_baseline_ms": -9.86,
+      "three_slowest_frames": [
+        {
+          "frame_ms": 48.71,
+          "at_seconds": 12.01,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 53914
+        },
+        {
+          "frame_ms": 46.8,
+          "at_seconds": 6.2,
+          "generation_jobs": 0,
+          "mesh_jobs": 7,
+          "prop_jobs": 4,
+          "preceding_upload_vertices": 56818
+        },
+        {
+          "frame_ms": 43.57,
+          "at_seconds": 25.62,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 63998
+        }
+      ],
+      "beschreibung": "Bereinigter Client mit der Worker-Konfiguration des normalen Spiels"
+    },
+    {
+      "sample_frames": 2137,
+      "sample_window_seconds": 36.0,
+      "average_fps": 59.3585395194546,
+      "p50_frame_ms": 15.889264,
+      "p95_frame_ms": 24.810278,
+      "p99_frame_ms": 29.285480999999997,
+      "worst_frame_ms": 51.889658999999995,
+      "frames_over_60_fps_budget": 940,
+      "retained_draw_entities": 9986,
+      "reused_wind_meshes": 5368,
+      "reused_wind_bytes": 2951419248,
+      "initial_load_seconds": 47.682854643,
+      "run": "final6-play",
+      "completed_return_m": 63.22515869140625,
+      "profiling": false,
+      "resolution": [
+        2560,
+        1440
+      ],
+      "shadow": "high",
+      "view_distance": 16,
+      "leaf_quality": "high",
+      "block_quality": "high",
+      "gpu": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "within_60_fps_percent": 56.01,
+      "shadow_map_resolution_px": 2048,
+      "process_peak_drm_vram_GiB": 9.05,
+      "wall_time_measurement": "36 s Spielzeit nach Ladephase; Fenster-Auflösung physisch, FPS ohne VSync.",
+      "source": "../../../../target/forest-60-1127/final6-play/native.log",
+      "process_peak_rss_MiB": 3896.8,
+      "peak_deferred_resident_bytes": 248360056,
+      "device_busy_during_walk": {
+        "adapter_device": "card1",
+        "driver_counter": "gpu_busy_percent",
+        "period_seconds": 0.25,
+        "count": 144,
+        "mean": 90.69444444444444,
+        "p50": 97,
+        "p95": 99,
+        "share_at_95_percent": 0.5555555555555556
+      },
+      "workers": {
+        "compute": 4,
+        "async_compute": 4,
+        "io": 4
+      },
+      "p95_delta_from_baseline_ms": -10.19,
+      "three_slowest_frames": [
+        {
+          "frame_ms": 51.89,
+          "at_seconds": 12.02,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 21330
+        },
+        {
+          "frame_ms": 43.77,
+          "at_seconds": 25.76,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 11380
+        },
+        {
+          "frame_ms": 38.81,
+          "at_seconds": 25.07,
+          "generation_jobs": 0,
+          "mesh_jobs": 5,
+          "prop_jobs": 4,
+          "preceding_upload_vertices": 63062
+        }
+      ],
+      "beschreibung": "Erster Hoch-Lauf mit dem finalen Standard-Bildpfad"
+    },
+    {
+      "sample_frames": 2124,
+      "sample_window_seconds": 36.0,
+      "average_fps": 58.99352676484994,
+      "p50_frame_ms": 15.841161999999999,
+      "p95_frame_ms": 25.526688,
+      "p99_frame_ms": 30.236131999999998,
+      "worst_frame_ms": 56.787803999999994,
+      "frames_over_60_fps_budget": 920,
+      "retained_draw_entities": 9559,
+      "reused_wind_meshes": 4816,
+      "reused_wind_bytes": 2676477072,
+      "initial_load_seconds": 48.531647268,
+      "run": "repeat6-play",
+      "completed_return_m": 63.259521484375,
+      "profiling": false,
+      "resolution": [
+        2560,
+        1440
+      ],
+      "shadow": "high",
+      "view_distance": 16,
+      "leaf_quality": "high",
+      "block_quality": "high",
+      "gpu": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "within_60_fps_percent": 56.69,
+      "shadow_map_resolution_px": 2048,
+      "process_peak_drm_vram_GiB": 9.18,
+      "wall_time_measurement": "36 s Spielzeit nach Ladephase; Fenster-Auflösung physisch, FPS ohne VSync.",
+      "source": "../../../../target/forest-60-1127/repeat6-play/native.log",
+      "process_peak_rss_MiB": 3710.1,
+      "peak_deferred_resident_bytes": 204984250,
+      "device_busy_during_walk": {
+        "adapter_device": "card1",
+        "driver_counter": "gpu_busy_percent",
+        "period_seconds": 0.25,
+        "count": 143,
+        "mean": 88.20979020979021,
+        "p50": 96,
+        "p95": 99,
+        "share_at_95_percent": 0.5104895104895105
+      },
+      "workers": {
+        "compute": 4,
+        "async_compute": 4,
+        "io": 4
+      },
+      "p95_delta_from_baseline_ms": -9.47,
+      "three_slowest_frames": [
+        {
+          "frame_ms": 56.79,
+          "at_seconds": 12.06,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 59788
+        },
+        {
+          "frame_ms": 40.31,
+          "at_seconds": 13.25,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 1,
+          "preceding_upload_vertices": 2328
+        },
+        {
+          "frame_ms": 40.23,
+          "at_seconds": 13.51,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 17861
+        }
+      ],
+      "beschreibung": "Wiederholung vor dem Entfernen der experimentellen Testschalter"
+    },
+    {
+      "sample_frames": 2108,
+      "sample_window_seconds": 36.0,
+      "average_fps": 58.55553318571525,
+      "p50_frame_ms": 16.204783,
+      "p95_frame_ms": 24.925708,
+      "p99_frame_ms": 28.859855,
+      "worst_frame_ms": 49.750212000000005,
+      "frames_over_60_fps_budget": 963,
+      "retained_draw_entities": 10473,
+      "reused_wind_meshes": 4822,
+      "reused_wind_bytes": 2585431144,
+      "initial_load_seconds": 49.298788774,
+      "run": "interactive6-play",
+      "completed_return_m": 63.259246826171875,
+      "profiling": false,
+      "resolution": [
+        2560,
+        1440
+      ],
+      "shadow": "high",
+      "view_distance": 16,
+      "leaf_quality": "high",
+      "block_quality": "high",
+      "gpu": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "within_60_fps_percent": 54.32,
+      "shadow_map_resolution_px": 2048,
+      "process_peak_drm_vram_GiB": 9.12,
+      "wall_time_measurement": "36 s Spielzeit nach Ladephase; Fenster-Auflösung physisch, FPS ohne VSync.",
+      "source": "../../../../target/forest-60-1127/interactive6-play/native.log",
+      "process_peak_rss_MiB": 3236.6,
+      "peak_deferred_resident_bytes": 142002626,
+      "device_busy_during_walk": {
+        "adapter_device": "card1",
+        "driver_counter": "gpu_busy_percent",
+        "period_seconds": 0.25,
+        "count": 144,
+        "mean": 87.90972222222223,
+        "p50": 95,
+        "p95": 99,
+        "share_at_95_percent": 0.5069444444444444
+      },
+      "workers": {
+        "compute": 4,
+        "async_compute": 3,
+        "io": 3
+      },
+      "p95_delta_from_baseline_ms": -10.07,
+      "three_slowest_frames": [
+        {
+          "frame_ms": 49.75,
+          "at_seconds": 25.42,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 53012
+        },
+        {
+          "frame_ms": 49.45,
+          "at_seconds": 12.03,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 1,
+          "preceding_upload_vertices": 61102
+        },
+        {
+          "frame_ms": 43.3,
+          "at_seconds": 13.24,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 31986
+        }
+      ],
+      "beschreibung": "Zusätzliche Wiederholung mit der Worker-Konfiguration des normalen Spiels"
+    },
+    {
+      "sample_frames": 1998,
+      "sample_window_seconds": 36.0,
+      "average_fps": 55.48522533408905,
+      "p50_frame_ms": 16.662205,
+      "p95_frame_ms": 28.143103,
+      "p99_frame_ms": 32.507650999999996,
+      "worst_frame_ms": 96.907803,
+      "frames_over_60_fps_budget": 999,
+      "retained_draw_entities": 9339,
+      "reused_wind_meshes": 4202,
+      "reused_wind_bytes": 3663632102,
+      "initial_load_seconds": 64.479437621,
+      "run": "ordinary6-play",
+      "completed_return_m": 63.2645263671875,
+      "profiling": false,
+      "resolution": [
+        2560,
+        1440
+      ],
+      "shadow": "high",
+      "view_distance": 16,
+      "leaf_quality": "high",
+      "block_quality": "high",
+      "gpu": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "within_60_fps_percent": 50.0,
+      "shadow_map_resolution_px": 2048,
+      "process_peak_drm_vram_GiB": 8.38,
+      "wall_time_measurement": "36 s Spielzeit nach Ladephase; Fenster-Auflösung physisch, FPS ohne VSync.",
+      "source": "../../../../target/forest-60-1127/ordinary6-play/native.log",
+      "process_peak_rss_MiB": 3125.6,
+      "peak_deferred_resident_bytes": 202153526,
+      "device_busy_during_walk": {
+        "adapter_device": "card1",
+        "driver_counter": "gpu_busy_percent",
+        "period_seconds": 0.25,
+        "count": 143,
+        "mean": 89.77622377622377,
+        "p50": 99,
+        "p95": 99,
+        "share_at_95_percent": 0.6503496503496503
+      },
+      "workers": {
+        "compute": 4,
+        "async_compute": 4,
+        "io": 4
+      },
+      "p95_delta_from_baseline_ms": -6.86,
+      "three_slowest_frames": [
+        {
+          "frame_ms": 96.91,
+          "at_seconds": 6.26,
+          "generation_jobs": 0,
+          "mesh_jobs": 8,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 35969
+        },
+        {
+          "frame_ms": 50.29,
+          "at_seconds": 12.9,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 5232
+        },
+        {
+          "frame_ms": 47.91,
+          "at_seconds": 14.09,
+          "generation_jobs": 0,
+          "mesh_jobs": 2,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 48372
+        }
+      ],
+      "beschreibung": "Kontrolle mit vollständiger Geometrie für alle Blattschatten"
+    },
+    {
+      "sample_frames": 2131,
+      "sample_window_seconds": 36.0,
+      "average_fps": 59.18133751910147,
+      "p50_frame_ms": 15.996494,
+      "p95_frame_ms": 24.84946,
+      "p99_frame_ms": 30.061253999999998,
+      "worst_frame_ms": 47.46615,
+      "frames_over_60_fps_budget": 927,
+      "retained_draw_entities": 9772,
+      "reused_wind_meshes": 5054,
+      "reused_wind_bytes": 2787169332,
+      "initial_load_seconds": 47.473658656,
+      "run": "medium6-play",
+      "completed_return_m": 63.2672119140625,
+      "profiling": false,
+      "resolution": [
+        2560,
+        1440
+      ],
+      "shadow": "medium",
+      "view_distance": 16,
+      "leaf_quality": "high",
+      "block_quality": "high",
+      "gpu": "AMD Radeon RX 6950 XT (RADV NAVI21)",
+      "within_60_fps_percent": 56.5,
+      "shadow_map_resolution_px": 1024,
+      "process_peak_drm_vram_GiB": 9.13,
+      "wall_time_measurement": "36 s Spielzeit nach Ladephase; Fenster-Auflösung physisch, FPS ohne VSync.",
+      "source": "../../../../target/forest-60-1127/medium6-play/native.log",
+      "process_peak_rss_MiB": 3408.4,
+      "peak_deferred_resident_bytes": 182734096,
+      "device_busy_during_walk": {
+        "adapter_device": "card1",
+        "driver_counter": "gpu_busy_percent",
+        "period_seconds": 0.25,
+        "count": 144,
+        "mean": 87.66666666666667,
+        "p50": 95,
+        "p95": 99,
+        "share_at_95_percent": 0.5069444444444444
+      },
+      "workers": {
+        "compute": 4,
+        "async_compute": 4,
+        "io": 4
+      },
+      "p95_delta_from_baseline_ms": -10.15,
+      "three_slowest_frames": [
+        {
+          "frame_ms": 47.47,
+          "at_seconds": 12.04,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 56220
+        },
+        {
+          "frame_ms": 36.19,
+          "at_seconds": 13.24,
+          "generation_jobs": 0,
+          "mesh_jobs": 3,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 18612
+        },
+        {
+          "frame_ms": 35.49,
+          "at_seconds": 34.81,
+          "generation_jobs": 4,
+          "mesh_jobs": 8,
+          "prop_jobs": 0,
+          "preceding_upload_vertices": 44141
+        }
+      ],
+      "beschreibung": "Kontrolle mit der Schattenstufe Mittel"
+    }
+  ],
+  "method": "Je Lauf frische Kopie derselben gespeicherten Welt; integrierter Server mit Eingabebestätigung, 36 Sekunden nach der Aufwärmphase, 64 Meter nach Osten, Rückkehr, dann weiter. Bildzeiten basieren auf der Wanduhr. Für die FPS-Läufe sind detaillierte Ablaufverfolgung und Screenshots deaktiviert."
+}

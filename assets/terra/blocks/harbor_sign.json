@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": 786,
+  "name": "Harbor Sign",
+  "description": "Harbor Sign",
+  "creative_category": "decoration",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.2,
+  "resistance": 3.8,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/harbor_sign.glb",
+  "struct_block": true,
+  "textures": {
+    "drift": "textures/misty_coast/harbor_timber.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.11,
+        0.0,
+        0.44
+      ],
+      "maximum": [
+        0.23,
+        0.96,
+        0.57
+      ]
+    },
+    {
+      "minimum": [
+        0.11,
+        0.87,
+        0.43
+      ],
+      "maximum": [
+        0.92,
+        0.94,
+        0.58
+      ]
+    },
+    {
+      "minimum": [
+        0.28,
+        0.38,
+        0.47
+      ],
+      "maximum": [
+        0.9,
+        0.79,
+        0.54
+      ]
+    }
+  ]
+}

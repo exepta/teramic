@@ -44,10 +44,10 @@ fn adjacent_partial_segments_render_once_even_without_exposed_cube_interfaces() 
         .unwrap()
     };
     let once = compose(&[a]);
+    let neighbor = compose(&[b]);
     let adjacent = compose(&[a, b, a]);
     assert_eq!(once.len(), 1);
     assert!(once[0].positions.len() < once[0].indices.len());
-    assert_eq!(once[0].indices.len(), 96 * 3);
     assert_eq!(once[0].rooted_wind.len(), once[0].positions.len());
     let mut expected = Vec::new();
     terra_world::segments::visit(50, [3, 4, 5], Default::default(), false, |t, _| {
@@ -62,7 +62,9 @@ fn adjacent_partial_segments_render_once_even_without_exposed_cube_interfaces() 
         expected,
         "index sharing must preserve the canonical picking triangles"
     );
-    assert_eq!(adjacent[0].positions.len(), once[0].positions.len() * 2);
+    let (first, second) = adjacent[0].positions.split_at(once[0].positions.len());
+    assert_eq!(first, once[0].positions);
+    assert_eq!(second, neighbor[0].positions);
     assert!(
         adjacent[0]
             .indices
@@ -70,9 +72,8 @@ fn adjacent_partial_segments_render_once_even_without_exposed_cube_interfaces() 
             .all(|&i| (i as usize) < adjacent[0].positions.len())
     );
     assert_eq!(
-        compose(&[b])[0].positions.len(),
-        once[0].positions.len(),
-        "removing one cell must retain the neighbor"
+        adjacent[0].indices.len(),
+        once[0].indices.len() + neighbor[0].indices.len()
     );
 }
 
@@ -94,6 +95,7 @@ fn replacing_fixture_sections_cancels_old_snapshots_even_when_edit_epoch_is_unch
         a,
         super::jobs::RenderJob {
             ready: None,
+            folded_leaves: None,
             micro_detail: true,
             epoch: 0,
             appearance_epoch: 0,
@@ -127,7 +129,10 @@ fn templates() -> TemplateSet {
         material: 0,
     };
     TemplateSet {
+        sculpted_blocks: Default::default(),
+        batched_wind_leaves: Default::default(),
         normal_mapped_materials: Default::default(),
+        foliage_proxy_tints: Default::default(),
         foliage_clusters: Default::default(),
         lantern_variants: Default::default(),
         opaque_cube_lods: Default::default(),
@@ -316,7 +321,7 @@ fn decorations_are_deterministic_and_missing_material_is_an_error() {
 }
 
 #[test]
-fn detailed_trunks_surrounded_by_masked_crowns_have_no_open_faces() {
+fn detailed_trunks_remain_visible_through_crowns_and_glass() {
     use crate::blocks::{
         cube_faces,
         definitions::{BlockRenderKind, CubeSurface},
@@ -324,7 +329,7 @@ fn detailed_trunks_surrounded_by_masked_crowns_have_no_open_faces() {
     };
     use bevy::math::Vec3;
     let mut templates = TemplateSet::default();
-    for id in [6, 7, 8, 9, 10] {
+    for id in [6, 7, 8, 9, 10, 15] {
         let bark = id == 6 || id == 10;
         templates.blocks.insert(
             id,
@@ -341,12 +346,12 @@ fn detailed_trunks_surrounded_by_masked_crowns_have_no_open_faces() {
         );
     }
     let index = |p: [usize; 3]| p[0] + 18 * (p[1] + 18 * p[2]);
-    for leaf in 7..=9 {
+    for neighbor in [7, 8, 9, 15] {
         let mut padded = vec![0; terra_voxel::meshing::PADDED_VOLUME];
         for x in 3..=6 {
             for y in 3..=5 {
                 for z in 3..=5 {
-                    padded[index([x, y, z])] = leaf;
+                    padded[index([x, y, z])] = neighbor;
                 }
             }
         }
@@ -412,7 +417,7 @@ fn detailed_trunks_surrounded_by_masked_crowns_have_no_open_faces() {
                                 });
                                 assert!(
                                     hit,
-                                    "Missing trunk face: leaf={leaf}, lod={level:?}, center={center:?}, axis={axis}, sign={sign}"
+                                    "Missing trunk face behind glass: neighbor={neighbor}, lod={level:?}, center={center:?}, axis={axis}, sign={sign}"
                                 );
                             }
                         }
@@ -465,6 +470,7 @@ fn mesh_jobs_cannot_upload_after_a_newer_edit() {
         position,
         RenderJob {
             ready: None,
+            folded_leaves: None,
             micro_detail: true,
             epoch: 0,
             appearance_epoch: 0,
@@ -557,37 +563,29 @@ fn uploaded_glass_and_torch_models_never_cast_shadows_but_terrain_does() {
                 water: None,
             },
         );
-        let task = AsyncComputeTaskPool::get().spawn(async {
-            let batches = (0..4)
-                .map(|material| super::builder::MeshBatch {
-                    material,
-                    positions: vec![[0.0; 3], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
-                    normals: vec![[0.0, 0.0, 1.0]; 3],
-                    uvs: vec![[0.0; 2]; 3],
-                    indices: vec![0, 1, 2],
-                    ..default()
-                })
-                .collect();
-            (Ok(batches), 0.0)
-        });
+        let batches = (0..4)
+            .map(|material| super::builder::MeshBatch {
+                material,
+                positions: vec![[0.0; 3], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+                normals: vec![[0.0, 0.0, 1.0]; 3],
+                uvs: vec![[0.0; 2]; 3],
+                indices: vec![0, 1, 2],
+                ..default()
+            })
+            .collect();
         app.world_mut().resource_mut::<RenderJobs>().0.insert(
             position,
             RenderJob {
-                ready: None,
+                ready: Some((Ok(batches), 0.0)),
+                folded_leaves: None,
                 micro_detail: true,
                 epoch: 0,
                 appearance_epoch: 0,
                 level,
-                task,
+                task: AsyncComputeTaskPool::get().spawn(std::future::pending()),
             },
         );
-        for _ in 0..100 {
-            app.update();
-            if app.world().resource::<RenderJobs>().0.is_empty() {
-                break;
-            }
-            std::thread::sleep(std::time::Duration::from_millis(1));
-        }
+        app.update();
         let mut query = app.world_mut().query::<(
             &MeshMaterial3d<StandardMaterial>,
             Option<&bevy::light::NotShadowCaster>,
@@ -664,6 +662,7 @@ fn empty_terrain_batches_remove_previous_geometry_without_empty_gpu_allocations(
             position,
             RenderJob {
                 ready: Some((Ok(batches), 0.0)),
+                folded_leaves: None,
                 micro_detail: true,
                 epoch: 0,
                 appearance_epoch: 0,
@@ -776,6 +775,7 @@ fn repeated_terrain_lod_replacements_and_unloads_release_owned_meshes() {
                         }]),
                         0.0,
                     )),
+                    folded_leaves: None,
                     micro_detail: true,
                     epoch: 0,
                     appearance_epoch: 0,
@@ -819,6 +819,55 @@ fn repeated_terrain_lod_replacements_and_unloads_release_owned_meshes() {
     assert_eq!(
         app.world().resource::<crate::LodSwapStatus>().completed,
         200
+    );
+}
+
+#[test]
+fn distant_canopy_faces_apply_their_own_albedo_transfer_once() {
+    use super::builder::{RenderOptions, compose_section_with_options};
+    let mut templates = templates();
+    templates.blocks.insert(7, templates.blocks[&1].clone());
+    templates.foliage_clusters.insert(
+        7,
+        crate::blocks::FoliageClusterMaterials {
+            leaves: 2,
+            needles: Some(3),
+        },
+    );
+    // Both species share the full-face artwork. An unowned leaf block uses
+    // the broadleaf cluster, whose pigment differs from spruce needles.
+    let broadleaf = [0.78, 0.72, 0.81];
+    templates.foliage_proxy_tints.insert((2, 0), broadleaf);
+    templates
+        .foliage_proxy_tints
+        .insert((3, 0), [0.31, 0.28, 0.75]);
+    let options = RenderOptions {
+        water_level: None,
+        detail_level: super::DetailLevel::Far,
+        terrain: None,
+        exposure: None,
+        tints: Default::default(),
+        conditions: Default::default(),
+    };
+    let face = BlockFace {
+        edge_mask: 15,
+        occupied_neighbor: false,
+        minimum: [3, 5, 7],
+        width: 3,
+        height: 2,
+        u_axis: 0,
+        v_axis: 2,
+        side: 3,
+        material: 7,
+    };
+    let batches =
+        compose_section_with_options(&[face], &templates, SectionPos::default(), &options).unwrap();
+    assert_eq!(batches[0].colors.len(), 4);
+    assert!(
+        batches[0]
+            .colors
+            .iter()
+            .all(|color| color[..3] == broadleaf)
     );
 }
 
@@ -1254,6 +1303,7 @@ fn published_terrain_arrivals_survive_full_workers_and_message_expiry() {
             position,
             super::jobs::RenderJob {
                 ready: None,
+                folded_leaves: None,
                 micro_detail: true,
                 epoch: 0,
                 appearance_epoch: 0,
@@ -1369,8 +1419,7 @@ fn edited_section_becomes_visible_while_all_ordinary_composition_workers_are_blo
     // A never-seen saved section must still use its first chunk entrance.
     app.world_mut()
         .resource_mut::<super::RenderedSections>()
-        .block_revisions
-        .insert(owner, 0);
+        .record_presentation(owner, 0, Some(0));
     app.world_mut()
         .resource_mut::<EditJournal>()
         .record(owner.global_block([8, 8, 8]).unwrap(), 1)
@@ -1410,6 +1459,7 @@ fn edited_section_becomes_visible_while_all_ordinary_composition_workers_are_blo
             blocked,
             super::jobs::RenderJob {
                 ready: None,
+                folded_leaves: None,
                 micro_detail: true,
                 epoch: 0,
                 appearance_epoch: 0,
@@ -1630,6 +1680,77 @@ fn terrain_selection_retries_only_finished_roots_after_entry() {
             "a finished entry lost its stationary LOD retry"
         );
         std::thread::sleep(Duration::from_millis(1));
+    }
+}
+
+#[test]
+fn replicated_clock_updates_keep_an_uploaded_view_ready() {
+    use super::{GeometryCache, RenderJobs, RenderStatus, RenderedSection, RenderedSections};
+    use bevy::prelude::*;
+    use terra_world::streaming::{ChunkFocus, ChunkStore, LoadedSection, WorldTerrain};
+    use terra_world::{TerraGenerator, edits::EditJournal};
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .init_resource::<crate::blocks::BlockAssets>()
+        .init_resource::<RenderedSections>()
+        .init_resource::<RenderStatus>()
+        .init_resource::<RenderJobs>()
+        .init_resource::<GeometryCache>()
+        .init_resource::<ChunkStore>()
+        .init_resource::<EditJournal>()
+        .init_resource::<terra_core::GameConfig>()
+        .insert_resource(ChunkFocus([0.0; 3]))
+        .insert_resource(WorldTerrain(
+            TerraGenerator::new(Default::default()).unwrap(),
+        ))
+        .add_systems(Update, super::dispatch_meshes);
+    app.world_mut()
+        .resource_mut::<crate::blocks::BlockAssets>()
+        .templates = Some(std::sync::Arc::new(templates()));
+    // More than a single LOD sweep can inspect in one frame.
+    for x in 0..1_100 {
+        let p = SectionPos::new(x, 0, 0);
+        app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+            p,
+            LoadedSection {
+                data: terra_voxel::BlockSection::empty(p).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water: None,
+                water_epoch: 0,
+                props: Vec::new(),
+            },
+        );
+    }
+    app.world_mut()
+        .resource_mut::<RenderedSections>()
+        .sections
+        .insert(
+            SectionPos::default(),
+            RenderedSection {
+                entity: Entity::PLACEHOLDER,
+                meshes: Vec::new(),
+                mesh_epoch: 0,
+                appearance_epoch: 0,
+                folded_leaves: None,
+                micro_detail: false,
+                detail_level: super::DetailLevel::Near,
+            },
+        );
+    app.update();
+    app.update();
+    assert!(app.world().resource::<RenderStatus>().ready);
+    for day in 1..=3 {
+        app.world_mut().resource_mut::<EditJournal>().clock = Some(terra_core::WorldClock {
+            day,
+            ..Default::default()
+        });
+        app.update();
+        assert!(
+            app.world().resource::<RenderStatus>().ready,
+            "journal bookkeeping must not start a new global LOD sweep"
+        );
     }
 }
 
@@ -1876,6 +1997,7 @@ fn render_lod_rebuilds_from_cached_faces_and_eviction_frees_every_mesh() {
         p,
         super::jobs::RenderJob {
             ready: Some((Ok(Vec::new()), 0.0)),
+            folded_leaves: None,
             micro_detail: false,
             epoch: 0,
             appearance_epoch: 0,
@@ -2142,7 +2264,8 @@ fn dry_sand_and_snow_keep_imprint_uv1_under_roofs_at_every_terrain_lod() {
     let mut templates = templates();
     let mut cube = templates.blocks[&1].clone();
     cube.details.clear();
-    for material in [3, 4, 5] {
+    let materials = [3, 4, 5, 481, 581, 582, 584];
+    for material in materials {
         templates.blocks.insert(material, cube.clone());
     }
     let exposure = std::sync::Arc::new(crate::weather::surfaces::exposure::Exposure {
@@ -2154,7 +2277,7 @@ fn dry_sand_and_snow_keep_imprint_uv1_under_roofs_at_every_terrain_lod() {
         water: [f32::NEG_INFINITY; 256],
     });
     for detail_level in [DetailLevel::Near, DetailLevel::Middle, DetailLevel::Far] {
-        for material in [3, 4, 5] {
+        for material in materials {
             let face = BlockFace {
                 minimum: [0; 3],
                 width: 1,

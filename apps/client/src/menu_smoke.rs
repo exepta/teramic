@@ -43,6 +43,9 @@ struct MenuSmoke {
 #[derive(Resource, Default)]
 struct MenuPointer(Option<bevy::picking::pointer::Location>);
 
+#[derive(Resource)]
+struct PressAfterHover(bool);
+
 /// Keep fixture input in ECS. Native focus/motion can otherwise replace a
 /// queued press location before the later release; never warp the OS cursor.
 fn maintain_pointer(world: &mut World) {
@@ -60,9 +63,23 @@ fn maintain_pointer(world: &mut World) {
     }
     world.write_message(PointerInput::new(
         PointerId::Mouse,
-        location,
+        location.clone(),
         PointerAction::Move { delta: Vec2::ZERO },
     ));
+    // Bevy hit-tests in PreUpdate. Give the pointer one frame over its new
+    // target before pressing, including the first frame after the startup fade.
+    if let Some(mut press) = world.get_resource_mut::<PressAfterHover>() {
+        if press.0 {
+            world.remove_resource::<PressAfterHover>();
+            world.write_message(PointerInput::new(
+                PointerId::Mouse,
+                location,
+                PointerAction::Press(bevy::picking::pointer::PointerButton::Primary),
+            ));
+        } else {
+            press.0 = true;
+        }
+    }
 }
 
 pub(crate) fn install(app: &mut App) {
@@ -414,10 +431,17 @@ pub(crate) fn pointer(
         let target = world
             .query::<(Entity, &ElementId)>()
             .iter(world)
-            .find_map(|(entity, element)| {
-                (element.0 == id && (title.is_empty() || subtree_has_text(world, entity, title, 0)))
-                    .then_some(entity)
+            .filter(|(_, element)| element.0 == id)
+            .filter_map(|(entity, _)| {
+                if id == "row-slider" {
+                    scope_distance(world, entity, title).map(|depth| (depth, entity))
+                } else {
+                    (title.is_empty() || subtree_has_text(world, entity, title, 0))
+                        .then_some((0, entity))
+                }
             })
+            .min_by_key(|(depth, _)| *depth)
+            .map(|(_, entity)| entity)
             .ok_or_else(|| format!("Pointer target missing: {id}/{title}"))?;
         let position = world
             .get::<bevy::ui::UiGlobalTransform>(target)
@@ -460,15 +484,15 @@ pub(crate) fn pointer(
     world.resource_mut::<MenuPointer>().0 = Some(location.clone());
     maintain_pointer(world);
     // Exercise real hit testing and TiltUI click propagation without an OS cursor warp.
-    world.write_message(PointerInput::new(
-        PointerId::Mouse,
-        location,
-        if pressed {
-            PointerAction::Press(PointerButton::Primary)
-        } else {
-            PointerAction::Release(PointerButton::Primary)
-        },
-    ));
+    if pressed {
+        world.insert_resource(PressAfterHover(false));
+    } else {
+        world.write_message(PointerInput::new(
+            PointerId::Mouse,
+            location,
+            PointerAction::Release(PointerButton::Primary),
+        ));
+    }
     Ok(())
 }
 fn create_scroll_location(
@@ -2830,17 +2854,35 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
                 "Pointer Audio tab failed",
             )?;
             screenshot(world, state, "pointer-audio");
-            pointer(world, "menu-action", "Back", true)?;
+            let title = world
+                .resource::<OptionsView>()
+                .rows
+                .iter()
+                .find(|row| row.id == "audio-ambience")
+                .ok_or("Ambient volume row missing")?
+                .title
+                .clone();
+            pointer(world, "row-slider", &title, true)?;
         }
-        1010 => pointer(world, "", "", false)?,
+        1010 => {
+            check_ambient_preview(world, 0.35..0.58)?;
+            move_test_pointer(world, Vec2::new(48.0, 0.0))?;
+        }
         1011 => {
+            check_ambient_preview(world, 0.58..1.01)?;
+            pointer(world, "", "", false)?;
+        }
+        1012 => emit(world, "audio-ambience", Some("100"))?,
+        1013 => pointer(world, "menu-action", "Back", true)?,
+        1014 => pointer(world, "", "", false)?,
+        1015 => {
             require(
                 world.resource::<MenuState>().page == MenuPage::Main,
                 "Pointer Options Back failed",
             )?;
             pointer(world, "menu-action", "Quit", true)?;
         }
-        1012 => {
+        1016 => {
             pointer(world, "", "", false)?;
             tracing::info!(
                 "Native pointer smoke passed: pointer input, hit testing, click/release, Worlds, Back, Options, Controls, Audio and Quit"
@@ -2851,12 +2893,57 @@ fn step(world: &mut World, state: &mut MenuSmoke) -> Result<bool, String> {
     Ok(true)
 }
 
+fn check_ambient_preview(world: &mut World, expected: std::ops::Range<f32>) -> Result<(), String> {
+    use bevy::audio::AudioSinkPlayback;
+    let draft = world.resource::<OptionsDraft>().audio.ambience_volume;
+    require(
+        expected.contains(&draft),
+        &format!("Unexpected dragged ambient volume {draft}"),
+    )?;
+    require(
+        world.resource::<AudioConfig>().ambience_volume == 1.0,
+        "Slider modified saved mix",
+    )?;
+    let (playback, sink) = world
+        .query::<(&AudioPlayer, &PlaybackSettings, Option<&AudioSink>)>()
+        .iter(world)
+        .find(|(player, _, _)| {
+            player
+                .0
+                .path()
+                .is_some_and(|p| p.path() == std::path::Path::new("audio/environment/birds.wav"))
+        })
+        .map(|(_, playback, sink)| {
+            (
+                playback.volume.to_linear(),
+                sink.map(|s| s.volume().to_linear()),
+            )
+        })
+        .ok_or("Dragging the slider produced no ambient preview")?;
+    tracing::info!(
+        draft,
+        playback,
+        ?sink,
+        "Ambient preview before pointer release"
+    );
+    require(
+        (playback - draft).abs() < 0.001 && sink.is_none_or(|v| (v - draft).abs() < 0.001),
+        "Preview volume did not follow the held slider",
+    )
+}
+
 /// Move the isolated fixture pointer without moving the desktop cursor.
 pub(crate) fn move_test_pointer(world: &mut World, delta: Vec2) -> Result<(), String> {
+    use bevy::picking::pointer::{PointerAction, PointerId, PointerInput};
     let mut pointer = world.resource_mut::<MenuPointer>();
     let location = pointer.0.as_mut().ok_or("Missing test pointer")?;
     location.position += delta;
-    maintain_pointer(world);
+    let location = location.clone();
+    world.write_message(PointerInput::new(
+        PointerId::Mouse,
+        location,
+        PointerAction::Move { delta },
+    ));
     Ok(())
 }
 

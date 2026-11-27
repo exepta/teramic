@@ -72,7 +72,7 @@ fn profile(item: ItemKind) -> Option<(Shape, ToolMaterial)> {
             DiamondScythe => (Shape::Scythe, M::Diamond),
             RubyScythe => (Shape::Scythe, M::Ruby),
             Bucket => (Shape::Bucket(false), M::Iron),
-            WaterBucket | TarBucket | BileBucket => (Shape::Bucket(true), M::Iron),
+            WaterBucket | TarBucket | BileBucket | LavaBucket => (Shape::Bucket(true), M::Iron),
             Wrench => (Shape::Wrench, M::Iron),
             WoodSpoon => (Shape::Spoon, M::Wood),
             StoneSpoon => (Shape::Spoon, M::Stone),
@@ -109,6 +109,8 @@ pub(crate) fn batches(item: ItemKind, material: usize) -> Result<Vec<MeshBatch>,
         Shape::Bucket(filled) => {
             let liquid = if item.tool_kind() == Some(ToolKind::TarBucket) {
                 Some([0.035, 0.030, 0.040])
+            } else if item.tool_kind() == Some(ToolKind::LavaBucket) {
+                Some([1., 0.32, 0.035])
             } else if item.tool_kind() == Some(ToolKind::BileBucket) {
                 Some([0.56, 0.62, 0.08])
             } else if filled {

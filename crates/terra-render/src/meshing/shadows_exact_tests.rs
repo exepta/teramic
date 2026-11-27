@@ -133,10 +133,23 @@ fn material_proof_requires_opaque_zero_bias_two_sided_depth_and_no_special_shade
         templates.blocks.insert(material, tar);
     }
     blocks.templates = Some(Arc::new(templates));
-    assert_eq!(
-        exact_materials(&blocks, &standard, &foliage, &wet, &depth),
-        BTreeSet::from([0, 1, 20])
-    );
+    let mut cache = ShadowMaterialCache {
+        candidates: shadow_candidates(&blocks, &foliage, &wet, &depth),
+        ..default()
+    };
+    cache.refresh(&standard);
+    assert_eq!(*cache.casters, BTreeSet::from([0, 1, 20]));
+    let original = cache.casters.clone();
+    cache.refresh(&standard);
+    assert!(Arc::ptr_eq(&original, &cache.casters));
+    let eligible = *original.first().unwrap();
+    standard
+        .get_mut(&blocks.materials[eligible])
+        .unwrap()
+        .alpha_mode = AlphaMode::Blend;
+    cache.refresh(&standard);
+    assert!(!cache.casters.contains(&eligible));
+    assert!(original.contains(&eligible));
 }
 
 #[test]
@@ -159,6 +172,19 @@ fn middle_and_far_copy_complete_geometry_with_negative_extents_and_mixed_indices
         assert!(proxy.colors.is_empty() && proxy.surface_water.is_empty());
         assert_eq!(triangles(proxies), triangles(&original[..2]));
     }
+}
+
+#[test]
+fn depth_proxies_share_exact_corners_across_material_seams() {
+    let mut batches = vec![triangle(0, 0.0), triangle(1, 0.0)];
+    batches[1].indices.reverse();
+    batches[1].normals.fill([0.0, 0.0, -1.0]);
+    batches[1].uvs.fill([0.25, 0.5]);
+    batches[1].compact_indices();
+    let expected = triangles(&batches);
+    append_exact(&mut batches, &BTreeSet::from([0, 1]), DetailLevel::Middle).unwrap();
+    assert_eq!(batches[2].positions.len(), 3);
+    assert_eq!(triangles(&batches[2..]), expected);
 }
 
 #[test]
@@ -202,7 +228,13 @@ fn large(material: usize, vertices: usize) -> MeshBatch {
     MeshBatch {
         material,
         positions: (0..vertices)
-            .map(|i| [(i % 16) as f32, ((i / 16) % 16) as f32, (i / 256) as f32])
+            .map(|i| {
+                [
+                    material as f32 * 16.0 + (i % 16) as f32,
+                    ((i / 16) % 16) as f32,
+                    (i / 256) as f32,
+                ]
+            })
             .collect(),
         indices: (0..vertices as u32).collect(),
         ..default()
@@ -297,6 +329,7 @@ fn exact_casters_publish_atomically_restore_when_disabled_and_release_on_unload(
             position,
             RenderJob {
                 ready: Some((Ok(batches), 0.0)),
+                folded_leaves: None,
                 micro_detail: true,
                 epoch: 0,
                 appearance_epoch: 0,

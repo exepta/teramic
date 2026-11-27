@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 623,
+  "name": "Lava-Crust Rock",
+  "description": "Cooling plates still glow along their fractures.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.25,
+  "resistance": 2.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "side": {
+      "roughness": 0.84,
+      "normal_texture": "textures/ashlands/lava_crust_side_normal.png",
+      "emission": [
+        0.14,
+        0.025,
+        0.004
+      ]
+    }
+  },
+  "textures": {
+    "side": "textures/ashlands/lava_crust_side.png"
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

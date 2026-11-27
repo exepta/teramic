@@ -16,9 +16,25 @@ impl Index {
     pub fn invalidate(&mut self, position: SectionPos) {
         self.0.remove(&position);
     }
-    pub fn refresh(&mut self, chunks: &ChunkStore, journal: &EditJournal) {
-        self.0.retain(|p, _| chunks.loaded.contains_key(p));
-        for (&p, loaded) in &chunks.loaded {
+    pub fn refresh(&mut self, eye: Vec3, chunks: &ChunkStore, journal: &EditJournal) {
+        // nearby() accepts a 32 m cube. Include rounding at either end of each
+        // axis, including when a far-world f32 camera cannot distinguish voxels.
+        let low = eye
+            .to_array()
+            .map(|v| ((v - 32.0).next_down() as f64 - 1.0).floor() as i64);
+        let high = eye
+            .to_array()
+            .map(|v| ((v + 32.0).next_up() as f64 + 1.0).ceil() as i64);
+        let low = low.map(|v| v.div_euclid(16));
+        let high = high.map(|v| v.div_euclid(16));
+        let in_range = |p: SectionPos| {
+            (low[0]..=high[0]).contains(&p.x)
+                && (low[1]..=high[1]).contains(&p.y)
+                && (low[2]..=high[2]).contains(&p.z)
+        };
+        self.0
+            .retain(|p, _| in_range(*p) && chunks.loaded.contains_key(p));
+        let mut refresh = |p: SectionPos, loaded: &terra_world::streaming::LoadedSection| {
             let revision = loaded.data.revision();
             let epoch = journal.mesh_epoch(p);
             if self
@@ -26,21 +42,47 @@ impl Index {
                 .get(&p)
                 .is_some_and(|(r, e, _)| (*r, *e) == (revision, epoch))
             {
-                continue;
+                return;
             }
             let mut sources = Vec::new();
-            if loaded.data.may_contain(MATERIAL) || epoch != 0 {
+            if loaded.data.may_contain(MATERIAL) {
                 for (i, &raw) in loaded.data.blocks().iter().enumerate() {
-                    let local = [i % 16, (i / 16) % 16, i / 256];
-                    let Ok(global) = p.global_block(local) else {
-                        continue;
-                    };
-                    if journal.block(global).unwrap_or(raw) == MATERIAL {
+                    if raw == MATERIAL
+                        && let Ok(global) = p.global_block([i % 16, (i / 16) % 16, i / 256])
+                        && journal.block(global).unwrap_or(raw) == MATERIAL
+                    {
                         sources.push(global);
                     }
                 }
             }
+            for (local, raw) in journal.blocks_in_section(p) {
+                if raw == MATERIAL
+                    && loaded.data.block(local) != Ok(MATERIAL)
+                    && let Ok(global) = p.global_block(local)
+                {
+                    sources.push(global);
+                }
+            }
             self.0.insert(p, (revision, epoch, sources));
+        };
+        let volume = (0..3).fold(1u64, |n, a| n.saturating_mul(high[a].abs_diff(low[a]) + 1));
+        if volume > chunks.loaded.len() as u64 {
+            for (&p, loaded) in &chunks.loaded {
+                if in_range(p) {
+                    refresh(p, loaded);
+                }
+            }
+        } else {
+            for z in low[2]..=high[2] {
+                for y in low[1]..=high[1] {
+                    for x in low[0]..=high[0] {
+                        let p = SectionPos::new(x, y, z);
+                        if let Some(loaded) = chunks.loaded.get(&p) {
+                            refresh(p, loaded);
+                        }
+                    }
+                }
+            }
         }
     }
     pub fn nearby(&self, eye: Vec3) -> Vec<Position> {

@@ -1,5 +1,5 @@
-//! Shadow-only opaque cube shells omit subpixel relief. Foliage casts with its
-//! visible geometry so cutouts, outlying leaves and wind match every render pass.
+//! Shadow-only opaque cube shells omit subpixel relief. Leaf pigment can weld
+//! lighting seams for depth while retaining every original triangle and wind tag.
 //! Middle/far depth batches preserve complete opaque geometry.
 use crate::{
     blocks::TemplateSet,
@@ -8,7 +8,7 @@ use crate::{
         builder::{MeshBatch, append_greedy},
     },
 };
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{ecs::system::SystemParam, platform::collections::hash_map::Entry, prelude::*};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, LazyLock};
 use terra_voxel::meshing::BlockFace;
@@ -16,6 +16,38 @@ use terra_voxel::meshing::BlockFace;
 pub(crate) const LAYER: usize = 61;
 #[derive(Component)]
 pub(crate) struct ShadowProxy;
+
+/// Like the original leaf caster, this proxy stops casting during a chunk fade.
+#[derive(Component)]
+pub(crate) struct LeafShadowProxy;
+
+#[path = "leaf_shadows.rs"]
+mod blades;
+pub(crate) use blades::PROFILE_ERROR_METRES;
+pub(super) use blades::append_leaf_shadows;
+pub(super) use blades::append_profiles;
+
+/// False marks the exact caster (a seam-welded mesh for nearby crowns); true
+/// marks its profile, eligible only in coarser directional maps.
+#[derive(Component, Clone, Copy)]
+pub(crate) struct LeafProfileCaster(pub bool);
+
+pub(super) fn profile_shadows_enabled() -> bool {
+    static ENABLED: LazyLock<bool> = LazyLock::new(|| {
+        !(std::env::args().any(|a| a.starts_with("--smoke-test"))
+            && std::env::var("TERRA_BENCH_WELDED_LEAF_SHADOWS").is_ok_and(|v| v == "1"))
+    });
+    *ENABLED
+}
+
+pub(super) fn leaf_shadows_enabled() -> bool {
+    static ENABLED: LazyLock<bool> = LazyLock::new(|| {
+        !full_geometry_reference()
+            && !(std::env::args().any(|arg| arg.starts_with("--smoke-test"))
+                && std::env::var("TERRA_BENCH_ORIGINAL_LEAF_SHADOWS").is_ok_and(|v| v == "1"))
+    });
+    *ENABLED
+}
 
 #[derive(Resource)]
 pub(crate) struct OpaqueShadowMaterial(pub Handle<StandardMaterial>);
@@ -36,9 +68,10 @@ pub(crate) fn prepare_material(
 pub(crate) struct ReplacedShadowCaster;
 
 #[derive(SystemParam)]
-pub(super) struct ExactInputs<'w> {
+pub(super) struct ExactInputs<'w, 's> {
+    cache: Local<'s, ShadowMaterialCache>,
     standard: Option<Res<'w, Assets<StandardMaterial>>>,
-    foliage: Option<Res<'w, crate::foliage::FoliageAssets>>,
+    pub(super) foliage: Option<Res<'w, crate::foliage::FoliageAssets>>,
     wet: Option<Res<'w, crate::weather::surfaces::WetMaterials>>,
     depth: Option<Res<'w, crate::weather::surfaces::TerrainDepthMaterials>>,
     shadow: Option<Res<'w, OpaqueShadowMaterial>>,
@@ -59,49 +92,88 @@ fn exact_enabled() -> bool {
     *ENABLED
 }
 
-impl ExactInputs<'_> {
+#[derive(Default)]
+struct ShadowMaterialCache {
+    palette_revision: Option<[u32; 4]>,
+    standard_revision: Option<u32>,
+    candidates: Vec<(usize, AssetId<StandardMaterial>, bool)>,
+    casters: Arc<BTreeSet<usize>>,
+}
+
+impl ExactInputs<'_, '_> {
     pub(super) fn capture(
-        &self,
-        blocks: &crate::blocks::BlockAssets,
+        &mut self,
+        blocks: &Res<crate::blocks::BlockAssets>,
     ) -> Option<Arc<BTreeSet<usize>>> {
         if !exact_enabled() || self.shadow.is_none() {
             return None;
         }
-        Some(Arc::new(exact_materials(
-            blocks,
-            self.standard.as_deref()?,
-            self.foliage.as_deref()?,
-            self.wet.as_deref()?,
-            self.depth.as_deref()?,
-        )))
+        let standard = self.standard.as_ref()?;
+        let foliage = self.foliage.as_ref()?;
+        let wet = self.wet.as_ref()?;
+        let depth = self.depth.as_ref()?;
+        let revision = [
+            blocks.last_changed().get(),
+            foliage.last_changed().get(),
+            wet.last_changed().get(),
+            depth.last_changed().get(),
+        ];
+        let cache = &mut *self.cache;
+        if cache.palette_revision != Some(revision) {
+            cache.candidates = shadow_candidates(blocks, foliage, wet, depth);
+            cache.casters = Arc::default();
+            cache.palette_revision = Some(revision);
+            cache.standard_revision = None;
+        }
+        if cache.standard_revision != Some(standard.last_changed().get()) {
+            cache.refresh(standard);
+            cache.standard_revision = Some(standard.last_changed().get());
+        }
+        Some(cache.casters.clone())
     }
 }
 
-fn exact_materials(
+impl ShadowMaterialCache {
+    fn refresh(&mut self, standard: &Assets<StandardMaterial>) {
+        for (slot, id, previous) in &mut self.candidates {
+            let eligible = standard.get(*id).is_some_and(|material| {
+                material.alpha_mode == AlphaMode::Opaque
+                    && !material.unlit
+                    && material.depth_bias == 0.0
+            });
+            if eligible != *previous {
+                // In-flight jobs keep the material classification they started with.
+                let casters = Arc::make_mut(&mut self.casters);
+                if eligible {
+                    casters.insert(*slot);
+                } else {
+                    casters.remove(slot);
+                }
+                *previous = eligible;
+            }
+        }
+    }
+}
+
+fn shadow_candidates(
     blocks: &crate::blocks::BlockAssets,
-    standard: &Assets<StandardMaterial>,
     foliage: &crate::foliage::FoliageAssets,
     wet: &crate::weather::surfaces::WetMaterials,
     depth: &crate::weather::surfaces::TerrainDepthMaterials,
-) -> BTreeSet<usize> {
+) -> Vec<(usize, AssetId<StandardMaterial>, bool)> {
     let Some(templates) = &blocks.templates else {
-        return BTreeSet::new();
+        return Vec::new();
     };
     if !crate::weather::surfaces::dry_terrain_uses_shared_surface_material() {
-        return BTreeSet::new();
+        return Vec::new();
     }
     blocks
         .materials
         .iter()
         .enumerate()
         .filter_map(|(slot, handle)| {
-            let material = standard.get(handle)?;
-            // Static surfaces use two-sided depth culling. Interpolated liquids
-            // need their own vertex shader in the shadow pass as well.
-            (material.alpha_mode == AlphaMode::Opaque
-                && !material.unlit
-                && material.depth_bias == 0.0
-                && wet.0.contains_key(&slot)
+            // Only these static catalog materials can share exact depth geometry.
+            (wet.0.contains_key(&slot)
                 && depth.0.contains_key(&slot)
                 && !templates.water_material(slot)
                 && !templates.glass_material(slot)
@@ -114,7 +186,7 @@ fn exact_materials(
                 && !foliage.fibres.contains_key(&slot)
                 && !foliage.flames.contains_key(&slot)
                 && !foliage.reference.contains_key(&slot))
-            .then_some(slot)
+            .then_some((slot, handle.id(), false))
         })
         .collect()
 }
@@ -180,23 +252,31 @@ pub(super) fn append_exact(
             .collect(),
         ..default()
     };
+    // The static depth material consumes only position. UV, normal and paint
+    // seams in the source meshes often duplicate the very same world corner.
+    // Reuse its index across faces and materials without moving any triangle.
+    let mut vertices = bevy::platform::collections::HashMap::<[u32; 3], u32>::default();
+    let mut remap = Vec::new();
     for batch in &sources {
-        let base = u32::try_from(combined.positions.len()).map_err(|_| "Shadow fusion overflow")?;
-        combined.positions.extend_from_slice(&batch.positions);
-        if batch.compact_indices.is_empty() {
-            for &index in &batch.indices {
-                combined
-                    .indices
-                    .push(base.checked_add(index).ok_or("Shadow fusion overflow")?);
-            }
-        } else {
-            for &index in &batch.compact_indices {
-                combined.indices.push(
-                    base.checked_add(u32::from(index))
-                        .ok_or("Shadow fusion overflow")?,
-                );
-            }
+        remap.clear();
+        for &position in &batch.positions {
+            let index = match vertices.entry(position.map(f32::to_bits)) {
+                Entry::Occupied(entry) => *entry.get(),
+                Entry::Vacant(entry) => {
+                    let index = u32::try_from(combined.positions.len())
+                        .map_err(|_| "Shadow fusion overflow")?;
+                    combined.positions.push(position);
+                    *entry.insert(index)
+                }
+            };
+            remap.push(index);
         }
+        combined
+            .indices
+            .extend(batch.indices.iter().map(|&i| remap[i as usize]));
+        combined
+            .indices
+            .extend(batch.compact_indices.iter().map(|&i| remap[usize::from(i)]));
     }
     // Retain the normal worker handoff bounds, including indivisible quad pairs.
     let proxies = crate::upload_budget::split_batches(vec![combined])?;
@@ -215,6 +295,7 @@ pub(crate) fn release_disabled(
     graphics: Option<Res<terra_core::GraphicsConfig>>,
     proxies: Query<(Entity, &Mesh3d), With<ShadowProxy>>,
     originals: Query<Entity, With<ReplacedShadowCaster>>,
+    profile_sources: Query<Entity, (With<LeafProfileCaster>, Without<ShadowProxy>)>,
 ) {
     if enabled(graphics.as_deref()) || (proxies.is_empty() && originals.is_empty()) {
         return;
@@ -224,6 +305,9 @@ pub(crate) fn release_disabled(
         .map(|(entity, mesh)| (entity, mesh.id()))
         .collect();
     let originals: Vec<_> = originals.iter().collect();
+    for entity in &profile_sources {
+        commands.entity(entity).remove::<LeafProfileCaster>();
+    }
     commands.queue(move |world: &mut World| {
         let _scope = terra_core::profiling::ScopeTimer::new("terrain.shadows.release");
         let removed: std::collections::HashSet<_> = proxies.iter().map(|(_, mesh)| *mesh).collect();
@@ -262,6 +346,25 @@ pub(crate) fn append(
     if level != DetailLevel::Near || full_geometry_reference() {
         return Ok(());
     }
+    // A silhouette that projects beyond the core casts with the color geometry.
+    // The shadow replacement is per material batch, which can also contain
+    // accents from a different block in this section.
+    let sculpted = |id| {
+        templates.block_details.micro_geometry
+            && templates.sculpted_blocks.contains_key(&id)
+            && !super::builder::coarse_authored(templates, id)
+    };
+    if faces.iter().all(|face| sculpted(face.material)) {
+        return Ok(());
+    }
+    let mut relief_materials = BTreeSet::new();
+    for id in faces.iter().map(|f| f.material).collect::<BTreeSet<_>>() {
+        if sculpted(id) {
+            let shape = &templates.sculpted_blocks[&id];
+            relief_materials.extend(shape.slots);
+            relief_materials.extend(shape.core.face_materials);
+        }
+    }
     let mut shadows = BTreeMap::new();
     let mut flat_shadows = BTreeMap::new();
     let mut source_materials = BTreeMap::<(usize, bool), BTreeSet<usize>>::new();
@@ -287,8 +390,12 @@ pub(crate) fn append(
         // A cube proxy would erase the silhouette of projecting leaf clusters.
         // Keep the real leaf batch as caster, including conifer geometry. Also
         // protect shared slots: upload replaces casters by material, not by ID.
-        if terra_voxel::MaterialId::FOLIAGE.contains(&face.material)
-            || matches!(face.material, 399 | terra_core::fog_blocks::MATERIAL)
+        if sculpted(face.material)
+            || terra_voxel::MaterialId::FOLIAGE.contains(&face.material)
+            || matches!(
+                face.material,
+                399 | terra_core::fog_blocks::MATERIAL | terra_world::lava::LAVA
+            )
         {
             continue;
         }
@@ -300,6 +407,20 @@ pub(crate) fn append(
                 == crate::blocks::definitions::BlockRenderKind::CustomMesh
                 && original.model.is_empty()
                 && templates.opaque_cube_lods.contains(&face.material);
+            if templates
+                .sculpted_blocks
+                .get(&face.material)
+                .is_some_and(|shape| {
+                    shape.core.face_materials
+                        != templates
+                            .cube_lods
+                            .get(&face.material)
+                            .unwrap_or(original)
+                            .face_materials
+                })
+            {
+                continue;
+            }
             let block = if authored {
                 let Some(coarse) = templates.cube_lods.get(&face.material) else {
                     continue;
@@ -309,6 +430,8 @@ pub(crate) fn append(
                 original
             };
             if block.render_kind != crate::blocks::definitions::BlockRenderKind::Cube
+                || relief_materials.contains(&block.face_materials[face.side])
+                || relief_materials.contains(&original.face_materials[face.side])
                 || foliage_materials.contains(&block.face_materials[face.side])
                 || foliage_materials.contains(&original.face_materials[face.side])
                 || model_materials.contains(&original.face_materials[face.side])
@@ -320,7 +443,8 @@ pub(crate) fn append(
                 || block.side_cap.is_some_and(|cap| {
                     face.side / 2 != 1
                         && (model_materials.contains(&cap.material)
-                            || foliage_materials.contains(&cap.material))
+                            || foliage_materials.contains(&cap.material)
+                            || relief_materials.contains(&cap.material))
                 })
                 || templates.water_material(block.face_materials[face.side])
                 || templates.bile_material(block.face_materials[face.side])
@@ -539,17 +663,17 @@ mod tests {
     }
 
     #[test]
-    fn authored_grass_shadow_shell_keeps_dense_color_faces_and_maps_near_materials() {
-        let templates = crate::blocks::authored_terrain_templates();
+    fn sculpted_grass_casts_its_relief_and_legacy_authored_grass_keeps_its_shadow_shell() {
+        let mut templates = crate::blocks::authored_terrain_templates();
         let mut padded = [0; terra_voxel::meshing::PADDED_VOLUME];
         for x in 1..=2 {
             padded[x + 18 * (1 + 18)] = 1;
         }
         let geometry = terra_voxel::meshing::mesh_section(&padded).unwrap();
-        let compose = || {
+        let compose = |templates: &TemplateSet| {
             super::super::builder::compose_section_with_options(
                 &geometry.faces,
-                &templates,
+                templates,
                 terra_voxel::SectionPos::default(),
                 &super::super::builder::RenderOptions {
                     water_level: None,
@@ -562,8 +686,19 @@ mod tests {
             )
             .unwrap()
         };
-        let original = compose();
-        let mut batches = compose();
+        let sculpted = compose(&templates);
+        assert!(
+            sculpted
+                .iter()
+                .flat_map(|b| &b.positions)
+                .any(|p| p[1] > 1.0)
+        );
+        let mut visible = compose(&templates);
+        append(&mut visible, &geometry.faces, &templates, DetailLevel::Near).unwrap();
+        assert_eq!(visible, sculpted);
+        templates.sculpted_blocks.clear();
+        let original = compose(&templates);
+        let mut batches = compose(&templates);
         assert!(batches[0].indices.len() >= 10 * 128 * 3);
         append(&mut batches, &geometry.faces, &templates, DetailLevel::Near).unwrap();
         assert_eq!(&batches[..original.len()], original);
@@ -708,6 +843,7 @@ mod tests {
             .insert(
                 position,
                 super::super::RenderedSection {
+                    folded_leaves: None,
                     micro_detail: true,
                     appearance_epoch: 0,
                     entity: root,

@@ -4,6 +4,7 @@ mod connectivity;
 pub(crate) mod custom;
 mod glass;
 mod jobs;
+pub(crate) mod lava;
 mod lighting;
 pub(crate) mod lod;
 mod material_edges;
@@ -11,6 +12,8 @@ mod mushroom_details;
 pub(crate) mod ore_details;
 mod pots;
 mod precision;
+mod published_children;
+mod resident;
 mod seasonal_foliage;
 pub(crate) mod segments;
 pub(crate) mod shadows;
@@ -69,11 +72,61 @@ pub struct TerrainSection {
 #[derive(Resource, Default)]
 pub struct RenderedSections {
     pub sections: HashMap<SectionPos, RenderedSection>,
-    /// Includes composed empty sections so their first building edit is not a new entrance.
-    pub(crate) block_revisions: HashMap<SectionPos, u64>,
+    presentations: HashMap<SectionPos, SectionPresentation>,
+}
+
+struct SectionPresentation {
+    block_revision: u64,
+    /// A successful composition can produce no render entity.
+    empty_mesh_epoch: Option<u64>,
+}
+
+impl RenderedSections {
+    pub(crate) fn block_revision(&self, position: SectionPos) -> Option<u64> {
+        self.presentations.get(&position).map(|p| p.block_revision)
+    }
+
+    pub(crate) fn record_presentation(
+        &mut self,
+        position: SectionPos,
+        block_revision: u64,
+        empty_mesh_epoch: Option<u64>,
+    ) -> bool {
+        self.presentations
+            .insert(
+                position,
+                SectionPresentation {
+                    block_revision,
+                    empty_mesh_epoch,
+                },
+            )
+            .is_some_and(|previous| previous.block_revision != block_revision)
+    }
+
+    /// A replacement LOD can be prepared while the current terrain is on screen.
+    /// Missing data, a retired visible mesh, or a first upload still in flight must wait.
+    pub fn section_presented(
+        &self,
+        position: SectionPos,
+        section: Option<&terra_world::streaming::LoadedSection>,
+        visibility: Option<&visibility::TerrainVisibility>,
+    ) -> bool {
+        section.is_some_and(|section| {
+            visibility.is_some_and(|visibility| visibility.hidden(position))
+                || self
+                    .sections
+                    .get(&position)
+                    .is_some_and(|drawn| drawn.mesh_epoch == section.mesh_epoch)
+                || self
+                    .presentations
+                    .get(&position)
+                    .is_some_and(|p| p.empty_mesh_epoch == Some(section.mesh_epoch))
+        })
+    }
 }
 
 pub struct RenderedSection {
+    pub(crate) folded_leaves: Option<lod::FoldedLeaves>,
     pub micro_detail: bool,
     pub appearance_epoch: u64,
     pub entity: Entity,
@@ -91,6 +144,18 @@ pub struct RenderStatus {
     pub pending_columns: HashSet<[i64; 2]>,
     pub error: Option<String>,
     pub completed_mesh_jobs: usize,
+    pub reused_shadow_meshes: u64,
+    pub reused_shadow_bytes: u64,
+    pub reused_edit_meshes: u64,
+    pub reused_edit_bytes: u64,
+    pub reused_streaming_meshes: u64,
+    pub reused_streaming_bytes: u64,
+    /// Wind-animated meshes included in the edit/streaming reuse totals.
+    pub reused_wind_meshes: u64,
+    pub reused_wind_bytes: u64,
+    /// Peak matched CPU stream bytes released for jobs waiting across a frame boundary.
+    pub peak_deferred_resident_bytes: usize,
+    pub retained_draw_entities: u64,
     /// Sum of worker elapsed composition time, excluding voxel generation and GPU upload.
     pub composition_seconds: f64,
     pub max_composition_seconds: f64,

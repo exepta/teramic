@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": 661,
+  "name": "Savanna Rock Formation",
+  "description": "Weathered blocks stacked on a low shelf.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/savanna_rock_pile.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.11,
+        0,
+        0.31
+      ],
+      "maximum": [
+        0.89,
+        0.28,
+        0.69
+      ]
+    },
+    {
+      "minimum": [
+        0.25,
+        0.28,
+        0.33
+      ],
+      "maximum": [
+        0.72,
+        0.54,
+        0.65
+      ]
+    }
+  ]
+}

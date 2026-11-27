@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": 519,
+  "name": "Woodland Litter",
+  "description": "Beech leaves and moss over dark forest loam.",
+  "creative_category": "nature",
+  "hardness": 0.42,
+  "resistance": 0.9,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "surface",
+    "side",
+    "side"
+  ],
+  "textures": {
+    "surface": "textures/forest/woodland_litter_surface.png",
+    "side": "textures/forest/woodland_litter_side.png"
+  },
+  "materials": {
+    "surface": {
+      "roughness": 0.93
+    },
+    "side": {
+      "roughness": 0.93
+    }
+  }
+}

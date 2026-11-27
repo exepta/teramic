@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 675,
+  "name": "Swamp Clay",
+  "description": "A dense bed of grey clay with a violet sheen.",
+  "creative_category": "terrain",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.46,
+  "resistance": 0.62,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/swamp/swamp_clay_side.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.66,
+      "reflectance": 0.09,
+      "normal_texture": "textures/swamp/swamp_clay_side_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

@@ -413,7 +413,8 @@ fn check_generated_cascade(lush: bool) {
     let mut journal = EditJournal::default();
     for z in owner.z - 1..=owner.z + 1 {
         for x in owner.x - 1..=owner.x + 1 {
-            let prepared = generator.prepare_column([x, z], false).unwrap();
+            let prepared = std::sync::Arc::new(generator.prepare_column([x, z], false).unwrap());
+            chunks.set_prepared_column_for_test([x, z], Some(prepared.clone()));
             for y in owner.y - 2..=owner.y + 1 {
                 let p = SectionPos::new(x, y, z);
                 let generated = generator
@@ -438,36 +439,41 @@ fn check_generated_cascade(lush: bool) {
         }
     }
     assert_eq!(chunks.block_at(outlet), Some(0));
-    assert_eq!(
-        super::super::fluid_cell_at(&terrain, &journal, outlet, 0).amount,
-        0
+    let c = chunks.surface_column_at(outlet[0], outlet[2]).unwrap();
+    let span = c
+        .falls
+        .iter()
+        .flatten()
+        .find(|s| s.contains(outlet[1]))
+        .expect("the cave outlet must arrive already supplied");
+    let shaft = i64::from(span.bottom)..=i64::from(span.top);
+    assert!(
+        i64::from(span.bottom) <= outlet[1] - 4,
+        "shaft stops prematurely: {outlet:?} {span:?}"
     );
-    for _ in 0..300 {
-        let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
-        assert!(step.visited <= 256);
+    for y in shaft.clone() {
+        let p = [outlet[0], y, outlet[2]];
+        let cell = chunks.fluid_cell_at(&terrain, &journal, p, chunks.block_at(p).unwrap());
+        assert!(
+            cell.amount > 0 && !cell.source,
+            "missing gravity water at {p:?}"
+        );
     }
-    let wet: Vec<_> = journal
-        .fluid_cells()
-        .filter(|(_, c)| c.amount > 0)
-        .collect();
-    assert!(
-        wet.iter().any(|(p, c)| p[1] < outlet[1] - 4 && !c.source),
-        "no falling cells: {outlet:?}"
+    assert_eq!(journal.fluid_cells().count(), 0);
+    let step = simulate_fluid_step(&terrain, &chunks, &mut journal, 256).unwrap();
+    assert_eq!(
+        step.visited, 0,
+        "an undisturbed generated cave cannot consume the tick budget"
     );
-    assert!(
-        wet.iter().all(|(_, c)| !c.source),
-        "flow created a new source"
-    );
-    assert!(wet.iter().all(|(p, _)| {
-        chunks
-            .block_at(*p)
-            .is_some_and(super::super::can_hold_fluid)
-    }));
     let mut reloaded = EditJournal::default();
     for delta in journal.changed_sections().map(|s| journal.section_delta(s)) {
         reloaded.import_delta(delta).unwrap();
     }
-    for (p, cell) in wet {
-        assert_eq!(reloaded.fluid(p), Some(cell));
+    for y in shaft {
+        let p = [outlet[0], y, outlet[2]];
+        assert_eq!(
+            chunks.fluid_cell_at(&terrain, &reloaded, p, 0),
+            chunks.fluid_cell_at(&terrain, &journal, p, 0)
+        );
     }
 }

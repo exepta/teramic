@@ -21,6 +21,13 @@ fn mane(variant: u8) -> [f32; 3] {
     }
 }
 
+// A renderer-only coat outside the sixteen persisted horse variants.
+const ZEBRA_COAT: u8 = 16;
+
+pub(super) fn zebra() -> Result<Vec<(Part, Vec3, Mesh)>, String> {
+    parts(ZEBRA_COAT)
+}
+
 pub(super) fn parts(variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
     let body_coat = coat(variant, [0.0, 1.0, 0.0]);
     let hair = mane(variant);
@@ -46,6 +53,11 @@ pub(super) fn parts(variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
         let t = i as f32 / 7.0;
         let y = 1.29 + t * 0.40;
         let z = -0.22 - t * 0.32;
+        if variant == ZEBRA_COAT {
+            let band = if i % 3 == 0 { [0.78, 0.75, 0.67] } else { hair };
+            body.voxel([0., y + 0.105, z], [0.09, 0.25, 0.13], band)?;
+            continue;
+        }
         body.voxel([0.0, y, z], [0.13, 0.12, 0.14], hair)?;
         for side in [-1.0, 1.0] {
             body.voxel(
@@ -109,7 +121,17 @@ pub(super) fn parts(variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, String> {
         parts.push((
             Part::Leg(if i == 0 || i == 3 { 1.0 } else { -1.0 }),
             Vec3::new(x, 0.68, z),
-            leg.finish()?,
+            if variant == ZEBRA_COAT {
+                leg.finish_painted(|p, tint| {
+                    if tint == HOOF {
+                        HOOF
+                    } else {
+                        coat(variant, [x + p.x, 0.68 + p.y, z + p.z])
+                    }
+                })?
+            } else {
+                leg.finish()?
+            },
         ));
     }
     let mut tail = Builder::with_resolution(16);

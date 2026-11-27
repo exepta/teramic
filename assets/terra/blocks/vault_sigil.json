@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": 763,
+  "name": "Faceted Vault Seal",
+  "description": "Faceted Vault Seal",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/vault_sigil.glb",
+  "struct_block": true,
+  "hardness": 1.2,
+  "resistance": 4.0,
+  "required_tool": null,
+  "mining_level": 0,
+  "textures": {},
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      0.7,
+      0.3,
+      1.0
+    ],
+    "intensity": 1200,
+    "range": 10.0,
+    "falloff": "soft_core",
+    "flicker": 0.0,
+    "shadows": false
+  }
+}

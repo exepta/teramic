@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": 667,
+  "name": "Savanna Stone Arch",
+  "description": "Sandstone stones span an open arch.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/savanna_stone_arch.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.04,
+        0,
+        0.29
+      ],
+      "maximum": [
+        0.24,
+        0.31,
+        0.71
+      ]
+    },
+    {
+      "minimum": [
+        0.76,
+        0,
+        0.29
+      ],
+      "maximum": [
+        0.96,
+        0.31,
+        0.71
+      ]
+    },
+    {
+      "minimum": [
+        0.2,
+        0.32,
+        0.29
+      ],
+      "maximum": [
+        0.8,
+        0.49,
+        0.71
+      ]
+    }
+  ]
+}

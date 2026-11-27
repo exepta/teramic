@@ -15,12 +15,15 @@ pub use caves::CaveKind;
 mod column_tests;
 mod columns;
 mod density;
+mod desert;
 mod generator;
 #[cfg(test)]
 mod geology_tests;
+mod highlands;
 mod lakes;
 mod landforms;
 mod landscape;
+mod misty_coast;
 pub mod natural_features;
 pub use landscape::LandscapeNoise;
 mod fantasy_relief;
@@ -28,11 +31,13 @@ mod landscape_regions;
 pub use landscape_regions::{LandformKind, LandscapeRegionSample};
 mod oases;
 mod ocean;
+mod plains;
 pub use ocean::{OceanArea, OceanHabitat};
 mod ores;
 pub use oases::OasisSample;
 mod rivers;
 pub use rivers::{HydrologyDistributary, HydrologyRegion, HydrologyTributary, RiverSample};
+mod cherry_grove;
 #[cfg(test)]
 mod landscape_tests;
 #[cfg(test)]
@@ -57,9 +62,17 @@ pub use generator::TerraGenerator;
 pub use sections::{SectionGenerationError, SectionGenerator};
 pub use surface::SurfaceColumn;
 pub use terrain::{MAX_SAMPLE_COORDINATE, TerrainGenerator};
-pub use vegetation::{GroundCover, TreeAppearance, TreeAppearanceSnapshot};
+pub use vegetation::{GroundCover, PalmSpan, TreeAppearance, TreeAppearanceSnapshot};
 
 #[cfg(feature = "bevy")]
 pub use vegetation::{planted_shape, planted_shape_with_ecology};
 
+mod ashlands;
 mod blood_forest;
+mod crystal_highlands;
+mod petrified_forest;
+pub use natural_features::{
+    CoastalLandmarkKind, CoastalLandmarkSite, CrystalLandmarkKind, CrystalLandmarkSite,
+};
+mod savanna;
+mod swamp;

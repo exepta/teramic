@@ -43,6 +43,73 @@ fn compact_tints(mesh: &mut Mesh) {
     let _ = mesh.quantize_colors(AttributeQuantization::Float16);
 }
 
+// A section spans 16 tiles. The extra tile on either side covers authored leaf overhangs.
+// Integer tile coordinates land on integral codes, retaining the painted repeat boundaries.
+const LEAF_UV_STEPS: f32 = 3600.0;
+const LEAF_UV_MIN: f32 = -1.0;
+const LEAF_UV_MAX: f32 = LEAF_UV_MIN + u16::MAX as f32 / LEAF_UV_STEPS;
+
+pub(super) fn pack_surface_uvs(batch: &mut MeshBatch, foliage: bool) {
+    if batch.uvs.is_empty() {
+        return;
+    }
+    let unit = batch
+        .uvs
+        .iter()
+        .flatten()
+        .all(|uv| (0.0..=1.0).contains(uv));
+    let (min, steps) = if unit {
+        (0.0, f32::from(u16::MAX))
+    } else if foliage
+        && batch
+            .uvs
+            .iter()
+            .flatten()
+            .all(|uv| (LEAF_UV_MIN..=LEAF_UV_MAX).contains(uv))
+    {
+        batch.tiled_uv_range = true;
+        (LEAF_UV_MIN, LEAF_UV_STEPS)
+    } else {
+        return;
+    };
+    batch.packed_uvs = std::mem::take(&mut batch.uvs)
+        .into_iter()
+        .map(|uv| uv.map(|v| ((v - min) * steps).round() as u16))
+        .collect();
+}
+
+pub(super) fn section_mesh(batch: &MeshBatch) -> Mesh {
+    let empty = || {
+        Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::RENDER_WORLD,
+        )
+    };
+    if batch.packed_uvs.is_empty() {
+        return empty();
+    }
+    // Atlas and tiled meshes have the same vertex format and can share a PBR
+    // pipeline. Always enable Bevy's decode on this format; only the metadata
+    // differs. Otherwise the first mesh encountered determines both shaders.
+    static UV_LAYOUTS: [std::sync::OnceLock<Mesh>; 2] = [const { std::sync::OnceLock::new() }; 2];
+    UV_LAYOUTS[usize::from(batch.tiled_uv_range)]
+        .get_or_init(|| {
+            let endpoints = if batch.tiled_uv_range {
+                [LEAF_UV_MIN, LEAF_UV_MAX]
+            } else {
+                [0., 1.]
+            };
+            let mut mesh = empty().with_inserted_attribute(
+                Mesh::ATTRIBUTE_UV_0,
+                endpoints.map(|uv| [uv; 2]).to_vec(),
+            );
+            mesh.compress_uv0()
+                .expect("two distinct finite Float32 UV endpoints");
+            mesh
+        })
+        .clone()
+}
+
 pub(super) fn compact_batch_tints(batch: &mut MeshBatch) {
     if batch.staged.is_some()
         || batch.half_colors.is_some()
@@ -81,6 +148,99 @@ mod tests {
         },
         render::render_resource::VertexFormat,
     };
+
+    #[test]
+    fn packed_uvs_keep_atlas_edges_and_subtexel_precision_without_changing_tiled_uvs() {
+        let uvs: Vec<_> = (0..=2048)
+            .map(|i| [i as f32 / 2048., 1. - i as f32 / 2048.])
+            .collect();
+        let mut batch = MeshBatch {
+            uvs: uvs.clone(),
+            ..Default::default()
+        };
+        pack_surface_uvs(&mut batch, false);
+        assert!(batch.uvs.is_empty());
+        assert_eq!(batch.packed_uvs.first(), Some(&[0, u16::MAX]));
+        assert_eq!(batch.packed_uvs.last(), Some(&[u16::MAX, 0]));
+        for (packed, original) in batch.packed_uvs.iter().zip(uvs) {
+            for axis in 0..2 {
+                assert!((f32::from(packed[axis]) / 65535. - original[axis]).abs() * 4096. <= 0.032);
+            }
+        }
+        for value in [-0.1, 16., f32::NAN, f32::INFINITY] {
+            let mut repeated = MeshBatch {
+                uvs: vec![[0., 1.], [1., value]],
+                ..Default::default()
+            };
+            pack_surface_uvs(&mut repeated, false);
+            assert!(repeated.packed_uvs.is_empty());
+            assert_eq!(repeated.uvs[1][1].to_bits(), value.to_bits());
+        }
+    }
+
+    #[test]
+    fn tiled_leaf_uvs_use_the_engine_decode_range_in_every_pass() {
+        let coordinates = [
+            [-0.25, 16.125],
+            [0.0, 1.0],
+            [12.13723, 4.0123],
+            [16.0, -1.0],
+        ];
+        let mut batch = MeshBatch {
+            uvs: coordinates.to_vec(),
+            ..Default::default()
+        };
+        pack_surface_uvs(&mut batch, true);
+        assert!(batch.tiled_uv_range && batch.uvs.is_empty());
+        let mut atlas = MeshBatch {
+            uvs: vec![[0., 0.], [1., 1.]],
+            ..Default::default()
+        };
+        pack_surface_uvs(&mut atlas, false);
+        let atlas_mesh = section_mesh(&atlas);
+        let atlas_range = atlas_mesh.final_uv_ranges[0].unwrap();
+        assert_eq!(atlas_range.min.to_array(), [0.; 2]);
+        assert_eq!(atlas_range.max.to_array(), [1.; 2]);
+        let mut layouts = MeshVertexBufferLayouts::default();
+        let mut mesh = section_mesh(&batch);
+        assert_eq!(
+            mesh.get_mesh_vertex_buffer_layout(&mut layouts),
+            atlas_mesh.get_mesh_vertex_buffer_layout(&mut layouts),
+            "both UV ranges must select the same GPU pipeline"
+        );
+        mesh.insert_attribute(
+            MeshVertexAttribute {
+                format: VertexFormat::Unorm16x2,
+                ..Mesh::ATTRIBUTE_UV_0
+            },
+            VertexAttributeValues::Unorm16x2(batch.packed_uvs.clone()),
+        );
+        let mesh = mesh.take_gpu_data().unwrap();
+        let range = mesh.final_uv_ranges[0].unwrap();
+        assert!(
+            mesh.get_mesh_vertex_buffer_layout(&mut MeshVertexBufferLayouts::default())
+                .0
+                .get_attribute_compression()
+                .contains(MeshAttributeCompressionFlags::COMPRESS_UV0)
+        );
+        for (packed, original) in batch.packed_uvs.iter().zip(coordinates) {
+            for axis in 0..2 {
+                let decoded = range.min[axis]
+                    + f32::from(packed[axis]) / 65535. * (range.max[axis] - range.min[axis]);
+                assert!((decoded - original[axis]).abs() < 0.00015);
+                if original[axis].fract() == 0.0 {
+                    assert!((decoded - original[axis]).abs() < 0.000002);
+                }
+            }
+        }
+        let mut beyond = MeshBatch {
+            uvs: vec![[1.0, 64.0]],
+            ..Default::default()
+        };
+        pack_surface_uvs(&mut beyond, true);
+        assert!(beyond.packed_uvs.is_empty() && !beyond.tiled_uv_range);
+        assert_eq!(beyond.uvs, [[1.0, 64.0]]);
+    }
 
     fn fixture(colors: Vec<[f32; 4]>) -> Mesh {
         let count = colors.len();

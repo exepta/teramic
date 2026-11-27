@@ -1,0 +1,14 @@
+{
+  "biome": "swamp",
+  "selection_weight": 1.0,
+  "terrain": {
+    "min_height": 8.0,
+    "max_height": 30.0,
+    "horizontal_scale": 690.0,
+    "detail_strength": 0.23,
+    "relief_strength": 0.22,
+    "soil_depth": 6.0,
+    "tree_density": 0.72,
+    "terrace_strength": 0.0
+  }
+}

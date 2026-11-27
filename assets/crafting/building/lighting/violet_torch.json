@@ -1,0 +1,26 @@
+{
+  "id": "teramic::violet_torch",
+  "name": "Violet Torch",
+  "station": "hand",
+  "output": {
+    "item": {
+      "block": 791
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": "stick",
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 792
+        },
+        "count": 1
+      }
+    ]
+  }
+}

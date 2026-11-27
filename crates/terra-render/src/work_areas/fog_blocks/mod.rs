@@ -34,7 +34,7 @@ struct State {
     terrain: Handle<Image>,
 }
 pub(super) fn install(app: &mut App) {
-    app.add_plugins(MaterialPlugin::<FogMaterial>::default())
+    crate::material_work::add::<FogMaterial>(app)
         .init_resource::<State>()
         .init_resource::<FogBlockStatus>()
         .add_systems(Startup, setup.after(super::setup))
@@ -119,9 +119,9 @@ fn update(
         state.next_refresh = time.elapsed_secs() + 0.5;
         let next = if ready && let (Some(eye), Some(chunks), Some(journal)) = (eye, chunks, journal)
         {
-            state.index.refresh(&chunks, &journal);
+            state.index.refresh(eye, &chunks, &journal);
             let nearby = state.index.nearby(eye);
-            Some(Field::sample(eye, &nearby, &chunks, &journal))
+            (!nearby.is_empty()).then(|| Field::sample(eye, &nearby, &chunks, &journal))
         } else {
             state.index = Index::default();
             None
@@ -155,11 +155,11 @@ fn update(
     }
     let visible = ready && eye.is_some() && state.field.as_ref().is_some_and(|f| f.occupied() > 0);
     for mut visibility in &mut visibility {
-        *visibility = if visible {
+        visibility.set_if_neq(if visible {
             Visibility::Inherited
         } else {
             Visibility::Hidden
-        };
+        });
     }
     status.sources = if visible {
         state.field.as_ref().map_or(0, |f| f.sources.len())
@@ -169,8 +169,9 @@ fn update(
     status.volumes = usize::from(visible);
     status.radius = terra_core::fog_blocks::RADIUS;
     status.sampled_cells = if visible { SIZE * SIZE } else { 0 };
-    if let Some(mut material) = materials.get_mut(&state.material) {
-        material.flow = super::material::flow(time.elapsed_secs_f64()).with_w(0.20);
-        status.drift = [material.flow.x, material.flow.y];
+    let flow = super::material::flow(time.elapsed_secs_f64()).with_w(0.20);
+    status.drift = [flow.x, flow.y];
+    if visible && let Some(mut material) = materials.get_mut(&state.material) {
+        material.flow = flow;
     }
 }

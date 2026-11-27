@@ -19,7 +19,7 @@ impl Presentation {
         let target = a
             .needs
             .goal
-            .filter(|g| g.kind == NeedKind::AttackAim)
+            .filter(|g| matches!(g.kind, NeedKind::AttackAim | NeedKind::AirborneAttackAim))
             .map(|goal| {
                 let local = Vec3::from_array(std::array::from_fn(|i| {
                     (goal.position[i] as f64 + 0.5 - a.position[i]) as f32
@@ -58,7 +58,7 @@ impl Presentation {
         self.target = a
             .needs
             .goal
-            .filter(|g| g.kind == NeedKind::AttackAim)
+            .filter(|g| matches!(g.kind, NeedKind::AttackAim | NeedKind::AirborneAttackAim))
             .map(|goal| {
                 let world = Vec3::from_array(goal.position.map(|v| v as f32 + 0.5));
                 (root.rotation.inverse() * (world - root.translation)) / root.scale
@@ -81,8 +81,43 @@ impl Presentation {
     ) {
         let p = self.pose.progress;
         let b = self.pose.behavior;
+        if b == B::DragonBurrow || b == B::DragonSurge && kind == super::Kind::DarkDragon {
+            let earth = b == B::DragonBurrow;
+            let immersion = self.pose.submergence();
+            let radius = if earth { 5.0 } else { 6.2 };
+            for i in 0..24 {
+                let t = (p * if earth { 4. } else { 2.8 } + i as f32 * 0.071).fract();
+                let angle = i as f32 * 2.399963 + if earth { 0. } else { 2.4 * p };
+                let r = radius * (0.35 + t * 0.8);
+                let y = if earth {
+                    0.2 + 1.8 * (std::f32::consts::PI * t).sin()
+                } else {
+                    0.12 + 2.4 * (1. - t).powi(2)
+                };
+                let pos = root
+                    .transform_point(Vec3::new(r * angle.cos(), y, r * angle.sin()) * self.scale);
+                let alpha = (1. - t) * immersion;
+                let color = if earth {
+                    [0.60, 0.41, 0.21, alpha]
+                } else if i % 4 == 0 {
+                    [1.5, 0.08, 0.32, alpha]
+                } else {
+                    [0.42, 0.07, 0.74, alpha]
+                };
+                emit(
+                    pos,
+                    if earth {
+                        0.48 + 0.48 * t
+                    } else {
+                        0.28 + 0.50 * t
+                    },
+                    color,
+                );
+            }
+            return;
+        }
         let Some(aim) = self.target else { return };
-        if !matches!(b, B::Spit | B::DragonVolley) {
+        if !matches!(b, B::Spit | B::DragonVolley | B::Tremor | B::Attack) {
             return;
         }
         let start = root
@@ -92,12 +127,29 @@ impl Presentation {
         let side = axis.cross(Vec3::Y).normalize_or(Vec3::X);
         let up = side.cross(axis);
         let (color, scatter, drift) = match kind {
+            super::Kind::FireDragon => ([1.50, 0.36, 0.045], 2.25, 2.9),
             super::Kind::WaterDragon => ([0.22, 0.88, 1.28], 1.6, -0.8),
             super::Kind::EarthDragon => ([1.25, 0.47, 0.095], 1.25, -1.8),
             _ => ([0.83, 0.13, 1.20], 2.1, 2.2),
         };
         let rgba = |alpha| [color[0], color[1], color[2], alpha];
         let impact = terra_core::creatures::dragons::impact_phase(b);
+        if matches!(b, B::Tremor | B::Attack) {
+            if p >= impact {
+                let t = (p - impact) / (1. - impact);
+                for i in 0..26 {
+                    let angle = i as f32 * 2.399963;
+                    let radius = (5.5 + (i % 7) as f32) * t.sqrt();
+                    let arc = 4.0 * t * (1.0 - t) * (0.7 + (i % 4) as f32 * 0.44);
+                    emit(
+                        target + Vec3::new(angle.cos() * radius, arc, angle.sin() * radius),
+                        (0.28 + (i % 3) as f32 * 0.23) * (1. - t * 0.5),
+                        rgba(1. - t),
+                    );
+                }
+            }
+            return;
+        }
         let charge = (p / 0.29).clamp(0., 1.);
         if p < 0.36 {
             let fade = charge * ((0.36 - p) / 0.07).clamp(0., 1.);
@@ -156,14 +208,14 @@ impl Presentation {
             Joint::Ward => b == B::DragonWard && (0.08..0.95).contains(&p),
             Joint::Surge => b == B::DragonSurge && (0.23..0.96).contains(&p),
             Joint::Breath => b == B::Spit && (0.27..0.84).contains(&p),
-            Joint::Impact => match b {
-                B::Spit => self.target.is_some() && (0.55..0.95).contains(&p),
-                B::DragonVolley => self.target.is_some() && (0.72..0.98).contains(&p),
-                B::Tremor | B::Attack => (0.48..0.91).contains(&p),
-                _ => false,
-            },
+            // Ground eruptions follow foot contact. Ranged impacts use the
+            // dispersing motes at the actual aim height, including mid-air.
+            Joint::Impact => {
+                (b == B::DragonBurrow && (0.08..0.98).contains(&p))
+                    || matches!(b, B::Tremor | B::Attack) && (0.48..0.91).contains(&p)
+            }
             Joint::Rune => b == B::Ink && (0.08..0.94).contains(&p),
-            _ => true,
+            _ => self.pose.submergence() < 0.985,
         };
         *visibility = if show {
             Visibility::Inherited
@@ -178,6 +230,18 @@ impl Presentation {
         t.rotation = frame.rotation;
         t.scale = self.pose.joint_scale(joint);
         match joint {
+            Joint::Eyes => {
+                let phase = self.pose.clock.rem_euclid(4.9);
+                let openness = match b {
+                    B::Dead | B::Sleep => 0.03,
+                    _ => ((phase - 0.13).abs() / 0.13).clamp(0.03, 1.),
+                };
+                // The eye mesh shares the skull joint. Scale about the iris
+                // centre so hatchling and adult eyes close inside their sockets.
+                let offset = (8.87 - joint.pivot().y) * self.scale * t.scale.y;
+                t.translation += t.rotation * Vec3::Y * offset * (1. - openness);
+                t.scale.y *= openness;
+            }
             Joint::Missile(i) => {
                 let Some((form, aim)) = self.pose.lineage.zip(self.target) else {
                     return;
@@ -193,7 +257,7 @@ impl Presentation {
             }
             Joint::Ward | Joint::Surge => {
                 let ward = joint == Joint::Ward;
-                let shadow = self.pose.lineage == Some(Lineage::Shadow);
+                let shadow = self.pose.kind == super::Kind::DarkDragon;
                 if !ward
                     && !shadow
                     && let Some(target) = self.target
@@ -225,18 +289,15 @@ impl Presentation {
                     (direction.length() / self.scale).clamp(0.01, 80.) * extend.max(0.01),
                 );
             }
+            Joint::Impact if b == B::DragonBurrow => {
+                let amount = self.pose.submergence();
+                let ring = 0.48 + 0.55 * amount;
+                t.translation = Vec3::Y * 0.08;
+                t.scale = Vec3::new(ring, (0.30 + 0.16 * (p * 42.).sin()) * amount, ring);
+            }
             Joint::Impact => {
-                let phase = match b {
-                    B::Spit => (p - 0.55) / 0.4,
-                    B::DragonVolley => (p - 0.72) / 0.26,
-                    _ => (p - 0.48) / 0.43,
-                };
-                let ranged = matches!(b, B::Spit | B::DragonVolley);
-                if ranged && let Some(aim) = self.target {
-                    t.translation = aim;
-                }
-                let radius = if ranged { 0.62 } else { 1.25 };
-                let wave = 0.06 + (1. - (1. - phase).powi(2)) * radius;
+                let phase = (p - 0.48) / 0.43;
+                let wave = 0.06 + (1. - (1. - phase).powi(2)) * 1.25;
                 t.scale = Vec3::new(wave, (phase * std::f32::consts::PI).sin().max(0.01), wave);
             }
             Joint::Rune => {

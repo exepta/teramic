@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 775,
+  "name": "Tideworn Rock",
+  "description": "Tideworn Rock",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.8,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "textures": {
+    "side": "textures/misty_coast/tideworn_rock.png"
+  },
+  "materials": {
+    "side": {
+      "normal_texture": "textures/misty_coast/tideworn_rock_normal.png",
+      "roughness": 0.34,
+      "reflectance": 0.28
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 534,
+  "name": "Flowering Prickly Pear",
+  "description": "Rose blossoms and pale spines on fleshy cactus pads.",
+  "creative_category": "nature",
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/prickly_pear.glb",
+  "collision_boxes": [],
+  "struct_block": true,
+  "textures": {}
+}

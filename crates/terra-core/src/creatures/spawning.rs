@@ -8,6 +8,19 @@ pub struct SpawnMob {
 }
 
 pub const MOBS: &[(&str, SpawnMob)] = &[
+    (
+        "teramic::swamp_witch",
+        mob(CreatureKind::Villager, super::villagers::SWAMP_WITCH),
+    ),
+    (
+        "teramic::swamp_warlock",
+        mob(CreatureKind::Villager, super::villagers::SWAMP_WARLOCK),
+    ),
+    (
+        "teramic::swamp_hermit",
+        mob(CreatureKind::Villager, super::villagers::SWAMP_HERMIT),
+    ),
+    ("teramic::lava_worm", mob(CreatureKind::LavaWorm, 0)),
     ("teramic::sheep", mob(CreatureKind::Sheep, 0)),
     ("teramic::cow", mob(CreatureKind::Cow, 0)),
     ("teramic::pig", mob(CreatureKind::Pig, 0)),
@@ -78,8 +91,20 @@ pub const MOBS: &[(&str, SpawnMob)] = &[
     ("teramic::blood_slime", mob(CreatureKind::BloodSlime, 0)),
     ("teramic::blood_stalker", mob(CreatureKind::BloodStalker, 0)),
     ("teramic::blood_wisp", mob(CreatureKind::BloodWisp, 0)),
+    ("teramic::stone_golem", mob(CreatureKind::StoneGolem, 0)),
+    (
+        "teramic::weathered_stone_golem",
+        mob(CreatureKind::StoneGolem, 1),
+    ),
     ("teramic::thorn_brute", mob(CreatureKind::ThornBrute, 0)),
     ("teramic::dark_dragon", mob(CreatureKind::DarkDragon, 0)),
+    ("teramic::fire_dragon", mob(CreatureKind::FireDragon, 0)),
+    ("teramic::cinder_dragon", mob(CreatureKind::FireDragon, 1)),
+    (
+        "teramic::obsidian_fire_dragon",
+        mob(CreatureKind::FireDragon, 2),
+    ),
+    ("teramic::sulfur_dragon", mob(CreatureKind::FireDragon, 3)),
     ("teramic::earth_dragon", mob(CreatureKind::EarthDragon, 0)),
     ("teramic::water_dragon", mob(CreatureKind::WaterDragon, 0)),
     ("teramic::ruin_dragon", mob(CreatureKind::DarkDragon, 3)),
@@ -103,6 +128,8 @@ pub const MOBS: &[(&str, SpawnMob)] = &[
     ),
     ("teramic::granite_dragon", mob(CreatureKind::EarthDragon, 2)),
     ("teramic::magma_dragon", mob(CreatureKind::EarthDragon, 3)),
+    ("teramic::elephant", mob(CreatureKind::Elephant, 0)),
+    ("teramic::zebra", mob(CreatureKind::Zebra, 0)),
     ("teramic::sand_worm", mob(CreatureKind::SandWorm, 0)),
     ("teramic::villager", mob(CreatureKind::Villager, 0)),
     ("teramic::farmer", mob(CreatureKind::Villager, 1)),
@@ -162,9 +189,7 @@ const fn mob(kind: CreatureKind, variant: u8) -> SpawnMob {
 }
 
 pub fn lookup(id: &str) -> Option<SpawnMob> {
-    MOBS.iter()
-        .find(|(name, _)| *name == id)
-        .map(|(_, mob)| *mob)
+    crate::command_ids::resolve(id, MOBS.iter().copied()).ok()
 }
 
 impl SpawnMob {

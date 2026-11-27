@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 561,
+  "name": "Spiral Shell",
+  "description": "A coiled, striped sea snail shell.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 0.7,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/spiral_shell.glb",
+  "collision_boxes": [],
+  "textures": {}
+}

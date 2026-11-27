@@ -50,6 +50,7 @@ mod ravine_tests {
     fn coastal_ravine_tapers_to_the_hillside_in_the_reported_world() {
         let t = TerraGenerator::new(WorldConfig {
             seed: terra_core::WorldSeed(3809574271049500506),
+            ecology_revision: 15,
             ..Default::default()
         })
         .unwrap();
@@ -108,6 +109,7 @@ pub(super) struct CaveRegion {
     pub ecology: super::CaveBiome,
     pub surface: f64,
     pub climate: super::biomes::BiomeSample,
+    pub volcanic: bool,
     pub kind: CaveKind,
     pub salt: bool,
     pub center: [f64; 3],
@@ -536,7 +538,11 @@ impl TerraGenerator {
             (surface - height - 14.0).min(-12.0) - f64::from((seed >> 22) % 36),
             cz + (f64::from((seed >> 12) % 101) / 50.0 - 1.0) * jitter,
         ];
+        // A chamber is a single hydraulic basin. Check its footprint once in
+        // the region cache so a stream cannot hang at the volcanic boundary.
+        let volcanic = radius > 0. && self.volcanic_basin(center[0], center[2], radius);
         let region = CaveRegion {
+            volcanic,
             ecology,
             surface,
             climate: biome,
@@ -789,7 +795,10 @@ impl TerraGenerator {
             return None;
         }
         let mut ravine = None;
-        if self.config().bounded_world && height > self.config().sea_level + 8.0 {
+        if self.config().bounded_world
+            && height > self.config().sea_level + 8.0
+            && !self.surface_gullies()
+        {
             if self.config().ravine_revision > 0 {
                 if let Some(depth) = self.ravine_depth(x, z) {
                     // Close the incision into the coastal bank as the ground meets
@@ -861,6 +870,27 @@ impl TerraGenerator {
         Some(interval)
     }
 
+    pub(super) fn surface_gullies(&self) -> bool {
+        self.config().bounded_world
+            && self.config().ravine_revision >= 2
+            && self.config().ecology_revision >= 16
+    }
+
+    /// An open gully is part of the landscape. Flora, ground materials,
+    /// shadowing and the camera all use its real floor as their surface.
+    pub(super) fn gully_height(&self, x: f64, z: f64, height: f64, ashlands: f64) -> f64 {
+        if !self.surface_gullies()
+            || !self.config().caves
+            || height <= self.config().sea_level + 8.
+            || ashlands >= 0.65
+        {
+            return height;
+        }
+        let depth = self.ravine_depth(x, z).unwrap_or(0.) * 0.24;
+        let fade = 1. - super::biomes::smoothstep(0.04, 0.65, ashlands);
+        height - depth.min(height - self.config().sea_level - 8.) * fade
+    }
+
     /// Meandering channels with revisioned banks, rounded shoulders and
     /// varying depth. All samples are column-local and deterministic.
     fn ravine_depth(&self, x: f64, z: f64) -> Option<f64> {
@@ -874,6 +904,18 @@ impl TerraGenerator {
             + (z * 0.071 + phase).sin() * 3.0;
         // Repeat the rare descriptor along X, without depending on chunk borders.
         let across = (x - center_x + 384.0).rem_euclid(768.0) - 384.0;
+        // Repeating the row in every X tile produced identical, equally spaced
+        // trenches in every biome. Only retain occasional independent sites.
+        if self.config().ecology_revision >= 16 && self.config().ravine_revision >= 2 {
+            let tile = ((x - center_x + 384.) / 768.).floor() as i64;
+            let site = layer_seed(
+                self.config().seed.0 ^ (tile as u64).wrapping_mul(0x9e3779b97f4a7c15),
+                cell as u64 ^ 0x726176,
+            );
+            if !site.is_multiple_of(5) {
+                return None;
+            }
+        }
         let envelope = super::biomes::smoothstep(90.0, 68.0, along.abs());
         if envelope <= 0.0 {
             return None;
@@ -1032,7 +1074,15 @@ impl TerraGenerator {
                     let sx = x + dx * f64::from(step);
                     let sz = z + dz * f64::from(step);
                     let ground = self.surface_height(sx, sz);
-                    let cavity = portal.interval(sx, sz);
+                    let cavity = portal.interval(sx, sz).or_else(|| {
+                        // A fossil gallery just outside the entrance can cut
+                        // away the bank that would otherwise anchor this roof.
+                        if self.config().ecology_revision < 19 {
+                            return None;
+                        }
+                        let weight = self.climate_biome_at(sx, sz).weights.petrified_forest;
+                        self.fossil_gallery(sx, sz, ground, weight)
+                    });
                     let next_top = (ground - 0.5).floor() as i64;
                     let floor = cavity.map_or(ground, |c| c[0]);
                     let protected = (ground - 5.0 - 0.5).ceil() as i64;

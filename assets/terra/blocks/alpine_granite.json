@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": 583,
+  "name": "Alpine Granite",
+  "description": "A jointed grey cliff face flecked with quartz.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "cube",
+  "bevel_width": 0.0,
+  "hardness": 1.7,
+  "resistance": 2,
+  "textures": {
+    "side": "textures/highlands/alpine_granite_side.png",
+    "top": "textures/highlands/alpine_granite_top.png"
+  },
+  "materials": {
+    "side": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.08
+    },
+    "top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.08
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "top",
+    "side",
+    "side"
+  ]
+}

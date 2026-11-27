@@ -926,6 +926,15 @@ impl CaveStructure {
 
 impl TerraGenerator {
     pub fn cave_structure_at(&self, x: f64, z: f64) -> CaveStructure {
+        self.cave_structure_below(x, z, || self.surface_height(x, z))
+    }
+
+    pub(super) fn cave_structure_below(
+        &self,
+        x: f64,
+        z: f64,
+        surface: impl FnOnce() -> f64,
+    ) -> CaveStructure {
         let mut room = self.cave_room_at(x, z);
         if self.config().cave_structure_revision >= 3 && self.config().caves && !room.active() {
             if let Some(sample) = self.connector_water_at(x, z) {
@@ -934,6 +943,16 @@ impl TerraGenerator {
             } else {
                 room.water = None;
             }
+        }
+        if let Some(mut water) = room.water {
+            // Regional chamber geometry predates local cliffs and backwaters.
+            // Only voxels actually carved below the roof can supply cave fluid.
+            // A skylight can expose its pool, but cannot suspend one above land.
+            let roof = if room.open_to_sky() { 0. } else { 5. };
+            let top = (surface() - roof - 0.5).floor() + 1.;
+            water.level = water.level.min(top);
+            water.depth = water.level - water.bed;
+            room.water = (water.depth > 0.).then_some(water);
         }
         room
     }
@@ -986,6 +1005,11 @@ impl TerraGenerator {
         } else {
             CaveEcology::Stone
         };
+        let kind = if kind == CaveEcology::Waterfall && region.volcanic {
+            CaveEcology::Stone
+        } else {
+            kind
+        };
         let mut center = region.center;
         if kind == CaveEcology::Lush {
             center[1] = (surface - region.height - 9.0).max(-65.0);
@@ -1011,7 +1035,8 @@ impl TerraGenerator {
             revision: self.config().cave_structure_revision,
             salt_allowed,
             suppressed: region.presence <= 0.0,
-            dynamic_water: self.config().cave_structure_revision >= 4
+            dynamic_water: !region.volcanic
+                && self.config().cave_structure_revision >= 4
                 && (kind == CaveEcology::Waterfall
                     || self.config().cave_structure_revision >= 12 && kind == CaveEcology::Lush
                     || self.config().cave_structure_revision >= 5
@@ -1052,6 +1077,7 @@ impl TerraGenerator {
             return sample;
         }
         if self.config().water
+            && !region.volcanic
             && sample.active()
             && (matches!(
                 kind,

@@ -5,9 +5,9 @@ use bevy::prelude::*;
 /// The center keeps half the influence; four nearby samples share the rest.
 pub(super) fn biome_neighborhood(
     center: [f64; 2],
-    middle: [f64; 10],
-    mut sample: impl FnMut(f64, f64) -> [f64; 10],
-) -> [f64; 10] {
+    middle: [f64; 16],
+    mut sample: impl FnMut(f64, f64) -> [f64; 16],
+) -> [f64; 16] {
     let mut weights = middle.map(|weight| weight * 0.5);
     for [dx, dz] in [[-16.0, 0.0], [16.0, 0.0], [0.0, -16.0], [0.0, 16.0]] {
         for (sum, weight) in weights
@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn neighborhood_preserves_regions_and_introduces_neighbors_before_crossing() {
         let region = |x: f64, _: f64| {
-            let mut weights = [0.0; 10];
+            let mut weights = [0.0; 16];
             weights[if x < 0.0 { 2 } else { 8 }] = 1.0;
             weights
         };

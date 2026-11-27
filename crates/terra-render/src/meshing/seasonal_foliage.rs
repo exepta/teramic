@@ -147,7 +147,9 @@ pub(super) fn annotate_with_planted(
                     1.0
                 } else {
                     let kind = tree(global, owner.material);
-                    if deciduous(kind, false) {
+                    if owner.material != terra_voxel::MaterialId::WinterBirchBranches as u16
+                        && deciduous(kind, false)
+                    {
                         alpha_tag(global)
                     } else if matches!(kind, Some(TreeAppearance::Spruce | TreeAppearance::Fir))
                         && snow_exposed(cell)
@@ -193,10 +195,11 @@ mod tests {
             [-16; 3],
             &Default::default(),
             |_, material| {
-                Some(if material == 195 {
-                    TreeAppearance::Apple
-                } else {
-                    TreeAppearance::Cherry
+                Some(match material {
+                    195 => TreeAppearance::Apple,
+                    585 => TreeAppearance::Spruce,
+                    586 => TreeAppearance::Birch,
+                    _ => TreeAppearance::Cherry,
                 })
             },
             |_| 12.0,
@@ -204,9 +207,11 @@ mod tests {
         );
         assert_eq!(
             terra_voxel::MaterialId::FOLIAGE,
-            [7, 8, 9, 132, 133, 195, 310, 311, 312, 406]
+            [
+                7, 8, 9, 132, 133, 195, 310, 311, 312, 406, 585, 586, 606, 607, 644, 647, 682
+            ]
         );
-        assert_eq!(batches[0].foliage_owners.last().unwrap().material, 406);
+        assert_eq!(batches[0].foliage_owners.last().unwrap().material, 682);
         assert_eq!(batches[0].foliage_owners.last().unwrap().cell, [15; 3]);
         assert_eq!(
             batches[0].colors.len(),
@@ -215,8 +220,15 @@ mod tests {
         assert!(
             batches[0]
                 .colors
-                .iter()
-                .all(|color| (0.125..0.375).contains(&color[3]))
+                .chunks_exact(4)
+                .zip(terra_voxel::MaterialId::FOLIAGE)
+                .all(
+                    |(colors, id)| colors.iter().all(|color| if matches!(id, 585 | 586) {
+                        color[3] == 1.0
+                    } else {
+                        (0.125..0.375).contains(&color[3])
+                    })
+                )
         );
     }
     #[test]

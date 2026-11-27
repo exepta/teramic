@@ -1,6 +1,28 @@
 use super::*;
 
 #[test]
+fn acacia_logs_make_four_planks_and_hand_recipes_use_them_as_wood() {
+    let book = RecipeBook::builtins();
+    let mut bag = Inventory::default();
+    let log = ItemKind::Block(643);
+    let plank = ItemKind::Block(645);
+    assert_eq!(bag.insert(log, 1), 0);
+    for (recipe, remaining_planks) in [("teramic::acacia_planks", 4), ("teramic::sticks", 2)] {
+        book.craft(
+            &mut bag,
+            recipe_key(recipe),
+            1,
+            CraftStation::Hand,
+            CraftDestination::Inventory,
+        )
+        .unwrap();
+        assert_eq!(bag.count(plank), remaining_planks);
+    }
+    assert_eq!(bag.count(log), 0);
+    assert_eq!(bag.count(ItemKind::Stick), 4);
+}
+
+#[test]
 fn one_track_recipe_preserves_all_four_plank_species_and_retires_shape_recipes() {
     let book = RecipeBook::builtins();
     let recipe = book.get(recipe_key("teramic::rail_straight")).unwrap();
@@ -467,11 +489,13 @@ fn all_tools_have_unique_catalog_entries_and_valid_shaped_station_recipes() {
         );
         if matches!(
             tool,
-            crate::ToolKind::WaterBucket | crate::ToolKind::BileBucket
+            crate::ToolKind::WaterBucket
+                | crate::ToolKind::BileBucket
+                | crate::ToolKind::LavaBucket
         ) {
             assert!(
                 book.get(key(tool.slug())).is_none(),
-                "water is collected, never crafted for free"
+                "filled buckets are collected at a source"
             );
             continue;
         }
@@ -1130,7 +1154,7 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
     assert_eq!(book.error, None);
     assert_eq!(
         book.iter().count(),
-        87 + crate::ArmorItem::ALL.len()
+        88 + crate::ArmorItem::ALL.len()
             + crate::AccessoryKind::ALL.len()
             + crate::CapeItem::ALL.len()
             + crate::CapeItem::ALL_WHITE.len()
@@ -1166,11 +1190,17 @@ fn builtin_recipes_are_valid_and_catalog_roundtrip_preserves_keys() {
             + crate::profession_stations::ALL.len() // Nine independently craftable profession depots.
             + 20 // All existing castle recipes are also available in the embedded fallback.
             + 6 // Spirit Blossom timber, lanterns, petals and shrine.
+            + 3 // The Sakura garden lantern, silk banner and fox statue.
             + 39 // Colored clay, crypt masonry, lights, runes and ornate storage.
             + 11 // Asphalt, five road forms and their material recovery recipes.
             + 1 // A paid tar bucket consumes binder and an empty vessel.
+            + 1 // Acacia logs make planks by hand.
+            + 2 // Both willow log variants make willow planks.
+            + 1 // Petrified logs can be sawn into petrified planks.
+            + 1 // A Highland shard and stick make a violet torch.
     );
     for id in [
+        "violet_torch",
         "lantern",
         "chain",
         "apple_sapling",

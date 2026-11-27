@@ -1,6 +1,14 @@
 use super::*;
 use bevy::{sprite::BorderRect, text::LineBreak};
 
+fn layout(world: &mut World) {
+    world.init_resource::<crate::layout_classes::LayoutClasses>();
+    world
+        .run_system_cached(crate::layout_classes::track)
+        .unwrap();
+    super::equalize_category_widths(world);
+}
+
 fn group(world: &mut World, class: &str) -> Entity {
     world
         .spawn((
@@ -74,7 +82,7 @@ fn longest_shaped_label_sets_one_width_independent_of_character_count_or_dpi() {
         let group = group(&mut world, "copper-options-tabs");
         let (narrow, _) = caption_button(&mut world, group, "IIII", 15.0, scale);
         let (wide, _) = caption_button(&mut world, group, "WWWW", 100.0, scale);
-        equalize_category_widths(&mut world);
+        layout(&mut world);
         for button in [narrow, wide] {
             assert_eq!(world.get::<Node>(button).unwrap().width, Val::Px(156.0));
         }
@@ -87,13 +95,13 @@ fn changing_translations_can_grow_and_shrink_without_previous_button_width_feedb
     let group = group(&mut world, "kingdom-tabs");
     let (first, _) = caption_button(&mut world, group, "Armee", 42.0, 1.0);
     let (second, label) = caption_button(&mut world, group, "Arbeitskräfte", 123.0, 1.0);
-    equalize_category_widths(&mut world);
+    layout(&mut world);
     assert_eq!(world.get::<Node>(first).unwrap().width, Val::Px(179.0));
     world.get_mut::<Text>(label).unwrap().0 = "Work".into();
     world.get_mut::<TextLayoutInfo>(label).unwrap().size.x = 35.0;
     // A stretched parent from the previous frame must not become a new minimum.
     world.get_mut::<ComputedNode>(second).unwrap().size.x = 179.0;
-    equalize_category_widths(&mut world);
+    layout(&mut world);
     assert_eq!(world.get::<Node>(first).unwrap().width, Val::Px(98.0));
     assert_eq!(world.get::<Node>(second).unwrap().width, Val::Px(98.0));
 }
@@ -104,17 +112,17 @@ fn group_waits_for_all_real_labels_and_does_not_resize_unrelated_buttons() {
     let group = group(&mut world, "editor-categories");
     let (first, _) = caption_button(&mut world, group, "Steine", 60.0, 1.0);
     let (second, label) = caption_button(&mut world, group, "{{ category.name }}", 0.0, 1.0);
-    equalize_category_widths(&mut world);
+    layout(&mut world);
     assert_eq!(world.get::<Node>(first).unwrap().width, Val::Auto);
     world.get_mut::<Text>(label).unwrap().0 = "Baumaterialien".into();
     world.get_mut::<TextLayoutInfo>(label).unwrap().size.x = 140.0;
-    equalize_category_widths(&mut world);
+    layout(&mut world);
     for entity in [first, second] {
         assert_eq!(world.get::<Node>(entity).unwrap().width, Val::Px(196.0));
     }
     let other_group = self::group(&mut world, "copper-dialog-actions");
     let (other, _) = caption_button(&mut world, other_group, "Zurück", 70.0, 1.0);
-    equalize_category_widths(&mut world);
+    layout(&mut world);
     assert_eq!(world.get::<Node>(other).unwrap().width, Val::Auto);
 }
 
@@ -127,7 +135,7 @@ fn translated_setting_title_reserves_intrinsic_space_without_resizing_its_text()
         classes: vec!["setting-title".into()],
     });
     world.entity_mut(desc).add_child(title);
-    equalize_category_widths(&mut world);
+    layout(&mut world);
     assert_eq!(world.get::<Node>(desc).unwrap().min_width, Val::Px(284.0));
     assert_eq!(world.get::<Node>(title).unwrap().width, Val::Auto);
 }
@@ -140,7 +148,7 @@ fn asymmetric_insets_use_the_horizontal_edges_only() {
     let mut geometry = world.get_mut::<ComputedNode>(button).unwrap();
     geometry.padding = BorderRect::from([3.0, 11.0, 27.0, 37.0]);
     geometry.border = BorderRect::from([1.0, 5.0, 17.0, 19.0]);
-    equalize_category_widths(&mut world);
+    layout(&mut world);
     assert_eq!(world.get::<Node>(button).unwrap().width, Val::Px(132.0));
 }
 
@@ -162,7 +170,7 @@ fn setting_description_never_forces_a_narrow_row_beyond_its_available_width() {
         classes: vec!["setting-title".into()],
     });
     world.entity_mut(desc).add_child(title);
-    equalize_category_widths(&mut world);
+    layout(&mut world);
     assert_eq!(world.get::<Node>(desc).unwrap().min_width, Val::Px(228.0));
 }
 
@@ -174,6 +182,6 @@ fn anonymous_text_inside_a_styled_title_wrapper_reserves_the_shaped_width() {
     let glyphs = text(&mut world, "Sichtbarkeitsaktualisierungsrate", 237.0, 1.5);
     world.entity_mut(wrapper).add_child(glyphs);
     world.entity_mut(desc).add_child(wrapper);
-    equalize_category_widths(&mut world);
+    layout(&mut world);
     assert_eq!(world.get::<Node>(desc).unwrap().min_width, Val::Px(158.0));
 }

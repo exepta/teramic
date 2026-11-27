@@ -1,7 +1,7 @@
 //! Creation enables the current biome contract; reopening never changes a save.
 use crate::{DedicatedStore, GameMode, WorldEntry, WorldLibrary, WorldManifest, save_edits};
 use std::{fs, path::PathBuf};
-use terra_core::{BiomeDefinitions, Config, WorldConfig, WorldId, WorldSeed, save_toml};
+use terra_core::{BiomeDefinitions, BiomeKind, Config, WorldConfig, WorldId, WorldSeed, save_toml};
 
 struct Directory(PathBuf);
 impl Directory {
@@ -22,12 +22,13 @@ impl Drop for Directory {
 /// config. The field is absent and its biome profile array still has eight items.
 fn make_legacy(world: &mut toml::Value) {
     let fields = world.as_table_mut().unwrap();
+    fields.remove("ecology_revision");
     fields.remove("spirit_blossom_revision");
     fields.remove("blood_forest_revision");
     let entries = world["biome_definitions"]["entries"]
         .as_array_mut()
         .unwrap();
-    assert_eq!(entries.len(), 10);
+    assert_eq!(entries.len(), BiomeKind::ALL.len());
     entries.truncate(8);
     assert_eq!(entries.len(), 8);
 }
@@ -75,6 +76,7 @@ fn actual_legacy_dedicated_toml_and_eight_profiles_beat_new_templates_across_res
     let directory = Directory::new();
     fs::create_dir_all(&directory.0).unwrap();
     let saved = WorldConfig {
+        ecology_revision: 0,
         spirit_blossom_revision: 0,
         blood_forest_revision: 0,
         biome_definitions: Some(BiomeDefinitions::default()),
@@ -90,6 +92,7 @@ fn actual_legacy_dedicated_toml_and_eight_profiles_beat_new_templates_across_res
             .contains("spirit_blossom_revision")
     );
     let requested = WorldConfig {
+        ecology_revision: WorldConfig::CURRENT_ECOLOGY_REVISION,
         spirit_blossom_revision: 2,
         blood_forest_revision: 1,
         ..saved.clone()
@@ -100,8 +103,14 @@ fn actual_legacy_dedicated_toml_and_eight_profiles_beat_new_templates_across_res
         assert_eq!(resolved.blood_forest_revision, 0);
         assert!(resolved.same_terrain(&saved));
         assert_eq!(
-            resolved.biome_definitions.as_ref().unwrap().entries.len(),
-            10
+            resolved
+                .biome_definitions
+                .as_ref()
+                .unwrap()
+                .entries
+                .each_ref()
+                .map(|profile| profile.biome),
+            BiomeKind::ALL
         );
         let (store, mut journal) = DedicatedStore::open(&directory.0, &resolved).unwrap();
         if restart == 0 {
@@ -146,6 +155,7 @@ fn actual_legacy_library_toml_keeps_its_revision_when_loaded_played_and_saved() 
     make_legacy(&mut legacy["manifest"]["world"]);
     save_toml(&legacy, &manifest).unwrap();
     let mut expected = entry.manifest.world;
+    expected.ecology_revision = 0;
     expected.spirit_blossom_revision = 0;
     expected.blood_forest_revision = 0;
     for _ in 0..2 {
@@ -173,6 +183,7 @@ fn nine_profile_spirit_world_retains_zero_blood_revision_across_restarts() {
     let directory = Directory::new();
     fs::create_dir_all(&directory.0).unwrap();
     let saved = WorldConfig {
+        ecology_revision: 11,
         spirit_blossom_revision: 2,
         blood_forest_revision: 0,
         biome_definitions: Some(BiomeDefinitions::default()),
@@ -186,11 +197,12 @@ fn nine_profile_spirit_world_retains_zero_blood_revision_across_restarts() {
     let entries = legacy["world"]["biome_definitions"]["entries"]
         .as_array_mut()
         .unwrap();
-    assert_eq!(entries.len(), 10);
+    assert_eq!(entries.len(), BiomeKind::ALL.len());
     entries.truncate(9);
     let manifest = directory.0.join("world.toml");
     save_toml(&legacy, &manifest).unwrap();
     let current = WorldConfig {
+        ecology_revision: WorldConfig::CURRENT_ECOLOGY_REVISION,
         blood_forest_revision: 1,
         ..saved.clone()
     };
@@ -199,13 +211,179 @@ fn nine_profile_spirit_world_retains_zero_blood_revision_across_restarts() {
         assert_eq!(resolved.blood_forest_revision, 0);
         assert_eq!(resolved.spirit_blossom_revision, 2);
         assert_eq!(
-            resolved.biome_definitions.as_ref().unwrap().entries.len(),
-            10
+            resolved
+                .biome_definitions
+                .as_ref()
+                .unwrap()
+                .entries
+                .each_ref()
+                .map(|profile| profile.biome),
+            BiomeKind::ALL
         );
         assert!(resolved.same_terrain(&saved));
         let (store, _) = DedicatedStore::open(&directory.0, &resolved).unwrap();
         drop(store);
     }
+}
+
+#[test]
+fn ten_profile_pre_volcanic_save_preserves_custom_terrain_and_disables_ashlands_after_restart() {
+    let directory = Directory::new();
+    fs::create_dir_all(&directory.0).unwrap();
+    let mut profiles = BiomeDefinitions::default();
+    profiles.entries[BiomeKind::Desert as usize].selection_weight = 0.72;
+    let saved = WorldConfig {
+        ecology_revision: 15,
+        biome_definitions: Some(profiles),
+        ..Default::default()
+    };
+    let mut legacy = toml::Value::try_from(WorldManifest::new(saved.clone())).unwrap();
+    let entries = legacy["world"]["biome_definitions"]["entries"]
+        .as_array_mut()
+        .unwrap();
+    assert_eq!(
+        entries.pop().unwrap()["biome"].as_str(),
+        Some("misty_coast")
+    );
+    assert_eq!(
+        entries.pop().unwrap()["biome"].as_str(),
+        Some("crystal_highlands")
+    );
+    assert_eq!(
+        entries.pop().unwrap()["biome"].as_str(),
+        Some("petrified_forest")
+    );
+    assert_eq!(entries.pop().unwrap()["biome"].as_str(), Some("swamp"));
+    assert_eq!(entries.pop().unwrap()["biome"].as_str(), Some("savanna"));
+    assert_eq!(entries.pop().unwrap()["biome"].as_str(), Some("ashlands"));
+    assert_eq!(entries.len(), 10);
+    save_toml(&legacy, directory.0.join("world.toml")).unwrap();
+
+    for _ in 0..2 {
+        let resolved =
+            DedicatedStore::resolve_world_config(&directory.0, &WorldConfig::default()).unwrap();
+        assert!(resolved.same_terrain(&saved));
+        assert_eq!(resolved.ecology_revision, 15);
+        assert_eq!(
+            terra_world::TerraGenerator::new(resolved.clone())
+                .unwrap()
+                .biome_at(5901.5, -8180.5)
+                .weights
+                .ashlands,
+            0.
+        );
+        let (store, _) = DedicatedStore::open(&directory.0, &resolved).unwrap();
+        drop(store);
+    }
+}
+
+#[test]
+fn eleven_profile_save_keeps_its_ecology_and_ashlands_after_a_savanna_upgrade() {
+    let directory = Directory::new();
+    fs::create_dir_all(&directory.0).unwrap();
+    let mut profiles = BiomeDefinitions::default();
+    profiles.entries[BiomeKind::Ashlands as usize].selection_weight = 0.85;
+    let saved = WorldConfig {
+        ecology_revision: 16,
+        biome_definitions: Some(profiles),
+        ..Default::default()
+    };
+    let mut document = toml::Value::try_from(WorldManifest::new(saved.clone())).unwrap();
+    let entries = document["world"]["biome_definitions"]["entries"]
+        .as_array_mut()
+        .unwrap();
+    assert_eq!(
+        entries.pop().unwrap()["biome"].as_str(),
+        Some("misty_coast")
+    );
+    assert_eq!(
+        entries.pop().unwrap()["biome"].as_str(),
+        Some("crystal_highlands")
+    );
+    assert_eq!(
+        entries.pop().unwrap()["biome"].as_str(),
+        Some("petrified_forest")
+    );
+    assert_eq!(entries.pop().unwrap()["biome"].as_str(), Some("swamp"));
+    assert_eq!(entries.pop().unwrap()["biome"].as_str(), Some("savanna"));
+    save_toml(&document, directory.0.join("world.toml")).unwrap();
+    for _ in 0..2 {
+        let config =
+            DedicatedStore::resolve_world_config(&directory.0, &WorldConfig::default()).unwrap();
+        assert!(config.same_terrain(&saved));
+        let terrain = terra_world::TerraGenerator::new(config.clone()).unwrap();
+        assert_eq!(terrain.biome_at(-96.5, 1152.5).weights.savanna, 0.);
+        let (store, _) = DedicatedStore::open(&directory.0, &config).unwrap();
+        drop(store);
+    }
+}
+
+#[test]
+fn twelve_profile_save_keeps_its_savanna_settings_and_disables_swamps() {
+    let directory = Directory::new();
+    fs::create_dir_all(&directory.0).unwrap();
+    let mut profiles = BiomeDefinitions::default();
+    profiles.entries[BiomeKind::Savanna as usize].selection_weight = 0.79;
+    let saved = WorldConfig {
+        ecology_revision: 17,
+        biome_definitions: Some(profiles),
+        ..Default::default()
+    };
+    let mut document = toml::Value::try_from(WorldManifest::new(saved.clone())).unwrap();
+    let entries = document["world"]["biome_definitions"]["entries"]
+        .as_array_mut()
+        .unwrap();
+    assert_eq!(
+        entries.pop().unwrap()["biome"].as_str(),
+        Some("misty_coast")
+    );
+    assert_eq!(
+        entries.pop().unwrap()["biome"].as_str(),
+        Some("crystal_highlands")
+    );
+    assert_eq!(
+        entries.pop().unwrap()["biome"].as_str(),
+        Some("petrified_forest")
+    );
+    assert_eq!(entries.pop().unwrap()["biome"].as_str(), Some("swamp"));
+    save_toml(&document, directory.0.join("world.toml")).unwrap();
+    let resolved =
+        DedicatedStore::resolve_world_config(&directory.0, &WorldConfig::default()).unwrap();
+    assert!(resolved.same_terrain(&saved));
+    let terrain = terra_world::TerraGenerator::new(resolved).unwrap();
+    assert_eq!(terrain.biome_at(5264.5, -7311.5).weights.swamp, 0.);
+}
+
+#[test]
+fn fourteen_profile_world_keeps_its_alpine_range_when_crystal_highlands_are_added() {
+    let directory = Directory::new();
+    fs::create_dir_all(&directory.0).unwrap();
+    let saved = WorldConfig {
+        ecology_revision: 20,
+        biome_definitions: Some(BiomeDefinitions::default()),
+        ..Default::default()
+    };
+    let mut document = toml::Value::try_from(WorldManifest::new(saved.clone())).unwrap();
+    let entries = document["world"]["biome_definitions"]["entries"]
+        .as_array_mut()
+        .unwrap();
+    assert_eq!(
+        entries.pop().unwrap()["biome"].as_str(),
+        Some("misty_coast")
+    );
+    assert_eq!(
+        entries.pop().unwrap()["biome"].as_str(),
+        Some("crystal_highlands")
+    );
+    save_toml(&document, directory.0.join("world.toml")).unwrap();
+    let resolved =
+        DedicatedStore::resolve_world_config(&directory.0, &WorldConfig::default()).unwrap();
+    assert!(resolved.same_terrain(&saved));
+    let terrain = terra_world::TerraGenerator::new(resolved).unwrap();
+    assert_eq!(
+        terrain.biome_at(-1392.5, 400.5).weights.crystal_highlands,
+        0.
+    );
 }
 
 #[test]

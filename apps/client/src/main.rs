@@ -1,5 +1,6 @@
 mod alchemy_smoke;
 mod appearance_smoke;
+mod audio_preferences;
 mod avatar_smoke;
 mod biome_smoke;
 mod bootstrap;
@@ -90,6 +91,12 @@ mod water_contacts;
 mod waterfall_smoke;
 mod web_constructions_smoke;
 mod window_gallery_smoke;
+// Chunk workers create and release large temporary vertex streams while the
+// render thread publishes the preceding sections.
+#[cfg(all(target_os = "linux", target_env = "gnu"))]
+#[global_allocator]
+static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::args().any(|argument| argument == "--help") {
         println!(

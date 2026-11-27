@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 493,
+  "name": "Coagulated Mud",
+  "description": "Burgundy mud with pools of dark sap.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "surface": "earth",
+  "materials": {
+    "coagulated_mud": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.32,
+      "reflectance": 0.44
+    }
+  },
+  "textures": {
+    "coagulated_mud": "textures/coagulated_mud.png"
+  },
+  "face_materials": [
+    "coagulated_mud",
+    "coagulated_mud",
+    "coagulated_mud",
+    "coagulated_mud",
+    "coagulated_mud",
+    "coagulated_mud"
+  ]
+}

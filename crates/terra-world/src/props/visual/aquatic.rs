@@ -7,6 +7,9 @@ use crate::props::PropKind;
 use bevy_math::{Quat, Vec2, Vec3};
 use std::collections::BTreeMap;
 
+#[path = "reef_attachments.rs"]
+mod reef_attachments;
+
 type Batches = BTreeMap<usize, PropMesh>;
 fn voxel(
     batches: &mut Batches,
@@ -65,6 +68,35 @@ fn surface_variation(batches: &mut Batches, variant: usize) {
     }
 }
 
+/// Reef rosettes use the same voxel blades, rooted shape and picking faces as the harvestable plant.
+fn eelgrass(
+    b: &mut Batches,
+    variant: usize,
+    lod: PropDetail,
+    p: &PropPalette,
+) -> Result<(), String> {
+    let slot = p.foliage[variant % 3];
+    let mesh = b.entry(slot).or_insert_with(|| PropMesh {
+        material: slot,
+        ..Default::default()
+    });
+    let mut index = u32::try_from(mesh.positions.len()).map_err(|_| "Seagrass mesh overflow")?;
+    crate::segments::eelgrass::rosette(variant, lod, &mut |q, rgb| {
+        let points = q.map(|[x, y, z]| Vec3::new(x - 0.5, y, z - 0.5));
+        let normal = (points[1] - points[0])
+            .cross(points[2] - points[0])
+            .normalize();
+        mesh.positions.extend(points.map(|p| p.to_array()));
+        mesh.normals.extend([normal.to_array(); 4]);
+        mesh.uvs.extend(points.map(|v| [v.x + v.z, v.y]));
+        mesh.colors.extend([[rgb[0], rgb[1], rgb[2], 1.]; 4]);
+        mesh.indices
+            .extend([index, index + 1, index + 2, index, index + 2, index + 3]);
+        index += 4;
+    });
+    Ok(())
+}
+
 pub(super) fn append(
     b: &mut Batches,
     kind: PropKind,
@@ -75,57 +107,10 @@ pub(super) fn append(
     let fine = lod == PropDetail::Near;
     let far = lod == PropDetail::Far;
     match kind {
-        PropKind::Seagrass => {
-            for i in 0..if far {
-                2
-            } else if fine {
-                5
-            } else {
-                4
-            } {
-                let yaw = i as f32 * 2.39996 + v as f32 * 0.4;
-                let radius = 0.07 + (i % 3) as f32 * 0.04;
-                let height = 2.15 + ((i * 7 + v * 3) % 9) as f32 * 0.15;
-                let root = Vec3::new(yaw.cos() * radius, 0.0, yaw.sin() * radius);
-                let path = [
-                    Vec3::ZERO,
-                    Vec3::new(0.04, height * 0.32, 0.0),
-                    Vec3::new(-0.025, height * 0.68, 0.018),
-                    Vec3::new(0.03, height, 0.02),
-                ];
-                let distant = [path[0], path[3]];
-                add_stalk(
-                    b,
-                    p.foliage[(i + v) % 3],
-                    root,
-                    Vec2::new(if far { 0.10 } else { 0.065 }, 0.04),
-                    if far { &distant } else { &path },
-                    yaw,
-                )?;
-                if !far {
-                    // Staggered blunt leaf blades, like the tall fronds in the reference.
-                    for leaf in 0..if fine { 7 } else { 3 } {
-                        let t = 0.17 + leaf as f32 * if fine { 0.11 } else { 0.28 };
-                        let side = if (i + leaf) % 2 == 0 { -1.0 } else { 1.0 };
-                        let turn = Quat::from_rotation_y(yaw);
-                        let origin = root + turn * Vec3::new(0.01, height * t, 0.0);
-                        let width = 0.08 + ((leaf + v) % 3) as f32 * 0.018;
-                        add_stalk(
-                            b,
-                            p.foliage[(i + leaf + v) % 3],
-                            origin,
-                            Vec2::new(width, 0.035),
-                            &[
-                                Vec3::ZERO,
-                                Vec3::new(side * 0.10, 0.12, 0.0),
-                                Vec3::new(side * 0.13, 0.23, 0.01),
-                            ],
-                            yaw,
-                        )?;
-                    }
-                }
-            }
+        PropKind::ReefFan | PropKind::HangingPearlKelp => {
+            reef_attachments::append(b, kind, v, lod, p)?
         }
+        PropKind::Seagrass => eelgrass(b, v, lod, p)?,
         PropKind::SeaCucumber => {
             let body = [p.flowers[5], p.mushroom, p.stone][v % 3];
             let tint = if v % 3 == 2 {
@@ -541,7 +526,10 @@ mod tests {
 
     #[test]
     fn reef_templates_have_rooted_valid_geometry_and_bounded_lods() {
-        for kind in PropKind::ALL.into_iter().filter(|kind| kind.aquatic()) {
+        for kind in PropKind::ALL
+            .into_iter()
+            .filter(|kind| kind.aquatic() && !kind.reef_attachment())
+        {
             assert_eq!(
                 PropKind::from(terra_core::ResourcePropKind::from(kind)),
                 kind

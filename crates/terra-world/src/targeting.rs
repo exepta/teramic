@@ -256,7 +256,7 @@ pub fn placement_facing(
     if terra_core::lantern::is_part(material) {
         return terra_core::lantern::facing(material, hit.normal).unwrap_or_default();
     }
-    if material == 40 {
+    if terra_core::block_shapes::is_torch(material) {
         return crate::torches::facing(hit.normal).unwrap_or(0);
     }
     if terra_core::castle::is_castle(material) {
@@ -346,7 +346,14 @@ pub fn placement_facing(
 
 /// Liquid anchors yield to construction. The solid bile block remains ordinary terrain.
 pub fn displaceable_liquid(material: u16) -> bool {
-    material == terra_voxel::MaterialId::FluidWater as u16 || material == terra_core::bile::FLUID
+    matches!(
+        terra_voxel::MaterialId::from_raw(material),
+        Some(
+            terra_voxel::MaterialId::FluidWater
+                | terra_voxel::MaterialId::Bile
+                | terra_voxel::MaterialId::Lava
+        )
+    )
 }
 
 /// Fluid and incomplete snow caps yield their cell to ordinary construction.
@@ -666,6 +673,7 @@ fn pick_context(
                                     || !crate::saplings::soft_natural(p, journal))
                                 && crate::props::placement::supported(p, |p| chunks.block_at(p))
                                     == Some(true)
+                                && crate::props::reef_flora::submerged(p, chunks, journal)
                                 && !crate::props::seasonal::snow_buried(p, chunks, journal)
                         }),
                         pose,

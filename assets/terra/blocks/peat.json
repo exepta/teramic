@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 672,
+  "name": "Peat",
+  "description": "Dark layers of plant fibres show where old reeds sank into the marsh.",
+  "creative_category": "terrain",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.46,
+  "resistance": 0.62,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/swamp/peat_side.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.94,
+      "reflectance": 0.09,
+      "normal_texture": "textures/swamp/peat_side_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

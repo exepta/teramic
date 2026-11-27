@@ -31,6 +31,7 @@ impl Lake {
             distance: dx.hypot(dz) / outline,
             level: self.level,
             depth: self.depth,
+            spring: None,
         }
     }
 }
@@ -90,7 +91,8 @@ impl TerraGenerator {
         let [x, z] = center;
         let biome = self.climate_biome_at(x, z);
         let n = self.landscape_noise(x, z);
-        if biome.aridity() > 0.35
+        if self.volcanic_watershed(biome)
+            || biome.aridity() > 0.35
             || biome.weights.ocean > 0.25
             || biome.weights.highland > 0.35
             || n.surface_lake < 0.43
@@ -116,7 +118,11 @@ impl TerraGenerator {
                 if lake.sample(px, pz).distance > lake.radius + 2.0 {
                     continue;
                 }
-                let h = self.base_height_with_biome(px, pz, self.climate_biome_at(px, pz));
+                let climate = self.climate_biome_at(px, pz);
+                if self.volcanic_watershed(climate) {
+                    return None;
+                }
+                let h = self.watershed_ground(px, pz, climate);
                 low = low.min(h);
                 high = high.max(h);
                 if self.river_at(px, pz).is_some() || self.oasis_at(px, pz).is_some() {

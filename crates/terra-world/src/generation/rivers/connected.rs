@@ -78,7 +78,9 @@ impl TerraGenerator {
             .connected_path(region_at(x, z))
             .and_then(|path| self.sample_network(&path, x, z));
         if self.config().river_terrain_revision >= 7 {
-            return select_network_sample(
+            return self.select_network_sample(
+                x,
+                z,
                 self.macro_path_at(x, z)
                     .and_then(|path| self.sample_network(&path, x, z))
                     .map(|mut sample| {
@@ -128,9 +130,10 @@ impl TerraGenerator {
             .iter()
             .filter_map(|tributary| self.sample_tributary(&tributary.path, x, z))
             .min_by(|a, b| (a.distance / a.width).total_cmp(&(b.distance / b.width)));
-        let mut sample = select_network_sample(main, tributary);
+        let mut sample = self.select_network_sample(x, z, main, tributary);
         for branch in &path.distributaries {
-            sample = select_network_sample(sample, self.sample_tributary(&branch.path, x, z));
+            sample =
+                self.select_network_sample(x, z, sample, self.sample_tributary(&branch.path, x, z));
         }
         sample
     }
@@ -296,14 +299,7 @@ impl TerraGenerator {
                 origin[0] + MARGIN + (index % 7) as f64 * (extent - 2.0 * MARGIN) / 6.0,
                 origin[1] + MARGIN + (index / 7) as f64 * (extent - 2.0 * MARGIN) / 6.0,
             ];
-            (
-                point,
-                self.base_height_with_biome(
-                    point[0],
-                    point[1],
-                    self.climate_biome_at(point[0], point[1]),
-                ),
-            )
+            (point, self.watershed_height(point[0], point[1]))
         });
         let (source, mouth, coast, inland_lake) = if large && extent > 24_000.0 {
             let route = self.long_macro_endpoints(&probes, seed)?;
@@ -374,27 +370,40 @@ impl TerraGenerator {
             // max_by contract: the last equally ranked source probe wins.
             sources.sort_by(|a, b| rank(a).total_cmp(&rank(b)));
             sources.reverse();
-            let &(source, _) =
-                sources
-                    .into_iter()
-                    .take(if large { 8 } else { 1 })
-                    .find(|(source, _)| {
-                        if !large {
+            let screen_volcanoes =
+                self.config().ecology_revision >= 21 && self.config().landscape_revision >= 9;
+            let &(source, _) = sources
+                .into_iter()
+                .take(if large || screen_volcanoes { 8 } else { 1 })
+                .find(|(source, _)| {
+                    if !large {
+                        // Try the next ranked headwater if this valley is cut
+                        // by basalt. Preserve neighboring temperate catchments.
+                        if !screen_volcanoes {
                             return true;
                         }
-                        if coast {
-                            self.macro_shore(*source, mouth).is_some_and(|shore| {
-                                distance(*source, shore)
-                                    >= if extent > 24000.0 {
-                                        17000.0
-                                    } else {
-                                        extent * 0.48
-                                    }
-                            })
-                        } else {
-                            self.dry_macro_line(*source, mouth)
-                        }
-                    })?;
+                        let steps = (distance(*source, mouth) / 48.).ceil().max(1.) as usize;
+                        return (0..=steps).all(|i| {
+                            let t = i as f64 / steps as f64;
+                            !self.volcanic_watershed_at(
+                                source[0] + (mouth[0] - source[0]) * t,
+                                source[1] + (mouth[1] - source[1]) * t,
+                            )
+                        });
+                    }
+                    if coast {
+                        self.macro_shore(*source, mouth).is_some_and(|shore| {
+                            distance(*source, shore)
+                                >= if extent > 24000.0 {
+                                    17000.0
+                                } else {
+                                    extent * 0.48
+                                }
+                        })
+                    } else {
+                        self.dry_macro_line(*source, mouth)
+                    }
+                })?;
             if large && coast {
                 mouth = self.macro_shore(source, mouth)?;
             }
@@ -465,11 +474,7 @@ impl TerraGenerator {
         let mut caps = [0.0; POINTS];
         for (index, point) in points.iter().enumerate() {
             let world = frame.world(point[0], point[2]);
-            ground[index] = self.base_height_with_biome(
-                world[0],
-                world[1],
-                self.climate_biome_at(world[0], world[1]),
-            );
+            ground[index] = self.watershed_height(world[0], world[1]);
             let mut support = f64::INFINITY;
             let subdivisions = if large {
                 (step / 24.0).ceil().clamp(4.0, 64.0) as i32
@@ -484,7 +489,7 @@ impl TerraGenerator {
                 let center_x = points[a][0] + (points[b][0] - points[a][0]) * at.fract();
                 for cross in (-24..=24).step_by(if large { 12 } else { 3 }) {
                     let [x, z] = frame.world(center_x + f64::from(cross), at * step);
-                    let height = self.base_height_with_biome(x, z, self.climate_biome_at(x, z));
+                    let height = self.watershed_height(x, z);
                     if large
                         && cross == 0
                         && at * step < length - 96.0
@@ -511,7 +516,7 @@ impl TerraGenerator {
             lake.level = lake.level.min(upstream);
         }
         lake = lake.filter(|lake| {
-            let height = self.base_height_with_biome(
+            let height = self.watershed_ground(
                 lake.center[0],
                 lake.center[1],
                 self.climate_biome_at(lake.center[0], lake.center[1]),
@@ -547,17 +552,27 @@ impl TerraGenerator {
             frame,
             lake,
         };
-        if large {
-            self.macro_network(main, &probes, seed)
-        } else {
-            Some(self.regional_network(main, &probes))
+        if !self.freshwater_route_allowed(&main) {
+            return None;
         }
+        let mut network = if large {
+            self.macro_network(main, &probes, seed)?
+        } else {
+            self.regional_network(main, &probes)
+        };
+        network
+            .tributaries
+            .retain(|branch| self.freshwater_route_allowed(&branch.path));
+        network
+            .distributaries
+            .retain(|branch| self.freshwater_route_allowed(&branch.path));
+        Some(network)
     }
 
     pub(super) fn connected_ocean_outlet(&self, mouth: [f64; 2]) -> bool {
         let wet = |point: [f64; 2]| {
             let biome = self.climate_biome_at(point[0], point[1]);
-            let height = self.base_height_with_biome(point[0], point[1], biome);
+            let height = self.watershed_ground(point[0], point[1], biome);
             (height < self.config().sea_level - 1.0).then_some((biome.weights.ocean, height))
         };
         let mut seen = [false; 81];
@@ -625,30 +640,57 @@ fn wet_channel(sample: RiverSample) -> bool {
     sample.distance < sample.width && (sample.bed_height() - 0.5).floor() + 1.0 < sample.level
 }
 
-pub(super) fn select_network_sample(
-    main: Option<RiverSample>,
-    tributary: Option<RiverSample>,
-) -> Option<RiverSample> {
-    // The one-metre water-level influence also includes dry shoreline cells.
-    // Only actual wet channel cells may hide an incoming tributary's bed.
-    if main.is_some_and(wet_channel) {
-        return main;
-    }
-    let Some(mut tributary) = tributary else {
-        return main;
-    };
-    if let Some(main) = main {
-        let blend = 1.0 - smoothstep(main.width + 1.0, main.width + 13.0, main.distance);
-        tributary.level += (main.level - tributary.level) * blend;
-        tributary.bank_level += (main.bank_level - tributary.bank_level) * blend;
-    }
-    if wet_channel(tributary) {
-        return Some(tributary);
-    }
-    if main.is_none_or(|main| tributary.distance / tributary.width < main.distance / main.width) {
-        Some(tributary)
-    } else {
-        main
+impl TerraGenerator {
+    pub(super) fn select_network_sample(
+        &self,
+        x: f64,
+        z: f64,
+        main: Option<RiverSample>,
+        tributary: Option<RiverSample>,
+    ) -> Option<RiverSample> {
+        // The one-metre water-level influence also includes dry shoreline cells.
+        // Only actual wet channel cells may hide an incoming tributary's bed.
+        if main.is_some_and(wet_channel) {
+            return main;
+        }
+        let Some(mut tributary) = tributary else {
+            return main;
+        };
+        if let Some(main) = main {
+            let blend = 1.0 - smoothstep(main.width + 1.0, main.width + 13.0, main.distance);
+            tributary.level += (main.level - tributary.level) * blend;
+            tributary.bank_level += (main.bank_level - tributary.bank_level) * blend;
+        }
+        if wet_channel(tributary) {
+            return Some(tributary);
+        }
+        if self.config().river_terrain_revision >= 5
+            && let Some(parent) = main
+            && parent.distance >= parent.width
+            && tributary.distance >= tributary.width
+        {
+            // Both channels erode the same dry hillside. Switching to the closest
+            // centreline discarded the wider valley at its intersection with a
+            // covered tributary, leaving a wall along the distance bisector.
+            let raw = self.watershed_height(x, z);
+            let elevation =
+                |r| crate::generation::landforms::river_height(raw, r, self.config().sea_level);
+            let parent_height = elevation(parent);
+            let branch_height = elevation(tributary);
+            if parent_height != branch_height {
+                return Some(if parent_height < branch_height {
+                    parent
+                } else {
+                    tributary
+                });
+            }
+        }
+        if main.is_none_or(|main| tributary.distance / tributary.width < main.distance / main.width)
+        {
+            Some(tributary)
+        } else {
+            main
+        }
     }
 }
 

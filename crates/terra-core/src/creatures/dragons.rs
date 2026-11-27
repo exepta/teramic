@@ -88,6 +88,7 @@ pub const fn duration(behavior: B) -> f32 {
         B::DragonVolley => 2.65,
         B::DragonWard => 3.1,
         B::DragonSurge => 2.3,
+        B::DragonBurrow => 4.4,
         B::Dead => 1.8,
         _ => 1.0,
     }
@@ -111,7 +112,10 @@ pub const fn model_scale(kind: K, variant: u8) -> f32 {
     }
 }
 
-/// The heavy stone lineage has short wings rather than the wide marine fan.
+pub const fn flies(kind: K) -> bool {
+    matches!(kind, K::DarkDragon | K::FireDragon)
+}
+
 pub const fn wing_scale(kind: K, variant: u8) -> f32 {
     if matches!(lineage(kind, variant), Some(Lineage::Stone)) {
         0.55

@@ -205,6 +205,59 @@ pub(super) fn template(index: usize) -> &'static [Triangle] {
     })
 }
 
+// Each exposed face uses the same four motifs for its species and LOD. Index
+// the vertices and smooth their normals once, before emitting translated copies.
+#[derive(Default)]
+struct LeafFace {
+    positions: Vec<Vec3>,
+    normals: Vec<[f32; 3]>,
+    uvs: Vec<[f32; 2]>,
+    indices: Vec<u16>,
+}
+
+fn indexed_face(family: usize, middle: bool, side: usize, variant: usize) -> &'static LeafFace {
+    static FACES: [OnceLock<LeafFace>; FAMILIES * 2 * 6 * 4] =
+        [const { OnceLock::new() }; FAMILIES * 2 * 6 * 4];
+    FACES[((family * 2 + usize::from(middle)) * 6 + side) * 4 + variant].get_or_init(|| {
+        let triangles = template(
+            family * FAMILY_STRIDE + usize::from(middle) * 256 + (1 << side) * 4 + variant,
+        );
+        let mut face = LeafFace::default();
+        let count = if middle {
+            MIDDLE_TRIANGLES
+        } else {
+            NEAR_TRIANGLES
+        };
+        for leaf in triangles.chunks_exact(count) {
+            let start = face.positions.len();
+            let mut normals = [Vec3::ZERO; 7];
+            for triangle in leaf {
+                for (&position, &uv) in triangle.points.iter().zip(&triangle.uvs) {
+                    debug_assert!(
+                        position.cmpge(Vec3::splat(-RELIEF)).all()
+                            && position.cmple(Vec3::splat(1.0 + RELIEF)).all()
+                    );
+                    let index = (start..face.positions.len())
+                        .find(|&i| face.positions[i] == position && face.uvs[i] == uv)
+                        .unwrap_or_else(|| {
+                            face.positions.push(position);
+                            face.uvs.push(uv);
+                            face.positions.len() - 1
+                        });
+                    normals[index - start] += triangle.normal;
+                    face.indices.push(index as u16);
+                }
+            }
+            face.normals.extend(
+                normals[..face.positions.len() - start]
+                    .iter()
+                    .map(|n| n.normalize().to_array()),
+            );
+        }
+        face
+    })
+}
+
 pub(super) fn append(
     batches: &mut BTreeMap<usize, MeshBatch>,
     block: &BlockTemplate,
@@ -232,66 +285,41 @@ pub(super) fn append(
     let family = if conifer {
         2
     } else {
-        usize::from(style.material == 9)
+        usize::from(matches!(style.material, 9 | 586))
     };
     let slot = if conifer {
         cluster.needles.unwrap_or(cluster.leaves)
     } else {
         cluster.leaves
     };
-    let index = family * FAMILY_STRIDE
-        + usize::from(level == DetailLevel::Middle) * 256
-        + usize::from(exposure) * 4
-        + (variation(global, 0x004c_414d_494e) % 4) as usize;
-    let triangles = template(index);
-    if triangles.is_empty() {
+    if exposure == 0 {
         return Ok(());
     }
+    let variant = (variation(global, 0x004c_414d_494e) % 4) as usize;
     let offset = Vec3::from_array(local.map(|p| p as f32));
     let batch = batches.entry(slot).or_insert_with(|| MeshBatch {
         material: slot,
         ..default()
     });
     let start = batch.positions.len();
-    batch.colors.resize(start, [1.; 4]);
-    let triangles_per_leaf = if level == DetailLevel::Middle {
-        MIDDLE_TRIANGLES
-    } else {
-        NEAR_TRIANGLES
-    };
-    for leaf in triangles.chunks_exact(triangles_per_leaf) {
+    for side in 0..6 {
+        if exposure & (1 << side) == 0 {
+            continue;
+        }
+        let face = indexed_face(family, level == DetailLevel::Middle, side, variant);
         let base = u32::try_from(batch.positions.len()).map_err(|_| "Leaf mesh overflow")?;
-        let mut vertices = [(Vec3::ZERO, [0.; 2], Vec3::ZERO); 7];
-        let mut used = 0;
-        for triangle in leaf {
-            for (&point, &uv) in triangle.points.iter().zip(&triangle.uvs) {
-                debug_assert!(
-                    point.cmpge(Vec3::splat(-RELIEF)).all()
-                        && point.cmple(Vec3::splat(1.0 + RELIEF)).all()
-                );
-                let index = if let Some(i) = vertices[..used]
-                    .iter()
-                    .position(|v| v.0 == point && v.1 == uv)
-                {
-                    vertices[i].2 += triangle.normal;
-                    i
-                } else {
-                    vertices[used] = (point, uv, triangle.normal);
-                    used += 1;
-                    used - 1
-                };
-                batch
-                    .indices
-                    .push(base.checked_add(index as u32).ok_or("Leaf mesh overflow")?);
-            }
-        }
-        for &(position, uv, normal) in &vertices[..used] {
-            batch.positions.push((position + offset).to_array());
-            batch.uvs.push(uv);
-            batch.normals.push(normal.normalize().to_array());
-            batch.colors.push([1.; 4]);
-        }
+        base.checked_add(face.positions.len() as u32)
+            .ok_or("Leaf mesh overflow")?;
+        batch
+            .positions
+            .extend(face.positions.iter().map(|&p| (p + offset).to_array()));
+        batch.uvs.extend_from_slice(&face.uvs);
+        batch.normals.extend_from_slice(&face.normals);
+        batch
+            .indices
+            .extend(face.indices.iter().map(|&i| base + u32::from(i)));
     }
+    batch.colors.resize(batch.positions.len(), [1.; 4]);
     if batch.positions.len() > start {
         batch.foliage_owners.push(FoliageOwner {
             vertices: start..batch.positions.len(),

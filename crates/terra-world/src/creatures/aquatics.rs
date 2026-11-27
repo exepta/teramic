@@ -150,7 +150,12 @@ fn travel(a: &mut Creature, h: &Habitat, goal: [f64; 3], dt: f32, speed: f64) {
     let before = a.position;
     let delta = std::array::from_fn::<_, 3, _>(|i| goal[i] - before[i]);
     let length = distance(goal, before).sqrt().max(0.001);
-    let amount = (speed * f64::from(dt)).min(length);
+    let push = if a.kind == Kind::Squid {
+        0.78 + f64::from(terra_core::creatures::squid_jet(a.age)) * 0.88
+    } else {
+        1.
+    };
+    let amount = (speed * push * f64::from(dt)).min(length);
     let flow = crate::water::fluid_motion_at(h.terrain, h.chunks, h.journal, center(a));
     let next = std::array::from_fn(|i| {
         before[i]
@@ -269,11 +274,17 @@ pub fn step(
             }
             // Hold striking distance and face the swimmer during the bite.
             // Sweeping the turn protects long bodies beside a reef or bank.
-            let yaw = heading_for(a, player, dt);
-            if sweep_pose(a, h, a.position, a.position, yaw) {
-                a.yaw = yaw;
+            if entering {
+                let yaw = heading_for(a, player, dt);
+                if sweep_pose(a, h, a.position, a.position, yaw) {
+                    a.yaw = yaw;
+                }
             }
             a.velocity = [0.0; 3];
+            if !super::perception::in_melee_arc(a.yaw, center(a), player) {
+                a.behavior = Behavior::Hunt;
+                return bears::Effect::None;
+            }
             a.behavior = Behavior::Attack;
             if combat.melee_contact(entering, previous_timer, &mut a.timer) {
                 return bears::Effect::StrikePlayer {
@@ -335,7 +346,13 @@ pub fn step(
         }
     }
     let turn = (random(a.id, (a.age / 6.0) as u64) % 2000) as f64 / 1000.0 - 1.0;
-    let heading = f64::from(a.yaw) + turn * 0.22;
+    let heading = if a.kind == Kind::Squid {
+        // Continuous, time-based steering keeps a jet on its course at both
+        // low and high authority tick rates.
+        f64::from(a.yaw) + (a.age * 0.18 + (a.id % 31) as f64).sin() * 0.32 * f64::from(dt)
+    } else {
+        f64::from(a.yaw) + turn * 0.22
+    };
     let goal = depth::course(
         a,
         h,

@@ -261,6 +261,30 @@ fn cluster_batches_preserve_cell_ownership_wind_bounds_and_far_fallback() {
             if !detailed {
                 continue;
             }
+            if level == DetailLevel::Near && quality == terra_core::BlockDetailQuality::High {
+                let middle_cards = super::super::builder::compose_section_with_leaf_detail(
+                    &faces,
+                    &templates,
+                    terra_voxel::SectionPos::new(-1, 0, -1),
+                    &options,
+                    &[],
+                    &[],
+                    super::super::lod::select_folded_leaves(
+                        terra_voxel::SectionPos::default(),
+                        [1000.; 3],
+                        None,
+                        level,
+                        quality,
+                        u8::MAX,
+                    ),
+                    None,
+                )
+                .unwrap();
+                assert_eq!(middle_cards.len(), batches.len());
+                assert_eq!(middle_cards[0].material, batches[0].material);
+                assert_eq!(middle_cards[0].indices.len() * 3, batches[0].indices.len());
+                assert_eq!(middle_cards[0].foliage_owners[0].cell, [15; 3]);
+            }
             assert_eq!(
                 batches.len(),
                 1,
@@ -334,5 +358,25 @@ fn cluster_batches_preserve_cell_ownership_wind_bounds_and_far_fallback() {
     assert!(
         batches.contains_key(&73),
         "spruce uses the needle artwork instead of the oak sheet/core"
+    );
+    batches.clear();
+    append_crown(
+        &mut batches,
+        block,
+        [-1; 3],
+        [15; 3],
+        63,
+        DetailLevel::Middle,
+        CrownStyle {
+            material: 7,
+            species: Some(TreeAppearance::Spruce),
+            cluster: templates.foliage_clusters.get(&7).copied(),
+        },
+    )
+    .unwrap();
+    assert!(batches.contains_key(&70) && batches.contains_key(&71));
+    assert!(
+        !batches.contains_key(&73),
+        "distant conifers use closed boughs"
     );
 }

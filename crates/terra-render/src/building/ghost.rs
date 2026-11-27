@@ -9,6 +9,7 @@ use terra_world::edits::{BlockObjectState, EditJournal};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Cell {
+    variant: usize,
     relative: [i64; 3],
     material: u16,
     state: BlockObjectState,
@@ -102,6 +103,7 @@ fn cells(
                 }
             });
             Some(Cell {
+                variant: crate::blocks::sculpt::variant(position, material),
                 relative: std::array::from_fn(|i| position[i] - origin[i]),
                 material,
                 state: object,
@@ -183,19 +185,62 @@ fn geometry(cells: &[Cell], templates: &TemplateSet) -> Result<MeshBatch, String
                     edge_mask: 15,
                 })
                 .collect();
-            crate::meshing::builder::compose_section_with_options(
-                &faces,
-                templates,
-                terra_voxel::SectionPos::default(),
-                &RenderOptions {
-                    water_level: None,
-                    detail_level: crate::meshing::DetailLevel::Far,
-                    terrain: None,
-                    exposure: None,
-                    tints: Default::default(),
-                    conditions: default(),
-                },
-            )?
+            if let Some(shape) = templates.sculpted_blocks.get(&cell.material) {
+                let open = cell
+                    .neighbors
+                    .iter()
+                    .enumerate()
+                    .fold(0, |mask, (side, neighbor)| {
+                        if neighbor.unwrap_or(0) == 0 {
+                            mask | (1 << side)
+                        } else {
+                            mask
+                        }
+                    });
+                let mut batches = BTreeMap::new();
+                for face in faces {
+                    if cell.neighbors[face.side].is_some_and(|id| {
+                        id == cell.material
+                            || terra_voxel::meshing::occludes_face(id)
+                            || terra_voxel::MaterialId::FOLIAGE.contains(&id)
+                                && terra_voxel::MaterialId::FOLIAGE.contains(&cell.material)
+                    }) {
+                        continue;
+                    }
+                    crate::meshing::builder::append_sculpture(
+                        &mut batches,
+                        shape,
+                        face,
+                        [0; 3],
+                        shape.relief(
+                            face.side,
+                            cell.variant,
+                            if templates.block_details.micro_geometry {
+                                open
+                            } else {
+                                0
+                            },
+                            true,
+                        ),
+                        templates,
+                    )?;
+                }
+                batches.into_values().collect()
+            } else {
+                crate::meshing::builder::compose_section_with_options(
+                    &faces,
+                    templates,
+                    terra_voxel::SectionPos::default(),
+                    &RenderOptions {
+                        water_level: None,
+                        detail_level: crate::meshing::DetailLevel::Far,
+                        terrain: None,
+                        exposure: None,
+                        tints: Default::default(),
+                        conditions: default(),
+                    },
+                )?
+            }
         };
         for batch in batches {
             if batch.shadow_only {
@@ -560,6 +605,7 @@ mod tests {
             linked: true,
         };
         let cell = Cell {
+            variant: 0,
             relative: [0; 3],
             material: 148,
             state: default(),
@@ -602,7 +648,7 @@ mod tests {
                 (0..64)
                     .filter(|&f| terra_world::objects::chimney_basis(f).is_some())
                     .collect()
-            } else if material == 40 {
+            } else if terra_core::block_shapes::is_torch(material) {
                 vec![0, 4, 5, 6, 7]
             } else if material == 98 {
                 (0..8).collect()
@@ -617,6 +663,7 @@ mod tests {
                     ..default()
                 };
                 let cell = Cell {
+                    variant: 0,
                     relative: [0; 3],
                     material,
                     state,

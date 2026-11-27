@@ -1,0 +1,22 @@
+{
+  "id": "teramic::petrified_planks",
+  "name": "Petrified Planks",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 706
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 705
+        },
+        "count": 1
+      }
+    ]
+  }
+}

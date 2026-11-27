@@ -33,16 +33,13 @@ pub fn surface(h: &Habitat, candidate: [f64; 3]) -> Option<[f64; 3]> {
             })?;
             lowest = lowest.min(top.0);
             highest = highest.max(top.0);
-            if top.1 != terra_voxel::MaterialId::Sand as u16 {
+            if !burrowable_ground(top.1, h.journal.block([x, top.0, z]).is_some()) {
                 return None;
             }
             for depth in 1..=2 {
                 let cell = [x, top.0 - depth, z];
                 let substrate = h.block(cell)?;
-                if substrate != terra_voxel::MaterialId::Sand as u16
-                    && !(substrate == terra_voxel::MaterialId::Sandstone as u16
-                        && h.journal.block(cell).is_none())
-                {
+                if !burrowable_ground(substrate, h.journal.block(cell).is_some()) {
                     return None;
                 }
             }

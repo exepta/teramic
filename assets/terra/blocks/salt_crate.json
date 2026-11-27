@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": 790,
+  "name": "Salt Crate",
+  "description": "Salt Crate",
+  "creative_category": "decoration",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.2,
+  "resistance": 3.8,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/salt_crate.glb",
+  "struct_block": true,
+  "textures": {
+    "drift": "textures/misty_coast/harbor_timber.png"
+  },
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.07,
+        0.02,
+        0.12
+      ],
+      "maximum": [
+        0.93,
+        0.63,
+        0.88
+      ]
+    }
+  ]
+}

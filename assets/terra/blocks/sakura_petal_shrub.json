@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 605,
+  "name": "Flowering Sakura Shrub",
+  "description": "Carmine and pearl blossoms peek out of the glossy leaves.",
+  "creative_category": "nature",
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/sakura_petal_shrub.glb",
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "textures": {},
+  "collision_boxes": []
+}

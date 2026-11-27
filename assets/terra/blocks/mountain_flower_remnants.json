@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 595,
+  "name": "Mountain Flower Remnants",
+  "description": "A few ochre and violet seed heads survived the frost.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/mountain_flower_remnants.glb",
+  "collision_boxes": [],
+  "struct_block": true,
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "textures": {}
+}

@@ -1,17 +1,18 @@
 use super::*;
 use terra_core::creatures::{CreatureNeeds, CreaturePopulation, skeleton_id};
 
-/// Crypt-floor encounters only inspect loaded, edited cells. Stable separate IDs
-/// prevent replacing surface fauna or respawning defeated guards on a reload.
+/// Night visitors share persistent grave slots with crypt guards. Already
+/// explored daytime habitats are revisited by the bounded night scan.
 pub fn spawn(
     population: &mut CreaturePopulation,
     h: &Habitat,
     home: [i64; 2],
     player_y: f64,
+    night: bool,
     available: usize,
 ) -> usize {
     let species = definitions::get(Kind::Skeleton);
-    if !species.permits_spawn_biome("spirit_blossom") {
+    if !night {
         return 0;
     }
     if available == 0 || population.animals.len() >= terra_core::creatures::MAX_CREATURES {
@@ -19,7 +20,10 @@ pub fn spawn(
     }
     let x = (home[0] * 32 + 16) as f64;
     let z = (home[1] * 32 + 16) as f64;
-    if super::super::biome_slug(h.terrain.biome_at(x, z).weights.dominant()) != "spirit_blossom" {
+    let biome = super::super::biome_slug(h.terrain.surface_biome(&h.terrain.surface_column(x, z)));
+    if !matches!(biome, "ashlands" | "spirit_blossom" | "blood_forest")
+        || !species.permits_spawn_biome(biome)
+    {
         return 0;
     }
     let Some(first_id) = skeleton_id(home, 0) else {
@@ -43,7 +47,7 @@ pub fn spawn(
             .then(a.cmp(b))
     });
     let mut spawned = 0;
-    for slot in 0..species.spawn_group_size(seed, "spirit_blossom", 2).min(2) {
+    for slot in 0..species.spawn_group_size(seed, biome, 2).min(2) {
         if spawned >= available || population.animals.len() >= terra_core::creatures::MAX_CREATURES
         {
             break;
@@ -55,7 +59,11 @@ pub fn spawn(
             continue;
         }
         let mut candidate = None;
-        'section: for section in sections.iter().take(4) {
+        'section: for section in sections
+            .iter()
+            .filter(|_| biome == "spirit_blossom")
+            .take(4)
+        {
             for dy in 0..16 {
                 for probe in 0..12 {
                     let hash = random(id, probe);
@@ -85,6 +93,33 @@ pub fn spawn(
                 }
             }
         }
+        // Surface slots are independent of daytime herbivore exploration. Probe only
+        // installed ground near this player, accounting for excavation and dry banks.
+        if candidate.is_none() && (seed >> 20).is_multiple_of(4) {
+            for probe in 0..6 {
+                let hash = random(id, probe + 230);
+                let x = (home[0] * 32 + 4 + (hash % 24) as i64) as f64 + 0.5;
+                let z = (home[1] * 32 + 4 + ((hash >> 8) % 24) as i64) as f64 + 0.5;
+                let surface = h.terrain.surface_column(x, z);
+                let ground = surface.height.floor() + 1.;
+                if (ground - player_y).abs() > 28.
+                    || super::super::biome_slug(h.terrain.surface_biome(&surface)) != biome
+                {
+                    continue;
+                }
+                if let Some(p) = h.ground([x, ground, z], Kind::Skeleton)
+                    && !h.wet(p)
+                    && !super::super::lava_worm::is_lava(h, p)
+                    && population
+                        .animals
+                        .values()
+                        .all(|a| a.health <= 0. || distance(a.position, p) > 4.)
+                {
+                    candidate = Some(p);
+                    break;
+                }
+            }
+        }
         if let Some(position) = candidate {
             population.animals.insert(
                 id,
@@ -96,8 +131,8 @@ pub fn spawn(
                     velocity: [0.0; 3],
                     yaw: 0.0,
                     health: Kind::Skeleton.health(),
-                    behavior: Behavior::Rest,
-                    timer: 1.5,
+                    behavior: Behavior::Emerge,
+                    timer: terra_core::creatures::SKELETON_RISE_SECONDS,
                     age: 0.0,
                     variant: (random(id, seed) % 3) as u8,
                     needs: CreatureNeeds::full(Kind::Skeleton),

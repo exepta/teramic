@@ -1,8 +1,12 @@
 //! Explicit model/animation inspection, separate from authoritative network tests.
 mod dragon;
 mod forest;
+mod golem;
 mod sandworm;
+mod savanna;
 mod spirit;
+mod swamp;
+mod volcanic;
 use bevy::{
     prelude::*,
     render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk},
@@ -52,12 +56,28 @@ fn setup(
     {
         return;
     }
+    if std::env::var_os("TERRA_SWAMP_RESIDENTS_INSPECT").is_some() {
+        swamp::setup(&mut creatures, &mut journal);
+        return;
+    }
+    if std::env::var_os("TERRA_SAVANNA_INSPECT").is_some() {
+        savanna::setup(&mut creatures, &mut journal);
+        return;
+    }
+    if std::env::var_os("TERRA_VOLCANIC_INSPECT").is_some() {
+        volcanic::setup(&mut creatures, &mut journal);
+        return;
+    }
     if std::env::var_os("TERRA_DRAGON_INSPECT").is_some() {
         dragon::setup(&mut creatures);
         return;
     }
     if std::env::var_os("TERRA_SANDWORM_INSPECT").is_some() {
         sandworm::setup(&mut creatures, &mut journal);
+        return;
+    }
+    if std::env::var_os("TERRA_GOLEM_INSPECT").is_some() {
+        golem::setup(&mut creatures, &mut journal);
         return;
     }
     if std::env::var_os("TERRA_FOREST_INSPECT").is_some() {
@@ -204,12 +224,28 @@ fn run(world: &mut World) {
     {
         return;
     }
+    if std::env::var_os("TERRA_SWAMP_RESIDENTS_INSPECT").is_some() {
+        swamp::run(world);
+        return;
+    }
+    if std::env::var_os("TERRA_SAVANNA_INSPECT").is_some() {
+        savanna::run(world);
+        return;
+    }
+    if std::env::var_os("TERRA_VOLCANIC_INSPECT").is_some() {
+        volcanic::run(world);
+        return;
+    }
     if std::env::var_os("TERRA_DRAGON_INSPECT").is_some() {
         dragon::run(world);
         return;
     }
     if std::env::var_os("TERRA_SANDWORM_INSPECT").is_some() {
         sandworm::run(world);
+        return;
+    }
+    if std::env::var_os("TERRA_GOLEM_INSPECT").is_some() {
+        golem::run(world);
         return;
     }
     if std::env::var_os("TERRA_FOREST_INSPECT").is_some() {

@@ -47,7 +47,7 @@ pub(crate) fn connect_address() -> Result<Option<std::net::SocketAddr>, Box<dyn 
 }
 
 pub fn build_app() -> Result<App, Box<dyn Error>> {
-    let task_pool_options = crate::task_pools::options(
+    let task_pool_options = crate::task_pools::initialize(
         std::env::args().any(|argument| argument.starts_with("--smoke-test")),
         std::env::var("TERRA_COMPUTE_THREADS").ok().as_deref(),
     )?;
@@ -244,6 +244,19 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
             // The detached overview is 228 m from the keep. Disable distance
             // fog only in this isolated smoke view instead of streaming View24.
             client.fog_distance = 0.0;
+        } else if matches!(
+            scene.as_str(),
+            "picker-crystal-highlands" | "picker-misty-coast"
+        ) {
+            // Match the configured game terrain (including the map boundary and
+            // river settings). Both photographs verify physical block anchors.
+            world.ecology_revision = WorldConfig::CURRENT_ECOLOGY_REVISION;
+            world.biome_definitions = Some(terra_core::BiomeDefinitions::load_directory(
+                terra_core::asset_directory().join("biome"),
+            )?);
+            world.preferred_spawn_biome = None;
+            client.view_distance = 10;
+            client.vertical_view_distance = 5;
         } else if scene.starts_with("reference-")
             || (scene.starts_with("picker-")
                 && std::env::var_os("TERRA_REFERENCE_BIOMES").is_some())
@@ -267,6 +280,8 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
                 && std::env::var_os("TERRA_FANTASY_ROCKS").is_some()
             {
                 requested_ecology.max(9)
+            } else if scene.starts_with("picker-") {
+                WorldConfig::CURRENT_ECOLOGY_REVISION
             } else {
                 9
             };
@@ -280,7 +295,7 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
                 client.view_distance = 10;
                 client.vertical_view_distance = 5;
             }
-        } else if scene == "blood-forest" || scene == "picker-blood-forest" {
+        } else if scene == "blood-forest" {
             world.blood_forest_revision = 1;
             if world.biome_definitions.is_none() {
                 world.biome_definitions = Some(terra_core::BiomeDefinitions::load_directory(
@@ -299,13 +314,14 @@ pub fn build_app() -> Result<App, Box<dyn Error>> {
             // regression world's ecology-revision-zero terrain below.
             let requested_seed = world.seed;
             let requested_time = world.time;
+            let requested_rivers = world.rivers;
             world = WorldConfig::default();
             world.seed = requested_seed;
             world.time = requested_time;
             world.biome_definitions = Some(terra_core::BiomeDefinitions::load_directory(
                 terra_core::asset_directory().join("biome"),
             )?);
-            world.structures.set_all(false);
+            world.rivers = requested_rivers;
             world.preferred_spawn_biome = None;
             client.view_distance = 10;
             client.vertical_view_distance = 5;

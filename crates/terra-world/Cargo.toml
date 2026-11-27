@@ -7,9 +7,10 @@ license.workspace = true
 publish.workspace = true
 
 [features]
-bevy = ["dep:bevy", "terra-core/bevy"]
+bevy = ["dep:bevy", "dep:gltf", "terra-core/bevy"]
 
 [dependencies]
+gltf = { version = "1.4", default-features = false, features = ["utils"], optional = true }
 terra-core.workspace = true
 terra-voxel.workspace = true
 noise.workspace = true

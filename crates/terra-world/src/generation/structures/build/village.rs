@@ -145,6 +145,7 @@ pub(super) fn plan(terrain: &TerraGenerator, region: [i64; 2], seed: u32) -> Opt
         | StructureKind::Cemetery
         | StructureKind::GraveDungeon
         | StructureKind::DarkDragonLair
+        | StructureKind::FireDragonLair
         | StructureKind::EarthDragonLair
         | StructureKind::WaterDragonLair => return None,
     }
@@ -230,13 +231,12 @@ fn build(builder: &mut Builder<'_>, x: i64, z: i64) -> Option<()> {
     }
     let farm_offset = rotate([-29, -29], rotation);
     let farm = [x + farm_offset[0] - 6, z + farm_offset[1] - 4];
-    let farm_floor = builder.fit(farm[0], farm[1], 12, 8);
-    #[cfg(test)]
-    if farm_floor.is_none() && std::env::var_os("TERRA_STRUCTURE_TRACE").is_some() {
-        eprintln!("village seed={} stage=farm-fit", builder.seed);
-    }
-    let farm_y = farm_floor?;
-    let farm_bounds = [[farm[0] - 1, farm[1] - 1], [farm[0] + 13, farm[1] + 9]];
+    let farm_y = if builder.allows_field(farm[0], farm[1], 12, 8) {
+        Some(builder.fit(farm[0], farm[1], 12, 8)?)
+    } else {
+        None
+    };
+    let farm_bounds = farm_y.map(|_| [[farm[0] - 1, farm[1] - 1], [farm[0] + 13, farm[1] + 9]]);
     let mut roads = paths::Routes::new([x, z], &plots, farm_bounds);
     for plot in &plots {
         let connection = roads.connect(builder, plot.portal());
@@ -251,16 +251,21 @@ fn build(builder: &mut Builder<'_>, x: i64, z: i64) -> Option<()> {
         }
         connection?;
     }
-    let connection = roads.connect(builder, [farm[0] + 6, farm_y, farm[1] - 2]);
-    #[cfg(test)]
-    if connection.is_none() && std::env::var_os("TERRA_STRUCTURE_TRACE").is_some() {
-        eprintln!("village seed={} stage=farm-street", builder.seed);
+    if let Some(y) = farm_y {
+        roads.connect(builder, [farm[0] + 6, y, farm[1] - 2])?;
     }
-    connection?;
     for plot in &plots {
         buildings::build(builder, plot);
     }
-    builder.farm(farm[0], farm[1])?;
+    if let Some(y) = farm_y {
+        builder.farm(farm[0], farm[1])?;
+        farm_entrance(builder, farm, y);
+    }
+    buildings::plaza(builder, [x, z], layout, &roads);
+    Some(())
+}
+
+fn farm_entrance(builder: &mut Builder<'_>, farm: [i64; 2], farm_y: i64) {
     for dz in -2..=0 {
         let px = farm[0] + 6;
         let pz = farm[1] + dz;
@@ -273,6 +278,4 @@ fn build(builder: &mut Builder<'_>, x: i64, z: i64) -> Option<()> {
         builder.set([px, farm_y - 1, pz], PATH);
         builder.fill([px, farm_y, pz], [px, farm_y + 2, pz], 0);
     }
-    buildings::plaza(builder, [x, z], layout, &roads);
-    Some(())
 }

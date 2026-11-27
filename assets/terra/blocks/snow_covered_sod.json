@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": 584,
+  "name": "Snow-covered Sod",
+  "description": "A thin blanket of snow covers the alpine meadow.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "cube",
+  "bevel_width": 0.0,
+  "hardness": 0.4,
+  "resistance": 0.6,
+  "textures": {
+    "side": "textures/highlands/snow_covered_sod_side.png",
+    "top": "textures/highlands/snow_covered_sod_top.png",
+    "soil": "textures/dirt.png"
+  },
+  "materials": {
+    "side": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.08
+    },
+    "top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.08
+    },
+    "soil": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.91,
+      "reflectance": 0.08
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "soil",
+    "top",
+    "side",
+    "side"
+  ]
+}

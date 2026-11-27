@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 531,
+  "name": "Oasis Mosaic",
+  "description": "Blue glazed diamonds set into pale sandstone tesserae.",
+  "creative_category": "terrain",
+  "hardness": 1.4,
+  "resistance": 2,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "face_materials": [
+    "surface",
+    "surface",
+    "surface",
+    "surface",
+    "surface",
+    "surface"
+  ],
+  "textures": {
+    "surface": "textures/desert/oasis_mosaic_surface.png"
+  },
+  "materials": {
+    "surface": {
+      "roughness": 0.94,
+      "reflectance": 0.14,
+      "normal_texture": "textures/desert/oasis_mosaic_surface_normal.png"
+    }
+  }
+}

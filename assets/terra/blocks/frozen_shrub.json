@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 589,
+  "name": "Frozen Shrub",
+  "description": "White rime and a few red berries cling to the twigs.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/frozen_shrub.glb",
+  "collision_boxes": [],
+  "struct_block": true,
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "textures": {}
+}

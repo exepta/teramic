@@ -1,4 +1,4 @@
-//! Bounded solid apple meshes shared by world fruit, items, drops and picking.
+//! Solid fruit meshes shared by world fruit, inventory items, drops and picking.
 use super::{PropDetail, PropMesh, PropPalette};
 
 fn cuboid(mesh: &mut PropMesh, center: [f32; 3], size: [f32; 3], color: [f32; 3]) {
@@ -108,33 +108,47 @@ pub fn apple(variant: u8, level: PropDetail, palette: &PropPalette) -> Vec<PropM
         } else {
             [0.85, 0.065, 0.025]
         };
-        let rings = if level == PropDetail::Far { 3 } else { 5 };
-        for i in 0..rings {
-            let t = (i as f32 + 0.5) / rings as f32;
-            let width = 0.32 * (1.0 - ((t - 0.57) * 1.3).powi(2));
-            cuboid(
-                &mut mesh,
-                [0.0, 0.03 + t * 0.28, 0.0],
-                [width, 0.28 / rings as f32 + 0.001, width * 0.91],
-                color,
-            );
+        // A flattened base, broad shoulders and two raised lobes frame the stem.
+        // Each tier has clipped voxel corners. Far fruit uses a single box per tier.
+        let mut bottom = 0.027;
+        for (top, width, tone) in [
+            (0.057, 0.16, 0.78),
+            (0.109, 0.26, 0.88),
+            (0.234, 0.33, 0.96),
+            (0.285, 0.29, 1.0),
+        ] {
+            let height = top - bottom;
+            let y = bottom + height * 0.5;
+            let pigment = color.map(|channel| channel * tone);
+            let depth = width * 0.94;
+            if level == PropDetail::Far {
+                cuboid(&mut mesh, [0., y, 0.], [width, height, depth], pigment);
+            } else {
+                cuboid(
+                    &mut mesh,
+                    [0., y, 0.],
+                    [width, height, depth * 0.62],
+                    pigment,
+                );
+                for side in [-1., 1.] {
+                    cuboid(
+                        &mut mesh,
+                        [0., y, side * depth * 0.405],
+                        [width * 0.64, height, depth * 0.19],
+                        pigment,
+                    );
+                }
+            }
+            bottom = top;
         }
-        for x in [-0.07, 0.07] {
-            cuboid(&mut mesh, [x, 0.31, 0.0], [0.115, 0.045, 0.18], color);
-        }
-        if !green && level == PropDetail::Near {
-            cuboid(
-                &mut mesh,
-                [-0.065, 0.26, -0.132],
-                [0.064, 0.043, 0.008],
-                [1.0, 0.36, 0.20],
-            );
+        for x in [-0.066, 0.066] {
+            cuboid(&mut mesh, [x, 0.296, 0.], [0.085, 0.022, 0.13], color);
         }
     }
     cuboid(
         &mut mesh,
-        [0.012, 0.36, 0.0],
-        [0.035, 0.11, 0.033],
+        [0.012, 0.352, 0.0],
+        [0.031, 0.151, 0.032],
         [0.35, 0.16, 0.045],
     );
     cuboid(
@@ -149,6 +163,61 @@ pub fn apple(variant: u8, level: PropDetail, palette: &PropPalette) -> Vec<PropM
         [0.06, 0.025, 0.045],
         [0.43, 0.63, 0.075],
     );
+    vec![mesh]
+}
+
+/// Stepped husk, seam and the three germination pores on a ripe coconut.
+pub fn coconut(variant: u8, palette: &PropPalette) -> Vec<PropMesh> {
+    let mut mesh = PropMesh {
+        material: palette.crop,
+        ..Default::default()
+    };
+    for (height, width, depth, color) in [
+        (0.060, 0.21, 0.22, [0.46, 0.24, 0.09]),
+        (0.145, 0.33, 0.31, [0.60, 0.32, 0.12]),
+        (0.235, 0.38, 0.34, [0.70, 0.40, 0.16]),
+        (0.325, 0.33, 0.30, [0.63, 0.35, 0.13]),
+        (0.400, 0.21, 0.21, [0.50, 0.27, 0.10]),
+    ] {
+        cuboid(&mut mesh, [0.0, height, 0.0], [width, 0.10, depth], color);
+    }
+    // Pale coir follows the steps of the husk on both sides of the pores.
+    for side in [-1.0, 1.0] {
+        for (x, y, z) in [
+            (0.081, 0.145, 0.155),
+            (0.121, 0.235, 0.170),
+            (0.093, 0.325, 0.150),
+        ] {
+            cuboid(
+                &mut mesh,
+                [side * x, y, z],
+                [0.023, 0.074, 0.008],
+                [0.90, 0.62, 0.28],
+            );
+        }
+    }
+    for [x, y] in [[-0.055, 0.26], [0.045, 0.25], [-0.010, 0.21]] {
+        cuboid(
+            &mut mesh,
+            [x, y, 0.173],
+            [0.035, 0.035, 0.015],
+            [0.15, 0.08, 0.037],
+        );
+    }
+    if variant >= 128 {
+        cuboid(
+            &mut mesh,
+            [0.0, 0.46, -0.025],
+            [0.055, 0.12, 0.06],
+            [0.38, 0.32, 0.11],
+        );
+        cuboid(
+            &mut mesh,
+            [0.0, 0.51, -0.16],
+            [0.055, 0.05, 0.30],
+            [0.44, 0.34, 0.12],
+        );
+    }
     vec![mesh]
 }
 

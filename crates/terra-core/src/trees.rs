@@ -43,14 +43,16 @@ pub enum TreeSpecies {
     Birch,
     Cherry,
     Apple,
+    Acacia,
 }
 impl TreeSpecies {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::Oak,
         Self::Spruce,
         Self::Birch,
         Self::Cherry,
         Self::Apple,
+        Self::Acacia,
     ];
     pub const fn sapling(self) -> ResourcePropKind {
         match self {
@@ -59,6 +61,7 @@ impl TreeSpecies {
             Self::Birch => ResourcePropKind::BirchSapling,
             Self::Cherry => ResourcePropKind::CherrySapling,
             Self::Apple => ResourcePropKind::AppleSapling,
+            Self::Acacia => ResourcePropKind::AcaciaSapling,
         }
     }
     pub const fn from_sapling(kind: ResourcePropKind) -> Option<Self> {
@@ -68,6 +71,7 @@ impl TreeSpecies {
             ResourcePropKind::BirchSapling => Self::Birch,
             ResourcePropKind::CherrySapling => Self::Cherry,
             ResourcePropKind::AppleSapling => Self::Apple,
+            ResourcePropKind::AcaciaSapling => Self::Acacia,
             _ => return None,
         })
     }
@@ -76,6 +80,7 @@ impl TreeSpecies {
             Self::Spruce => 36,
             Self::Birch => 10,
             Self::Cherry => 134,
+            Self::Acacia => 643,
             _ => 6,
         }
     }
@@ -84,6 +89,7 @@ impl TreeSpecies {
             Self::Birch => 9,
             Self::Cherry => 132,
             Self::Apple => 195,
+            Self::Acacia => 644,
             _ => 7,
         }
     }
@@ -95,13 +101,14 @@ impl TreeSpecies {
             Self::Birch => 1100.,
             Self::Cherry => 1200.,
             Self::Apple => 1400.,
+            Self::Acacia => 1250.,
         }
     }
     /// Suggested mature-tree spacing, never a restriction on planting a sapling.
     pub const fn spacing(self) -> i64 {
         match self {
             Self::Spruce => 12,
-            Self::Birch | Self::Oak | Self::Cherry => 16,
+            Self::Birch | Self::Oak | Self::Cherry | Self::Acacia => 16,
             Self::Apple => 12,
         }
     }

@@ -23,8 +23,10 @@ struct Timing {
     step: f32,
     eat: f32,
     behavior: Behavior,
+    golem: super::golem::Cadence,
     worm: super::worm::Cadence,
     dragon: super::dragons::Cadence,
+    lava_worm: super::lava_worm::Cadence,
 }
 #[derive(Resource, Default)]
 pub(super) struct Soundscape {
@@ -50,7 +52,7 @@ pub(super) struct AudioWorld<'w, 's> {
     pub(super) access: Res<'w, WorldAccess>,
     animals: Option<Res<'w, terra_network::client::ReplicatedCreatures>>,
     menu: Option<Res<'w, terra_ui::menu::MenuState>>,
-    config: Option<Res<'w, terra_core::AudioConfig>>,
+    preferences: crate::audio_preferences::AudioPreferences<'w>,
     terrain: Res<'w, WorldTerrain>,
     chunks: Res<'w, ChunkStore>,
     journal: Res<'w, EditJournal>,
@@ -92,9 +94,9 @@ pub(super) fn update(
         }
     }
     let active = world.access.ready() && world.menu.as_ref().is_none_or(|m| m.world_audio_active());
-    let defaults = terra_core::AudioConfig::default();
-    let config = world.config.as_deref().unwrap_or(&defaults);
-    sounds.controls.configure(config, active);
+    sounds
+        .controls
+        .configure(world.preferences.current(), active);
     let body = world.bodies.iter().next();
     if !active || body.is_none() {
         if let Some(entity) = sounds.entity.take() {
@@ -285,8 +287,13 @@ pub(super) fn update(
             let d = listener.distance(position);
             (d < if track.current.kind.is_dragon() {
                 112.0
-            } else if track.current.kind == Kind::SandWorm {
+            } else if matches!(track.current.kind, Kind::SandWorm | Kind::LavaWorm) {
                 64.0
+            } else if matches!(
+                track.current.kind,
+                Kind::StoneGolem | Kind::Elephant | Kind::Zebra
+            ) {
+                38.0
             } else if track.current.kind.is_aquatic() && track.current.kind != Kind::Fish {
                 if submerged { 14.0 } else { 2.0 }
             } else if matches!(track.current.kind, Kind::Fish | Kind::Bee) {
@@ -298,11 +305,20 @@ pub(super) fn update(
         })
         .collect();
     nearby.sort_by(|a, b| {
-        (b.2.current.kind.is_dragon() || b.2.current.kind == Kind::SandWorm)
-            .cmp(&(a.2.current.kind.is_dragon() || a.2.current.kind == Kind::SandWorm))
-            .then(a.0.total_cmp(&b.0))
+        (b.2.current.kind.is_dragon()
+            || matches!(b.2.current.kind, Kind::SandWorm | Kind::LavaWorm))
+        .cmp(
+            &(a.2.current.kind.is_dragon()
+                || matches!(a.2.current.kind, Kind::SandWorm | Kind::LavaWorm)),
+        )
+        .then(a.0.total_cmp(&b.0))
     });
     let controls = sounds.controls.clone();
+    let dragon_listener = super::dragons::Listener {
+        ear: listener,
+        right,
+        cave: sounds.room.cave,
+    };
     let mut budget = 8;
     for (_, mut position, track) in nearby {
         if budget == 0 {
@@ -314,8 +330,10 @@ pub(super) fn update(
             step: now,
             eat: now,
             behavior: Behavior::Rest,
+            golem: Default::default(),
             worm: Default::default(),
             dragon: Default::default(),
+            lava_worm: Default::default(),
         });
         let speed = Vec3::from_array(animal.velocity).length();
         let mut radius = 24.0;
@@ -328,15 +346,44 @@ pub(super) fn update(
                 position = emission.sound.position(&presented, track.position());
                 (emission.sound.clip(emission.take), emission.level)
             })
+        } else if animal.kind == Kind::LavaWorm {
+            let presented = presented_action(track);
+            timing
+                .lava_worm
+                .update(&presented, track.position())
+                .map(|sound| {
+                    radius = sound.radius();
+                    ground_borne = sound == super::lava_worm::Sound::Impact;
+                    let mouth = terra_core::creatures::lava_worm::center(
+                        presented.behavior,
+                        presented.timer,
+                        presented.age,
+                        0,
+                    );
+                    position = track.position() + Quat::from_rotation_y(presented.yaw) * mouth;
+                    (sound.clip(), sound.level())
+                })
         } else if animal.kind.is_dragon() {
             let presented = presented_action(track);
-            timing.dragon.update(&presented, now).map(|sound| {
-                radius = sound.radius();
-                if sound == super::dragons::Sound::Land {
-                    position = track.position() + Vec3::Y * 0.4;
-                }
-                (sound.clip(animal.kind), sound.level())
-            })
+            if let Some(sound) = timing.dragon.update(&presented, now) {
+                let audible = sound.emit(
+                    &presented,
+                    track.position(),
+                    dragon_listener,
+                    |p| {
+                        crate::water_audio::scene::acoustic_transmission(listener, p, |cell| {
+                            habitat.block(cell)
+                        })
+                    },
+                    |cue| controls.enqueue(cue),
+                );
+                budget -= usize::from(audible);
+            }
+            continue;
+        } else if animal.kind == Kind::StoneGolem {
+            radius = 38.;
+            let p = presented_action(track);
+            timing.golem.action(p.behavior, p.timer, p.age)
         } else if animal.kind == Kind::Stalker {
             stalker_cue(animal, timing, now)
         } else if animal.kind.is_spider() {
@@ -379,6 +426,19 @@ pub(super) fn update(
             && timing.behavior != Behavior::Shake
         {
             Some((8, 0.17))
+        } else if matches!(animal.kind, Kind::Elephant | Kind::Zebra)
+            && (now >= timing.call
+                || animal.behavior == Behavior::Flee && timing.behavior != Behavior::Flee)
+        {
+            radius = 38.;
+            super::savanna::call(
+                animal.kind,
+                animal.behavior,
+                timing.behavior,
+                animal.id,
+                now,
+                &mut timing.call,
+            )
         } else if matches!(animal.kind, Kind::Sheep | Kind::Cow | Kind::Pig) && now >= timing.call {
             timing.call = now + 9.0 + ((animal.id ^ now.to_bits() as u64) % 140) as f32 * 0.1;
             let base = match animal.kind {
@@ -424,10 +484,11 @@ pub(super) fn update(
                 sound,
                 gains: [gain * (0.7 - pan * 0.3), gain * (0.7 + pan * 0.3)],
                 pitch: 0.96 + (animal.id % 9) as f32 * 0.01,
-                reverb: if animal.kind.is_dragon()
-                    || animal.kind.is_spider()
-                    || animal.kind == Kind::Stalker
-                {
+                reverb: if animal.kind.is_spider()
+                    || matches!(
+                        animal.kind,
+                        Kind::Stalker | Kind::LavaWorm | Kind::StoneGolem
+                    ) {
                     sounds.room.cave * 0.45
                 } else {
                     0.0
@@ -646,7 +707,9 @@ pub(super) fn contacts(
     };
     for step in steps.read().take(12) {
         let distance = listener.distance(step.position);
-        if distance > 24.0 {
+        let dragon = step.walker == terra_core::footsteps::Walker::Dragon;
+        let radius = if dragon { 48. } else { 24. };
+        if distance > radius {
             continue;
         }
         let direction = (step.position - listener).normalize_or_zero();
@@ -659,6 +722,7 @@ pub(super) fn contacts(
         let level = match step.walker {
             terra_core::footsteps::Walker::Player => 0.34,
             terra_core::footsteps::Walker::Stalker => 0.09,
+            terra_core::footsteps::Walker::Dragon => 0.58,
             _ => 0.12,
         };
         let take = variation.next(step.material, step.alternate);
@@ -682,7 +746,29 @@ pub(super) fn contacts(
             world.journal.surface_condition(contact).wetness,
             clips::Surface::material(step.material),
         );
-        let gain = level * take.level * (1.0 - distance / 24.0).powi(2) * transmission;
+        let gain = level * take.level * (1.0 - distance / radius).powi(2) * transmission;
+        let kind = step
+            .creature
+            .and_then(|id| world.animals.as_ref()?.creatures.get(&id))
+            .map(|track| track.current.kind);
+        if let Some(kind) = kind.filter(|k| k.is_dragon() || *k == Kind::StoneGolem) {
+            let (sound, body_gain, pitch) = if kind == Kind::StoneGolem {
+                (super::golem::foot(step.alternate), gain * 2.8, take.pitch)
+            } else {
+                (
+                    super::dragons::Sound::Step.clip(kind),
+                    gain,
+                    take.pitch * 1.22,
+                )
+            };
+            sounds.controls.enqueue(Cue {
+                category: Category::Footsteps,
+                sound,
+                gains: [body_gain * (0.7 - pan * 0.3), body_gain * (0.7 + pan * 0.3)],
+                pitch,
+                reverb: sounds.room.cave * 0.7,
+            });
+        }
         sounds.controls.enqueue(Cue {
             category: Category::Footsteps,
             sound: take.sound,

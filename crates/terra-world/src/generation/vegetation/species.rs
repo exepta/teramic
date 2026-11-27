@@ -14,6 +14,9 @@ pub(crate) enum TreeSpecies {
     Mushroom(u8),
     Fir,
     Apple,
+    Acacia,
+    Baobab,
+    Willow,
 }
 
 impl TreeSpecies {
@@ -27,6 +30,9 @@ impl TreeSpecies {
     }
     pub fn wood(self) -> MaterialId {
         match self {
+            Self::Acacia => MaterialId::AcaciaLog,
+            Self::Willow => MaterialId::WillowLog,
+            Self::Baobab => MaterialId::BaobabLog,
             Self::Birch => MaterialId::WeatheredWood,
             Self::Spruce | Self::Fir => MaterialId::SpruceLog,
             Self::Cherry(_) => MaterialId::CherryLog,
@@ -40,6 +46,9 @@ impl TreeSpecies {
         match self {
             Self::Green | Self::Spruce | Self::Fir | Self::Palm => MaterialId::Leaves,
             Self::Autumn => MaterialId::AutumnLeaves,
+            Self::Acacia => MaterialId::AcaciaLeaves,
+            Self::Willow => MaterialId::WillowLeaves,
+            Self::Baobab => MaterialId::BaobabLeaves,
             Self::Birch => MaterialId::SilverLeaves,
             Self::Apple => MaterialId::AppleLeaves,
             Self::Bloodwood => MaterialId::BloodLeaves,
@@ -57,7 +66,9 @@ impl TreeSpecies {
                 MaterialId::GreenMushroomCap,
                 MaterialId::BlueMushroomCap,
                 MaterialId::WhiteMushroomCap,
-            ][usize::from(variant % 6)],
+                MaterialId::BrownMushroomCap,
+                MaterialId::GlowMushroomCap,
+            ][usize::from(variant % 8)],
         }
     }
     pub fn height_range(self) -> (f32, f32) {
@@ -73,9 +84,22 @@ impl TreeSpecies {
             Self::Bloodwood => (14.0, 25.0),
             Self::Mushroom(_) => (6.0, 14.0),
             Self::Apple => (7.0, 10.0),
+            Self::Acacia => (8., 13.),
+            Self::Willow => (9., 21.),
+            Self::Baobab => (15., 20.),
         }
     }
     pub fn in_biome(seed: u64, biome: BiomeSample, landscape_revision: u8) -> Self {
+        if biome.weights.swamp > 0.48 {
+            return Self::Willow;
+        }
+        if biome.weights.savanna > 0.48 {
+            return if super::random(seed, 562) < 0.14 {
+                Self::Baobab
+            } else {
+                Self::Acacia
+            };
+        }
         if f64::from(super::random(seed, 910)) < (biome.weights.blood_forest * 1.7).min(1.0) {
             return Self::Bloodwood;
         }
@@ -136,6 +160,12 @@ mod tests {
                     cherry_forest: 0.0,
                     spirit_blossom: 0.0,
                     blood_forest: 0.0,
+                    ashlands: 0.0,
+                    savanna: 0.0,
+                    swamp: 0.0,
+                    petrified_forest: 0.0,
+                    crystal_highlands: 0.0,
+                    misty_coast: 0.0,
                 },
             };
             let mut firs = 0;

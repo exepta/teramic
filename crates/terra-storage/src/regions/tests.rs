@@ -2072,7 +2072,16 @@ fn all_prop_kinds_items_and_removal_tombstones_persist_in_binary_regions() {
         if kind == PropKind::SpiderWeb {
             prop = terra_world::props::webs::attached(support, [0, 1, 0], 5, prop.id).unwrap();
         }
-        assert!(journal.place_prop(prop).unwrap());
+        if kind.reef_attachment() {
+            let face = if kind == PropKind::HangingPearlKelp {
+                [0, -1, 0]
+            } else {
+                [0, 0, -1]
+            };
+            prop = terra_world::props::reef_flora::attached(kind, support, face, prop.id).unwrap();
+            assert_eq!(terra_world::props::placement::support(&prop), support);
+        }
+        assert!(journal.place_prop(prop).unwrap(), "placing {kind:?}");
         originals.push(prop);
         let item = ItemKind::Prop(ResourcePropKind::from(kind));
         assert_eq!(PropKind::from(ResourcePropKind::from(kind)), kind);

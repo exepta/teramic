@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 587,
+  "name": "Young Alpine Conifer",
+  "description": "A little conifer carries its first winter snow.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/alpine_conifer.glb",
+  "collision_boxes": [],
+  "struct_block": true,
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "textures": {}
+}

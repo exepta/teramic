@@ -138,7 +138,15 @@ pub fn fuels() -> &'static [FuelDefinition] {
     static FUELS: OnceLock<Vec<FuelDefinition>> = OnceLock::new();
     FUELS
         .get_or_init(|| {
-            const SOURCES: [(&str, &str); 10] = [
+            const SOURCES: &[(&str, &str)] = &[
+                (
+                    "charred_log",
+                    include_str!("../../../assets/fuels/charred_log.json"),
+                ),
+                (
+                    "charred_planks",
+                    include_str!("../../../assets/fuels/charred_planks.json"),
+                ),
                 (
                     "cherry_log",
                     include_str!("../../../assets/fuels/cherry_log.json"),
@@ -173,9 +181,34 @@ pub fn fuels() -> &'static [FuelDefinition] {
                     "spruce_planks",
                     include_str!("../../../assets/fuels/spruce_planks.json"),
                 ),
+                (
+                    "willow_log",
+                    include_str!("../../../assets/fuels/willow_log.json"),
+                ),
+                (
+                    "mossy_willow_log",
+                    include_str!("../../../assets/fuels/mossy_willow_log.json"),
+                ),
+                (
+                    "willow_planks",
+                    include_str!("../../../assets/fuels/willow_planks.json"),
+                ),
+                (
+                    "acacia_log",
+                    include_str!("../../../assets/fuels/acacia_log.json"),
+                ),
+                (
+                    "acacia_planks",
+                    include_str!("../../../assets/fuels/acacia_planks.json"),
+                ),
+                (
+                    "baobab_log",
+                    include_str!("../../../assets/fuels/baobab_log.json"),
+                ),
             ];
             SOURCES
-                .into_iter()
+                .iter()
+                .copied()
                 .filter_map(|(name, source)| {
                     let builtin = serde_json::from_str::<FuelDefinition>(source).ok()?;
                     Some(

@@ -496,7 +496,8 @@ pub(super) fn edit_allowed(action: EditAction, peer: &Peer, world: &ControlWorld
             action:
                 terra_core::farming::FarmingAction::Refill
                 | terra_core::farming::FarmingAction::FillBucket
-                | terra_core::farming::FarmingAction::FillBileBucket,
+                | terra_core::farming::FarmingAction::FillBileBucket
+                | terra_core::farming::FarmingAction::FillLavaBucket,
             ..
         } => KingdomPermission::Inventories,
         EditAction::ToggleObject { position, .. }

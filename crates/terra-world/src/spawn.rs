@@ -68,12 +68,23 @@ pub fn find_land_spawn(
         return Err(failure());
     }
     let generator = SectionGenerator::new(terrain.clone());
+    let land_preference = preferred.filter(|&biome| biome != BiomeKind::Ocean);
     let candidate = |x: i64, z: i64| {
-        if !terrain.settlement_start_clear([x, z]) {
+        // A preferred region can be thousands of blocks away. Reject other land
+        // biomes before probing their settlements, carved ground and water.
+        if !(-LIMIT..=LIMIT).contains(&x)
+            || !(-LIMIT..=LIMIT).contains(&z)
+            || land_preference.is_some_and(|biome| !matches_preferred_biome(terrain, x, z, biome))
+            || !terrain.settlement_start_clear([x, z])
+        {
             return None;
         }
         let ground = surface_ground(terrain, x, z)?;
-        if preferred.is_some_and(|biome| !matches_preferred_biome(terrain, x, z, biome)) {
+        // The ocean preference examines surrounding water, so first establish
+        // that the candidate itself can provide a dry landing.
+        if preferred == Some(BiomeKind::Ocean)
+            && !matches_preferred_biome(terrain, x, z, BiomeKind::Ocean)
+        {
             return None;
         }
         let spawn = WorldSpawn { ground };
@@ -107,6 +118,11 @@ pub fn find_land_spawn(
 /// climate alone does not turn a dry island into an ocean floor. The Ocean
 /// preference therefore means a safe shore within 64 m of real marine water.
 fn matches_preferred_biome(terrain: &TerraGenerator, x: i64, z: i64, preferred: BiomeKind) -> bool {
+    let preferred = if preferred == BiomeKind::ClifftedDesert && terrain.desert_overhaul() {
+        BiomeKind::Desert
+    } else {
+        preferred
+    };
     if preferred == BiomeKind::Ocean {
         for distance in [8, 32, 64] {
             for direction in [
@@ -137,17 +153,38 @@ fn matches_preferred_biome(terrain: &TerraGenerator, x: i64, z: i64, preferred: 
         }
         return false;
     }
-    let mut weights = terrain.biome_at(x as f64 + 0.5, z as f64 + 0.5).weights;
-    weights.ocean = 0.0;
-    let visible = if weights.values().iter().all(|value| *value <= f64::EPSILON) {
-        BiomeKind::Plains
-    } else {
-        weights.dominant()
-    };
-    visible == preferred
+    let weights = terrain.biome_at(x as f64 + 0.5, z as f64 + 0.5).weights;
+    if preferred == BiomeKind::Ashlands && terrain.config().ecology_revision < 18 {
+        return weights.dominant_land() == preferred;
+    }
+    if preferred == BiomeKind::Swamp {
+        return weights.swamp > 0.8
+            && matches!(
+                terrain
+                    .surface_column(x as f64 + 0.5, z as f64 + 0.5)
+                    .surface_material,
+                MaterialId::SwampTurf | MaterialId::MossyPeat | MaterialId::Peat
+            );
+    }
+    if preferred == BiomeKind::Savanna {
+        // A first spawn sits inside the grassland. A single dominant border
+        // cell can otherwise open onto adjacent oak woods in the first view.
+        let (sx, sz) = (x as f64 + 0.5, z as f64 + 0.5);
+        return weights.savanna >= 0.84
+            && [[-48., 0.], [48., 0.], [0., -48.], [0., 48.]]
+                .into_iter()
+                .all(|[dx, dz]| terrain.biome_at(sx + dx, sz + dz).weights.savanna >= 0.68)
+            && matches!(
+                terrain.surface_column(sx, sz).surface_material,
+                MaterialId::SavannaTurf | MaterialId::DrySavannaTurf
+            );
+    }
+    weights.is_land_destination(preferred)
 }
 
 fn surface_ground(terrain: &TerraGenerator, x: i64, z: i64) -> Option<[i64; 3]> {
+    #[cfg(test)]
+    tests::SURFACE_PROBES.set(tests::SURFACE_PROBES.get() + 1);
     if !(-LIMIT..=LIMIT).contains(&x) || !(-LIMIT..=LIMIT).contains(&z) {
         return None;
     }
@@ -192,7 +229,12 @@ fn valid(spawn: WorldSpawn, generator: &SectionGenerator, journal: &EditJournal)
                 return false;
             }
             let above = [ground[0], ground[1] + 1, ground[2]];
-            if fluid_cell_at(terrain, journal, above, block(above).unwrap_or(u16::MAX)).amount > 0 {
+            let above_material = block(above).unwrap_or(u16::MAX);
+            if matches!(
+                MaterialId::from_raw(above_material),
+                Some(MaterialId::Lava | MaterialId::Fumarole)
+            ) || fluid_cell_at(terrain, journal, above, above_material).amount > 0
+            {
                 return false;
             }
         }

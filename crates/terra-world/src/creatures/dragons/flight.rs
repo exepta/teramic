@@ -58,11 +58,12 @@ fn empty(h: &Habitat, low: DVec3, high: DVec3) -> bool {
 /// wings. The sweep includes the turn between the old and proposed headings.
 pub(super) fn passage(h: &Habitat, a: &Creature, start: DVec3, end: DVec3, yaw: f64) -> bool {
     let scale = f64::from(pose::model_scale(a.kind, a.variant)) * a.growth_scale();
+    let wingspan = 1.82 + 16.98 * f64::from(pose::wing_scale(a.kind, a.variant));
     let mid = f64::from(a.yaw) + angle_delta(f64::from(a.yaw), yaw) * 0.5;
     for (width, front, back, low, high) in [
         (2.7, 4.0, 3.7, 0.08, 3.4),
         (2.8, 10.1, 17.2, 3.3, 10.1),
-        (18.8, 2.0, 10.5, 3.6, 13.0),
+        (wingspan, 2.0, 10.5, 3.6, 13.0),
     ] {
         let mut lo = DVec3::splat(f64::INFINITY);
         let mut hi = DVec3::splat(f64::NEG_INFINITY);
@@ -86,7 +87,7 @@ pub(super) fn passage(h: &Habitat, a: &Creature, start: DVec3, end: DVec3, yaw: 
 }
 
 pub(super) fn can_launch(a: &Creature, h: &Habitat) -> bool {
-    if !a.dragon_stage().can_fly() {
+    if !pose::flies(a.kind) || !a.dragon_stage().can_fly() {
         return false;
     }
     let from = DVec3::from_array(a.position);
@@ -97,10 +98,6 @@ pub(super) fn can_launch(a: &Creature, h: &Habitat) -> bool {
 
 pub(super) fn clean_landing(a: &Creature, h: &Habitat, ground: [f64; 3]) -> bool {
     let p = DVec3::from_array(ground);
-    let terrain = h
-        .chunks
-        .surface_column_at(p.x.floor() as i64, p.z.floor() as i64)
-        .map_or_else(|| h.terrain.surface_height(p.x, p.z), |c| c.height);
     let support = (p - DVec3::Y * 0.1).floor().as_i64vec3().to_array();
     if !h
         .block(support)
@@ -115,7 +112,7 @@ pub(super) fn clean_landing(a: &Creature, h: &Habitat, ground: [f64; 3]) -> bool
                         | MaterialId::StrawBlock
                 )
         })
-        || p.y > terrain + 4.0
+        || h.wet_footprint(ground, a.size(), f64::from(a.yaw))
     {
         return false;
     }
@@ -134,7 +131,26 @@ pub(super) fn clean_landing(a: &Creature, h: &Habitat, ground: [f64; 3]) -> bool
             }
         }
     }
-    passage(h, a, p, p + DVec3::Y * 1.25, f64::from(a.yaw))
+    flare_clear(a, h, p, p + DVec3::Y * 1.25)
+}
+
+/// When the wing fingers fold into the body on final approach, test the body
+/// and folded shoulders along the descent. An extended flight envelope here
+/// rejects ordinary slopes several metres beyond all four planted feet.
+pub(super) fn flare_clear(a: &Creature, h: &Habitat, from: DVec3, to: DVec3) -> bool {
+    let size = a.size();
+    let yaw = f64::from(a.yaw);
+    let scale = f64::from(pose::model_scale(a.kind, a.variant)) * a.growth_scale();
+    let shoulder = DVec3::new(3.6, 0., 4.0) * scale;
+    [0., 0.5, 1.].into_iter().all(|t| {
+        let p = from.lerp(to, t);
+        h.clear_swimmer_rotated(p.to_array(), size, yaw)
+            && empty(
+                h,
+                p - shoulder + DVec3::Y * 3.4 * scale,
+                p + shoulder + DVec3::Y * 9.4 * scale,
+            )
+    })
 }
 
 impl Encounter {
@@ -187,6 +203,16 @@ impl Encounter {
         let forward = DVec3::new(-heading.sin(), 0., -heading.cos());
         let alignment = forward.dot(flat.normalize_or_zero()).max(0.);
         let wish = (forward * flat.length() * alignment + DVec3::Y * self.course.y) * aim.length();
+        // Lift and forward thrust pulse after the visible power stroke. Lose
+        // the impulse while braking over a pad or waiting for loaded airspace.
+        let [lift, thrust] = terra_core::creatures::dragon_pose::wing_impulse(
+            a,
+            self.flight_velocity.as_vec3().to_array(),
+        );
+        let work = (aim.length() / 9.).clamp(0., 1.) * self.course.length();
+        let wish = (wish
+            + (DVec3::Y * f64::from(lift) + forward * f64::from(thrust) * alignment) * work)
+            .clamp_length_max(speed);
         let velocity =
             self.flight_velocity + (wish - self.flight_velocity).clamp_length_max(12.5 * dt);
         let next = from + velocity * dt;

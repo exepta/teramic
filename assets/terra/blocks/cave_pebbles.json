@@ -12,8 +12,8 @@
   "model_layout": "scene",
   "model": "models/cave_pebbles.glb",
   "textures": {
-    "Pale edge": "textures/dripstone_cave/calcite_side.png",
-    "Wet stone": "textures/dripstone_cave/wet_side.png"
+    "Wet stone": "textures/dripstone_cave/wet_side.png",
+    "Pale edge": "textures/dripstone_cave/calcite_side.png"
   },
   "collision_boxes": [
     {

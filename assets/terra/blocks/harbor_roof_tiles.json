@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 784,
+  "name": "Harbor Roof Tiles",
+  "description": "Harbor Roof Tiles",
+  "creative_category": "building",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.8,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "textures": {
+    "side": "textures/misty_coast/harbor_roof_tiles.png"
+  },
+  "materials": {
+    "side": {
+      "normal_texture": "textures/misty_coast/harbor_roof_tiles_normal.png",
+      "roughness": 0.84,
+      "reflectance": 0.12
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

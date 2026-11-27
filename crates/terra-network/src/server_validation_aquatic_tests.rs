@@ -36,8 +36,20 @@ mod villager_defense_authority_tests;
 #[path = "server_wrench_tests.rs"]
 mod wrench_tests;
 
+fn planting_face(kind: ResourcePropKind) -> [i8; 3] {
+    match kind {
+        ResourcePropKind::ReefFan => [0, 0, 1],
+        ResourcePropKind::HangingPearlKelp => [0, -1, 0],
+        _ => [0, 1, 0],
+    }
+}
+
 fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
-    let support = [4, 3, 4];
+    let support = match kind {
+        ResourcePropKind::ReefFan => [4, 6, 4],
+        ResourcePropKind::HangingPearlKelp => [4, 7, 4],
+        _ => [4, 3, 4],
+    };
     let mut config = GameConfig::default();
     config.server.game_mode = GameMode::Survival;
     config.world.landscape_revision = 3;
@@ -72,9 +84,21 @@ fn fixture(kind: ResourcePropKind, wet: bool) -> (App, Peer, [i64; 3]) {
     if terra_core::TreeSpecies::from_sapling(kind).is_some() {
         data.set_block([4, 3, 4], MaterialId::Dirt as u16).unwrap();
     }
+    if PropKind::from(kind).reef_attachment() {
+        data.set_block(
+            terra_voxel::global_to_section(support).1,
+            MaterialId::Stone as u16,
+        )
+        .unwrap();
+    }
     if wet {
-        data.set_block([4, 4, 4], MaterialId::FluidWater as u16)
-            .unwrap();
+        let face = planting_face(kind);
+        let root = std::array::from_fn(|i| support[i] + i64::from(face[i]));
+        data.set_block(
+            terra_voxel::global_to_section(root).1,
+            MaterialId::FluidWater as u16,
+        )
+        .unwrap();
     }
     app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
         owner,
@@ -533,6 +557,8 @@ fn farm_command(
                 | FarmingAction::PourTar
                 | FarmingAction::FillBileBucket
                 | FarmingAction::EmptyBileBucket
+                | FarmingAction::FillLavaBucket
+                | FarmingAction::EmptyLavaBucket
                 | FarmingAction::Refill
         ) {
             journal.revision(section)
@@ -1411,8 +1437,11 @@ fn marine_placement_checks_real_source_cells_depth_and_loaded_ground() {
         .filter(|kind| terra_core::CropKind::from_prop(*kind).is_none())
     {
         let (mut app, _, support) = fixture(kind, true);
+        let face = planting_face(kind);
+        let root = std::array::from_fn(|i| support[i] + i64::from(face[i]));
+        let local = terra_voxel::global_to_section(root).1;
         let valid = |app: &App| {
-            prop_environment_valid(
+            prop_environment_valid_for_face(
                 app.world().resource::<ChunkStore>(),
                 &app.world().resource::<WorldTerrain>().0,
                 app.world().resource::<EditJournal>(),
@@ -1420,6 +1449,7 @@ fn marine_placement_checks_real_source_cells_depth_and_loaded_ground() {
                     .resource::<terra_core::block_properties::BlockPropertiesCatalog>(),
                 support,
                 kind,
+                face,
             )
         };
         assert_eq!(valid(&app), PropKind::from(kind).aquatic(), "{kind:?}");
@@ -1429,7 +1459,7 @@ fn marine_placement_checks_real_source_cells_depth_and_loaded_ground() {
             .get_mut(&terra_voxel::global_to_section(support).0)
             .unwrap()
             .data
-            .set_block([4, 4, 4], MaterialId::FluidWater as u16)
+            .set_block(local, MaterialId::FluidWater as u16)
             .unwrap();
         assert_eq!(
             valid(&app),
@@ -1442,19 +1472,20 @@ fn marine_placement_checks_real_source_cells_depth_and_loaded_ground() {
             .get_mut(&terra_voxel::global_to_section(support).0)
             .unwrap()
             .data
-            .set_block([4, 4, 4], MaterialId::Stone as u16)
+            .set_block(local, MaterialId::Stone as u16)
             .unwrap();
         assert!(!valid(&app), "solid obstruction {kind:?}");
         let (dry, _, support) = fixture(kind, false);
         assert_eq!(
-            prop_environment_valid(
+            prop_environment_valid_for_face(
                 dry.world().resource::<ChunkStore>(),
                 &dry.world().resource::<WorldTerrain>().0,
                 dry.world().resource::<EditJournal>(),
                 dry.world()
                     .resource::<terra_core::block_properties::BlockPropertiesCatalog>(),
                 support,
-                kind
+                kind,
+                face
             ),
             !PropKind::from(kind).aquatic() || kind == ResourcePropKind::SmallStones
         );
@@ -1505,7 +1536,9 @@ fn every_prop_uses_authority_placement_accurate_picking_harvest_drop_and_reload_
     {
         let (mut app, peer, support) = fixture(kind, PropKind::from(kind).aquatic());
         let owner = terra_voxel::global_to_section(support).0;
-        let look = aim(&app, &peer, [4.5, 4.0, 4.5]);
+        let face = planting_face(kind);
+        let center = std::array::from_fn(|i| support[i] as f64 + 0.5 + f64::from(face[i]) * 0.5);
+        let look = aim(&app, &peer, center);
         let command = EditCommand {
             request: 1,
             revision: 0,

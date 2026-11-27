@@ -843,3 +843,117 @@ fn water_wheel_trimesh_has_only_the_axle_while_rim_picking_is_unchanged() {
         assert_eq!(hit.position, position);
     }
 }
+
+#[test]
+fn leaf_core_stops_capsules_and_picking_at_the_cell_plane_and_allows_adjacent_placement() {
+    use crate::character::{PLAYER_HALF_HEIGHT, PLAYER_RADIUS};
+    use avian3d::collision::collider::contact_query::contact;
+    let cell = [-1, 5, -10];
+    let adjacent = [0, 5, -10];
+    let (owner, local) = global_to_section(cell);
+    let mut chunks = ChunkStore::default();
+    for section in [owner, global_to_section(adjacent).0] {
+        chunks.loaded.insert(
+            section,
+            LoadedSection {
+                data: BlockSection::empty(section).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+    }
+    let journal = EditJournal::default();
+    let properties =
+        BlockPropertiesCatalog::load(&terra_core::asset_directory().join("terra/blocks")).unwrap();
+    let masked: Vec<_> = properties.1.keys().copied().collect();
+    let capsule = Collider::capsule(PLAYER_RADIUS, 2. * (PLAYER_HALF_HEIGHT - PLAYER_RADIUS));
+    let translation = Vec3::from_array(owner.origin().unwrap().map(|v| v as f32));
+    for leaf in terra_voxel::MaterialId::FOLIAGE {
+        chunks
+            .loaded
+            .get_mut(&owner)
+            .unwrap()
+            .data
+            .set_block(local, leaf)
+            .unwrap();
+        let data = &chunks.loaded[&owner].data;
+        let geometry = model_geometry(data, &chunks, &journal, &properties).unwrap();
+        let collider =
+            build_collider_with_geometry(data, &geometry.boxes, &geometry.triangles, &masked)
+                .unwrap()
+                .unwrap();
+        // Sideways and from above, the capsule clears the core by 2 cm,
+        // inside the visual overhang. Crossing either cell plane makes contact.
+        for (gap, touches) in [(0.02, false), (-0.02, true)] {
+            for center in [
+                Vec3::new(PLAYER_RADIUS + gap, 5.5, -9.5),
+                Vec3::new(-0.5, 6. + PLAYER_HALF_HEIGHT + gap, -9.5),
+            ] {
+                let hit = contact(
+                    &collider,
+                    translation,
+                    Quat::IDENTITY,
+                    &capsule,
+                    center,
+                    Quat::IDENTITY,
+                    0.,
+                )
+                .unwrap();
+                assert_eq!(
+                    hit.is_some_and(|h| h.penetration > 0.),
+                    touches,
+                    "leaf {leaf} at {center:?}"
+                );
+            }
+        }
+        let pick = |start, dir| {
+            terra_world::interaction_shapes::raycast(&chunks, &journal, &properties, start, dir, 2.)
+        };
+        let cast = |start: [f64; 3], dir: [f64; 3]| {
+            collider.cast_ray(
+                translation,
+                Quat::IDENTITY,
+                Vec3::from_array(start.map(|v| v as f32)),
+                Vec3::from_array(dir.map(|v| v as f32)),
+                2.,
+                true,
+            )
+        };
+        for axis in 0..3 {
+            for sign in [-1_i32, 1] {
+                let mut normal = [0; 3];
+                normal[axis] = sign;
+                let start =
+                    std::array::from_fn(|i| cell[i] as f64 + 0.5 + 1.25 * f64::from(normal[i]));
+                let dir = normal.map(|n| -f64::from(n));
+                let hit = pick(start, dir).unwrap();
+                assert_eq!((hit.position, hit.normal), (cell, normal));
+                assert!((hit.distance - 0.75).abs() < 1e-6);
+                assert!((cast(start, dir).unwrap().0 - 0.75).abs() < 1e-5);
+                let neighbor = std::array::from_fn(|i| cell[i] + i64::from(normal[i]));
+                assert_eq!(
+                    terra_world::targeting::item_placement_with_state(&chunks, &journal, hit, leaf),
+                    Some((neighbor, 0))
+                );
+                let bounds = terra_world::targeting::placement_bounds(
+                    &chunks,
+                    &journal,
+                    hit,
+                    leaf,
+                    (start, dir),
+                )
+                .unwrap();
+                assert_eq!(bounds.minimum, neighbor.map(|v| v as f64));
+                assert_eq!(bounds.maximum, neighbor.map(|v| v as f64 + 1.));
+            }
+        }
+        // Travel just outside the side and top of the physical core.
+        for clear in [[0.02, 5.5, -10.8], [-0.5, 6.02, -10.8]] {
+            assert!(pick(clear, [0., 0., 1.]).is_none());
+            assert!(cast(clear, [0., 0., 1.]).is_none());
+        }
+    }
+}

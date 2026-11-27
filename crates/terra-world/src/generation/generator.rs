@@ -6,7 +6,10 @@ use terra_voxel::VoxelSample;
 #[derive(Clone)]
 pub struct TerraGenerator {
     pub(super) advanced: std::sync::Arc<super::advanced::AdvancedSampler>,
+    pub(super) coastal_plans: std::sync::Arc<super::natural_features::coast::CoastPlans>,
+    pub(super) shoreline: std::sync::Arc<super::misty_coast::ShoreCache>,
     pub(super) biome_regions: std::sync::Arc<super::biomes::RegionCache>,
+    pub(super) cascades: std::sync::Arc<super::rivers::savanna_cascades::CascadeCache>,
     pub(super) rivers: std::sync::Arc<super::rivers::RiverCache>,
     pub(super) cave_portals: std::sync::Arc<super::caves::CaveCache>,
     pub(super) cave_biomes: std::sync::Arc<super::cave_biomes::CaveBiomeCache>,
@@ -35,6 +38,9 @@ impl TerraGenerator {
         Ok(Self {
             advanced: std::sync::Arc::new(super::advanced::AdvancedSampler::new(&config)),
             biome_regions: Default::default(),
+            shoreline: Default::default(),
+            coastal_plans: Default::default(),
+            cascades: Default::default(),
             rivers: Default::default(),
             cave_portals: Default::default(),
             cave_biomes: Default::default(),
@@ -75,6 +81,17 @@ impl TerraGenerator {
             if y < -126.0 {
                 return VoxelSample::new(-1.0, terra_voxel::MaterialId::Bedrock);
             }
+        }
+        if let Some(bottom) = column.ice_bottom()
+            && (bottom..bottom + f64::from(column.ocean.ice_depth)).contains(&y)
+        {
+            return VoxelSample::new(-0.5, terra_voxel::MaterialId::Ice);
+        }
+        if column
+            .lava_level
+            .is_some_and(|level| y < level && y > column.height)
+        {
+            return VoxelSample::new(-0.5, terra_voxel::MaterialId::Lava);
         }
         let height = column.height;
         // The exposed bed and banks of a desert ravine collect surface sand.
@@ -151,6 +168,14 @@ impl TerraGenerator {
         let mut density = y - height;
         if self.config.landscape_revision >= 5 {
             density = self.advanced.density([x, y, z], column, density);
+            if self.config.ecology_revision >= 17
+                && column.river_cavity.is_none()
+                && let Some([_, ceiling]) = column.cave_cavity
+            {
+                // A terrain overhang cannot hollow out the hillside supporting
+                // a portal roof. Distinct cave chambers are still carved below.
+                density = density.min((ceiling - y).max(y - height));
+            }
         }
         if let Some([floor, ceiling]) = column.river_cavity {
             density = density.max((y - floor).min(ceiling - y));
@@ -208,11 +233,10 @@ impl TerraGenerator {
             let corridor = (y - floor).min(ceiling - y);
             density = (y - height).max(clipped).max(corridor);
         }
-        if self.config.landscape_revision >= 4
-            && column.biome.weights.ocean > 0.45
-            && column.water_level.is_some_and(|level| {
-                (level - self.config.sea_level).abs() < 0.01 && level - height > 3.0
-            })
+        if column.lava_level.is_some()
+            || self.config.landscape_revision >= 4
+                && column.water_level.is_some()
+                && column.river_cavity.is_none()
         {
             // Apply after every chamber/connector CSG, otherwise a later carve can
             // reopen the seabed. Deeper caves remain intact below this solid roof.
@@ -356,19 +380,14 @@ impl TerrainGenerator for TerraGenerator {
         GENERATOR_VERSION
     }
     fn sample(&self, position: [f64; 3]) -> VoxelSample {
+        let cell = position.map(|v| v.floor() as i64);
         if position.iter().all(|v| v.is_finite())
-            && let Some(material) = self.structure_block(position.map(|v| v.floor() as i64))
+            && let Some(material) = self
+                .structure_block(cell)
+                .or_else(|| self.natural_material_at(cell))
         {
             return VoxelSample {
                 density: if material == 0 { 1.0 } else { -1.0 },
-                material,
-            };
-        }
-        if position.iter().all(|v| v.is_finite())
-            && let Some(material) = self.natural_material_at(position.map(|v| v.floor() as i64))
-        {
-            return VoxelSample {
-                density: -1.0,
                 material,
             };
         }

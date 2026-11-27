@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 571,
+  "name": "Lobster Pot",
+  "description": "An arched wicker cage for catching shellfish.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 0.7,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/lobster_pot.glb",
+  "collision_boxes": [],
+  "textures": {}
+}

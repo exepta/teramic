@@ -1,3 +1,4 @@
+mod falls;
 use super::{
     MAX_SAMPLE_COORDINATE, SectionGenerationError, SectionGenerator, SurfaceColumn,
     vegetation::{Tree, trees_in_column},
@@ -8,6 +9,7 @@ use terra_voxel::{SECTION_SIZE, SectionPos};
 
 /// Immutable per-column data shared by all vertical worker jobs. No edits are cached here.
 pub struct PreparedColumn {
+    pub(crate) fall_columns: Vec<usize>,
     pub(super) config: WorldConfig,
     pub(super) coordinate: [i64; 2],
     pub(super) padding: usize,
@@ -40,6 +42,7 @@ mod snow_tests {
         let center = [-1, 4, -17];
         for material in [102, 78, 3] {
             let prepared = PreparedColumn {
+                fall_columns: Vec::new(),
                 config: WorldConfig::default(),
                 coordinate: [-1, -2],
                 padding: 0,
@@ -49,6 +52,7 @@ mod snow_tests {
                 tree_props: Vec::new(),
                 natural_features: Vec::new(),
                 structures: vec![Arc::new(Site {
+                    tidal_nest: false,
                     summary: SiteSummary {
                         id: 1,
                         kind: StructureKind::Village,
@@ -98,9 +102,17 @@ impl PreparedColumn {
     /// Includes the air carved for the chamber and its passages. The space
     /// above the roof and neighbouring natural caves use their own atmosphere.
     pub fn in_dragon_lair(&self, cell: [i64; 3]) -> bool {
+        self.dragon_lair_top(cell).is_some()
+    }
+
+    /// Upper search bound for a real voxel roof, including lairs built above
+    /// the natural heightmap. Open passages still require an actual roof hit.
+    pub fn dragon_lair_top(&self, cell: [i64; 3]) -> Option<i64> {
         self.structures
             .iter()
-            .any(|site| site.summary.kind.dragon().is_some() && site.block_at(cell).is_some())
+            .filter(|site| site.summary.kind.dragon().is_some() && site.block_at(cell).is_some())
+            .map(|site| site.summary.bounds[1][1])
+            .max()
     }
 
     #[cfg(test)]
@@ -110,6 +122,7 @@ impl PreparedColumn {
     ) -> Self {
         use super::structures::{Site, SiteSummary, StructureKind};
         self.structures.push(Arc::new(Site {
+            tidal_nest: false,
             summary: SiteSummary {
                 id: settlement.id,
                 kind: StructureKind::Village,
@@ -162,7 +175,54 @@ impl PreparedColumn {
             .iter()
             .filter_map(|site| site.sections.get(&section))
             .flat_map(|patch| patch.objects.iter().cloned())
+            .chain(
+                self.natural_features
+                    .iter()
+                    .flat_map(|patch| &patch.objects)
+                    .filter(|object| terra_voxel::global_to_section(object.position).0 == section)
+                    .cloned(),
+            )
             .collect()
+    }
+
+    /// Authored poses for visual prediction, including the neighboring cells used
+    /// to join stairs and crystal facets before their server sections arrive.
+    pub fn model_objects_in_halo(
+        &self,
+        section: SectionPos,
+    ) -> impl Iterator<Item = &super::structures::StructureObject> {
+        let origin = section.origin().ok();
+        let adjacent = [
+            [0, 0, 0],
+            [-1, 0, 0],
+            [1, 0, 0],
+            [0, -1, 0],
+            [0, 1, 0],
+            [0, 0, -1],
+            [0, 0, 1],
+        ];
+        self.structures
+            .iter()
+            .flat_map(move |site| {
+                adjacent
+                    .into_iter()
+                    .filter_map(move |offset| site.sections.get(&section.offset(offset).ok()?))
+                    .flat_map(|patch| &patch.objects)
+            })
+            .chain(
+                self.natural_features
+                    .iter()
+                    .flat_map(|patch| &patch.objects),
+            )
+            .filter(move |object| {
+                object.state.is_some()
+                    && origin.is_some_and(|start| {
+                        (0..3).all(|axis| {
+                            (start[axis].saturating_sub(1)..=start[axis].saturating_add(16))
+                                .contains(&object.position[axis])
+                        })
+                    })
+            })
     }
     #[cfg(feature = "bevy")]
     pub(crate) fn felling_species(&self, root: [i64; 3]) -> Option<terra_core::TreeSpecies> {
@@ -174,7 +234,7 @@ impl PreparedColumn {
     #[cfg(feature = "bevy")]
     pub(crate) fn felling_materials(&self, root: [i64; 3]) -> Option<(u16, u16)> {
         let tree = self.trees.iter().find(|tree| tree.origin == root)?;
-        Some((tree.wood_material as u16, tree.species.leaves() as u16))
+        Some((tree.wood_material as u16, tree.leaves_material as u16))
     }
 
     #[cfg(feature = "bevy")]
@@ -182,7 +242,10 @@ impl PreparedColumn {
         self.trees
             .iter()
             .find(|tree| {
-                matches!(tree.wood_material as u16, 6 | 10 | 36 | 134)
+                (matches!(
+                    tree.wood_material as u16,
+                    6 | 10 | 36 | 134 | 643 | 646 | 679 | 680
+                ) || matches!(tree.leaves_material as u16, 606..=607))
                     && tree.wood_at(cell).is_some()
             })?
             .felling_shape()
@@ -191,7 +254,11 @@ impl PreparedColumn {
     #[cfg(feature = "bevy")]
     pub(crate) fn felling_foot(&self, cell: [i64; 3]) -> bool {
         self.trees.iter().any(|tree| {
-            matches!(tree.wood_material as u16, 6 | 10 | 36 | 134) && tree.wood_at(cell).is_some()
+            (matches!(
+                tree.wood_material as u16,
+                6 | 10 | 36 | 134 | 643 | 646 | 679 | 680
+            ) || matches!(tree.leaves_material as u16, 606..=607))
+                && tree.wood_at(cell).is_some()
         })
     }
 
@@ -208,10 +275,43 @@ impl PreparedColumn {
             .filter(|tree| tree.leaves_at(cell).is_some());
         let tree = crowns.next()?;
         // A neighbouring living tree retains shared crown cells.
-        (tree.leaves_at(cell)? as u16 == material && crowns.next().is_none()).then_some(tree.origin)
+        (terra_voxel::MaterialId::same_tree_material(material, tree.leaves_at(cell)? as u16)
+            && crowns.next().is_none())
+        .then_some(tree.origin)
     }
 
     /// Exact upper bound of generated terrain, water and trees in this prepared column.
+    /// One sample per falling column at the listener's elevation. Fluid
+    /// occupancy at the selected cell remains authoritative for sound.
+    pub fn nearest_waterfall(&self, section: SectionPos, ear: [f64; 3]) -> Option<[i64; 3]> {
+        let origin = section.origin().ok()?;
+        let mut nearest = None;
+        let mut distance = f64::INFINITY;
+        for &i in &self.fall_columns {
+            let x = origin[0] + (i % self.size) as i64 - self.padding as i64;
+            let z = origin[2] + (i / self.size) as i64 - self.padding as i64;
+            if x.div_euclid(16) != section.x || z.div_euclid(16) != section.z {
+                continue;
+            }
+            for span in self.columns[i].falls.into_iter().flatten() {
+                let low = i64::from(span.bottom).max(origin[1]);
+                let high = (i64::from(span.top) - 1).min(origin[1] + 15);
+                if low > high {
+                    continue;
+                }
+                let y = (ear[1].floor() as i64).clamp(low, high);
+                let point = [x, y, z];
+                let d = (0..3)
+                    .map(|j| (point[j] as f64 + 0.5 - ear[j]).powi(2))
+                    .sum();
+                if d < distance {
+                    distance = d;
+                    nearest = Some(point);
+                }
+            }
+        }
+        nearest
+    }
     pub fn maximum_height(&self) -> f64 {
         self.maximum
     }
@@ -274,8 +374,20 @@ impl PreparedColumn {
     ) -> Option<super::TreeAppearance> {
         self.trees.iter().find_map(|tree| {
             let generated = match material {
-                6 | 10 | 36 | 134 | 313 | 405 => tree.wood_at(global),
-                7..=9 | 132 | 133 | 195 | 310..=312 | 406 => tree.leaves_at(global),
+                6 | 10 | 36 | 134 | 313 | 405 | 643 | 646 | 679 | 680 => tree.wood_at(global),
+                7..=9
+                | 132
+                | 133
+                | 195
+                | 310..=312
+                | 606..=607
+                | 406
+                | 537..=540
+                | 585..=586
+                | 644
+                | 647
+                | 682
+                | 683 => tree.leaves_at(global),
                 _ => None,
             };
             generated
@@ -299,6 +411,19 @@ impl PreparedColumn {
                     tree.origin,
                     crate::fruit::generation_seed(self.config.seed.0, tree.origin),
                 )
+            })
+    }
+    /// Only the mineral basin around a generated vent receives thermal-water
+    /// optics. Nearby rivers and underground pools retain their own palette.
+    pub fn geothermal_water(&self, pos: [f64; 3]) -> bool {
+        self.natural_features
+            .iter()
+            .filter_map(|p| p.geyser)
+            .any(|[x, y, z]| {
+                let dy = pos[1] - y as f64;
+                let dx = pos[0] - x as f64 - 0.5;
+                let dz = pos[2] - z as f64 - 0.5;
+                (-5.0..=0.5).contains(&dy) && dx * dx + dz * dz <= 81.
             })
     }
     /// Existing immutable biome and surface data; this never resamples noise.
@@ -344,6 +469,32 @@ fn cave_eye_bounds(columns: &[SurfaceColumn], padding: usize, size: usize) -> Op
 #[cfg(all(test, feature = "bevy"))]
 mod felling_ownership_tests {
     use super::*;
+
+    #[test]
+    fn natural_savanna_trunks_resolve_owned_wood_for_felling() {
+        let terrain = crate::TerraGenerator::new(WorldConfig {
+            biome_definitions: Some(terra_core::BiomeDefinitions::default()),
+            ..Default::default()
+        })
+        .unwrap();
+        let roots = terrain.tree_appearance([-96, 0, 1152]);
+        let (foot, _) = roots
+            .tree_roots()
+            .find(|(_, kind)| {
+                matches!(
+                    kind,
+                    super::super::TreeAppearance::Acacia | super::super::TreeAppearance::Baobab
+                )
+            })
+            .unwrap();
+        let column = SectionGenerator::new(terrain)
+            .prepare_column([foot[0].div_euclid(16), foot[2].div_euclid(16)], false)
+            .unwrap();
+        assert!(column.felling_foot(foot));
+        let shape = column.felling_shape(foot).unwrap();
+        assert_eq!(shape.origin, foot);
+        assert_eq!(column.felling_owner(foot, shape.wood_material), Some(foot));
+    }
 
     #[test]
     fn tree_attribution_preserves_neighbor_wood_and_shared_crowns_in_generation_priority() {
@@ -433,13 +584,13 @@ impl SectionGenerator {
             .filter(|tree| {
                 !self
                     .terrain()
-                    .cave_structure_at(tree.origin[0] as f64 + 0.5, tree.origin[2] as f64 + 0.5)
+                    .cave_room_at(tree.origin[0] as f64 + 0.5, tree.origin[2] as f64 + 0.5)
                     .open_to_sky()
             })
             .collect();
         // Attachment searches are performed once per immutable column, not for
         // every vertical section or every terrain remesh.
-        let tree_props = trees
+        let mut tree_props: Vec<_> = trees
             .iter()
             .filter(|tree| {
                 [0, 2].into_iter().all(|axis| {
@@ -452,7 +603,24 @@ impl SectionGenerator {
             })
             .filter(|prop| [prop.section.x, prop.section.z] == coordinate)
             .collect();
+        if self.terrain().config().ecology_revision >= 15 {
+            for tree in &trees {
+                tree_props.extend(
+                    super::vegetation::palm_coconuts(tree, self.terrain().config().seed.0)
+                        .into_iter()
+                        .filter(|prop| [prop.section.x, prop.section.z] == coordinate),
+                );
+            }
+        }
         let natural_features = self.terrain().natural_patches(start, size);
+        self.prepare_falls(
+            start,
+            size,
+            &mut columns,
+            &structures,
+            &natural_features,
+            &trees,
+        );
         let mut minimum = columns
             .iter()
             .map(|c| {
@@ -475,14 +643,22 @@ impl SectionGenerator {
             maximum = maximum.max((tree.origin[1] + i64::from(tree.bounds.max[1])) as f64);
         }
         for patch in &natural_features {
-            if let Some(top) = patch.maximum() {
+            if let Some([bottom, top]) = patch.vertical_bounds() {
+                minimum = minimum.min(bottom as f64);
                 maximum = maximum.max(top as f64 + 1.0);
             }
         }
         if self.terrain().config().water && minimum < self.terrain().config().sea_level {
             maximum = maximum.max(self.terrain().config().sea_level);
         }
-        for level in columns.iter().filter_map(|column| column.water_level) {
+        for span in columns.iter().flat_map(|c| c.falls.into_iter().flatten()) {
+            maximum = maximum.max(f64::from(span.top) + 1.);
+            minimum = minimum.min(f64::from(span.bottom));
+        }
+        for level in columns
+            .iter()
+            .filter_map(|column| column.water_level.or(column.lava_level))
+        {
             maximum = maximum.max(level);
         }
         for column in columns.iter().filter(|column| column.ocean.ice_depth > 0) {
@@ -517,6 +693,12 @@ impl SectionGenerator {
                 .iter()
                 .any(|c| c.cave.surface_view_floor().is_some());
         Ok(PreparedColumn {
+            fall_columns: columns
+                .iter()
+                .enumerate()
+                .filter(|(_, c)| c.falls.iter().any(Option::is_some))
+                .map(|(i, _)| i)
+                .collect(),
             config: self.terrain().config().clone(),
             coordinate,
             padding,

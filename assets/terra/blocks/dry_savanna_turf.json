@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": 633,
+  "name": "Dry Savanna Grass Block",
+  "description": "A golden mat of sun-dried grass.",
+  "creative_category": "terrain",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "top": "textures/savanna/dry_savanna_turf_top.png",
+    "side": "textures/savanna/dry_savanna_turf_side.png",
+    "soil": "textures/savanna/dry_savanna_soil_side.png"
+  },
+  "materials": {
+    "top": {
+      "roughness": 0.91,
+      "reflectance": 0.09,
+      "normal_texture": "textures/savanna/dry_savanna_turf_top_normal.png"
+    },
+    "side": {
+      "roughness": 0.91,
+      "reflectance": 0.09,
+      "normal_texture": "textures/savanna/dry_savanna_turf_side_normal.png"
+    },
+    "soil": {
+      "roughness": 0.91,
+      "reflectance": 0.09,
+      "normal_texture": "textures/savanna/dry_savanna_soil_side_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "soil",
+    "top",
+    "side",
+    "side"
+  ]
+}

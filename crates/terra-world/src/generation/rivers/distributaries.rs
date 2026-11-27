@@ -80,12 +80,7 @@ impl TerraGenerator {
                     source[0] + (outlet.point[0] - source[0]) * MIN_LAND_REACH / length,
                     source[1] + (outlet.point[1] - source[1]) * MIN_LAND_REACH / length,
                 ];
-                if self.base_height_with_biome(
-                    check[0],
-                    check[1],
-                    self.climate_biome_at(check[0], check[1]),
-                ) <= self.config().sea_level + 1.0
-                {
+                if self.watershed_height(check[0], check[1]) <= self.config().sea_level + 1.0 {
                     continue;
                 }
                 // Prefer clear forks over a second almost-parallel centreline.
@@ -155,11 +150,7 @@ impl TerraGenerator {
                 path.points[a][0] + (path.points[b][0] - path.points[a][0]) * at.fract(),
                 along,
             );
-            let ground = self.base_height_with_biome(
-                point[0],
-                point[1],
-                self.climate_biome_at(point[0], point[1]),
-            );
+            let ground = self.watershed_height(point[0], point[1]);
             let Some(sample) = self.sample_drainage(path, point[0], point[1], None) else {
                 break;
             };
@@ -229,11 +220,7 @@ impl TerraGenerator {
         let mut caps = [0.0; POINTS];
         for i in 0..POINTS {
             let point = frame.world(points[i][0], points[i][2]);
-            ground[i] = self.base_height_with_biome(
-                point[0],
-                point[1],
-                self.climate_biome_at(point[0], point[1]),
-            );
+            ground[i] = self.watershed_height(point[0], point[1]);
             let mut support = f64::INFINITY;
             for along in [-0.5, -0.25, 0.0, 0.25, 0.5] {
                 let at = (i as f64 + along).clamp(0.0, (POINTS - 1) as f64);
@@ -247,8 +234,7 @@ impl TerraGenerator {
                         width * 1.4 + 2.0
                     };
                     let [x, z] = frame.world(cross + side * reach, at * step);
-                    support =
-                        support.min(self.base_height_with_biome(x, z, self.climate_biome_at(x, z)));
+                    support = support.min(self.watershed_height(x, z));
                 }
             }
             let reservoir = main.lake.is_some_and(|lake| {

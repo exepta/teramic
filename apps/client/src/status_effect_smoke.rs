@@ -68,7 +68,7 @@ struct Inspection {
     next_command: Instant,
 }
 
-const STAGES: [&str; 10] = [
+const STAGES: [&str; 12] = [
     "poison-1280",
     "freeze-1280",
     "regeneration-1280",
@@ -79,6 +79,8 @@ const STAGES: [&str; 10] = [
     "clear-compact",
     "nightvision-1280",
     "nightvision-clear-1280",
+    "bleeding-1280",
+    "bleeding-clear-1280",
 ];
 
 fn effects_for_stage(stage: usize) -> &'static [EffectKind] {
@@ -88,6 +90,7 @@ fn effects_for_stage(stage: usize) -> &'static [EffectKind] {
         2 => &[EffectKind::Regeneration],
         3 | 5 | 6 => &EffectKind::ALL,
         8 => &[EffectKind::NightVision],
+        10 => &[EffectKind::Bleeding],
         _ => &[],
     }
 }
@@ -244,16 +247,22 @@ fn check(world: &mut World, stage: usize) -> Result<(), String> {
             &tilt_ui::ElementClasses,
             &ComputedNode,
             &bevy::ui::UiGlobalTransform,
+            Option<&BackgroundColor>,
         )>()
         .iter(world)
-        .filter(|(classes, _, _)| {
+        .filter(|(classes, _, _, _)| {
             classes
                 .classes
                 .iter()
                 .any(|class| class == "status-effect-card")
         })
-        .map(|(_, node, transform)| Rect::from_center_size(transform.translation, node.size()))
-        .collect();
+        .map(|(_, node, transform, background)| {
+            if !background.is_some_and(|color| color.0.alpha() >= 0.99) {
+                return Err("The effect card has no edge-to-edge opaque background".to_string());
+            }
+            Ok(Rect::from_center_size(transform.translation, node.size()))
+        })
+        .collect::<Result<_, _>>()?;
     if cards.len() != card_count + usize::from(has_overflow) {
         return Err(format!(
             "HUD card binding mismatch: {} real nodes for {} cards and overflow={has_overflow}",
@@ -333,7 +342,8 @@ fn check(world: &mut World, stage: usize) -> Result<(), String> {
             .get(&handle)
             .ok_or("Missing effect icon atlas")?;
         let rect = rect.ok_or("Missing effect icon atlas rectangle")?;
-        if rect.min.cmplt(Vec2::ZERO).any()
+        if rect.size() != image.size().as_vec2() / 4.0
+            || rect.min.cmplt(Vec2::ZERO).any()
             || rect.max.cmpgt(image.size().as_vec2()).any()
             || rect.size().min_element() < 1.0
         {
@@ -484,6 +494,7 @@ mod tests {
             assert_eq!(effects_for_stage(stage), &EffectKind::ALL);
         }
         assert!(effects_for_stage(4).is_empty());
+        assert_eq!(effects_for_stage(10), &[EffectKind::Bleeding]);
         assert!(effects_for_stage(STAGES.len() - 1).is_empty());
     }
 

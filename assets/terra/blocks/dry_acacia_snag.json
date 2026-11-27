@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 665,
+  "name": "Dry Acacia Snag",
+  "description": "A sun-bleached trunk with broken branches.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/dry_acacia_snag.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.4,
+        0,
+        0.4
+      ],
+      "maximum": [
+        0.6,
+        0.56,
+        0.6
+      ]
+    }
+  ]
+}

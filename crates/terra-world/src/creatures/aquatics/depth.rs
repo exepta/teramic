@@ -11,11 +11,17 @@ pub(in crate::creatures) fn goal(a: &Creature, h: &Habitat) -> Option<f64> {
     if high < low {
         return None;
     }
-    // Hold a depth preference for 32 seconds: unlike a small sine offset about
-    // the current Y, this creates sustained dives through the water column.
-    let seed = random(a.id, (a.age / 32.0) as u64 ^ 0x6465_7074);
-    let fraction = 0.12 + (seed % 1001) as f64 / 1000.0 * 0.62;
-    Some(low + (high - low) * fraction)
+    let leg = (a.age / 42.0) as u64;
+    let seed = random(a.id, leg ^ 0x6465_7074);
+    let choice = (seed % 1001) as f64 / 1000.;
+    let above_bed = if (leg + a.id % 3).is_multiple_of(3) {
+        (high - low) * (0.28 + choice * 0.42)
+    } else {
+        // Feed among the fronds even in deep ocean, where a fraction of the
+        // full column can be many metres above the tallest seagrass.
+        0.12 + choice * (1.1 + a.size()[0] * 0.35)
+    };
+    Some(low + above_bed.min(high - low))
 }
 
 pub(super) fn course(a: &Creature, h: &Habitat, mut target: [f64; 3]) -> [f64; 3] {

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": 602,
+  "name": "Garden Fox Statue",
+  "description": "A little stone guardian wears a rose silk scarf.",
+  "creative_category": "decoration",
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/sakura_fox_statue.glb",
+  "hardness": 1.2,
+  "resistance": 2,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.16,
+        0,
+        0.16
+      ],
+      "maximum": [
+        0.84,
+        0.08,
+        0.83
+      ]
+    },
+    {
+      "minimum": [
+        0.19,
+        0.08,
+        0.19
+      ],
+      "maximum": [
+        0.81,
+        0.16,
+        0.8
+      ]
+    },
+    {
+      "minimum": [
+        0.337,
+        0.15,
+        0.51
+      ],
+      "maximum": [
+        0.423,
+        0.43,
+        0.63
+      ]
+    },
+    {
+      "minimum": [
+        0.5269999999999999,
+        0.15,
+        0.51
+      ],
+      "maximum": [
+        0.613,
+        0.43,
+        0.63
+      ]
+    },
+    {
+      "minimum": [
+        0.28,
+        0.16,
+        0.29
+      ],
+      "maximum": [
+        0.67,
+        0.84,
+        0.63
+      ]
+    }
+  ]
+}

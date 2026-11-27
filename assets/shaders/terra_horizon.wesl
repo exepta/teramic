@@ -54,6 +54,28 @@ fn voxel_sun(uv: vec2<f32>) -> vec4<f32> {
     return vec4<f32>(1.0, 0.61, 0.15, exp(-max(length(uv) - 1.0, 0.0) * 4.0) * 0.16);
 }
 
+// The angular texture is anchored to the disk as it follows the local sun or moon.
+fn crater_noise(p: vec2<f32>) -> f32 {
+    let base = floor(p);
+    let f = smoothstep(vec2<f32>(0.0), vec2<f32>(1.0), fract(p));
+    return mix(mix(hash(vec3<f32>(base, 17.0)), hash(vec3<f32>(base + vec2<f32>(1.0, 0.0), 17.0)), f.x),
+               mix(hash(vec3<f32>(base + vec2<f32>(0.0, 1.0), 17.0)), hash(vec3<f32>(base + 1.0, 17.0)), f.x), f.y);
+}
+
+fn ember_disk(uv: vec2<f32>) -> vec4<f32> {
+    let radius = length(uv);
+    if radius > 1.6 { return vec4<f32>(0.0); }
+    let rim = 1.0 - smoothstep(0.99, 1.01, radius);
+    let sky_glow = 0.23 * exp(-8.0 * max(radius - 1.0, 0.0));
+    let p = floor(uv * 75.0) / 75.0;
+    let depth = sqrt(max(0.0, 1.0 - dot(p, p)));
+    let strata = 0.52 * crater_noise(5.0 * p + depth) + 0.32 * crater_noise(p * 16.0)
+        + 0.16 * crater_noise(p * 38.0);
+    let pigment = smoothstep(0.26, 0.70, strata + depth * 0.13 + p.x * 0.11);
+    let surface = mix(vec3<f32>(0.49, 0.035, 0.057), vec3<f32>(1.48, 0.33, 0.042), pigment);
+    return vec4<f32>(mix(vec3<f32>(0.78, 0.19, 0.10), surface, rim), max(rim, sky_glow));
+}
+
 struct HorizonOutput {
     @location(0) color: vec4<f32>,
     @builtin(frag_depth) depth: f32,
@@ -68,10 +90,18 @@ fn fragment(in: VertexOutput) -> HorizonOutput {
     var celestial = vec4<f32>(0.0);
     if dot(direction, -moon.xyz) > 0.0 {
         celestial = voxel_sun(celestial_uv(direction, -moon.xyz, 0.065));
-        celestial.a *= sky.y * horizon;
+        celestial.a *= (1.0 - sky.z) * mix(0.44, 1.0, sky.y) * horizon;
     } else {
         celestial = voxel_moon(celestial_uv(direction, moon.xyz, 0.085));
         celestial.a *= moon.w * horizon;
+    }
+    let ash = (1.0 - sky.y) * (1.0 - sky.z);
+    if ash > 0.001 {
+        let axis = select(moon.xyz, -moon.xyz, -moon.y >= 0.0);
+        if dot(direction, axis) > 0.0 {
+            let volcanic = ember_disk(celestial_uv(direction, axis, 0.154));
+            celestial = mix(celestial, vec4<f32>(volcanic.rgb, volcanic.a * horizon), ash);
+        }
     }
     // Rotating 3D cells avoid a longitude seam or a cluster at the poles.
     let axis_y = dot(direction, vec3<f32>(0.0, 0.9, 0.4358899));
@@ -99,6 +129,16 @@ fn fragment(in: VertexOutput) -> HorizonOutput {
     var rgb = base_rgb * (1.0 - celestial_alpha)
         + celestial_rgb;
     var final_alpha = alpha;
+    // Warm suspended ash persists all the way to the zenith. The horizon fog
+    // and this gradual sky veil meet in the same linear HDR colour space.
+    if ash > 0.001 {
+        let altitude = smoothstep(-0.03, 0.85, direction.y);
+        let dusk = mix(0.24, 1.0, 1.0 - moon.w);
+        let canopy = mix(haze.color.rgb * vec3<f32>(1.20, 0.91, 0.84), vec3<f32>(0.12,0.072,0.145) * dusk, altitude);
+        let veil = ash * (0.88 + altitude * 0.06) * (1.0 - celestial_alpha);
+        rgb = rgb * (1.0 - veil) + canopy * veil;
+        final_alpha += (1.0 - final_alpha) * veil;
+    }
     // The sky shell also closes the submerged medium. Its old horizon-only
     // opacity left a black upper wedge when looking below finite water meshes.
     // This reuses the exact biome/daylight fog hue and costs no extra pass.

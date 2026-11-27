@@ -79,7 +79,7 @@ def tar_png(path, wet):
 def tar_assets():
     entries = [
         (437, 'wet_tar', 'Liquid Tar', 'Viscous, glossy tar on a prepared path. Flows slowly onto adjacent paths, then dries into a firm road.', True),
-        (438, 'dried_tar', 'Dried Tar Road', 'A cured tar film bonded to its compacted path. Its thickness preserves the amount poured.', False),
+        (438, 'dried_tar', 'Dried Tar Road', 'A cured tar film bonded to its compacted path. The finished surface sits flush with neighboring blocks.', False),
     ]
     for material, slug, name, description, wet in entries:
         tar_png(BLOCKS / f'textures/{slug}.png', wet)

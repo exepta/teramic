@@ -70,6 +70,13 @@ impl InventoryPointer {
         self.last_primary = None;
     }
 
+    pub(super) fn usage_item(&self) -> Option<&str> {
+        self.hovered
+            .as_ref()
+            .map(|target| target.item.as_str())
+            .filter(|item| !item.is_empty())
+    }
+
     pub(super) fn recipe_item(&self) -> Option<&str> {
         self.hovered
             .as_ref()

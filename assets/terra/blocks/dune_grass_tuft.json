@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 789,
+  "name": "Windbent Dune Grass",
+  "description": "Windbent Dune Grass",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.22,
+  "resistance": 1.1,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/dune_grass_tuft.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

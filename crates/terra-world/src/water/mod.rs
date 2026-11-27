@@ -2,13 +2,14 @@
 #[cfg(feature = "bevy")]
 pub mod buckets;
 mod channels;
+pub(crate) mod falls;
+#[cfg(feature = "bevy")]
+pub mod floating_plants;
 pub(crate) mod fluid;
-#[cfg(any(feature = "bevy", test))]
 pub(crate) mod fluid_mesh;
 #[cfg(feature = "bevy")]
 pub(crate) mod front;
 mod geometry;
-#[cfg(any(feature = "bevy", test))]
 pub(crate) mod tongue;
 #[cfg(feature = "bevy")]
 pub use front::{flowing_surface_height, leading_front};
@@ -62,6 +63,7 @@ pub struct WaterColumn {
 /// Independent bounded reservoirs may coexist above and below solid rock.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct WaterColumns {
+    pub(crate) falls: [Option<falls::Fall>; 3],
     pub intervals: [Option<WaterColumn>; 3],
 }
 impl WaterColumns {
@@ -83,6 +85,7 @@ impl WaterColumns {
 impl crate::TerraGenerator {
     pub fn water_columns(&self, x: f64, z: f64) -> WaterColumns {
         let mut columns = WaterColumns {
+            falls: [None; 3],
             intervals: [
                 self.natural_surface_water(x, z),
                 self.cave_structure_at(x, z).water,
@@ -123,15 +126,12 @@ impl crate::TerraGenerator {
             .map_or(surface, |cavity| surface.min(cavity[0]));
         let bed = (floor - 0.5).floor() + 1.0;
         let level = oasis
-            .filter(|sample| sample.distance <= sample.radius)
-            .map_or_else(
-                || {
-                    river.map_or(self.config().sea_level, |river| {
-                        river.water_level(self.config().sea_level)
-                    })
-                },
-                |sample| sample.level,
-            );
+            .and_then(|sample| sample.surface_water_level())
+            .unwrap_or_else(|| {
+                river.map_or(self.config().sea_level, |river| {
+                    river.water_level(self.config().sea_level)
+                })
+            });
         (bed < level).then_some(WaterColumn {
             level,
             bed,
@@ -141,6 +141,23 @@ impl crate::TerraGenerator {
 }
 
 pub(crate) fn build_natural_patch(
+    position: terra_voxel::SectionPos,
+    origin: [i64; 3],
+    columns: &[crate::SurfaceColumn],
+    padded: &[u16],
+    sea_level: f64,
+    river: bool,
+) -> Option<WaterPatch> {
+    let mut patch = build_reservoir_patch(position, origin, columns, padded, sea_level, river);
+    {
+        let mut flows = FluidSnapshot::new();
+        falls::add_cells(columns, origin, &mut flows, None);
+        fluid_mesh::append_fluid_patch(&mut patch, position, columns, padded, &flows, river);
+    }
+    patch
+}
+
+pub(crate) fn build_reservoir_patch(
     position: terra_voxel::SectionPos,
     origin: [i64; 3],
     columns: &[crate::SurfaceColumn],
@@ -232,6 +249,28 @@ mod natural_patch_tests {
         surface.river_cavity = None;
         surface.cave = CaveStructure::default();
         vec![surface; 18 * 18]
+    }
+
+    #[test]
+    fn floating_flowers_preserve_the_water_tile_on_flat_and_flowing_surfaces() {
+        use terra_voxel::MaterialId::{LilyPad, LotusFlower, PondBlossoms};
+        let owner = SectionPos::new(-1, 0, -1);
+        let origin = owner.origin().unwrap();
+        for level in [8.0, 8.375] {
+            let mut columns = columns();
+            for c in &mut columns {
+                c.water_level = Some(level);
+            }
+            let mut padded = vec![0; 18 * 18 * 18];
+            let bare = build_natural_patch(owner, origin, &columns, &padded, 8., true).unwrap();
+            for flower in [LilyPad, LotusFlower, PondBlossoms] {
+                let y = level.ceil() as usize + 1;
+                padded[1 + 18 * (y + 18)] = flower as u16;
+                let with_flower =
+                    build_natural_patch(owner, origin, &columns, &padded, 8., true).unwrap();
+                assert_eq!(bare, with_flower);
+            }
+        }
     }
 
     #[test]

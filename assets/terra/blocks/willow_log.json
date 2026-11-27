@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 679,
+  "name": "Willow Log",
+  "description": "Deeply furrowed bark surrounds the willow’s pale growth rings.",
+  "creative_category": "wood",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.6,
+  "resistance": 2.2,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/swamp/willow_log_side.png",
+    "end": "textures/swamp/willow_log_end.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.94,
+      "reflectance": 0.09,
+      "normal_texture": "textures/swamp/willow_log_side_normal.png"
+    },
+    "end": {
+      "roughness": 0.94,
+      "reflectance": 0.09,
+      "normal_texture": "textures/swamp/willow_log_end_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "end",
+    "end",
+    "side",
+    "side"
+  ]
+}

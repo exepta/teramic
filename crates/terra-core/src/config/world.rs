@@ -101,8 +101,10 @@ impl StructureSettings {
 pub struct WorldConfig {
     /// Saved ecology: 6 regional flora/cacti, 7 rooted birches, 8 buried Spirit fog stones,
     /// 9 fantasy arches/leaning spires and curled botanical clumps,
-    /// 10 monumental sweeping arches, 11 rare widely separated landmarks.
-    /// Absent in old saves retains their terrain; revisions 0–10 are unchanged.
+    /// 10 monumental arches, 11 widely separated landmarks, 12 woodland giants and glades,
+    /// 13 Plains meadows and farmsteads, taller mushroom groves and rarer pavilions.
+    /// 14 wooded trails and desert oases, 15 denser woods, sparse mesas, ocean and highland ecology; 16 volcanic provinces, 17 savanna grasslands, 18 willow swamps, 19 petrified forests.
+    /// Missing in older saves retains their original ecology.
     #[serde(default)]
     pub ecology_revision: u8,
     /// Spirit terrain contract: 1 blossom groves, 2 wetlands and grave sites.
@@ -195,7 +197,22 @@ pub struct WorldConfig {
     pub ores: crate::OreGeneration,
 }
 impl WorldConfig {
-    pub const CURRENT_STRUCTURES_REVISION: u8 = 15;
+    /// Historic world manifests can omit the ocean profile.
+    pub fn ocean_biome_config(&self) -> &super::OceanBiomeConfig {
+        self.biome_definitions
+            .as_ref()
+            .and_then(|defs| defs.get(super::BiomeKind::Ocean).ocean.as_ref())
+            .unwrap_or_else(|| {
+                super::BiomeDefinitions::builtin()
+                    .get(super::BiomeKind::Ocean)
+                    .ocean
+                    .as_ref()
+                    .expect("validated ocean defaults")
+            })
+    }
+
+    pub const CURRENT_ECOLOGY_REVISION: u8 = 22;
+    pub const CURRENT_STRUCTURES_REVISION: u8 = 16;
     pub const CURRENT_CAVE_STRUCTURE_REVISION: u8 = 13;
     pub const CURRENT_LANDSCAPE_REVISION: u8 = 9;
     pub const CURRENT_RIVER_TERRAIN_REVISION: u8 = 7;
@@ -286,7 +303,7 @@ impl WorldConfig {
 impl Default for WorldConfig {
     fn default() -> Self {
         Self {
-            ecology_revision: 11,
+            ecology_revision: Self::CURRENT_ECOLOGY_REVISION,
             spirit_blossom_revision: 2,
             blood_forest_revision: 1,
             natural_mob_limit: 256,
@@ -333,7 +350,7 @@ impl Default for WorldConfig {
 impl Config for WorldConfig {
     fn validate(&self) -> Result<(), ConfigError> {
         ensure(
-            self.ecology_revision <= 11,
+            self.ecology_revision <= Self::CURRENT_ECOLOGY_REVISION,
             "Unsupported world.ecology_revision",
         )?;
         ensure(

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 760,
+  "name": "Crystal Pennant",
+  "description": "Crystal Pennant",
+  "creative_category": "decoration",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crystal_pennant.glb",
+  "struct_block": true,
+  "hardness": 1.2,
+  "resistance": 4.0,
+  "required_tool": null,
+  "mining_level": 0,
+  "textures": {},
+  "collision_boxes": []
+}

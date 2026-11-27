@@ -277,6 +277,7 @@ pub(super) fn build(role: u8, female: bool) -> Sculpt {
         21 => feathers(&mut b),
         _ => {}
     }
+    swamp::head(&mut b, role);
     b
 }
 fn straw(b: &mut Sculpt) {

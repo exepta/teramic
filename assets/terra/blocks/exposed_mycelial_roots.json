@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 510,
+  "name": "Exposed Mycelial Roots",
+  "description": "Buttressed roots break through the moss.",
+  "creative_category": "nature",
+  "hardness": 0.65,
+  "resistance": 1.2,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/exposed_mycelial_roots.glb",
+  "textures": {},
+  "collision_boxes": []
+}

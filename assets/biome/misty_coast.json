@@ -1,0 +1,14 @@
+{
+  "biome": "misty_coast",
+  "selection_weight": 1.0,
+  "terrain": {
+    "min_height": 2.0,
+    "max_height": 54.0,
+    "horizontal_scale": 360.0,
+    "detail_strength": 0.26,
+    "relief_strength": 0.35,
+    "soil_depth": 2.0,
+    "tree_density": 0.42,
+    "terrace_strength": 0.2
+  }
+}

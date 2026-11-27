@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 501,
+  "name": "Blood Crystal Growth",
+  "description": "A cluster of ruby spires breaks through the stone.",
+  "creative_category": "nature",
+  "hardness": 0.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/blood_crystal_growth.glb",
+  "textures": {},
+  "struct_block": true,
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      1.0,
+      0.075,
+      0.1
+    ],
+    "intensity": 155,
+    "range": 6,
+    "falloff": "soft_core",
+    "flicker": 0,
+    "cave_intensity": 0.8,
+    "shadows": false
+  }
+}

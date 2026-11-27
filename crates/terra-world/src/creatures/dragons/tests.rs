@@ -30,7 +30,7 @@ fn hatchling_drinks_at_the_bank_sleeps_in_cover_and_only_launches_after_three_mo
         ..dry.config().clone()
     })
     .unwrap();
-    let mut a = adult(K::WaterDragon);
+    let mut a = adult(K::FireDragon);
     a.id = breeding::next_birth_id(&Default::default(), 0).unwrap();
     a.age = 0.;
     let nest = [8, 1, 12];
@@ -79,7 +79,7 @@ fn encounter_roars_at_a_visible_intruder_and_drops_aggro_behind_cover() {
     let (terrain, chunks, mut journal) = fixture();
     let mut a = adult(K::DarkDragon);
     let mut encounter = Encounter::new(&a, None);
-    let id = PlayerUuid::from_u128(1);
+    let id = Target::Player(PlayerUuid::from_u128(1));
     let players = [(id, [8.5, 2.1, -10.5])];
     {
         let h = Habitat {
@@ -123,7 +123,7 @@ fn breath_leads_a_running_target_then_keeps_its_warned_impact_point() {
     };
     let mut a = adult(K::WaterDragon);
     let mut encounter = Encounter::new(&a, None);
-    let id = PlayerUuid::from_u128(1);
+    let id = Target::Player(PlayerUuid::from_u128(1));
     let mut point = [5.5, 2.1, -8.5];
     encounter.step(&mut a, &h, 0.1, &[(id, point)], true, false);
     assert_eq!(a.behavior, B::Emerge);
@@ -151,8 +151,8 @@ fn water_vortex_pulls_bystanders_towards_locked_aim_but_spares_players_who_dodge
         journal: &journal,
     };
     let mut a = adult(K::WaterDragon);
-    let owner = PlayerUuid::from_u128(1);
-    let bystander = PlayerUuid::from_u128(2);
+    let owner = Target::Player(PlayerUuid::from_u128(1));
+    let bystander = Target::Player(PlayerUuid::from_u128(2));
     let mut encounter = Encounter::new(&a, None);
     encounter.target = Some(owner);
     a.behavior = B::Ink;
@@ -203,13 +203,13 @@ fn each_species_has_distinct_combat_moves_and_breath_uses_its_animated_mouth() {
             kind: NeedKind::AttackAim,
             position: [8, 2, -9],
         });
-        let id = PlayerUuid::from_u128(3);
+        let id = Target::Player(PlayerUuid::from_u128(3));
         let hit = encounter.strikes(
             &a,
             &h,
             &[
                 (id, [8.5, 2.5, -8.5]),
-                (PlayerUuid::nil(), [15.5, 2.5, -8.5]),
+                (Target::Player(PlayerUuid::nil()), [15.5, 2.5, -8.5]),
             ],
         );
         assert_eq!(hit.len(), 1, "{kind:?} muzzle {:?}", pose::muzzle(&a));
@@ -218,15 +218,22 @@ fn each_species_has_distinct_combat_moves_and_breath_uses_its_animated_mouth() {
 }
 
 #[test]
-fn all_three_guardians_use_the_walkable_entrance_fly_out_and_return_to_their_nest() {
+fn flying_guardians_use_the_walkable_entrance_fly_out_and_return_to_their_nest() {
     use crate::generation::sections::SectionGenerator;
     use crate::streaming::{ChunkStore, LoadedSection};
     use crate::{TerraGenerator, edits::EditJournal};
     use terra_voxel::{SectionPos, global_to_section};
 
-    let terrain = TerraGenerator::new(Default::default()).unwrap();
+    let terrain = TerraGenerator::new(terra_core::WorldConfig {
+        ecology_revision: 19,
+        ..Default::default()
+    })
+    .unwrap();
     let sections = SectionGenerator::new(terrain.clone());
-    for region in [[-1, 3], [-1, -5], [-6, 5]] {
+    for (region, variant) in [[-1, -5], [-6, 18]]
+        .into_iter()
+        .flat_map(|region| [(region, 0), (region, 3)])
+    {
         let site = terrain.structure_site(region).unwrap();
         let kind = site.kind.dragon().unwrap();
         let center = site.center;
@@ -282,14 +289,7 @@ fn all_three_guardians_use_the_walkable_entrance_fly_out_and_return_to_their_nes
             journal: &journal,
         };
         let mut a = adult(kind);
-        // For one real nest cover the longest possible route including the leash.
-        // Pick an age/identity whose first deterministic excursion targets the rim.
-        if kind == K::EarthDragon {
-            a.age = 1280.;
-            a.id = (1..10_000)
-                .find(|id| crate::generation::seed::layer_seed(id + 10, 0).is_multiple_of(353))
-                .unwrap();
-        }
+        a.variant = variant;
         a.position = [
             center[0] as f64 + 0.5,
             center[1] as f64,
@@ -316,14 +316,14 @@ fn all_three_guardians_use_the_walkable_entrance_fly_out_and_return_to_their_nes
         let mut prepared = std::collections::BTreeMap::new();
         let mut previous = None;
         for _ in 0..1850 {
-            // Follow the same moving 5x3x5 collision neighborhood as server
+            // Follow the same moving 5x4x5 collision neighborhood as server
             // streaming. Exercise the real trees and cave roofs along the sortie.
             let focus = global_to_section(a.position.map(|v| v.floor() as i64)).0;
             if previous != Some(focus) {
                 previous = Some(focus);
                 for z in focus.z - 2..=focus.z + 2 {
                     for x in focus.x - 2..=focus.x + 2 {
-                        for y in focus.y - 1..=focus.y + 1 {
+                        for y in focus.y - 1..=focus.y + 2 {
                             let pos = SectionPos::new(x, y, z);
                             if chunks.loaded.contains_key(&pos) {
                                 continue;
@@ -375,15 +375,13 @@ fn all_three_guardians_use_the_walkable_entrance_fly_out_and_return_to_their_nes
             }
         }
         eprintln!(
-            "{kind:?}: maximum horizontal distance {furthest:.1}, clearance {max_clearance:.1} blocks, returned {returned}"
+            "{kind:?} variant {variant}: maximum horizontal distance {furthest:.1}, clearance {max_clearance:.1} blocks, returned {returned}"
         );
         assert!(
             max_clearance >= 35.,
-            "{kind:?} cruising only {max_clearance:.1} above terrain"
+            "{kind:?} variant {variant} cruising only {max_clearance:.1} above terrain"
         );
-        if kind == K::EarthDragon {
-            assert!(furthest > 495., "long patrol stopped at {furthest}");
-        }
+
         assert!(
             returned && furthest > 140. && furthest <= ROAM_RADIUS,
             "{kind:?} launch={launch} fly={fly} land={land} far={furthest:.1} end={:?} position={:?} home={:?} patrol={:?} course={:?}",
@@ -527,7 +525,7 @@ fn flight_steers_over_canopy_on_the_approach_and_reaches_the_far_side() {
         chunks: &chunks,
         journal: &journal,
     };
-    let mut a = adult(K::EarthDragon);
+    let mut a = adult(K::FireDragon);
     a.position = [8.5, 8., 13.5];
     a.behavior = B::Fly;
     a.yaw = 0.;
@@ -557,6 +555,80 @@ fn flight_steers_over_canopy_on_the_approach_and_reaches_the_far_side() {
         "failed to clear the canopy: {:?} crest {crest}",
         a.position
     );
+}
+
+#[test]
+fn obstructed_apron_holds_in_flight_then_uses_a_new_strip_beyond_the_old_pad() {
+    use crate::streaming::LoadedSection;
+    use terra_voxel::{BlockSection, MaterialId, SectionPos};
+    let (terrain, mut chunks, journal) = fixture();
+    let mut a = adult(K::FireDragon);
+    let center = DVec3::new(8.5, 1., 12.5);
+    a.position = (center + DVec3::Y * 15.).to_array();
+    a.behavior = B::Fly;
+    a.yaw = std::f32::consts::PI;
+    let mut encounter = Encounter::new(&a, None);
+    for x in -4..=4 {
+        for z in -4..=5 {
+            for y in -1..=6 {
+                let pos = SectionPos::new(x, y, z);
+                chunks.loaded.insert(
+                    pos,
+                    LoadedSection {
+                        data: BlockSection::empty(pos).unwrap(),
+                        mesh: None,
+                        mesh_epoch: 0,
+                        water_epoch: 0,
+                        water: None,
+                        props: Vec::new(),
+                    },
+                );
+            }
+        }
+    }
+    let mut path_length = 0.;
+    for index in 0..800 {
+        if index == 170 {
+            // New footing appears well outside the original seven pad probes.
+            for x in -7..=24 {
+                for z in 33..=49 {
+                    let (sec, block) = terra_voxel::global_to_section([x, 0, z]);
+                    chunks
+                        .loaded
+                        .get_mut(&sec)
+                        .unwrap()
+                        .data
+                        .set_block(block, MaterialId::Stone as u16)
+                        .unwrap();
+                }
+            }
+        }
+        let h = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        a.age += 0.2;
+        let from = DVec3::from_array(a.position);
+        encounter.approach_pad(&mut a, &h, center, DVec3::Z, 0.2);
+        if index < 170 {
+            assert_eq!(a.behavior, B::Fly);
+            path_length += (DVec3::from_array(a.position) - from).with_y(0.).length();
+        }
+        if a.behavior == B::Land {
+            assert!(index >= 170 && a.position[2] >= 33.);
+            assert!(path_length > 40., "a moving hold, traveled {path_length}");
+            for _ in 0..35 {
+                encounter.step(&mut a, &h, 0.2, &[], true, false);
+                if !encounter.airborne {
+                    break;
+                }
+            }
+            assert!(!encounter.airborne && (a.position[1] - 1.).abs() < 0.01);
+            return;
+        }
+    }
+    panic!("never found new strip, last pose {:?}", a.position);
 }
 
 #[test]
@@ -608,7 +680,7 @@ fn walking_dragon_turns_before_descending_and_requires_a_reachable_front_tread()
 #[test]
 fn greater_dragon_volleys_hit_once_and_stop_at_a_new_wall() {
     let (terrain, chunks, mut journal) = fixture();
-    let target = PlayerUuid::from_u128(5);
+    let target = Target::Player(PlayerUuid::from_u128(5));
     let players = [(target, [8.5, 2.5, -7.5])];
     for expected in [true, false] {
         if !expected {
@@ -666,7 +738,7 @@ fn great_bloodlines_use_personal_defenses_a_safe_blink_and_raised_geysers() {
     a.timer *= 0.45;
     assert_eq!(pose::incoming_damage(&a, 10.), 3.);
     let prior = a.health;
-    lineages::resolve(&mut a, &h, pose::Lineage::Tidal, false, &[]);
+    lineages::resolve(&mut a, &h, pose::Lineage::Tidal, false, &[], None);
     assert!(a.health > prior && a.health <= a.kind.health());
     a.needs.goal = Some(NeedGoal {
         kind: NeedKind::AttackAim,
@@ -677,19 +749,427 @@ fn great_bloodlines_use_personal_defenses_a_safe_blink_and_raised_geysers() {
         &a,
         &h,
         &[
-            (PlayerUuid::from_u128(1), [8.5, 2., 0.5]),
-            (PlayerUuid::from_u128(2), [14.5, 2., 0.5]),
+            (Target::Player(PlayerUuid::from_u128(1)), [8.5, 2., 0.5]),
+            (Target::Player(PlayerUuid::from_u128(2)), [14.5, 2., 0.5]),
         ],
     );
     assert_eq!(hit.len(), 1);
     assert!(hit[0].impulse[1] > 8.);
     a.kind = K::DarkDragon;
     let before = a.position;
-    lineages::resolve(&mut a, &h, pose::Lineage::Shadow, false, &[]);
+    lineages::resolve(&mut a, &h, pose::Lineage::Shadow, false, &[], None);
     assert_ne!(a.position, before);
     assert!(h.clear_rotated(a.position, a.size(), false, f64::from(a.yaw)));
     a.needs.goal.as_mut().unwrap().position = [1000, 2, -600];
     let before = a.position;
-    lineages::resolve(&mut a, &h, pose::Lineage::Shadow, false, &[]);
+    lineages::resolve(&mut a, &h, pose::Lineage::Shadow, false, &[], None);
     assert_eq!(a.position, before);
+}
+
+#[test]
+fn changing_to_creative_releases_the_player_and_the_roost_guardian_walks_home() {
+    let (terrain, chunks, journal) = fixture();
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut a = adult(K::FireDragon);
+    let mut encounter = Encounter::new(&a, Some(([8, 1, 5], [0, 1])));
+    let target = Target::Player(PlayerUuid::from_u128(4));
+    encounter.step(&mut a, &h, 0.1, &[(target, [8.5, 2., 14.5])], false, false);
+    assert_eq!(encounter.target, Some(target));
+    // Aim away from the nest to exercise the pivot while returning to the roost.
+    a.yaw = std::f32::consts::PI;
+    for _ in 0..65 {
+        encounter.step(&mut a, &h, 0.1, &[], false, false);
+    }
+    assert_eq!(encounter.target, None);
+    assert!((a.position[2] - 5.5).abs() < 2.4, "{:?}", a.position);
+    assert!(matches!(a.behavior, B::Rest | B::Sleep));
+}
+
+#[test]
+fn a_low_flying_dragon_must_land_before_it_can_tremor_against_a_mob() {
+    let (terrain, chunks, journal) = fixture();
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut a = adult(K::FireDragon);
+    a.position[1] = 3.;
+    a.behavior = B::Fly;
+    let mut encounter = Encounter::new(&a, None);
+    let target = Target::Mob(7);
+    let prey = [(target, [8.5, 2., 2.5])];
+    encounter.step(&mut a, &h, 0.1, &prey, false, false);
+    assert_eq!(encounter.target, Some(target));
+    a.timer = 0.;
+    encounter.cooldown = 0.;
+    encounter.attack_number = 1;
+    assert_eq!(encounter.choose(a.kind, 10.), B::Tremor);
+    encounter.step(&mut a, &h, 0.1, &prey, false, false);
+    assert!(encounter.attack_pad.is_some());
+    assert!(matches!(a.behavior, B::Fly | B::Land));
+    let mut landed = false;
+    for _ in 0..220 {
+        encounter.step(&mut a, &h, 0.10, &prey, false, false);
+        landed |= a.behavior == B::Land;
+        if a.behavior == B::Tremor {
+            assert!(landed && on_ground(&a, &h));
+            return;
+        }
+    }
+    panic!(
+        "failed to touch down and stomp: {:?} {:?}",
+        a.behavior, a.position
+    );
+}
+
+#[test]
+fn a_tidal_guardian_spawns_in_the_ocean_and_dives_without_leaving_its_reef() {
+    use crate::streaming::{ChunkStore, LoadedSection};
+    use terra_voxel::{SectionPos, global_to_section};
+    let config = terra_core::WorldConfig {
+        ecology_revision: 19,
+        structures_revision: 16,
+        ..Default::default()
+    };
+    let terrain = crate::TerraGenerator::new(config).unwrap();
+    let site = terrain.structure_site([-6, 5]).unwrap();
+    assert_eq!(site.kind.dragon(), Some(K::WaterDragon));
+    let [x, y, z] = site.center;
+    let home = [x.div_euclid(32), z.div_euclid(32)];
+    let water = terrain
+        .water_columns(x as f64 + 0.5, z as f64 + 0.5)
+        .at(y)
+        .unwrap();
+    assert!(water.level > y as f64 + 14.);
+    let sections = crate::SectionGenerator::new(terrain.clone());
+    let (anchor, _) = global_to_section(site.center);
+    let mut chunks = ChunkStore::default();
+    for sx in anchor.x - 1..=anchor.x + 1 {
+        for sz in anchor.z - 1..=anchor.z + 1 {
+            let col = sections.prepare_column([sx, sz], true).unwrap();
+            for sy in anchor.y - 1..=anchor.y + 1 {
+                let pos = SectionPos::new(sx, sy, sz);
+                let section = sections
+                    .build_prepared(pos, 0, &Default::default(), &col)
+                    .unwrap();
+                chunks.loaded.insert(
+                    pos,
+                    LoadedSection {
+                        data: section.data,
+                        water: section.water,
+                        props: vec![],
+                        mesh: None,
+                        mesh_epoch: 0,
+                        water_epoch: 0,
+                    },
+                );
+            }
+        }
+    }
+    let journal = crate::edits::EditJournal::default();
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut population = terra_core::creatures::CreaturePopulation::default();
+    assert!(crate::creatures::spawn_cell_away_from_players(
+        &mut population,
+        &h,
+        home,
+        &[],
+        1
+    ));
+    let a = population.animals.values_mut().next().unwrap();
+    assert!(!flight::can_launch(a, &h));
+    let mut enc = Encounter::new(a, Some((site.center, site.dragon_entrance().unwrap())));
+    let base = DVec3::from_array(a.position);
+    let goal = base + DVec3::new(2., 3., 2.);
+    for _ in 0..14 {
+        enc.travel(a, &h, goal, 0.15, 5.);
+    }
+    assert_eq!(a.behavior, B::Swim);
+    let high = a.position[1];
+    assert!(high > base.y + 0.9);
+    for _ in 0..14 {
+        enc.travel(a, &h, base, 0.15, 5.);
+    }
+    assert!(a.position[1] < high - 0.8 && h.wet(a.position));
+    // Exercise the actual untargeted update, including entrance/patrol handling.
+    let mut travelled = 0.;
+    let mut excursion = 0_f64;
+    for _ in 0..370 {
+        let before = DVec3::from_array(a.position);
+        enc.step(a, &h, 0.1, &[], false, false);
+        let after = DVec3::from_array(a.position);
+        travelled += after.distance(before);
+        excursion = excursion.max(after.distance(base));
+        assert!(h.wet(a.position) && h.clear_swimmer_rotated(a.position, a.size(), a.yaw.into()));
+    }
+    assert!(
+        travelled > 14. && excursion > 7.,
+        "reef patrol travelled {travelled}, excursion {excursion}"
+    );
+}
+
+#[test]
+fn tidal_guardian_swims_around_an_edited_pillar_without_crossing_dry_or_unloaded_space() {
+    use crate::water::{FLUID_CAPACITY, FluidCell};
+    use terra_voxel::{BlockSection, MaterialId, SectionPos};
+    let (dry, mut chunks, mut journal) = fixture();
+    for x in -1..=1 {
+        for z in -1..=1 {
+            let pos = SectionPos::new(x, 1, z);
+            chunks.loaded.insert(
+                pos,
+                crate::streaming::LoadedSection {
+                    data: BlockSection::empty(pos).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: vec![],
+                },
+            );
+        }
+    }
+    let terrain = crate::TerraGenerator::new(terra_core::WorldConfig {
+        water: true,
+        sea_level: -60.,
+        ..dry.config().clone()
+    })
+    .unwrap();
+    let water = FluidCell {
+        amount: FLUID_CAPACITY,
+        source: true,
+        flow: [0, 0],
+    };
+    for x in -11..=28 {
+        for z in -10..=24 {
+            for y in 1..=14 {
+                journal.set_fluid([x, y, z], water).unwrap();
+            }
+        }
+    }
+    // A solid wall from bed to waterline forces a lateral, not a vertical detour.
+    for y in 1..=15 {
+        for z in 4..=8 {
+            journal.record([9, y, z], MaterialId::Stone as u16).unwrap();
+        }
+    }
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut a = crate::creatures::spawning::near(
+        &Default::default(),
+        &h,
+        terra_core::creatures::spawning::SpawnMob {
+            kind: K::WaterDragon,
+            variant: 0,
+        },
+        [-14.8, 3., 6.2],
+        std::f32::consts::PI * 1.5,
+    )
+    .unwrap();
+    assert_eq!(a.behavior, B::Swim);
+    let mut enc = Encounter::new(&a, None);
+    let submerged = DVec3::from_array(a.position);
+    a.position[1] = 13.5;
+    assert!(h.wet(a.position));
+    assert!(!h.wet([
+        a.position[0],
+        a.position[1] + a.size()[1] - 0.14,
+        a.position[2]
+    ]));
+    assert!(h.clear_swimmer_rotated(a.position, a.size(), a.yaw.into()));
+    for _ in 0..35 {
+        enc.travel(&mut a, &h, submerged, 0.1, 5.);
+    }
+    assert!(
+        a.position[1] < 6.,
+        "stranded at the waterline {:?}",
+        a.position
+    );
+    let goal = DVec3::new(19., 3., 6.);
+    assert!(h.clear_swimmer_rotated(a.position, a.size(), a.yaw.into()));
+    for _ in 0..135 {
+        enc.travel(&mut a, &h, goal, 0.1, 5.);
+        assert!(h.clear_swimmer_rotated(a.position, a.size(), a.yaw.into()) && h.wet(a.position));
+    }
+    assert!(
+        DVec3::from_array(a.position).distance(goal) < 2.,
+        "stopped at {:?}",
+        a.position
+    );
+}
+
+#[test]
+fn an_earth_dragon_dives_below_a_broad_natural_bank_and_reemerges() {
+    use crate::streaming::LoadedSection;
+    use terra_voxel::{BlockSection, MaterialId, SectionPos};
+    let (terrain, mut chunks, journal) = fixture();
+    for z in -1..=1 {
+        for x in -1..=1 {
+            let sec = SectionPos::new(x, -1, z);
+            let mut data = BlockSection::empty(sec).unwrap();
+            for nx in 0..16 {
+                for nz in 0..16 {
+                    data.set_block([nx, 15, nz], MaterialId::Stone as u16)
+                        .unwrap();
+                }
+            }
+            chunks.loaded.insert(
+                sec,
+                LoadedSection {
+                    data,
+                    water: None,
+                    props: vec![],
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                },
+            );
+        }
+    }
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut a = adult(K::EarthDragon);
+    let from = DVec3::from_array(a.position);
+    let mut e = Encounter::new(&a, None);
+    assert!(!flight::can_launch(&a, &h));
+    assert!(e.begin_tunnel(&mut a, &h, from - DVec3::Z * 15.));
+    let mut buried = false;
+    for _ in 0..46 {
+        a.timer = (a.timer - 0.1).max(0.);
+        if a.behavior != B::DragonBurrow {
+            break;
+        }
+        buried |= terra_core::creatures::dragon_pose::Pose::of(&a, 0.).submergence() > 0.95;
+        e.tunnel(&mut a, &h, 0.1);
+    }
+    assert!(buried && a.position[2] < from.z - 9. && a.behavior == B::Hunt);
+}
+
+#[test]
+fn shadow_gates_open_behind_the_victims_look_and_reject_an_unloaded_exit() {
+    let (terrain, chunks, journal) = fixture();
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut a = adult(K::DarkDragon);
+    a.behavior = B::DragonSurge;
+    a.needs.goal = Some(NeedGoal {
+        kind: NeedKind::AttackAim,
+        position: [8, 1, 0],
+    });
+    let target = [8.5, 2.0, 0.5];
+    let prey = [(Target::Player(PlayerUuid::from_u128(2)), target)];
+    for yaw in [0_f32, std::f32::consts::FRAC_PI_2] {
+        a.position = [8.5, 1., 12.5];
+        lineages::resolve(&mut a, &h, pose::Lineage::Shadow, false, &prey, Some(yaw));
+        let delta = DVec3::from_array(a.position) - DVec3::from_array(target);
+        let (s, c) = f64::from(yaw).sin_cos();
+        assert!(delta.dot(DVec3::new(s, 0., c)) > 7. && facing(&a, DVec3::from_array(target)));
+    }
+    let before = a.position;
+    a.needs.goal.as_mut().unwrap().position = [500, 1, 0];
+    lineages::resolve(&mut a, &h, pose::Lineage::Shadow, false, &prey, Some(0.));
+    assert_eq!(a.position, before);
+}
+
+#[test]
+fn grounded_fire_and_dark_guardians_make_combat_passes_and_land_to_hit() {
+    use crate::streaming::LoadedSection;
+    use terra_voxel::{BlockSection, SectionPos};
+    let (terrain, mut chunks, journal) = fixture();
+    for x in -3..=3 {
+        for z in -3..=3 {
+            for y in 0..=2 {
+                let p = SectionPos::new(x, y, z);
+                chunks.loaded.entry(p).or_insert_with(|| {
+                    let mut data = BlockSection::empty(p).unwrap();
+                    if y == 0 {
+                        for x in 0..16 {
+                            for z in 0..16 {
+                                data.set_block([x, 0, z], 3).unwrap();
+                            }
+                        }
+                    }
+                    LoadedSection {
+                        data,
+                        mesh: None,
+                        mesh_epoch: 0,
+                        water_epoch: 0,
+                        water: None,
+                        props: vec![],
+                    }
+                });
+            }
+        }
+    }
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    for (kind, variant, range) in [
+        (K::FireDragon, 0, 4.),
+        (K::DarkDragon, 0, 6.),
+        (K::FireDragon, 3, 22.),
+        (K::DarkDragon, 5, 18.),
+    ] {
+        let mut a = adult(kind);
+        a.variant = variant;
+        let mut encounter = Encounter::new(&a, None);
+        let target = [(
+            Target::Player(PlayerUuid::from_u128(112)),
+            [8.5, 1.95, 12.5 - range],
+        )];
+        let mut last = a.behavior;
+        let mut history = vec![];
+        let mut airborne_hit = false;
+        let mut landed = false;
+        let mut touchdown_hit = false;
+        for _ in 0..1100 {
+            let hits = encounter.step(&mut a, &h, 0.1, &target, true, false);
+            if last != a.behavior {
+                history.push(a.behavior);
+                last = a.behavior;
+            }
+            if hits.is_empty() {
+                continue;
+            }
+            if a.behavior == B::Spit
+                && a.needs
+                    .goal
+                    .is_some_and(|g| g.kind == NeedKind::AirborneAttackAim)
+            {
+                assert!(a.position[1] > 5.);
+                airborne_hit = true;
+            }
+            landed |= airborne_hit && history.contains(&B::Land);
+            if landed && a.behavior == B::Tremor {
+                assert!(on_ground(&a, &h));
+                touchdown_hit = true;
+                break;
+            }
+        }
+        assert!(
+            touchdown_hit,
+            "{kind:?}/{variant}, range {range}: flight hit {airborne_hit}, landed {landed}, {history:?}, final {:?}",
+            a.position
+        );
+    }
 }

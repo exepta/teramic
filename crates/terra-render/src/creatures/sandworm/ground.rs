@@ -1,5 +1,5 @@
 //! Ground-projected cached wedge patches, with bounded, throttled voxel probes.
-use super::super::{CreatureAnimationSet, CreatureAvatar, Limb, Motion, model::Part};
+use super::super::{CreatureAnimationSet, CreatureAvatar, Limb, Models, Motion, model::Part};
 use bevy::prelude::*;
 use terra_voxel::MaterialId;
 use terra_world::{edits::EditJournal, streaming::ChunkStore};
@@ -26,23 +26,24 @@ pub(in crate::creatures) fn install(app: &mut App) {
     app.add_systems(Update, conform.after(CreatureAnimationSet));
 }
 
+type GroundPatch = (
+    &'static ChildOf,
+    &'static Limb,
+    &'static mut Transform,
+    &'static mut Visibility,
+    &'static mut WaveGround,
+    &'static mut MeshMaterial3d<StandardMaterial>,
+);
+
 fn conform(
     time: Res<Time>,
     chunks: Option<Res<ChunkStore>>,
     journal: Option<Res<EditJournal>>,
+    models: Option<Res<Models>>,
     roots: Query<(&Transform, &Motion), With<CreatureAvatar>>,
-    mut patches: Query<
-        (
-            &ChildOf,
-            &Limb,
-            &mut Transform,
-            &mut Visibility,
-            &mut WaveGround,
-        ),
-        Without<CreatureAvatar>,
-    >,
+    mut patches: Query<GroundPatch, Without<CreatureAvatar>>,
 ) {
-    for (parent, limb, mut local, mut visible, mut sample) in &mut patches {
+    for (parent, limb, mut local, mut visible, mut sample, mut material) in &mut patches {
         if *visible == Visibility::Hidden {
             continue;
         }
@@ -79,6 +80,13 @@ fn conform(
             sample.anchor_y = anchor_y;
             sample.height =
                 supported_surface(cells, |cell| surface(chunks, journal, cell, anchor_y));
+            if let (Some(models), Some((height, _))) = (&models, sample.height) {
+                let cell = [cells[0][0], height as i64 - 1, cells[0][1]];
+                let block = journal.block(cell).or_else(|| chunks.block_at(cell));
+                if let Some(block) = block {
+                    apply_sand_material(&mut material, models, block);
+                }
+            }
         }
         if let Some((height, stepped)) = sample.height {
             if stepped {
@@ -93,6 +101,24 @@ fn conform(
         } else {
             *visible = Visibility::Hidden;
         }
+    }
+}
+
+pub(super) fn apply_sand_material(
+    material: &mut MeshMaterial3d<StandardMaterial>,
+    models: &Models,
+    block: u16,
+) {
+    let target = if matches!(
+        MaterialId::from_raw(block),
+        Some(MaterialId::RedDuneSand | MaterialId::RedSandstone)
+    ) {
+        &models.red_sand
+    } else {
+        &models.material
+    };
+    if &material.0 != target {
+        material.0 = target.clone();
     }
 }
 
@@ -154,13 +180,15 @@ pub(super) fn surface(
     for y in ((anchor_y - 5)..=(anchor_y + 3)).rev() {
         // An edit is meaningful only when its underlying streamed voxel is known.
         let cell = [x, y, z];
-        let block = journal.block(cell).unwrap_or(chunks.block_at(cell)?);
+        let edit = journal.block(cell);
+        let block = edit.unwrap_or(chunks.block_at(cell)?);
         let material = MaterialId::from_raw(block)?;
         if matches!(material, MaterialId::SolidWater | MaterialId::FluidWater) {
             return None;
         }
         if material.is_solid() {
-            return (material == MaterialId::Sand).then_some((y + 1) as f32);
+            return terra_core::creatures::sandworm::burrowable_ground(block, edit.is_some())
+                .then_some((y + 1) as f32);
         }
     }
     None
@@ -190,6 +218,14 @@ mod tests {
         );
         let mut journal = EditJournal::default();
         assert_eq!(surface(&chunks, &journal, [4, 4], 1), Some(1.0));
+        for block in [MaterialId::DuneSand, MaterialId::RedDuneSand] {
+            journal.record([4, 0, 4], block as u16).unwrap();
+            assert_eq!(surface(&chunks, &journal, [4, 4], 1), Some(1.0));
+        }
+        journal
+            .record([4, 0, 4], MaterialId::RedSandstone as u16)
+            .unwrap();
+        assert_eq!(surface(&chunks, &journal, [4, 4], 1), None);
         journal.record([4, 0, 4], MaterialId::Stone as u16).unwrap();
         assert_eq!(surface(&chunks, &journal, [4, 4], 1), None);
         journal.record([4, 0, 4], MaterialId::Sand as u16).unwrap();

@@ -1,0 +1,34 @@
+{
+  "id": "teramic::sakura_silk_banner",
+  "name": "Cherry Blossom Banner",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 604
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 127
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 135
+        },
+        "count": 1
+      },
+      {
+        "item": {
+          "block": 601
+        },
+        "count": 1
+      }
+    ]
+  }
+}

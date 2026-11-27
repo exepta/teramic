@@ -66,6 +66,28 @@ fn uneven_fans_share_faces_and_keep_free_tips_on_floor_and_ceiling() {
 }
 
 #[test]
+fn seagrass_has_square_tips_and_axis_aligned_sixteenth_block_steps() {
+    for seed in [[0, 0, 0], [13, -17, -27], [-5, 4, 97]] {
+        let mut tips = 0;
+        visit(50, seed, Profile::default(), false, |triangle, _| {
+            assert!(
+                triangle
+                    .iter()
+                    .flatten()
+                    .all(|&value| (value * 16.).fract() == 0.)
+            );
+            let [p, q, r] = triangle.map(bevy_math::Vec3::from_array);
+            let n = (q - p).cross(r - p);
+            assert_eq!(n.to_array().into_iter().filter(|&v| v != 0.).count(), 1);
+            if n.y > 0. && p.y == 1. {
+                tips += 1;
+            }
+        });
+        assert!(tips >= 2);
+    }
+}
+
+#[test]
 fn seagrass_stalks_meet_exactly_across_negative_vertical_section_seams() {
     for coarse in [false, true] {
         let seam = |position: [i64; 3], profile: Profile, height: f32| {

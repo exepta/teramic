@@ -1,0 +1,28 @@
+{
+  "id": "teramic::sakura_fox_statue",
+  "name": "Garden Fox Statue",
+  "station": "workbench",
+  "output": {
+    "item": {
+      "block": 602
+    },
+    "count": 1
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 597
+        },
+        "count": 3
+      },
+      {
+        "item": {
+          "block": 601
+        },
+        "count": 1
+      }
+    ]
+  }
+}

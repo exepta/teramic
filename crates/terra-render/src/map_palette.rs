@@ -1,52 +1,86 @@
 //! Capture texture albedos before render-only images release their CPU pixels.
 use bevy::{
-    asset::AssetId,
+    asset::{AssetEventSystems, AssetId},
     color::Srgba,
     prelude::*,
     render::render_resource::{TextureDimension, TextureFormat},
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use terra_core::MapPalette;
 
-#[derive(Resource, Default)]
-struct TextureMeans(HashMap<AssetId<Image>, [f32; 3]>);
+#[derive(Default)]
+struct PaletteSources {
+    materials: HashSet<AssetId<StandardMaterial>>,
+    // An entry without a mean also watches an image that is still loading.
+    textures: HashMap<AssetId<Image>, Option<[f32; 3]>>,
+}
 
 pub(crate) fn install(app: &mut App) {
+    // Asset events are flushed here; render extraction takes GPU-only pixels afterwards.
     app.init_resource::<MapPalette>()
-        .init_resource::<TextureMeans>()
-        .add_systems(PostStartup, update)
-        .add_systems(
-            Update,
-            update
-                .after(crate::blocks::poll_blocks)
-                .after(crate::appearance::update_weather_materials),
-        );
+        .add_systems(PostUpdate, update.after(AssetEventSystems));
+}
+
+fn event_id<A: Asset>(event: &AssetEvent<A>) -> AssetId<A> {
+    match *event {
+        AssetEvent::Added { id }
+        | AssetEvent::Modified { id }
+        | AssetEvent::LoadedWithDependencies { id }
+        | AssetEvent::Removed { id }
+        | AssetEvent::Unused { id } => id,
+    }
 }
 
 fn update(
     blocks: Res<crate::blocks::BlockAssets>,
     materials: Res<Assets<StandardMaterial>>,
     images: Res<Assets<Image>>,
-    mut means: ResMut<TextureMeans>,
+    mut sources: Local<PaletteSources>,
+    mut material_events: MessageReader<AssetEvent<StandardMaterial>>,
+    mut image_events: MessageReader<AssetEvent<Image>>,
     mut palette: ResMut<MapPalette>,
 ) {
-    if !blocks.is_changed() && !materials.is_changed() && !images.is_changed() {
-        return;
+    let mut dirty = blocks.is_changed();
+    if dirty {
+        sources.materials.clear();
+        sources
+            .materials
+            .extend(blocks.materials.iter().map(Handle::id));
     }
-    // Generated patterns exist before templates do; PNGs arrive incrementally.
-    // Keep only three floats per texture, never a second copy of its mip chain.
-    for handle in &blocks.materials {
-        let Some(texture) = materials
-            .get(handle)
-            .and_then(|material| material.base_color_texture.as_ref())
-        else {
-            continue;
-        };
-        if !means.0.contains_key(&texture.id())
-            && let Some(mean) = images.get(texture).and_then(texture_mean)
-        {
-            means.0.insert(texture.id(), mean);
+    for event in material_events.read() {
+        dirty |= sources.materials.contains(&event_id(event));
+    }
+    if dirty {
+        for handle in &blocks.materials {
+            if let Some(texture) = materials
+                .get(handle)
+                .and_then(|m| m.base_color_texture.as_ref())
+            {
+                sources
+                    .textures
+                    .entry(texture.id())
+                    .or_insert_with(|| images.get(texture).and_then(texture_mean));
+            }
         }
+    }
+    for event in image_events.read() {
+        let id = event_id(event);
+        if matches!(event, AssetEvent::Unused { .. }) {
+            sources.textures.remove(&id);
+            continue;
+        }
+        if let Some(mean) = sources.textures.get_mut(&id) {
+            // A sampler-only change can arrive after extraction has released the pixels.
+            let next = match images.get(id) {
+                Some(image) if image.data.is_none() => continue,
+                image => image.and_then(texture_mean),
+            };
+            dirty |= *mean != next;
+            *mean = next;
+        }
+    }
+    if !dirty {
+        return;
     }
     let Some(templates) = &blocks.templates else {
         return;
@@ -62,9 +96,15 @@ fn update(
         *air = [0.0; 3];
     }
     for (&id, block) in &templates.blocks {
+        let top = templates
+            .sculpted_blocks
+            .get(&id)
+            .map_or(block.face_materials[3], |shape| {
+                shape.core.face_materials[3]
+            });
         let Some(material) = blocks
             .materials
-            .get(block.face_materials[3])
+            .get(top)
             .and_then(|handle| materials.get(handle))
         else {
             continue;
@@ -76,21 +116,41 @@ fn update(
                 .cube_face_definition(id, 3)
                 .map(|definition| definition.base_color),
             material,
-            &means,
+            &sources,
         );
     }
     // The near model shares a grass/soil atlas. Its whole-image mean is not the
     // upper face; UpLod provides the exact tiled top used by the authored surface.
     let authored_grass = templates.cube_lods.contains_key(&1);
-    let surface_grass = templates
-        .cube_lods
+    let surface_grass = if templates
+        .sculpted_blocks
         .get(&1)
-        .and_then(|block| blocks.materials.get(block.face_materials[3]))
-        .and_then(|handle| materials.get(handle))
-        .map(|material| authored_grass_top_palette(material_albedo(None, material, &means)));
+        .is_some_and(|shape| shape.reference_grass)
+    {
+        colors.get(1).copied()
+    } else {
+        templates
+            .cube_lods
+            .get(&1)
+            .and_then(|block| blocks.materials.get(block.face_materials[3]))
+            .and_then(|handle| materials.get(handle))
+            .map(|material| authored_grass_top_palette(material_albedo(None, material, &sources)))
+    };
     let biome_colors = crate::appearance::LINEAR_COLORS.map(|c| [c[0], c[1], c[2]]);
     let water_colors = std::array::from_fn(|index| {
-        if index == 9 {
+        if index == 15 {
+            crate::water::biome::COAST_TINT
+        } else if index == 14 {
+            crate::water::biome::GLACIAL_TINT
+        } else if index == 13 {
+            crate::water::biome::PETRIFIED_TINT
+        } else if index == 12 {
+            crate::water::biome::SWAMP_TINT
+        } else if index == 11 {
+            crate::water::biome::SAVANNA_TINT
+        } else if index == 10 {
+            crate::water::biome::ASHLANDS_TINT
+        } else if index == 9 {
             crate::water::biome::BLOOD_TINT
         } else if index == 8 {
             crate::water::biome::SPIRIT_TINT
@@ -123,14 +183,13 @@ fn authored_grass_top_palette(color: [f32; 3]) -> [f32; 3] {
 fn material_albedo(
     authored: Option<[f32; 4]>,
     material: &StandardMaterial,
-    means: &TextureMeans,
+    sources: &PaletteSources,
 ) -> [f32; 3] {
     let base = stable_base_color(authored, material);
     let texture = material
         .base_color_texture
         .as_ref()
-        .and_then(|handle| means.0.get(&handle.id()))
-        .copied()
+        .and_then(|handle| *sources.textures.get(&handle.id())?)
         .unwrap_or([1.0; 3]);
     std::array::from_fn(|axis| (base[axis] * texture[axis]).clamp(0.0, 1.0))
 }
@@ -208,24 +267,31 @@ mod tests {
             details: Vec::new(),
             model: Vec::new(),
         };
-        let mut images = Assets::<Image>::default();
-        let mut materials = Assets::<StandardMaterial>::default();
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Image>()
+            .init_asset::<StandardMaterial>();
         let handles = [[102, 51, 25, 255], [51, 153, 25, 255]].map(|pixel| {
-            let texture = images.add(Image::new(
-                Extent3d {
-                    width: 1,
-                    height: 1,
-                    depth_or_array_layers: 1,
-                },
-                TextureDimension::D2,
-                pixel.to_vec(),
-                TextureFormat::Rgba8Unorm,
-                RenderAssetUsages::default(),
-            ));
-            materials.add(StandardMaterial {
-                base_color_texture: Some(texture),
-                ..default()
-            })
+            let texture = app
+                .world_mut()
+                .resource_mut::<Assets<Image>>()
+                .add(Image::new(
+                    Extent3d {
+                        width: 1,
+                        height: 1,
+                        depth_or_array_layers: 1,
+                    },
+                    TextureDimension::D2,
+                    pixel.to_vec(),
+                    TextureFormat::Rgba8Unorm,
+                    RenderAssetUsages::default(),
+                ));
+            app.world_mut()
+                .resource_mut::<Assets<StandardMaterial>>()
+                .add(StandardMaterial {
+                    base_color_texture: Some(texture),
+                    ..default()
+                })
         });
         let mut blocks = crate::blocks::BlockAssets::default();
         blocks.materials = handles.to_vec();
@@ -234,13 +300,8 @@ mod tests {
             cube_lods: HashMap::from([(1, block(1))]),
             ..default()
         }));
-        let mut app = App::new();
-        app.insert_resource(images)
-            .insert_resource(materials)
-            .insert_resource(blocks)
-            .init_resource::<TextureMeans>()
-            .init_resource::<MapPalette>()
-            .add_systems(Update, update);
+        app.insert_resource(blocks);
+        install(&mut app);
         app.update();
 
         let palette = app.world().resource::<MapPalette>();
@@ -255,6 +316,72 @@ mod tests {
         }
         assert!(surface[1] > palette.colors[1][1] * 2.0);
         assert!(palette.revision > 0);
+
+        let revision = palette.revision;
+        let _old_texture = app
+            .world()
+            .resource::<Assets<StandardMaterial>>()
+            .get(&handles[0])
+            .unwrap()
+            .base_color_texture
+            .clone();
+        let replacement = app.world().resource::<Assets<Image>>().reserve_handle();
+        app.world_mut()
+            .resource_mut::<Assets<StandardMaterial>>()
+            .get_mut_untracked(&handles[0])
+            .unwrap()
+            .base_color_texture = Some(replacement.clone());
+        // The unrelated change must not pick up the deliberately unreported rebind.
+        let _other = app
+            .world_mut()
+            .resource_mut::<Assets<StandardMaterial>>()
+            .add(StandardMaterial::default());
+        let _other_image = app
+            .world_mut()
+            .resource_mut::<Assets<Image>>()
+            .add(Image::default());
+        app.update();
+        assert_eq!(app.world().resource::<MapPalette>().revision, revision);
+
+        app.world_mut()
+            .resource_mut::<Assets<StandardMaterial>>()
+            .get_mut(&handles[0])
+            .unwrap()
+            .base_color_texture = Some(replacement.clone());
+        app.update();
+        assert_eq!(app.world().resource::<MapPalette>().colors[1], [1.0; 3]);
+
+        let mut image = Image::new(
+            Extent3d {
+                width: 1,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            vec![255, 0, 0, 255],
+            TextureFormat::Rgba8Unorm,
+            RenderAssetUsages::RENDER_WORLD,
+        );
+        for (pixel, expected) in [
+            ([255, 0, 0, 255], [1., 0., 0.]),
+            ([0, 0, 255, 255], [0., 0., 1.]),
+        ] {
+            image.data = Some(pixel.to_vec());
+            app.world_mut()
+                .resource_mut::<Assets<Image>>()
+                .insert(replacement.id(), image.clone())
+                .unwrap();
+            app.update();
+            assert_eq!(app.world().resource::<MapPalette>().colors[1], expected);
+            // Simulate the subsequent GPU extraction, then a sampler-only change.
+            app.world_mut()
+                .resource_mut::<Assets<Image>>()
+                .get_mut(&replacement)
+                .unwrap()
+                .data = None;
+            app.update();
+            assert_eq!(app.world().resource::<MapPalette>().colors[1], expected);
+        }
     }
 
     #[test]

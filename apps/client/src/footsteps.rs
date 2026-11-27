@@ -1,7 +1,7 @@
 //! Distance-driven contacts for local/remote players and replicated land animals.
 use bevy::prelude::*;
 use std::collections::HashMap;
-use terra_core::footsteps::{Footstep, FootstepSet, Walker};
+use terra_core::footsteps::{Footstep, FootstepSet, TrackSurface, Walker};
 use terra_network::client::{ClientSession, ReplicatedCreatures, ReplicatedPlayers};
 use terra_world::{
     creatures::Habitat,
@@ -144,13 +144,14 @@ fn update(
             return;
         };
         events.write(Footstep {
-            position: if matches!(material, 4 | 5) {
-                Vec3::new(feet.x, (support[1] + 1) as f32, feet.z)
-            } else if material == 98 {
+            creature: (key.0 == 2).then_some(key.1),
+            position: if material == terra_voxel::MaterialId::SnowLayer as u16 {
                 let layers = world.journal.object_state(support).map_or(1, |state| {
                     terra_core::construction::snow_layers(state.facing)
                 });
                 Vec3::new(feet.x, support[1] as f32 + f32::from(layers) / 8.0, feet.z)
+            } else if TrackSurface::from_block(material).is_some() {
+                Vec3::new(feet.x, (support[1] + 1) as f32, feet.z)
             } else {
                 feet
             },
@@ -188,26 +189,39 @@ fn update(
     }
     if let Some(animals) = &world.animals {
         for (id, track) in &animals.creatures {
-            use terra_core::creatures::CreatureKind;
+            use terra_core::creatures::{CreatureBehavior, CreatureKind};
+            if matches!(
+                track.current.behavior,
+                CreatureBehavior::Fly
+                    | CreatureBehavior::Swim
+                    | CreatureBehavior::Leap
+                    | CreatureBehavior::Ceiling
+                    | CreatureBehavior::Climb
+                    | CreatureBehavior::Descend
+                    | CreatureBehavior::Dead
+            ) {
+                continue;
+            }
             let walker = match track.current.kind {
-                CreatureKind::Cow | CreatureKind::Horse => Walker::Cow,
+                CreatureKind::Cow | CreatureKind::Horse | CreatureKind::Zebra => Walker::Cow,
                 CreatureKind::Sheep | CreatureKind::SpiritFox => Walker::Sheep,
                 CreatureKind::Pig => Walker::Pig,
-                CreatureKind::Bear => Walker::Bear,
-                CreatureKind::Stalker => Walker::Stalker,
+                CreatureKind::Bear | CreatureKind::Elephant => Walker::Bear,
+                CreatureKind::Stalker | CreatureKind::BloodStalker => Walker::Stalker,
                 CreatureKind::Villager | CreatureKind::Skeleton => Walker::Player,
-                CreatureKind::ThornBrute => Walker::Bear,
+                CreatureKind::StoneGolem | CreatureKind::ThornBrute => Walker::Bear,
                 CreatureKind::DarkDragon
+                | CreatureKind::FireDragon
                 | CreatureKind::EarthDragon
-                | CreatureKind::WaterDragon
-                | CreatureKind::Fish
+                | CreatureKind::WaterDragon => Walker::Dragon,
+                CreatureKind::BloodSlime => Walker::Slime,
+                CreatureKind::Fish
+                | CreatureKind::LavaWorm
                 | CreatureKind::SandWorm
                 | CreatureKind::Bee
                 | CreatureKind::Butterfly
                 | CreatureKind::SpiritGloom
                 | CreatureKind::Raven
-                | CreatureKind::BloodSlime
-                | CreatureKind::BloodStalker
                 | CreatureKind::BloodWisp
                 | CreatureKind::Squid
                 | CreatureKind::MoonJelly
@@ -220,7 +234,7 @@ fn update(
                 | CreatureKind::WhaleShark => continue,
                 CreatureKind::SmallSpider
                 | CreatureKind::MediumSpider
-                | CreatureKind::LargeSpider => continue,
+                | CreatureKind::LargeSpider => Walker::Spider,
             };
             let p = track.position();
             if listener.is_some_and(|l| l.distance_squared(p) <= 48.0 * 48.0) {
@@ -229,7 +243,11 @@ fn update(
                     p,
                     track.current.velocity[1].abs() < 0.1,
                     walker,
-                    if walker == Walker::Stalker {
+                    if walker == Walker::Dragon {
+                        2.7 * track.current.growth_scale() as f32
+                    } else if track.current.kind == CreatureKind::StoneGolem {
+                        terra_core::creatures::golem::STRIDE
+                    } else if walker == Walker::Stalker {
                         1.05
                     } else {
                         0.65

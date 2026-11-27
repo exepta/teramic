@@ -15,7 +15,9 @@
         1
       ],
       "roughness": 0.94,
-      "reflectance": 0.08
+      "reflectance": 0.08,
+      "normal_texture": "textures/sculpted/leaves_normal.png",
+      "double_sided": true
     },
     "Painted moss canopy_top": {
       "base_color": [
@@ -24,8 +26,10 @@
         1,
         1
       ],
-      "roughness": 0.94,
-      "reflectance": 0.08
+      "roughness": 0.89,
+      "reflectance": 0.08,
+      "normal_texture": "textures/sculpted/leaves_normal.png",
+      "double_sided": true
     },
     "leaf_cluster": {
       "base_color": [
@@ -61,8 +65,8 @@
   "required_tool": null,
   "mining_level": 0,
   "textures": {
-    "Painted moss canopy": "textures/foliage/oak_side.png",
-    "Painted moss canopy_top": "textures/foliage/oak_top.png",
+    "Painted moss canopy": "textures/sculpted/leaves.png",
+    "Painted moss canopy_top": "textures/sculpted/leaves.png",
     "leaf_cluster": "textures/foliage/oak_cluster.png",
     "needle_cluster": "textures/foliage/spruce_cluster.png"
   },

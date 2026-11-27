@@ -17,13 +17,13 @@ pub(super) struct Routes {
     surfaces: HashMap<[i64; 2], Surface>,
 }
 impl Routes {
-    pub(super) fn new(origin: [i64; 2], plots: &[Plot], farm: [[i64; 2]; 2]) -> Self {
+    pub(super) fn new(origin: [i64; 2], plots: &[Plot], farm: Option<[[i64; 2]; 2]>) -> Self {
         Self::with_radius(origin, plots, farm, RADIUS)
     }
     pub(super) fn with_radius(
         origin: [i64; 2],
         plots: &[Plot],
-        farm: [[i64; 2]; 2],
+        farm: Option<[[i64; 2]; 2]>,
         radius: i64,
     ) -> Self {
         let radius = radius.clamp(RADIUS, 84);
@@ -37,7 +37,7 @@ impl Routes {
             levels: HashMap::new(),
             surfaces: HashMap::new(),
         };
-        for bounds in plots.iter().map(Plot::bounds).chain([farm]) {
+        for bounds in plots.iter().map(Plot::bounds).chain(farm) {
             for z in bounds[0][1] - 2..=bounds[1][1] + 2 {
                 for x in bounds[0][0] - 2..=bounds[1][0] + 2 {
                     if let Some(i) = result.index([x, z]) {
@@ -46,11 +46,13 @@ impl Routes {
                 }
             }
         }
-        let gate = (farm[0][0] + farm[1][0]) / 2;
-        for z in farm[0][1] - 3..=farm[0][1] + 1 {
-            for x in gate - 1..=gate + 1 {
-                if let Some(i) = result.index([x, z]) {
-                    result.blocked[i] = false;
+        if let Some(farm) = farm {
+            let gate = (farm[0][0] + farm[1][0]) / 2;
+            for z in farm[0][1] - 3..=farm[0][1] + 1 {
+                for x in gate - 1..=gate + 1 {
+                    if let Some(i) = result.index([x, z]) {
+                        result.blocked[i] = false;
+                    }
                 }
             }
         }

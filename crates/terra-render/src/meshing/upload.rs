@@ -4,10 +4,7 @@ use super::{
 };
 use crate::blocks::BlockAssets;
 use bevy::ecs::system::SystemParam;
-use bevy::{
-    asset::RenderAssetUsages, camera::primitives::MeshAabb, math::Vec3A, mesh::PrimitiveTopology,
-    prelude::*,
-};
+use bevy::{camera::primitives::MeshAabb, math::Vec3A, prelude::*};
 use terra_world::edits::EditJournal;
 use terra_world::streaming::ChunkStore;
 
@@ -32,6 +29,20 @@ pub(crate) struct RenderWorld<'w, 's> {
     time: Option<Res<'w, Time>>,
     entering: Query<'w, 's, (), With<crate::transitions::ChunkFade>>,
     queued: Query<'w, 's, (), With<crate::transitions::QueuedChunk>>,
+    residents: Query<'w, 's, &'static super::resident::PublishedMeshes>,
+    parents: Query<'w, 's, (&'static Visibility, &'static Children)>,
+    draw_children: Query<'w, 's, super::published_children::DrawChild>,
+}
+
+impl RenderWorld<'_, '_> {
+    fn wind_layout(&self, slot: usize, rooted: bool) -> bool {
+        self.foliage.as_ref().is_some_and(|assets| {
+            assets.materials.contains_key(&slot)
+                || assets.flames.contains_key(&slot)
+                || assets.reference.contains_key(&slot)
+                || rooted && assets.fibres.contains_key(&slot)
+        })
+    }
 }
 
 pub(crate) fn upload_sections(
@@ -82,7 +93,7 @@ pub(crate) fn upload_sections(
         });
     if world.chunks.is_changed() {
         rendered
-            .block_revisions
+            .presentations
             .retain(|p, _| chunks.loaded.contains_key(p));
         let removed: Vec<_> = rendered
             .sections
@@ -108,6 +119,7 @@ pub(crate) fn upload_sections(
         .map(|c| &c.client)
         .or(fallback.as_ref())
         .unwrap();
+    let mut deferred_new_residents = false;
     let mut positions: Vec<_> = jobs.0.keys().copied().collect();
     positions.sort_by_key(|p| {
         (
@@ -150,6 +162,9 @@ pub(crate) fn upload_sections(
         }
         if let Some((mut result, seconds)) = poll_job(job) {
             let previous = rendered.sections.get(&position);
+            let refinement = previous.is_some_and(|old| {
+                old.mesh_epoch == job.epoch && old.appearance_epoch == job.appearance_epoch
+            });
             let stale_detail = world.focus.as_ref().is_some_and(|focus| {
                 super::lod::select_configured_micro_detail(
                     position,
@@ -157,6 +172,15 @@ pub(crate) fn upload_sections(
                     previous.map(|r| r.micro_detail),
                     client.blocks,
                 ) != job.micro_detail
+                    || job.folded_leaves.is_some_and(|folded| {
+                        folded.at_focus(
+                            position,
+                            focus.0,
+                            previous.and_then(|r| r.folded_leaves),
+                            job.level,
+                            client.blocks.leaf_geometry_quality,
+                        ) != folded
+                    })
                     || super::lod::select_level(
                         position,
                         focus.0,
@@ -190,6 +214,7 @@ pub(crate) fn upload_sections(
                     && old.mesh_epoch == job.epoch
                     && old.appearance_epoch == job.appearance_epoch
                     && old.detail_level == job.level
+                    && old.folded_leaves == job.folded_leaves
                     && old.micro_detail == job.micro_detail
             }) {
                 if let Ok(batches) = &mut result {
@@ -212,6 +237,8 @@ pub(crate) fn upload_sections(
                         );
                         false
                     } else {
+                        batch.paired_leaf_shadow = false;
+                        batch.profile_leaf_shadow = false;
                         true
                     }
                 });
@@ -223,7 +250,19 @@ pub(crate) fn upload_sections(
                 break;
             }
             let mut deferred = false;
+            let mut borrowed_any = false;
             if let (Ok(batches), Ok(origin)) = (&mut result, position.origin()) {
+                // The optional far-group experiment needs the original CPU mesh
+                // for aggregate construction. Only reuse where that copy is unnecessary.
+                let residents = previous
+                    .filter(|_| world.far.is_none() || job.level == super::DetailLevel::Near)
+                    .and_then(|old| {
+                        Some((
+                            old.entity,
+                            world.residents.get(old.entity).ok()?,
+                            old.meshes.as_slice(),
+                        ))
+                    });
                 let tint = world
                     .terrain
                     .as_ref()
@@ -243,15 +282,33 @@ pub(crate) fn upload_sections(
                     if batch.positions.is_empty() || !batch.has_indices() {
                         continue;
                     }
+                    if let Some(piece) = &mut batch.source {
+                        piece.set_wind_layout(
+                            world.wind_layout(batch.material, !batch.rooted_wind.is_empty()),
+                        );
+                    }
+                    if let (Some(piece), Some((owner, residents, owned))) =
+                        (&batch.source, residents)
+                        && let Some(prepared) = residents.find(piece, owned, &meshes)
+                    {
+                        batch.borrow_resident(owner, prepared);
+                        borrowed_any = true;
+                        continue;
+                    }
+                    // No further new uploads in a blocked section, but later
+                    // resident matches can still shed their CPU buffers now.
+                    if deferred {
+                        continue;
+                    }
                     if world.budget.as_mut().is_some_and(|budget| {
-                        !budget.reserve_batch_bytes(
-                            crate::upload_budget::UploadKind::Terrain,
+                        !budget.reserve_terrain_batch(
                             batch.positions.len(),
                             crate::upload_budget::batch_bytes(batch),
+                            refinement,
                         )
                     }) {
                         deferred = true;
-                        break;
+                        continue;
                     }
                     prepare_batch(
                         batch,
@@ -259,14 +316,19 @@ pub(crate) fn upload_sections(
                         &assets,
                         tint.as_ref().map(|t| (t, origin, column.as_deref())),
                         &mut meshes,
-                        job.level == super::DetailLevel::Far,
+                        job.level != super::DetailLevel::Near,
                     );
                 }
             }
             if deferred {
+                deferred_new_residents |= borrowed_any;
                 // Keep prepared assets private until the complete replacement
                 // can publish atomically; subsequent frames stage only the rest.
                 job.ready = Some((result, seconds));
+                if refinement {
+                    // New sections can still use the headroom reserved for them.
+                    continue;
+                }
                 break;
             }
             status.completed_mesh_jobs += 1;
@@ -278,11 +340,14 @@ pub(crate) fn upload_sections(
                 job.appearance_epoch,
                 job.level,
                 job.micro_detail,
+                job.folded_leaves,
                 result,
             ));
         }
     }
-    for (position, epoch, appearance_epoch, level, micro_detail, mut result) in completed {
+    for (position, epoch, appearance_epoch, level, micro_detail, folded_leaves, mut result) in
+        completed
+    {
         jobs.0.remove(&position);
         if epoch != world.journal.mesh_epoch(position)
             || appearance_epoch
@@ -309,6 +374,56 @@ pub(crate) fn upload_sections(
                 continue;
             }
         };
+        // Only transfer ownership after the full replacement can commit. Until
+        // then stale, cancelled or partial jobs own only their freshly staged assets.
+        let previous = rendered.sections.get(&position);
+        let lost_resident = batches.iter().any(|batch| {
+            let Some(owner) = batch.borrowed_from else {
+                return false;
+            };
+            let staged = batch
+                .staged
+                .as_ref()
+                .expect("resident batch has a staged handle");
+            world.far.is_some() && level != super::DetailLevel::Near
+                || !world.residents.contains(owner)
+                || previous
+                    .is_none_or(|old| old.entity != owner || !old.meshes.contains(&staged.handle))
+                || !meshes.contains(staged.handle.id())
+                || !batch.source.as_ref().is_some_and(|source| {
+                    source.supports_wind_layout(world.wind_layout(batch.material, staged.rooted))
+                })
+        });
+        if lost_resident {
+            crate::upload_budget::release_staged(&mut batches, &mut meshes);
+            jobs.1.push(position);
+            continue;
+        }
+        let edited = super::jobs::interactive_edit(position, &world.journal, &rendered);
+        let reused: std::collections::HashSet<_> = batches
+            .iter_mut()
+            .filter_map(|batch| {
+                batch.borrowed_from.take()?;
+                let id = batch.staged.as_ref().unwrap().handle.id();
+                let source = batch.source.as_ref().unwrap();
+                let bytes = source.bytes();
+                if source.has_wind_layout() {
+                    status.reused_wind_meshes += 1;
+                    status.reused_wind_bytes += bytes as u64;
+                }
+                if batch.shadow_only {
+                    status.reused_shadow_meshes += 1;
+                    status.reused_shadow_bytes += bytes as u64;
+                } else if edited {
+                    status.reused_edit_meshes += 1;
+                    status.reused_edit_bytes += bytes as u64;
+                } else {
+                    status.reused_streaming_meshes += 1;
+                    status.reused_streaming_bytes += bytes as u64;
+                }
+                Some(id)
+            })
+            .collect();
         // Bevy's mesh allocator must not receive an empty vertex/index buffer.
         // Empty section results still retire an obsolete mesh below.
         batches.retain(|batch| batch.staged.is_some());
@@ -318,10 +433,8 @@ pub(crate) fn upload_sections(
         // Building is an immediate world update, not another generated-chunk
         // entrance. This also covers the first block in a previously empty section.
         let revision = world.journal.revision(position);
-        let edited = rendered
-            .block_revisions
-            .insert(position, revision)
-            .is_some_and(|previous| previous != revision);
+        let edited =
+            rendered.record_presentation(position, revision, batches.is_empty().then_some(epoch));
         let first_upload = !edited
             && rendered.sections.get(&position).is_none_or(|old| {
                 world.queued.contains(old.entity) || world.entering.contains(old.entity)
@@ -329,6 +442,7 @@ pub(crate) fn upload_sections(
         if let Some(history) = motion.as_deref_mut() {
             let now = world.time.as_ref().map_or(0.0, |time| time.elapsed_secs());
             for kind in [
+                crate::liquid_motion::Kind::Lava,
                 crate::liquid_motion::Kind::Galle,
                 crate::liquid_motion::Kind::Tar,
             ] {
@@ -338,6 +452,11 @@ pub(crate) fn upload_sections(
                     }) == Some(kind)
                 });
                 if present {
+                    if kind == crate::liquid_motion::Kind::Lava
+                        && !batches.iter().any(|b| b.flowing_lava)
+                    {
+                        history.remove(crate::liquid_motion::Key(position, kind));
+                    }
                     continue;
                 }
                 // Curing changes the road's surface material in place; a wet
@@ -382,20 +501,41 @@ pub(crate) fn upload_sections(
                 }
             }
         }
-        if let Some(old) = rendered.sections.remove(&position) {
+        let mut previous = rendered.sections.remove(&position);
+        if let Some(old) = &mut previous {
             if old.mesh_epoch == epoch && old.detail_level != level {
                 crate::transitions::record_swap(&mut commands);
             }
-            // Pending and stale jobs leave the old root intact. A valid result
-            // replaces both roots in this system's single deferred command commit.
-            remove_section(old, &mut commands);
+            old.meshes.retain(|mesh| !reused.contains(&mesh.id()));
         }
-        if batches.is_empty() {
+        let origin = position.origin();
+        if batches.is_empty() || origin.is_err() {
+            if let Some(old) = previous {
+                remove_section(old, &mut commands);
+            }
             continue;
         }
-        let Ok(origin) = position.origin() else {
-            continue;
-        };
+        let origin = origin.unwrap();
+        // Fade/queued materials and optional aggregated far batches have their
+        // own ownership. Only transfer live, settled children in the normal path.
+        let mut candidates = std::collections::HashMap::<_, Vec<Entity>>::new();
+        if !first_upload
+            && !reused.is_empty()
+            && world.far.is_none()
+            && let Some(old) = &previous
+            && !world.queued.contains(old.entity)
+            && !world.entering.contains(old.entity)
+            && let Ok((visibility, children)) = world.parents.get(old.entity)
+            && *visibility != Visibility::Hidden
+        {
+            for child in children.iter() {
+                if let Ok(draw) = world.draw_children.get(child)
+                    && reused.contains(&draw.mesh.0.id())
+                {
+                    candidates.entry(draw.mesh.0.id()).or_default().push(child);
+                }
+            }
+        }
         let root = commands
             .spawn((
                 Name::new(format!(
@@ -417,28 +557,34 @@ pub(crate) fn upload_sections(
             .flat_map(|batch| batch.shadow_sources.iter().copied())
             .collect();
         let mut handles = Vec::with_capacity(batches.len());
+        let mut residents = super::resident::PublishedMeshes::default();
         for mut batch in batches {
             let shadow_only = batch.shadow_only;
             let mut prepared = batch.staged.take().expect("complete upload is atomic");
-            if let Some(mut mesh) = prepared.liquid.take()
-                && let Some(history) = motion.as_deref_mut()
-                && let Some(kind) = assets.templates.as_ref().and_then(|templates| {
-                    crate::liquid_motion::Kind::material(templates, batch.material)
-                })
-            {
-                let now = world.time.as_ref().map_or(0.0, |time| time.elapsed_secs());
-                history.prepare(
-                    crate::liquid_motion::Key(position, kind),
-                    &mut mesh,
-                    now,
-                    !first_upload,
-                    batch.material,
-                );
-                prepared.bounds = crate::liquid_motion::bounds(&mesh);
-                if let Err(error) = meshes.insert(prepared.handle.id(), mesh) {
-                    tracing::error!(%error,"Fluid interpolation mesh publication failed");
+            if let Some(piece) = batch.source.take() {
+                residents.record(piece, &prepared);
+            }
+            if let Some(mut mesh) = prepared.liquid.take() {
+                if let Some(history) = motion.as_deref_mut()
+                    && let Some(kind) = assets.templates.as_ref().and_then(|templates| {
+                        crate::liquid_motion::Kind::material(templates, batch.material)
+                    })
+                {
+                    let now = world.time.as_ref().map_or(0.0, |time| time.elapsed_secs());
+                    history.prepare(
+                        crate::liquid_motion::Key(position, kind),
+                        &mut mesh,
+                        now,
+                        !first_upload,
+                        batch.material,
+                    );
+                    prepared.bounds = crate::liquid_motion::bounds(&mesh);
                 }
-                prepared.far = None;
+                // This strong, reserved handle has never held an asset. Publish
+                // the final geometry once, including when interpolation is absent.
+                meshes
+                    .insert(prepared.handle.id(), mesh)
+                    .expect("staged liquid retains its reserved mesh handle");
             }
             let rooted_fibre = prepared.rooted;
             let damp = prepared.damp;
@@ -449,10 +595,13 @@ pub(crate) fn upload_sections(
                     .is_some_and(|t| t.water_material(batch.material))
             });
             let coastal_quads = prepared.coastal_quads;
-            let foliage = world
-                .foliage
-                .as_ref()
-                .and_then(|a| a.materials.get(&batch.material));
+            let foliage = world.foliage.as_ref().and_then(|a| {
+                if shadow_only && batch.profile_leaf_shadow {
+                    a.profile_shadows.get(&batch.material)
+                } else {
+                    a.materials.get(&batch.material)
+                }
+            });
             let flame = world
                 .foliage
                 .as_ref()
@@ -464,71 +613,32 @@ pub(crate) fn upload_sections(
                 .and_then(|assets| assets.fibres.get(&batch.material));
             let bounds = prepared.bounds;
             let handle = prepared.handle;
-            let mut entity =
-                commands.spawn((Mesh3d(handle.clone()), Transform::default(), ChildOf(root)));
-            if let Some(bounds) = bounds {
-                entity.insert((bounds, bevy::camera::visibility::NoAutoAabb));
-            }
-            if shadow_only {
-                entity.insert((
-                    super::shadows::ShadowProxy,
-                    bevy::camera::visibility::RenderLayers::layer(super::shadows::LAYER),
-                ));
-            } else {
-                entity.insert((
-                    crate::miniature::layers(),
-                    terra_core::miniature::MiniatureMesh::Terrain,
-                ));
-            }
-            if prepared.opaque_shadow
+            use super::published_children::{DrawRole, Surface};
+            let surface = if prepared.opaque_shadow
                 && let Some(material) = world.shadow_material.as_ref()
             {
-                entity.insert(MeshMaterial3d(material.0.clone()));
+                Surface::Standard(&material.0)
             } else if let Some(water) = water {
-                if coastal_quads > 0 {
-                    entity.insert(super::CoastalWashQuads(coastal_quads));
-                }
-                entity.insert((
-                    MeshMaterial3d(water.0.clone()),
-                    bevy::light::NotShadowCaster,
-                ));
+                Surface::Water(&water.0)
             } else if let Some(material) = flame {
-                entity.insert((
-                    MeshMaterial3d(material.clone()),
-                    bevy::light::NotShadowCaster,
-                ));
-                if let Some(bounds) = bounds {
-                    entity.insert(bounds);
-                }
+                Surface::Flame(material)
             } else if let Some(material) = world
                 .foliage
                 .as_ref()
                 .and_then(|a| a.reference.get(&batch.material))
             {
-                entity.insert(MeshMaterial3d(material.clone()));
-                if let Some(bounds) = bounds {
-                    entity.insert(bounds);
-                }
+                Surface::Standard(material)
             } else if let Some(material) = foliage {
-                entity.insert((
-                    MeshMaterial3d(material.clone()),
-                    crate::foliage::WindFoliage,
-                ));
-                if let Some(bounds) = bounds {
-                    entity.insert(bounds);
-                }
+                Surface::Leaf(material)
             } else if let Some(material) = fibre {
-                entity.insert((MeshMaterial3d(material.clone()), crate::foliage::WindFibre));
-                if let Some(bounds) = bounds {
-                    entity.insert(bounds);
-                }
+                Surface::Fibre(material)
             } else if let Some(material) = world
                 .wet
                 .as_ref()
                 .filter(|_| damp)
                 .and_then(|wet| wet.0.get(&batch.material))
             {
-                entity.insert(MeshMaterial3d(material.clone()));
+                Surface::Wet(material)
             } else if let Some(material) = world
                 .depth
                 .as_ref()
@@ -540,21 +650,90 @@ pub(crate) fn upload_sections(
                 })
                 .and_then(|depth| depth.0.get(&batch.material))
             {
-                entity.insert(MeshMaterial3d(material.clone()));
+                Surface::Depth(material)
             } else {
-                entity.insert(MeshMaterial3d(assets.materials[batch.material].clone()));
-            }
+                Surface::Standard(&assets.materials[batch.material])
+            };
             let permanently_shadowless = assets.templates.as_ref().is_some_and(|t| {
                 t.glass_material(batch.material)
                     || t.torch_material(batch.material)
                     || t.fog_material(batch.material)
                     || t.bile_material(batch.material)
             });
-            let replaced_caster = !shadow_only && shadowed_materials.contains(&batch.material);
-            if replaced_caster && !permanently_shadowless {
+            let replaced_caster = !shadow_only
+                && ((batch.paired_leaf_shadow && !batch.profile_leaf_shadow)
+                    || shadowed_materials.contains(&batch.material));
+            let role = DrawRole {
+                replaced: replaced_caster && !permanently_shadowless,
+                no_shadow: replaced_caster
+                    || permanently_shadowless
+                    || matches!(surface, Surface::Water(_) | Surface::Flame(_)),
+                moving_leaf: matches!(surface, Surface::Leaf(_))
+                    && (!batch.paired_leaf_shadow || !shadow_only),
+                moving_fibre: matches!(surface, Surface::Fibre(_)),
+            };
+            if let Some(available) = candidates.get_mut(&handle.id())
+                && let Some(old) = &previous
+                && let Some(index) = available.iter().position(|child| {
+                    world
+                        .draw_children
+                        .get(*child)
+                        .is_ok_and(|draw| role.matches(draw, old.entity, &batch, &surface, bounds))
+                })
+            {
+                // Relationship hooks detach this child from the old root before
+                // its retirement traverses and hides the remaining descendants.
+                commands
+                    .entity(available.swap_remove(index))
+                    .insert(ChildOf(root));
+                status.retained_draw_entities += 1;
+                handles.push(handle);
+                continue;
+            }
+            let mut entity =
+                commands.spawn((Mesh3d(handle.clone()), Transform::default(), ChildOf(root)));
+            if let Some(coarse) = batch.profile_caster() {
+                entity.insert(super::shadows::LeafProfileCaster(coarse));
+            }
+            if let Some(bounds) = bounds {
+                entity.insert((bounds, bevy::camera::visibility::NoAutoAabb));
+            }
+            if shadow_only {
+                entity.insert(super::shadows::ShadowProxy);
+                if batch.paired_leaf_shadow {
+                    // A camera queues Mesh3d by its visibility class. Lights
+                    // query Mesh3d directly, so the compact caster can inherit
+                    // *all* original light layers, including miniature worlds.
+                    entity.insert((
+                        super::shadows::LeafShadowProxy,
+                        crate::miniature::layers(),
+                        bevy::camera::visibility::VisibilityClass::default(),
+                    ));
+                } else {
+                    entity.insert(bevy::camera::visibility::RenderLayers::layer(
+                        super::shadows::LAYER,
+                    ));
+                }
+            } else {
+                entity.insert((
+                    crate::miniature::layers(),
+                    terra_core::miniature::MiniatureMesh::Terrain,
+                ));
+            }
+            surface.insert(&mut entity);
+            if matches!(surface, Surface::Water(_)) && coastal_quads > 0 {
+                entity.insert(super::CoastalWashQuads(coastal_quads));
+            }
+            if role.moving_leaf {
+                entity.insert(crate::foliage::WindFoliage);
+            }
+            if role.moving_fibre {
+                entity.insert(crate::foliage::WindFibre);
+            }
+            if role.replaced {
                 entity.insert(super::shadows::ReplacedShadowCaster);
             }
-            if replaced_caster || permanently_shadowless {
+            if role.no_shadow {
                 entity.insert(bevy::light::NotShadowCaster);
             }
             if let Some(geometry) = prepared.far.take() {
@@ -590,12 +769,17 @@ pub(crate) fn upload_sections(
             }
             handles.push(handle);
         }
+        if let Some(old) = previous {
+            remove_section(old, &mut commands);
+        }
+        residents.insert(&mut commands.entity(root));
         if first_upload {
             crate::transitions::enter(&mut commands, root, animation);
         }
         rendered.sections.insert(
             position,
             RenderedSection {
+                folded_leaves,
                 micro_detail,
                 appearance_epoch,
                 entity: root,
@@ -604,6 +788,18 @@ pub(crate) fn upload_sections(
                 detail_level: level,
             },
         );
+    }
+    if deferred_new_residents {
+        let live = jobs
+            .0
+            .values()
+            .filter_map(|job| job.ready.as_ref()?.0.as_ref().ok())
+            .flatten()
+            .filter(|batch| batch.borrowed_from.is_some())
+            .filter_map(|batch| batch.source.as_ref())
+            .map(|source| source.bytes())
+            .sum();
+        status.peak_deferred_resident_bytes = status.peak_deferred_resident_bytes.max(live);
     }
 }
 
@@ -619,8 +815,10 @@ fn prepare_batch(
     meshes: &mut Assets<Mesh>,
     far: bool,
 ) {
-    let opaque_shadow =
-        batch.shadow_only && batch.normals.is_empty() && batch.packed_normals.is_empty();
+    let opaque_shadow = batch.shadow_only
+        && !batch.paired_leaf_shadow
+        && batch.normals.is_empty()
+        && batch.packed_normals.is_empty();
     let rooted = !batch.rooted_wind.is_empty();
     let damp = !rooted && !batch.shadow_only && !batch.surface_water.is_empty();
     let water = world.water.is_some()
@@ -650,22 +848,27 @@ fn prepare_batch(
     };
     batch.finish_tangents();
     let indices = batch.take_indices();
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::RENDER_WORLD,
-    )
-    .with_inserted_attribute(
-        Mesh::ATTRIBUTE_POSITION,
-        std::mem::take(&mut batch.positions),
-    )
-    .with_inserted_indices(indices);
+    let mut mesh = super::precision::section_mesh(batch)
+        .with_inserted_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            std::mem::take(&mut batch.positions),
+        )
+        .with_inserted_indices(indices);
     if !batch.bile_motion.is_empty() {
         mesh.insert_attribute(
             crate::liquid_motion::POUR_COORDS,
             std::mem::take(&mut batch.bile_motion),
         );
     }
-    if !batch.uvs.is_empty() {
+    if !batch.packed_uvs.is_empty() {
+        mesh.insert_attribute(
+            bevy::mesh::MeshVertexAttribute {
+                format: bevy::render::render_resource::VertexFormat::Unorm16x2,
+                ..Mesh::ATTRIBUTE_UV_0
+            },
+            bevy::mesh::VertexAttributeValues::Unorm16x2(std::mem::take(&mut batch.packed_uvs)),
+        );
+    } else if !batch.uvs.is_empty() {
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, std::mem::take(&mut batch.uvs));
     }
     if !batch.packed_tangents.is_empty() {
@@ -686,9 +889,12 @@ fn prepare_batch(
         values.resize(mesh.count_vertices(), [0.; 2]);
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_1, values);
     }
-    if let Some((tints, blood)) = tints {
+    if let Some((tints, medium_weights)) = tints {
         mesh.insert_attribute(crate::water::biome::ATTRIBUTE_BIOME_TINT, tints);
-        mesh.insert_attribute(crate::water::biome::ATTRIBUTE_BLOOD_WEIGHT, blood);
+        mesh.insert_attribute(
+            crate::water::biome::ATTRIBUTE_MEDIUM_WEIGHTS,
+            medium_weights,
+        );
     }
     if !batch.packed_normals.is_empty() {
         mesh.insert_attribute(
@@ -720,12 +926,7 @@ fn prepare_batch(
     } else if !batch.colors.is_empty() {
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, std::mem::take(&mut batch.colors));
     }
-    let wind = world.foliage.as_ref().is_some_and(|a| {
-        a.materials.contains_key(&batch.material)
-            || a.flames.contains_key(&batch.material)
-            || a.reference.contains_key(&batch.material)
-            || rooted && a.fibres.contains_key(&batch.material)
-    });
+    let wind = world.wind_layout(batch.material, rooted);
     if !batch.shadow_only
         && !rooted
         && !wind
@@ -745,29 +946,43 @@ fn prepare_batch(
         }
         bounds
     });
+    let liquid_kind = assets
+        .templates
+        .as_ref()
+        .and_then(|templates| crate::liquid_motion::Kind::material(templates, batch.material));
     let far = if world.far.is_some()
         && far
         && !batch.shadow_only
+        && !rooted
         && !wind
         && !water
+        && assets.templates.is_some()
+        && liquid_kind.is_none()
         && world
             .materials
             .as_ref()
             .and_then(|materials| materials.get(&assets.materials[batch.material]))
             .is_some_and(|m| m.alpha_mode == AlphaMode::Opaque)
     {
-        world.far.as_ref().and_then(|cache| cache.capture(&mesh))
+        world
+            .far
+            .as_ref()
+            .and_then(|cache| cache.capture(&mesh, bounds))
     } else {
         None
     };
+    let interpolated = !batch.shadow_only
+        && liquid_kind
+            .is_some_and(|kind| kind != crate::liquid_motion::Kind::Lava || batch.flowing_lava);
+    let (handle, liquid) = if interpolated {
+        (meshes.reserve_handle(), Some(mesh))
+    } else {
+        (meshes.add(mesh), None)
+    };
     batch.staged = Some(super::staging::StagedMesh {
         opaque_shadow,
-        liquid: assets
-            .templates
-            .as_ref()
-            .and_then(|templates| crate::liquid_motion::Kind::material(templates, batch.material))
-            .map(|_| mesh.clone()),
-        handle: meshes.add(mesh),
+        liquid,
+        handle,
         bounds,
         rooted,
         damp,
@@ -843,6 +1058,7 @@ fn remove_section(old: RenderedSection, commands: &mut Commands) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bevy::{asset::RenderAssetUsages, mesh::PrimitiveTopology};
 
     fn worker_batches(
         batches: Vec<super::super::builder::MeshBatch>,
@@ -959,7 +1175,14 @@ mod tests {
                         let mesh = meshes.get(&batch.staged.as_ref().unwrap().handle).unwrap();
                         assert_eq!(
                             mesh.attribute(Mesh::ATTRIBUTE_TANGENT),
-                            Some(&bevy::mesh::VertexAttributeValues::Float32x4(tangents))
+                            Some(&if packed {
+                                bevy::mesh::VertexAttributeValues::Snorm8x4(vec![
+                                    [0, 0, 127, -127];
+                                    3
+                                ])
+                            } else {
+                                bevy::mesh::VertexAttributeValues::Float32x4(tangents)
+                            })
                         );
                         assert_eq!(mesh.count_vertices(), 3);
                         assert!(batch.tangents.is_empty());
@@ -1375,6 +1598,7 @@ mod tests {
                 .insert(
                     position,
                     RenderedSection {
+                        folded_leaves: None,
                         micro_detail: false,
                         appearance_epoch: 0,
                         entity: old,
@@ -1397,6 +1621,7 @@ mod tests {
                 position,
                 RenderJob {
                     ready: Some((Ok(batches), 0.)),
+                    folded_leaves: None,
                     micro_detail: false,
                     epoch: 0,
                     appearance_epoch: 0,
@@ -1578,6 +1803,7 @@ mod tests {
             .insert(
                 position,
                 RenderedSection {
+                    folded_leaves: None,
                     micro_detail: true,
                     appearance_epoch: 0,
                     entity: root,
@@ -1602,12 +1828,676 @@ mod tests {
                 }]),
                 0.025,
             )),
+            folded_leaves: None,
             micro_detail,
             epoch: 0,
             appearance_epoch: 0,
             level,
             task: bevy::tasks::AsyncComputeTaskPool::get().spawn(std::future::pending()),
         }
+    }
+
+    #[test]
+    fn staged_liquids_publish_once_at_commit_or_release_the_reservation_on_cancel() {
+        use super::super::{DetailLevel, builder::MeshBatch};
+        use crate::blocks::{BlockTemplate, TemplateSet, definitions::BlockRenderKind};
+        use crate::liquid_motion::{FROM, History};
+        for (id, flowing, history_at_commit, cancel) in [
+            (terra_world::lava::LAVA, true, true, false),
+            (terra_core::bile::FLUID, false, false, false),
+            (terra_core::roads::WET_TAR, false, true, true),
+            (terra_world::lava::LAVA, false, true, false),
+        ] {
+            let (mut app, position, old) = entering_upload_fixture();
+            let mut templates = TemplateSet::default();
+            templates.blocks.insert(
+                id,
+                BlockTemplate {
+                    render_kind: BlockRenderKind::Cube,
+                    face_materials: [0; 6],
+                    faces: Default::default(),
+                    side_cap: None,
+                    bevel_width: 0.0,
+                    surface: None,
+                    model: Vec::new(),
+                    details: Vec::new(),
+                },
+            );
+            let mut assets = app.world_mut().resource_mut::<BlockAssets>();
+            assets.templates = Some(std::sync::Arc::new(templates));
+            let other = assets.materials[0].clone();
+            assets.materials.push(other);
+            let mut job = completed_upload_job(DetailLevel::Near, false);
+            let batches = job.ready.as_mut().unwrap().0.as_mut().unwrap();
+            batches[0].flowing_lava = flowing;
+            let allocation = batches[0].positions.as_ptr() as usize;
+            batches.push(MeshBatch {
+                material: 1,
+                positions: vec![[0.; 3]; 3],
+                indices: vec![0, 1, 2],
+                ..default()
+            });
+            app.world_mut()
+                .resource_mut::<RenderJobs>()
+                .0
+                .insert(position, job);
+            if !history_at_commit {
+                app.world_mut().init_resource::<History>();
+            }
+            app.world_mut()
+                .resource_mut::<crate::MeshUploadStatus>()
+                .reserve_batch_bytes(
+                    crate::upload_budget::UploadKind::Terrain,
+                    crate::upload_budget::TERRAIN_VERTICES - 3,
+                    0,
+                );
+            app.update();
+            let job = &app.world().resource::<RenderJobs>().0[&position];
+            let staged = job.ready.as_ref().unwrap().0.as_ref().unwrap()[0]
+                .staged
+                .as_ref()
+                .unwrap();
+            let deferred = flowing || id != terra_world::lava::LAVA;
+            assert_eq!(staged.liquid.is_some(), deferred);
+            let handle = staged.handle.clone();
+            let meshes = app.world().resource::<Assets<Mesh>>();
+            assert_eq!(meshes.contains(handle.id()), !deferred);
+            let staged_mesh = staged
+                .liquid
+                .as_ref()
+                .or_else(|| meshes.get(&handle))
+                .unwrap();
+            assert_eq!(
+                staged_mesh
+                    .attribute(Mesh::ATTRIBUTE_POSITION)
+                    .unwrap()
+                    .get_bytes()
+                    .as_ptr() as usize,
+                allocation
+            );
+            assert_eq!(
+                app.world().resource::<RenderedSections>().sections[&position].entity,
+                old
+            );
+            if history_at_commit {
+                app.world_mut().init_resource::<History>();
+            } else {
+                app.world_mut().remove_resource::<History>();
+            }
+            if cancel {
+                app.world_mut()
+                    .resource_mut::<EditJournal>()
+                    .record([0; 3], 1)
+                    .unwrap();
+            }
+            app.world_mut()
+                .insert_resource(crate::MeshUploadStatus::default());
+            app.update();
+            let meshes = app.world().resource::<Assets<Mesh>>();
+            if cancel {
+                assert!(!meshes.contains(handle.id()));
+                assert_eq!(app.world().resource::<History>().publications, 0);
+                assert_eq!(
+                    app.world().resource::<RenderedSections>().sections[&position].entity,
+                    old
+                );
+            } else {
+                let mesh = meshes.get(&handle).unwrap();
+                assert_eq!(
+                    mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+                        .unwrap()
+                        .get_bytes()
+                        .as_ptr() as usize,
+                    allocation
+                );
+                assert_eq!(mesh.contains_attribute(FROM), history_at_commit && deferred);
+                assert!(
+                    app.world().resource::<RenderedSections>().sections[&position]
+                        .meshes
+                        .contains(&handle)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn deferred_resident_drops_streams_and_transfers_only_from_a_live_owner() {
+        use super::super::{DetailLevel, builder::MeshBatch, resident::StaticPiece};
+        use crate::upload_budget::{MAX_BATCH_BYTES, UploadKind};
+
+        #[derive(Clone, Copy)]
+        enum Finish {
+            Commit,
+            Edit,
+            Unload,
+            LostHandle,
+            LostOwner,
+        }
+        const BYTES: usize = 384 * 20 + 6;
+        for mode in [
+            Finish::Commit,
+            Finish::Edit,
+            Finish::Unload,
+            Finish::LostHandle,
+            Finish::LostOwner,
+        ] {
+            let (mut app, position, _) = entering_upload_fixture();
+            let templates = std::sync::Arc::new(crate::blocks::TemplateSet::default());
+            let queue = |app: &mut App, uvs: &[f32], level| {
+                let mut job = completed_upload_job(level, false);
+                let batches = job.ready.as_mut().unwrap().0.as_mut().unwrap();
+                *batches = uvs
+                    .iter()
+                    .map(|&u| MeshBatch {
+                        positions: vec![[1., 2., 3.]; 384],
+                        uvs: vec![[u, 0.5]; 384],
+                        compact_indices: vec![0, 1, 2],
+                        ..default()
+                    })
+                    .collect();
+                StaticPiece::identify(batches, &templates);
+                app.world_mut()
+                    .resource_mut::<RenderJobs>()
+                    .0
+                    .insert(position, job);
+                app.insert_resource(crate::MeshUploadStatus::default());
+            };
+            queue(&mut app, &[0.25], DetailLevel::Middle);
+            app.update();
+            let old = &app.world().resource::<RenderedSections>().sections[&position];
+            let owner = old.entity;
+            let resident = old.meshes[0].id();
+            queue(&mut app, &[0.5, 0.75, 0.25], DetailLevel::Far);
+            assert!(
+                app.world_mut()
+                    .resource_mut::<crate::MeshUploadStatus>()
+                    .reserve_batch_bytes(UploadKind::Terrain, 1, MAX_BATCH_BYTES / 2 - BYTES)
+            );
+            app.update();
+            let batches = app.world().resource::<RenderJobs>().0[&position]
+                .ready
+                .as_ref()
+                .unwrap()
+                .0
+                .as_ref()
+                .unwrap();
+            let fresh = batches[0].staged.as_ref().unwrap().handle.id();
+            assert!(batches[1].staged.is_none());
+            assert_eq!(batches[2].borrowed_from, Some(owner));
+            assert_eq!(batches[2].staged.as_ref().unwrap().handle.id(), resident);
+            assert_eq!(crate::upload_budget::batch_bytes(&batches[2]), 0);
+            assert_eq!(batches[2].positions.capacity(), 0);
+            assert_eq!(
+                app.world()
+                    .resource::<RenderStatus>()
+                    .peak_deferred_resident_bytes,
+                BYTES
+            );
+            // A second blocked frame neither stages nor transfers the handle.
+            app.update();
+            assert_eq!(
+                app.world().resource::<RenderedSections>().sections[&position].meshes[0].id(),
+                resident
+            );
+            app.insert_resource(crate::MeshUploadStatus::default());
+            match mode {
+                Finish::Commit => {}
+                Finish::Edit => {
+                    app.world_mut()
+                        .resource_mut::<EditJournal>()
+                        .record([0, 0, 0], 1)
+                        .unwrap();
+                }
+                Finish::Unload => {
+                    app.world_mut()
+                        .resource_mut::<ChunkStore>()
+                        .loaded
+                        .remove(&position);
+                }
+                Finish::LostHandle => {
+                    app.world_mut()
+                        .resource_mut::<Assets<Mesh>>()
+                        .remove(resident);
+                }
+                Finish::LostOwner => {
+                    let replacement = app
+                        .world_mut()
+                        .spawn(super::super::resident::PublishedMeshes::default())
+                        .id();
+                    app.world_mut()
+                        .resource_mut::<RenderedSections>()
+                        .sections
+                        .get_mut(&position)
+                        .unwrap()
+                        .entity = replacement;
+                }
+            }
+            app.update();
+            let jobs = app.world().resource::<RenderJobs>();
+            assert!(jobs.0.is_empty());
+            let assets = app.world().resource::<Assets<Mesh>>();
+            assert_eq!(assets.contains(fresh), matches!(mode, Finish::Commit));
+            assert_eq!(
+                assets.contains(resident),
+                !matches!(mode, Finish::Unload | Finish::LostHandle)
+            );
+            if matches!(mode, Finish::Commit) {
+                let new = &app.world().resource::<RenderedSections>().sections[&position];
+                assert_ne!(new.entity, owner);
+                assert_eq!(
+                    new.meshes
+                        .iter()
+                        .filter(|mesh| mesh.id() == resident)
+                        .count(),
+                    1
+                );
+                assert_eq!(assets.len(), 3);
+                assert_eq!(
+                    app.world()
+                        .resource::<RenderStatus>()
+                        .reused_streaming_meshes,
+                    1
+                );
+            } else if matches!(mode, Finish::LostHandle | Finish::LostOwner | Finish::Edit) {
+                assert!(jobs.1.contains(&position));
+                assert_eq!(
+                    app.world()
+                        .resource::<RenderStatus>()
+                        .reused_streaming_meshes,
+                    0
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn streamed_section_reuses_the_unchanged_gpu_mesh_only_after_atomic_publication() {
+        use super::super::{DetailLevel, builder::MeshBatch, resident::StaticPiece};
+        let (mut app, position, _) = entering_upload_fixture();
+        let templates = std::sync::Arc::new(crate::blocks::TemplateSet::default());
+        let queue = |app: &mut App, uv: f32, level| {
+            let mut job = completed_upload_job(level, false);
+            let batches = job.ready.as_mut().unwrap().0.as_mut().unwrap();
+            *batches = [0.25, uv]
+                .into_iter()
+                .map(|u| MeshBatch {
+                    positions: vec![[1., 2., 3.]; 384],
+                    uvs: vec![[u, 0.5]; 384],
+                    compact_indices: vec![0, 1, 2],
+                    ..default()
+                })
+                .collect();
+            StaticPiece::identify(batches, &templates);
+            app.world_mut()
+                .resource_mut::<RenderJobs>()
+                .0
+                .insert(position, job);
+            app.world_mut()
+                .insert_resource(crate::MeshUploadStatus::default());
+        };
+        let handles = |app: &App| {
+            app.world().resource::<RenderedSections>().sections[&position]
+                .meshes
+                .iter()
+                .map(Handle::id)
+                .collect::<Vec<_>>()
+        };
+        queue(&mut app, 0.5, DetailLevel::Middle);
+        app.update();
+        let original = handles(&app);
+        let first_bounds = |app: &App| {
+            let root = app.world().resource::<RenderedSections>().sections[&position].entity;
+            let child = app.world().get::<Children>(root).unwrap()[0];
+            *app.world()
+                .get::<bevy::camera::primitives::Aabb>(child)
+                .unwrap()
+        };
+        let original_bounds = first_bounds(&app);
+        queue(&mut app, 0.75, DetailLevel::Far);
+        assert!(
+            app.world_mut()
+                .resource_mut::<crate::MeshUploadStatus>()
+                .reserve_batch_bytes(
+                    crate::upload_budget::UploadKind::Terrain,
+                    1,
+                    crate::upload_budget::TERRAIN_BYTES
+                )
+        );
+        app.update();
+        assert_eq!(handles(&app), original);
+        app.world_mut()
+            .init_resource::<super::super::GeometryCache>();
+        super::super::forget_section_snapshots(app.world_mut(), &[position]);
+        assert!(
+            original
+                .iter()
+                .all(|id| app.world().resource::<Assets<Mesh>>().contains(*id))
+        );
+        queue(&mut app, 0.75, DetailLevel::Far);
+        app.update();
+        let replacement = handles(&app);
+        assert_eq!(replacement[0], original[0]);
+        assert_eq!(first_bounds(&app), original_bounds);
+        assert_eq!(
+            app.world().resource::<RenderedSections>().sections[&position].detail_level,
+            DetailLevel::Far,
+        );
+        assert_ne!(replacement[1], original[1]);
+        assert!(!app.world().resource::<Assets<Mesh>>().contains(original[1]));
+        let status = app.world().resource::<RenderStatus>();
+        assert_eq!(
+            (
+                status.reused_streaming_meshes,
+                status.reused_streaming_bytes
+            ),
+            (1, 384 * 20 + 6)
+        );
+        assert_eq!(
+            app.world()
+                .resource::<crate::MeshUploadStatus>()
+                .admitted_vertices,
+            384
+        );
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .remove(&position);
+        app.update();
+        assert!(app.world().resource::<Assets<Mesh>>().is_empty());
+    }
+
+    #[test]
+    fn leaf_shadow_upload_pairs_only_its_color_piece_and_keeps_all_world_light_layers() {
+        use super::super::{
+            DetailLevel,
+            builder::MeshBatch,
+            shadows::{LeafShadowProxy, ReplacedShadowCaster, append_leaf_shadows},
+        };
+        use crate::foliage::{FoliageAssets, LeafMaterial};
+        use bevy::camera::visibility::{RenderLayers, VisibilityClass};
+        use bevy::light::NotShadowCaster;
+        let (mut app, position, _) = entering_upload_fixture();
+        let mut leaves = FoliageAssets::default();
+        leaves.materials.insert(0, Handle::default());
+        app.insert_resource(leaves);
+        let mut job = completed_upload_job(DetailLevel::Middle, false);
+        let batches = job.ready.as_mut().unwrap().0.as_mut().unwrap();
+        *batches = [384, 3]
+            .map(|count| MeshBatch {
+                positions: (0..count).map(|i| [f32::from(i % 3), 0., 1.]).collect(),
+                packed_colors: vec![[255, 10, 20, 105]; usize::from(count)],
+                compact_indices: (0..count).collect(),
+                ..default()
+            })
+            .into();
+        append_leaf_shadows(batches, &std::collections::HashSet::from([0]), false).unwrap();
+        app.world_mut()
+            .resource_mut::<RenderJobs>()
+            .0
+            .insert(position, job);
+        app.update();
+        let root = app.world().resource::<RenderedSections>().sections[&position].entity;
+        let children = app.world().get::<Children>(root).unwrap();
+        assert_eq!(children.len(), 3);
+        for &entity in &children[..] {
+            assert!(
+                app.world()
+                    .get::<MeshMaterial3d<LeafMaterial>>(entity)
+                    .is_some()
+            );
+        }
+        let (replaced, other, proxy) = (children[0], children[1], children[2]);
+        assert!(app.world().get::<ReplacedShadowCaster>(replaced).is_some());
+        assert!(app.world().get::<NotShadowCaster>(replaced).is_some());
+        assert!(app.world().get::<NotShadowCaster>(other).is_none());
+        assert!(app.world().get::<LeafShadowProxy>(proxy).is_some());
+        assert!(app.world().get::<NotShadowCaster>(proxy).is_none());
+        assert!(
+            app.world()
+                .get::<VisibilityClass>(proxy)
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(
+            app.world().get::<RenderLayers>(proxy),
+            app.world().get::<RenderLayers>(replaced)
+        );
+        assert_eq!(
+            app.world().get::<bevy::camera::primitives::Aabb>(proxy),
+            app.world().get::<bevy::camera::primitives::Aabb>(replaced)
+        );
+    }
+
+    #[test]
+    fn crowns_and_rooted_fibres_reuse_only_the_same_wind_geometry_and_padded_layout() {
+        use super::super::{DetailLevel, builder::MeshBatch, resident::StaticPiece};
+        use crate::foliage::{FoliageAssets, WIND_BOUNDS, WindFibre, WindFoliage};
+        let (mut app, position, _) = entering_upload_fixture();
+        let mut templates = crate::blocks::TemplateSet::default();
+        templates.foliage_clusters.insert(
+            7,
+            crate::blocks::FoliageClusterMaterials {
+                leaves: 0,
+                needles: None,
+            },
+        );
+        let templates = std::sync::Arc::new(templates);
+        let mut assets = app.world_mut().resource_mut::<BlockAssets>();
+        assets.templates = Some(templates.clone());
+        let base = assets.materials[0].clone();
+        assets.materials.push(base);
+        let publish = |app: &mut App, level, seasonal_alpha: u8, weight: f32| {
+            let mut job = completed_upload_job(level, false);
+            let batches = job.ready.as_mut().unwrap().0.as_mut().unwrap();
+            *batches = (0..2)
+                .map(|material| MeshBatch {
+                    material,
+                    positions: vec![[1., 2., 3.]; 384],
+                    packed_colors: vec![[120, 159, 132, seasonal_alpha]; 384],
+                    rooted_wind: if material == 1 {
+                        vec![[0., weight]; 384]
+                    } else {
+                        Vec::new()
+                    },
+                    compact_indices: vec![0, 1, 2],
+                    ..default()
+                })
+                .collect();
+            StaticPiece::identify(batches, &templates);
+            app.world_mut()
+                .resource_mut::<RenderJobs>()
+                .0
+                .insert(position, job);
+            app.world_mut()
+                .insert_resource(crate::MeshUploadStatus::default());
+            app.update();
+            app.world().resource::<RenderedSections>().sections[&position]
+                .meshes
+                .iter()
+                .map(Handle::id)
+                .collect::<Vec<_>>()
+        };
+
+        let draw_ids = |app: &App| {
+            let root = app.world().resource::<RenderedSections>().sections[&position].entity;
+            app.world()
+                .get::<Children>(root)
+                .unwrap()
+                .iter()
+                .collect::<Vec<_>>()
+        };
+        let unpadded = publish(&mut app, DetailLevel::Middle, 62, 0.5);
+        app.init_resource::<FoliageAssets>();
+        let mut leaves = app.world_mut().resource_mut::<FoliageAssets>();
+        leaves.materials.insert(0, Handle::default());
+        leaves.fibres.insert(1, Handle::default());
+        let padded = publish(&mut app, DetailLevel::Middle, 62, 0.5);
+        assert!(unpadded.iter().zip(&padded).all(|(a, b)| a != b));
+        let original = draw_ids(&app);
+        assert_eq!(publish(&mut app, DetailLevel::Near, 62, 0.5), padded);
+        assert_eq!(draw_ids(&app), original);
+        assert_eq!(
+            app.world()
+                .resource::<RenderStatus>()
+                .retained_draw_entities,
+            2
+        );
+        let root = app.world().resource::<RenderedSections>().sections[&position].entity;
+        let children = app.world().get::<Children>(root).unwrap();
+        assert!(app.world().get::<WindFoliage>(children[0]).is_some());
+        assert!(app.world().get::<WindFibre>(children[1]).is_some());
+        for child in children.iter() {
+            assert_eq!(
+                app.world()
+                    .get::<bevy::camera::primitives::Aabb>(child)
+                    .unwrap()
+                    .half_extents,
+                Vec3A::splat(WIND_BOUNDS)
+            );
+        }
+        assert_eq!(app.world().resource::<RenderStatus>().reused_wind_meshes, 2);
+        assert_eq!(
+            app.world()
+                .resource::<crate::MeshUploadStatus>()
+                .admitted_vertices,
+            0
+        );
+        // A changed binding or runtime layer cannot inherit the old draw
+        // entity, even when the GPU geometry remains identical.
+        let other = Handle::<crate::foliage::LeafMaterial>::Uuid(
+            bevy::asset::uuid::Uuid::from_u128(731640),
+            std::marker::PhantomData,
+        );
+        app.world_mut()
+            .resource_mut::<FoliageAssets>()
+            .materials
+            .insert(0, other);
+        app.world_mut()
+            .entity_mut(original[1])
+            .insert(bevy::camera::visibility::RenderLayers::layer(31));
+        assert_eq!(publish(&mut app, DetailLevel::Middle, 62, 0.5), padded);
+        let rebound = draw_ids(&app);
+        assert_ne!(rebound[0], original[0]);
+        assert_ne!(rebound[1], original[1]);
+        let changed_weight = publish(&mut app, DetailLevel::Near, 62, 0.2);
+        assert_eq!(changed_weight[0], padded[0]);
+        assert_eq!(draw_ids(&app)[0], rebound[0]);
+        assert_ne!(draw_ids(&app)[1], rebound[1]);
+        assert_ne!(changed_weight[1], padded[1]);
+        let changed_season = publish(&mut app, DetailLevel::Near, 95, 0.2);
+        assert!(
+            changed_weight
+                .iter()
+                .zip(&changed_season)
+                .all(|(a, b)| a != b)
+        );
+    }
+
+    #[test]
+    fn near_shadow_reuse_survives_partial_cancellation_and_retires_on_new_geometry_or_lod() {
+        use super::super::{DetailLevel, builder::MeshBatch, resident::ShadowPiece};
+        use std::sync::Arc;
+        let (mut app, position, _) = entering_upload_fixture();
+        let mut geometry = Arc::new(terra_voxel::meshing::BlockMesh::default());
+        let mut templates = Arc::new(crate::blocks::TemplateSet::default());
+        let queue = |app: &mut App, geometry: &Arc<_>, templates: &Arc<_>, level| {
+            let mut job = completed_upload_job(level, false);
+            let batches = job.ready.as_mut().unwrap().0.as_mut().unwrap();
+            batches.insert(
+                0,
+                MeshBatch {
+                    shadow_only: true,
+                    shadow_sources: vec![0],
+                    positions: vec![[0.; 3], [1., 0., 0.], [0., 1., 0.]],
+                    compact_indices: vec![0, 1, 2],
+                    ..default()
+                },
+            );
+            if level == DetailLevel::Near {
+                ShadowPiece::identify(batches, geometry, templates);
+            }
+            app.world_mut()
+                .resource_mut::<RenderJobs>()
+                .0
+                .insert(position, job);
+            app.world_mut()
+                .insert_resource(crate::MeshUploadStatus::default());
+        };
+        let mesh = |app: &App| {
+            app.world().resource::<RenderedSections>().sections[&position].meshes[0].id()
+        };
+        queue(&mut app, &geometry, &templates, DetailLevel::Near);
+        app.update();
+        let original = mesh(&app);
+        queue(&mut app, &geometry, &templates, DetailLevel::Near);
+        assert!(
+            app.world_mut()
+                .resource_mut::<crate::MeshUploadStatus>()
+                .reserve_batch_bytes(
+                    crate::upload_budget::UploadKind::Terrain,
+                    1,
+                    crate::upload_budget::TERRAIN_BYTES
+                )
+        );
+        app.update();
+        assert!(
+            app.world()
+                .resource::<RenderJobs>()
+                .0
+                .contains_key(&position)
+        );
+        app.world_mut()
+            .init_resource::<super::super::GeometryCache>();
+        super::super::forget_section_snapshots(app.world_mut(), &[position]);
+        assert!(app.world().resource::<Assets<Mesh>>().contains(original));
+        assert_eq!(
+            app.world().resource::<RenderStatus>().reused_shadow_meshes,
+            0
+        );
+        queue(&mut app, &geometry, &templates, DetailLevel::Near);
+        app.update();
+        assert_eq!(mesh(&app), original);
+        assert_eq!(
+            app.world()
+                .resource::<crate::MeshUploadStatus>()
+                .admitted_vertices,
+            3
+        );
+        let status = app.world().resource::<RenderStatus>();
+        assert_eq!(
+            (status.reused_shadow_meshes, status.reused_shadow_bytes),
+            (1, 42)
+        );
+        for change in 0..3 {
+            let previous = mesh(&app);
+            let level = match change {
+                0 => {
+                    geometry = Arc::new(Default::default());
+                    DetailLevel::Near
+                }
+                1 => {
+                    templates = Arc::new(Default::default());
+                    DetailLevel::Near
+                }
+                _ => DetailLevel::Middle,
+            };
+            queue(&mut app, &geometry, &templates, level);
+            app.update();
+            assert_ne!(mesh(&app), previous);
+            assert!(!app.world().resource::<Assets<Mesh>>().contains(previous));
+            assert_eq!(
+                app.world()
+                    .resource::<crate::MeshUploadStatus>()
+                    .admitted_vertices,
+                6
+            );
+        }
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .remove(&position);
+        app.update();
+        assert!(app.world().resource::<Assets<Mesh>>().is_empty());
     }
 
     #[test]
@@ -1664,22 +2554,62 @@ mod tests {
     }
 
     #[test]
-    fn entering_results_accept_changed_lod_or_micro_detail() {
-        for (level, micro_detail) in [
-            (super::super::DetailLevel::Middle, true),
-            (super::super::DetailLevel::Near, false),
+    fn an_octant_change_rejects_a_completed_leaf_job_while_the_section_stays_near() {
+        use super::super::lod::{DetailLevel::Near, select_folded_leaves};
+        let (mut app, position, old) = entering_upload_fixture();
+        let quality = terra_core::BlockDetailQuality::High;
+        let before = select_folded_leaves(position, [8.; 3], None, Near, quality, u8::MAX);
+        // The west half is 34 m from the old focus band's east edge, but the
+        // east half still uses full folds. The whole section stays Near.
+        let focus = [43., 8., 8.];
+        let after = before.at_focus(position, focus, None, Near, quality);
+        assert!(before.nearby && after.nearby && before != after);
+        let mut job = completed_upload_job(Near, true);
+        job.folded_leaves = Some(before);
+        app.insert_resource(terra_world::streaming::ChunkFocus(focus));
+        app.world_mut()
+            .resource_mut::<RenderJobs>()
+            .0
+            .insert(position, job);
+        app.update();
+        assert_eq!(
+            app.world().resource::<RenderedSections>().sections[&position].entity,
+            old
+        );
+        assert!(app.world().resource::<RenderJobs>().0.is_empty());
+        assert_eq!(
+            app.world()
+                .resource::<crate::MeshUploadStatus>()
+                .admitted_vertices,
+            0
+        );
+    }
+
+    #[test]
+    fn entering_results_accept_changed_lod_micro_detail_or_crown_folds() {
+        for (level, micro_detail, folded_leaves) in [
+            (super::super::DetailLevel::Middle, true, None),
+            (super::super::DetailLevel::Near, false, None),
+            (
+                super::super::DetailLevel::Near,
+                true,
+                Some(super::super::lod::FoldedLeaves::FULL),
+            ),
         ] {
             let (mut app, position, old) = entering_upload_fixture();
+            let mut job = completed_upload_job(level, micro_detail);
+            job.folded_leaves = folded_leaves;
             app.world_mut()
                 .resource_mut::<RenderJobs>()
                 .0
-                .insert(position, completed_upload_job(level, micro_detail));
+                .insert(position, job);
             app.update();
             let rendered = &app.world().resource::<RenderedSections>().sections[&position];
             assert_ne!(rendered.entity, old);
             assert!(app.world().get_entity(old).is_err());
             assert_eq!(rendered.detail_level, level);
             assert_eq!(rendered.micro_detail, micro_detail);
+            assert_eq!(rendered.folded_leaves, folded_leaves);
             assert_eq!(rendered.meshes.len(), 1);
             assert_eq!(app.world().resource::<Assets<Mesh>>().len(), 1);
             assert_eq!(
@@ -1853,6 +2783,7 @@ mod tests {
                         }]),
                         0.,
                     )),
+                    folded_leaves: None,
                     micro_detail: true,
                     epoch: 0,
                     appearance_epoch: 0,
@@ -1920,6 +2851,7 @@ mod tests {
                     }]),
                     0.,
                 )),
+                folded_leaves: None,
                 micro_detail: true,
                 epoch: 0,
                 appearance_epoch: 0,
@@ -2033,6 +2965,7 @@ mod tests {
                 position,
                 RenderJob {
                     ready: Some((Ok(vec![batch]), 0.0)),
+                    folded_leaves: None,
                     micro_detail: true,
                     epoch,
                     appearance_epoch: 0,
@@ -2147,6 +3080,7 @@ mod tests {
                     position,
                     RenderJob {
                         ready: Some((Ok(batches), 0.0)),
+                        folded_leaves: None,
                         micro_detail: true,
                         epoch: 0,
                         appearance_epoch: 0,
@@ -2167,9 +3101,11 @@ mod tests {
     }
 
     #[test]
-    fn authored_grass_proxy_replaces_dense_caster_and_unloads_owned_meshes() {
+    fn legacy_authored_grass_proxy_replaces_dense_caster_and_unloads_owned_meshes() {
         use super::super::{builder, jobs::RenderJob};
-        let templates = std::sync::Arc::new(crate::blocks::authored_terrain_templates());
+        let mut legacy = crate::blocks::authored_terrain_templates();
+        legacy.sculpted_blocks.clear();
+        let templates = std::sync::Arc::new(legacy);
         let mut padded = [0; terra_voxel::meshing::PADDED_VOLUME];
         padded[1 + 18 * (1 + 18)] = 1;
         let geometry = terra_voxel::meshing::mesh_section(&padded).unwrap();
@@ -2215,8 +3151,7 @@ mod tests {
             );
             app.world_mut()
                 .resource_mut::<RenderedSections>()
-                .block_revisions
-                .insert(position, 1);
+                .record_presentation(position, 1, None);
             let mut batches = builder::compose_section_with_options(
                 &geometry.faces,
                 &templates,
@@ -2243,6 +3178,7 @@ mod tests {
                 position,
                 RenderJob {
                     ready: Some((Ok(batches), 0.0)),
+                    folded_leaves: None,
                     micro_detail: true,
                     epoch: 0,
                     appearance_epoch: 0,
@@ -2358,6 +3294,7 @@ mod tests {
                 position,
                 RenderJob {
                     ready: Some((Ok(batches), 0.0)),
+                    folded_leaves: None,
                     micro_detail: true,
                     epoch: 0,
                     appearance_epoch: 0,

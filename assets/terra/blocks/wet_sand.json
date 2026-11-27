@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 541,
+  "name": "Wet Sand",
+  "description": "Fine wet grains bear parallel tide marks.",
+  "creative_category": "nature",
+  "hardness": 1.6,
+  "resistance": 2.5,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "wet_sand": "textures/ocean/wet_sand.png"
+  },
+  "face_materials": [
+    "wet_sand",
+    "wet_sand",
+    "wet_sand",
+    "wet_sand",
+    "wet_sand",
+    "wet_sand"
+  ],
+  "materials": {
+    "wet_sand": {
+      "roughness": 0.72,
+      "normal_texture": "textures/ocean/wet_sand_normal.png"
+    }
+  },
+  "surface": "sand"
+}

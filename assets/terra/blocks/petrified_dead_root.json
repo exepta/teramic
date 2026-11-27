@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 710,
+  "name": "Dead Root",
+  "description": "A tangle of roots slowly turned to stone.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.3,
+  "resistance": 2.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/petrified_dead_root.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

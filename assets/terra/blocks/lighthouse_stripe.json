@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 783,
+  "name": "Lighthouse Stripe",
+  "description": "Lighthouse Stripe",
+  "creative_category": "building",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.8,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "textures": {
+    "side": "textures/misty_coast/lighthouse_stripe.png"
+  },
+  "materials": {
+    "side": {
+      "normal_texture": "textures/misty_coast/lighthouse_stripe_normal.png",
+      "roughness": 0.84,
+      "reflectance": 0.12
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

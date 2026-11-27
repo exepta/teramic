@@ -22,10 +22,31 @@ class AuditTests(unittest.TestCase):
             self.assertEqual(block['light']['offset'], emission_offset(mesh_for(definition)))
 
     def test_existing_block_assets_have_complete_geometry_and_texture_references(self):
-        result = audit(399)
-        self.assertEqual(result['blocks'], 399)
+        block_dir = Path(__file__).resolve().parents[3] / 'assets/terra/blocks'
+        ids = [json.loads(path.read_text())['id'] for path in block_dir.glob('*.json')]
+        result = audit(max(ids))
+        self.assertEqual(result['blocks'], len(ids))
         self.assertEqual(result['failing_blocks'], 0, [row for row in result['definitions'] if row['errors']])
         self.assertFalse([row for row in result['geometry'] if row['warnings']])
+
+    def test_hidden_voxel_material_cannot_leave_a_stale_block_texture_binding(self):
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+        from model_polish import audit as audit_module
+
+        with TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            (folder / 'grain.png').touch()
+            model = {'asset': {'version': '2.0'}, 'materials': [{'name': 'Halite'}]}
+            (folder / 'salt.gltf').write_text(json.dumps(model))
+            block = {'id': 459, 'render_kind': 'custom_mesh', 'model': 'salt.gltf',
+                     'textures': {'Halite': 'grain.png', 'Chipped facet': 'grain.png'}}
+            (folder / 'salt.json').write_text(json.dumps(block))
+            with patch.object(audit_module, 'ROOT', folder), patch.object(audit_module, 'BLOCKS', folder):
+                result = audit_module.audit(459)
+            self.assertEqual(result['failing_blocks'], 1)
+            self.assertEqual(result['definitions'][0]['errors'],
+                             ['texture binding references missing material Chipped facet'])
 
     def test_concave_anchor_arms_cover_only_the_original_outline(self):
         outline = [(0,-.68),(.57,-.30),(.68,0),(.95,-.08),(.72,-.62),(0,-.87)]

@@ -147,7 +147,8 @@ fn update(
                 continue;
             };
             let appearance = world.terrain.0.tree_appearance(origin).at(source, kind);
-            if world.journal.block(source).is_some()
+            if kind == terra_voxel::MaterialId::WinterBirchBranches as u16
+                || world.journal.block(source).is_some()
                 || !matches!(
                     appearance,
                     Some(
@@ -272,6 +273,8 @@ fn blossom_particle_color(material: u16) -> Option<[f32; 4]> {
     match material {
         132 | 310 => Some([0.95, 0.34, 0.65, 1.0]),
         133 | 311 => Some([0.86, 0.82, 0.98, 1.0]),
+        606 => Some([0.16, 0.84, 0.74, 1.0]),
+        607 => Some([0.58, 0.82, 1.0, 1.0]),
         312 => Some([0.57, 0.30, 0.88, 1.0]),
         _ => None,
     }

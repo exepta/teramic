@@ -15,15 +15,23 @@ fn fixture() -> (WorldTerrain, ChunkStore, EditJournal, [i64; 3]) {
         ..Default::default()
     };
     config.structures.set_all(false);
+    loaded_water(config, [-1, -1])
+}
+
+fn loaded_water(
+    config: terra_core::WorldConfig,
+    [x, z]: [i64; 2],
+) -> (WorldTerrain, ChunkStore, EditJournal, [i64; 3]) {
     let terrain = TerraGenerator::new(config).unwrap();
+    let tile = [x.div_euclid(16), z.div_euclid(16)];
     let column = SectionGenerator::new(terrain.clone())
-        .prepare_column([-1, -1], false)
+        .prepare_column(tile, false)
         .unwrap();
-    let surface = column.surface_at(-1, -1).unwrap();
-    let p = [-1, surface.water_level.unwrap().ceil() as i64 - 1, -1];
+    let surface = column.surface_at(x, z).unwrap();
+    let p = [x, surface.water_level.unwrap().ceil() as i64 - 1, z];
     let mut chunks = ChunkStore::default();
     for y in p[1].div_euclid(16)..=(p[1] + 17).div_euclid(16) {
-        let pos = SectionPos::new(-1, y, -1);
+        let pos = SectionPos::new(tile[0], y, tile[1]);
         chunks.loaded.insert(
             pos,
             LoadedSection {
@@ -36,7 +44,7 @@ fn fixture() -> (WorldTerrain, ChunkStore, EditJournal, [i64; 3]) {
             },
         );
     }
-    chunks.set_prepared_column_for_test([-1, -1], Some(std::sync::Arc::new(column)));
+    chunks.set_prepared_column_for_test(tile, Some(std::sync::Arc::new(column)));
     (WorldTerrain(terrain), chunks, EditJournal::default(), p)
 }
 
@@ -45,7 +53,7 @@ fn frozen_source_survives_save_replication_thaw_and_manual_breaking() {
     let (terrain, mut chunks, mut journal, p) = fixture();
     let properties = BlockPropertiesCatalog::default();
     let source = chunks.fluid_cell_at(&terrain.0, &journal, p, 0);
-    let freezing = candidate(&chunks, &journal, p[0], p[2], -5.).unwrap();
+    let freezing = candidate(&chunks, &journal, p[0], p[2], -5., 8.0).unwrap();
     assert!(apply(&mut chunks, &mut journal, &properties, freezing).unwrap());
     assert_eq!(chunks.block_at(p), Some(49));
     assert_eq!(chunks.fluid_cell_at(&terrain.0, &journal, p, 49).amount, 0);
@@ -60,7 +68,7 @@ fn frozen_source_survives_save_replication_thaw_and_manual_breaking() {
         .apply_confirmed_delta(&mut restored_journal, serde_json::from_str(&saved).unwrap())
         .unwrap();
     assert_eq!(restored.block_at(p), Some(49));
-    let thaw = candidate(&restored, &restored_journal, p[0], p[2], 4.).unwrap();
+    let thaw = candidate(&restored, &restored_journal, p[0], p[2], 4., 8.0).unwrap();
     assert!(apply(&mut restored, &mut restored_journal, &properties, thaw).unwrap());
     assert_eq!(restored.block_at(p), Some(0));
     assert_eq!(restored_journal.fluid(p), Some(source));
@@ -70,7 +78,7 @@ fn frozen_source_survives_save_replication_thaw_and_manual_breaking() {
         .unwrap();
     assert_eq!(chunks.block_at(p), Some(0));
     assert_eq!(chunks.fluid_cell_at(&terrain.0, &journal, p, 0), source);
-    let freezing = candidate(&chunks, &journal, p[0], p[2], -5.).unwrap();
+    let freezing = candidate(&chunks, &journal, p[0], p[2], -5., 8.0).unwrap();
     apply(&mut chunks, &mut journal, &properties, freezing).unwrap();
     commit_block_edit(
         &mut chunks,
@@ -102,7 +110,7 @@ fn player_ice_roofs_withdrawn_sources_and_unknown_air_are_protected() {
         &properties,
     )
     .unwrap();
-    assert!(candidate(&chunks, &journal, p[0], p[2], 20.).is_none());
+    assert!(candidate(&chunks, &journal, p[0], p[2], 20., 8.0).is_none());
     let (_, mut chunks, mut journal, p) = fixture();
     let roof = [p[0], p[1] + 1, p[2]];
     commit_block_edit(
@@ -116,11 +124,11 @@ fn player_ice_roofs_withdrawn_sources_and_unknown_air_are_protected() {
         &properties,
     )
     .unwrap();
-    assert!(candidate(&chunks, &journal, p[0], p[2], -10.).is_none());
+    assert!(candidate(&chunks, &journal, p[0], p[2], -10., 8.0).is_none());
     let (_, chunks, mut journal, p) = fixture();
     journal.record(p, 0).unwrap();
     journal.set_fluid(p, Default::default()).unwrap();
-    assert!(candidate(&chunks, &journal, p[0], p[2], -10.).is_none());
+    assert!(candidate(&chunks, &journal, p[0], p[2], -10., 8.0).is_none());
     journal
         .set_fluid(
             p,
@@ -131,12 +139,12 @@ fn player_ice_roofs_withdrawn_sources_and_unknown_air_are_protected() {
             },
         )
         .unwrap();
-    assert!(candidate(&chunks, &journal, p[0], p[2], -10.).is_none());
+    assert!(candidate(&chunks, &journal, p[0], p[2], -10., 8.0).is_none());
     let (_, mut chunks, journal, p) = fixture();
     chunks
         .loaded
         .remove(&SectionPos::new(-1, (p[1] + 16).div_euclid(16), -1));
-    assert!(candidate(&chunks, &journal, p[0], p[2], -10.).is_none());
+    assert!(candidate(&chunks, &journal, p[0], p[2], -10., 8.0).is_none());
 }
 
 #[test]
@@ -184,4 +192,56 @@ fn live_winter_updates_are_budgeted_authoritative_and_pause_with_world_time() {
         app.update();
     }
     assert_eq!(app.world().resource::<IceStatus>().freezes, freezes);
+}
+
+#[test]
+fn winter_ocean_stays_open_and_only_thaws_marked_weather_ice() {
+    let config = terra_core::WorldConfig {
+        seed: terra_core::WorldSeed(7863640744109448198),
+        rivers: true,
+        ..Default::default()
+    };
+    let (terrain, mut chunks, mut journal, p) = loaded_water(config, [-4579, 5979]);
+    let sea = terrain.0.config().sea_level;
+    assert_eq!(
+        chunks
+            .surface_column_at(p[0], p[2])
+            .unwrap()
+            .biome_kind(sea),
+        crate::generation::biomes::BiomeKind::Ocean
+    );
+    assert!(candidate(&chunks, &journal, p[0], p[2], -25.0, sea).is_none());
+    // Recreate a seasonal edit from an earlier build and observe the source returning.
+    let source = chunks.fluid_cell_at(&terrain.0, &journal, p, 0);
+    let properties = BlockPropertiesCatalog::default();
+    assert!(
+        apply(
+            &mut chunks,
+            &mut journal,
+            &properties,
+            Change {
+                position: p,
+                material: 0,
+                water: source.amount
+            }
+        )
+        .unwrap()
+    );
+    let thaw = candidate(&chunks, &journal, p[0], p[2], -25.0, sea).unwrap();
+    assert!(apply(&mut chunks, &mut journal, &properties, thaw).unwrap());
+    assert_eq!(chunks.fluid_cell_at(&terrain.0, &journal, p, 0), source);
+    assert!(
+        commit_block_edit(
+            &mut chunks,
+            &mut journal,
+            &BlockEditRequest {
+                position: p,
+                expected_material: 0,
+                material: MaterialId::Ice as u16
+            },
+            &properties
+        )
+        .unwrap()
+    );
+    assert!(candidate(&chunks, &journal, p[0], p[2], 10.0, sea).is_none());
 }

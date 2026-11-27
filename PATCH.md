@@ -8942,3 +8942,23 @@ Lokale Welten und dedizierte Server laden die gespeicherte Höhlenrevision.
 Weltdateien ohne diesen Eintrag behalten Revision 0. Die Regressionstests
 prüfen Kammermaße, Terrassen, Tunnelanschlüsse und den Übergang über
 Chunk- und Regionsgrenzen.
+
+## 273. Aschelande, Unterwasserpflanzen und Rezeptverwendungen
+
+Neue Welten mit Landschaftsrevision 9 und Ökologierevision 16 enthalten Aschelande.
+In den Basalttälern liegen Lavaseen und -läufe, Glutkristalle und Dampfschächte.
+Dampf verletzt Spieler und Tiere in der aufsteigenden Säule. Der Lavawurm bleibt an
+eine Lavaquelle gebunden und greift vom Ufer aus erreichbare Gegner mit einem
+Feuerstoß oder einem Körperschlag an. In den Aschelanden sowie im Geister- und
+Blutwald graben sich nachts Skelette aus dem Boden.
+
+F87 ergänzt zähflüssige Lava, die aus einer Quelle über Kanten fließt und bei
+Wasserkontakt zu Lavakruste erstarrt. Brennbare Nachbarblöcke nehmen vor der
+Entzündung Hitze auf. Feuchtigkeit löscht die Flammen. Mit F70 wachsen Rifffächer
+an untergetauchten Felswänden und Perlentang unter Überhängen. Beide Pflanzen
+lassen sich ernten und an passenden untergetauchten Flächen wieder anbringen.
+
+Im Inventar öffnet `U` die Verwendungen des Gegenstands unter dem Mauszeiger.
+Die Biomauswahl zeigt Aufnahmen aus der Spielwelt. Kirschblütenwälder besitzen
+gestaffelte Kronen und Blütengirlanden. Im Geisterwald liegt der Nebel tiefer
+über dem entsättigten Boden.

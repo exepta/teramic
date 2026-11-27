@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 610,
+  "name": "Spirit Geode",
+  "description": "Lilac crystal spires rise from a mossy bed of amethyst.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.35,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/spirit_geode.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

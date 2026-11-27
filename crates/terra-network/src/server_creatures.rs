@@ -225,7 +225,7 @@ fn in_interest(a: &terra_core::creatures::Creature, player: [f64; 3]) -> bool {
         return distance(player, a.position)
             <= (terra_world::creatures::dragons::ROAM_RADIUS + 32.).powi(2);
     }
-    let extent = if a.kind == CreatureKind::SandWorm {
+    let extent = if matches!(a.kind, CreatureKind::SandWorm | CreatureKind::LavaWorm) {
         24.0
     } else {
         a.size()[0].max(a.size()[2]) * 0.5
@@ -239,8 +239,26 @@ fn active_near(a: &terra_core::creatures::Creature, player: [f64; 3]) -> bool {
                 .hypot(player[2] - (a.home[1] * 32 + 16) as f64)
                 < ACTIVE_RADIUS
 }
-fn finish_phase(a: &terra_core::creatures::Creature) -> bool {
-    a.kind == CreatureKind::SandWorm && terra_core::creatures::sandworm::committed(a.behavior)
+fn needs_distant_tick(a: &terra_core::creatures::Creature, chunks: &ChunkStore) -> bool {
+    match a.kind {
+        CreatureKind::SandWorm => terra_core::creatures::sandworm::committed(a.behavior),
+        // Keep lake patrols alive while their terrain is resident without requesting chunks.
+        CreatureKind::LavaWorm => {
+            let [x, y, z] = a.position.map(|v| v.floor() as i64);
+            chunks.block_at([x, y - 1, z]).is_some()
+        }
+        _ => false,
+    }
+}
+
+fn molten_worm_hit(peer: &mut Peer, damage: f32, mode: terra_core::GameMode) {
+    let health = peer.vitals.health;
+    survival::animal_attack(peer, damage, mode);
+    if peer.vitals.health < health && !peer.vitals.dead() {
+        peer.vitals
+            .effects
+            .apply(terra_core::EffectKind::OnFire, 5., 1);
+    }
 }
 
 fn habitat_offset(index: usize) -> [i64; 2] {
@@ -495,6 +513,7 @@ fn search_due(a: &terra_core::creatures::Creature, dt: f32, pending_navigation: 
         a.kind,
         CreatureKind::Butterfly
             | CreatureKind::SandWorm
+            | CreatureKind::LavaWorm
             | CreatureKind::SpiritGloom
             | CreatureKind::Raven
             | CreatureKind::BloodWisp
@@ -505,7 +524,9 @@ fn search_due(a: &terra_core::creatures::Creature, dt: f32, pending_navigation: 
     if a.kind.is_dragon() {
         return false;
     }
-    if a.kind == CreatureKind::Stalker || terra_world::creatures::forest::hostile(a.kind) {
+    if matches!(a.kind, CreatureKind::StoneGolem | CreatureKind::Stalker)
+        || terra_world::creatures::forest::hostile(a.kind)
+    {
         return pending_navigation || a.needs.search_in <= dt;
     }
     if a.kind == CreatureKind::Villager {
@@ -764,20 +785,26 @@ pub(super) fn tick(
         ];
         let lair = !population.explored.contains(&home) && terrain.0.dragon_nest(home).is_some();
         if limit == 0
-            || (!lair && (!natural_habitat_enabled(home, config.world.seed.0) || natural >= limit))
+            || (!lair && natural >= limit)
             || (home[0] as f64 * 32.0 + 16.0 - player[0])
                 .hypot(home[1] as f64 * 32.0 + 16.0 - player[2])
                 > ACTIVE_RADIUS
         {
             continue;
         }
+        let habitat = Habitat {
+            terrain: &terrain.0,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        if !lair && !natural_habitat_enabled(home, config.world.seed.0) {
+            // A guardian district is independent of the herd/bee occupancy roll.
+            terra_world::creatures::golem::populate(&mut population, &habitat, home, &players);
+            continue;
+        }
         terra_world::creatures::spawn_cell_away_from_players(
             &mut population,
-            &Habitat {
-                terrain: &terrain.0,
-                chunks: &chunks,
-                journal: &journal,
-            },
+            &habitat,
             home,
             &players,
             limit.saturating_sub(natural).max(usize::from(lair)),
@@ -854,6 +881,7 @@ pub(super) fn tick(
                 },
                 home,
                 player[1],
+                night,
                 limit.saturating_sub(natural),
             );
             natural = natural_near(&population, player);
@@ -886,7 +914,7 @@ pub(super) fn tick(
         .filter(|a| {
             a.health > 0.0
                 && !mounts.contains(a.id)
-                && (finish_phase(a) || players.iter().any(|p| active_near(a, *p)))
+                && (players.iter().any(|p| active_near(a, *p)) || needs_distant_tick(a, &chunks))
         })
         .map(|a| a.id)
         .collect();
@@ -914,7 +942,46 @@ pub(super) fn tick(
             .get(id)
             .is_some_and(|a| a.health > 0.0 && players.iter().any(|p| active_near(a, *p)))
     });
+    use terra_world::creatures::dragons::Target as DragonTarget;
+    let mut dragon_targets = Vec::new();
+    let mut dragon_headings = std::collections::BTreeMap::new();
+    if ids.iter().any(|id| {
+        population
+            .animals
+            .get(id)
+            .is_some_and(|a| a.kind.is_dragon() && a.health > 0.0)
+    }) {
+        dragon_headings.extend(
+            stalker_players
+                .iter()
+                .filter(|p| p.targetable)
+                .map(|p| (DragonTarget::Player(p.id), p.look[0])),
+        );
+        dragon_targets.extend(
+            vulnerable
+                .iter()
+                .map(|&(id, at)| (DragonTarget::Player(id), at)),
+        );
+        dragon_targets.extend(ids.iter().filter_map(|id| {
+            let a = population.animals.get(id)?;
+            dragon_headings.insert(DragonTarget::Mob(*id), a.yaw);
+            if a.health <= 0.0
+                || a.kind.is_dragon()
+                || population.owners.contains_key(id)
+                || matches!(
+                    a.behavior,
+                    CreatureBehavior::InNest | CreatureBehavior::Burrowed
+                )
+                || a.kind == CreatureKind::SandWorm && a.behavior == CreatureBehavior::Tremor
+            {
+                return None;
+            }
+            let [x, y, z] = a.position;
+            Some((DragonTarget::Mob(*id), [x, y + a.size()[1] * 0.55, z]))
+        }));
+    }
     let mut dragon_strikes = Vec::new();
+    let mut dragon_mob_damage = Vec::new();
     let mut worm_damage = Vec::new();
     let mut worm_launches = Vec::new();
     schedule.spirit_aura_elapsed += dt;
@@ -1007,7 +1074,10 @@ pub(super) fn tick(
                 .iter()
                 .map(|p| distance(*p, a.position))
                 .fold(f64::INFINITY, f64::min);
-            let cadence = if finish_phase(a) || distance < 64.0_f64.powi(2) {
+            let cadence = if distance < 64.0_f64.powi(2)
+                || a.kind == CreatureKind::SandWorm
+                    && terra_core::creatures::sandworm::committed(a.behavior)
+            {
                 0.095
             } else {
                 0.195
@@ -1130,6 +1200,11 @@ pub(super) fn tick(
                     };
                     terra_world::creatures::dragons::Encounter::new(a, nest)
                 });
+                encounter.set_prey_heading(
+                    encounter
+                        .target
+                        .and_then(|id| dragon_headings.get(&id).copied()),
+                );
                 encounter.set_keeper(
                     owner,
                     order == terra_core::creatures::taming::CompanionMode::Follow,
@@ -1142,7 +1217,7 @@ pub(super) fn tick(
                         journal: &journal,
                     },
                     dt,
-                    &vulnerable,
+                    &dragon_targets,
                     night,
                     owned,
                 ));
@@ -1190,6 +1265,14 @@ pub(super) fn tick(
                 terra_world::creatures::Forage::None
             } else if companion {
                 schedule.spider_cycles.forget(id);
+                // Ground navigation stores waypoints at standing height. A
+                // spider's surface steering instead aims at the owner's body.
+                let destination = owner.map(|mut position| {
+                    if !a.kind.is_spider() {
+                        position[1] -= f64::from(terra_physics::character::PLAYER_HALF_HEIGHT);
+                    }
+                    position
+                });
                 terra_world::creatures::companions::step(
                     a,
                     &Habitat {
@@ -1197,7 +1280,7 @@ pub(super) fn tick(
                         chunks: &chunks,
                         journal: &journal,
                     },
-                    owner,
+                    destination,
                     order,
                     dt,
                     search,
@@ -1366,20 +1449,25 @@ pub(super) fn tick(
                     bear_effects.push((id, effect));
                 }
                 terra_world::creatures::Forage::None
-            } else if a.kind == CreatureKind::SandWorm {
+            } else if matches!(a.kind, CreatureKind::SandWorm | CreatureKind::LavaWorm) {
                 let (worm_targets, target_ids) = worm_frame.targets(a, &targets);
                 let attack_phase = a.behavior;
-                let effect = terra_world::creatures::sandworm::step_sensed(
-                    a,
-                    &Habitat {
-                        terrain: &terrain.0,
-                        chunks: &chunks,
-                        journal: &journal,
-                    },
-                    &worm_targets,
-                    worm_frame.disturbances.iter().copied(),
-                    dt,
-                );
+                let habitat = Habitat {
+                    terrain: &terrain.0,
+                    chunks: &chunks,
+                    journal: &journal,
+                };
+                let effect = if a.kind == CreatureKind::LavaWorm {
+                    terra_world::creatures::lava_worm::step(a, &habitat, &worm_targets, dt)
+                } else {
+                    terra_world::creatures::sandworm::step_sensed(
+                        a,
+                        &habitat,
+                        &worm_targets,
+                        worm_frame.disturbances.iter().copied(),
+                        dt,
+                    )
+                };
                 match effect {
                     terra_world::creatures::bears::Effect::StrikePlayer { index, damage } => {
                         match target_ids.get(index) {
@@ -1406,6 +1494,26 @@ pub(super) fn tick(
                     terra_world::creatures::bears::Effect::None => {}
                     effect => bear_effects.push((id, effect)),
                 }
+                terra_world::creatures::Forage::None
+            } else if a.kind == CreatureKind::StoneGolem {
+                terra_world::creatures::golem::step(
+                    a,
+                    &Habitat {
+                        terrain: &terrain.0,
+                        chunks: &chunks,
+                        journal: &journal,
+                    },
+                    &targets,
+                    dt,
+                    search,
+                    Some(&mut schedule.navigation),
+                    |index, damage| {
+                        bear_effects.push((
+                            id,
+                            terra_world::creatures::bears::Effect::StrikePlayer { index, damage },
+                        ))
+                    },
+                );
                 terra_world::creatures::Forage::None
             } else if terra_world::creatures::forest::hostile(a.kind) {
                 let effect = terra_world::creatures::forest::step(
@@ -1608,7 +1716,20 @@ pub(super) fn tick(
                     && let Some((mut peer, _)) = peers.iter_mut().find(|(p, _)| p.uuid == *uuid)
                 {
                     let mode = peer.game_mode(&config);
-                    survival::animal_attack(&mut peer, damage, mode);
+                    if population
+                        .animals
+                        .get(&id)
+                        .is_some_and(|a| a.kind == CreatureKind::LavaWorm)
+                    {
+                        molten_worm_hit(&mut peer, damage, mode);
+                    } else {
+                        survival::animal_attack(&mut peer, damage, mode);
+                    }
+                }
+            }
+            terra_world::creatures::bears::Effect::Ignite { position } => {
+                if config.world.game_rules.fire_spread {
+                    terra_world::lava::ignite(&chunks, &mut journal, position);
                 }
             }
             terra_world::creatures::bears::Effect::SpitBile { origin, velocity } => {
@@ -1618,10 +1739,14 @@ pub(super) fn tick(
         }
     }
     for strike in dragon_strikes {
-        let Some((mut peer, _)) = peers
-            .iter_mut()
-            .find(|(peer, _)| peer.uuid == strike.target)
-        else {
+        let target = match strike.target {
+            DragonTarget::Player(uuid) => uuid,
+            DragonTarget::Mob(id) => {
+                dragon_mob_damage.push((id, strike.damage));
+                continue;
+            }
+        };
+        let Some((mut peer, _)) = peers.iter_mut().find(|(peer, _)| peer.uuid == target) else {
             continue;
         };
         let mode = peer.game_mode(&config);
@@ -1793,6 +1918,9 @@ pub(super) fn tick(
         },
     );
     journal.gameplay_mut().creatures = population;
+    for (id, damage) in dragon_mob_damage {
+        train_damage::hurt_creature(journal.gameplay_mut(), id, damage);
+    }
     for (target, damage, attacker) in worm_damage {
         let original = journal
             .gameplay()
@@ -1860,7 +1988,8 @@ pub(super) fn tick(
                 && peer.game_mode(&config) == terra_core::GameMode::Survival
                 && schedule.dragons.get(&a.id).is_some_and(|enc| {
                     enc.target.is_some()
-                        && (enc.target == Some(peer.uuid)
+                        && (enc.target
+                            == Some(terra_world::creatures::dragons::Target::Player(peer.uuid))
                             || challengers
                                 .as_deref()
                                 .is_some_and(|c| c.0.contains_key(&(a.id, peer.uuid))))
@@ -2311,6 +2440,13 @@ pub(super) fn interact(
                     a.velocity = [0.; 3];
                     a.needs.goal = None;
                 }
+            } else if a.kind == CreatureKind::StoneGolem && !dies {
+                terra_core::creatures::golem::hit(a);
+            } else if a.kind == CreatureKind::LavaWorm && !dies {
+                a.behavior = CreatureBehavior::Retreat;
+                a.timer = terra_core::creatures::lava_worm::DIVE;
+                a.needs.goal = None;
+                a.velocity = [0.; 3];
             } else if a.kind == CreatureKind::SandWorm && !dies {
                 terra_core::creatures::sandworm::hit_reaction(a, eye);
             } else {

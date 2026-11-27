@@ -255,3 +255,77 @@ fn bile_bucket_authority_spills_collects_one_source_and_rejects_stale_transactio
         1
     );
 }
+
+#[test]
+fn lava_bucket_pours_and_collects_one_source_with_current_permissions_and_inventory() {
+    use terra_world::edits::{BlockObjectState, LiquidState};
+    let (mut app, mut peer, _) = setup(3, ToolKind::LavaBucket);
+    let cell = [4, 4, 4];
+    let look = aim(&app, &peer, [4.5, 4., 4.5]);
+    let command = farm_command(&app, &peer, cell, FarmingAction::EmptyLavaBucket, look);
+    peer.permissions.build = false;
+    assert_eq!(
+        apply_farm(&mut app, &mut peer, command),
+        EditOutcome::Invalid
+    );
+    assert_eq!(app.world().resource::<ChunkStore>().block_at(cell), Some(0));
+    peer.permissions.build = true;
+    assert_eq!(
+        apply_farm(&mut app, &mut peer, command),
+        EditOutcome::Applied
+    );
+    assert_eq!(
+        app.world().resource::<ChunkStore>().block_at(cell),
+        Some(terra_world::lava::LAVA)
+    );
+    assert_eq!(
+        app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid]
+            .count(ItemKind::Tool(ToolKind::Bucket)),
+        1
+    );
+    peer.farming.reset_cooldown();
+    assert_eq!(
+        apply_farm(&mut app, &mut peer, command),
+        EditOutcome::Conflict
+    );
+    let look = aim(&app, &peer, [4.5, 4.5, 4.5]);
+    let state = BlockObjectState {
+        facing: 5,
+        liquid: Some(LiquidState {
+            origin: [3, 4, 4],
+            source: false,
+            volume: 6,
+            age: 0,
+        }),
+        ..Default::default()
+    };
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .set_object_state(cell, Some(state))
+        .unwrap();
+    let collect = farm_command(&app, &peer, cell, FarmingAction::FillLavaBucket, look);
+    assert_eq!(
+        apply_farm(&mut app, &mut peer, collect),
+        EditOutcome::Occluded
+    );
+    assert_eq!(
+        app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid]
+            .count(ItemKind::Tool(ToolKind::Bucket)),
+        1
+    );
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .set_object_state(cell, None)
+        .unwrap();
+    let collect = farm_command(&app, &peer, cell, FarmingAction::FillLavaBucket, look);
+    assert_eq!(
+        apply_farm(&mut app, &mut peer, collect),
+        EditOutcome::Applied
+    );
+    assert_eq!(app.world().resource::<ChunkStore>().block_at(cell), Some(0));
+    assert_eq!(
+        app.world().resource::<EditJournal>().gameplay().inventories[&peer.uuid]
+            .count(ItemKind::Tool(ToolKind::LavaBucket)),
+        1
+    );
+}

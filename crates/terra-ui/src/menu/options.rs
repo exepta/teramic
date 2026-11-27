@@ -22,6 +22,17 @@ pub enum OptionsTab {
     Multiplayer,
 }
 
+#[derive(Message, Debug, Copy, Clone, PartialEq, Eq)]
+pub enum AudioAudition {
+    Master,
+    Ambience,
+    Animals,
+    Footsteps,
+    Water,
+    River,
+    Waterfall,
+}
+
 #[derive(Resource, Default)]
 pub struct OptionsDraft {
     pub graphics: GraphicsConfig,
@@ -400,14 +411,33 @@ pub(super) fn change(world: &mut World, control: &str, value: &str) -> Result<()
         "minimap-coordinates" => draft.gameplay.minimap.coordinates = flag()?,
         "minimap-biome" => draft.gameplay.minimap.biome = flag()?,
         "minimap-clock" => draft.gameplay.minimap.clock = flag()?,
-        "audio-master" => draft.audio.master_volume = number()? / 100.0,
-        "audio-ambience" => draft.audio.ambience_volume = number()? / 100.0,
-        "audio-animals" => draft.audio.animals_volume = number()? / 100.0,
-        "audio-footsteps" => draft.audio.footsteps_volume = number()? / 100.0,
-        "audio-water" => draft.audio.water_volume = number()? / 100.0,
-        "audio-river" => draft.audio.river_volume = number()? / 100.0,
-        "audio-waterfall" => draft.audio.waterfall_volume = number()? / 100.0,
-        "audio-muted" => draft.audio.muted = flag()?,
+        "audio-muted" => {
+            let muted = flag()?;
+            if draft.audio.muted != muted {
+                draft.audio.muted = muted;
+                world.write_message(AudioAudition::Master);
+            }
+        }
+        id if id.starts_with("audio-") => {
+            let audio = &mut draft.audio;
+            let (gain, cue) = match id {
+                "audio-master" => (&mut audio.master_volume, AudioAudition::Master),
+                "audio-ambience" => (&mut audio.ambience_volume, AudioAudition::Ambience),
+                "audio-animals" => (&mut audio.animals_volume, AudioAudition::Animals),
+                "audio-footsteps" => (&mut audio.footsteps_volume, AudioAudition::Footsteps),
+                "audio-water" => (&mut audio.water_volume, AudioAudition::Water),
+                "audio-river" => (&mut audio.river_volume, AudioAudition::River),
+                "audio-waterfall" => (&mut audio.waterfall_volume, AudioAudition::Waterfall),
+                _ => return Err("Unknown setting".into()),
+            };
+            let value = number()? / 100.0;
+            if *gain != value {
+                *gain = value;
+                if (0.0..=1.0).contains(&value) {
+                    world.write_message(cue);
+                }
+            }
+        }
         "multiplayer-names" => draft.multiplayer.player_names = flag()?,
         "multiplayer-name-distance" => draft.multiplayer.player_name_distance = number()?,
         "multiplayer-cursors" => draft.multiplayer.chest_cursors = flag()?,

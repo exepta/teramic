@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": 617,
+  "name": "Columnar Basalt",
+  "description": "Black volcanic rock fractured into pillars.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.25,
+  "resistance": 2.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "side": {
+      "roughness": 0.84,
+      "normal_texture": "textures/ashlands/columnar_basalt_side_normal.png"
+    },
+    "end": {
+      "roughness": 0.84,
+      "normal_texture": "textures/ashlands/columnar_basalt_end_normal.png"
+    }
+  },
+  "textures": {
+    "side": "textures/ashlands/columnar_basalt_side.png",
+    "end": "textures/ashlands/columnar_basalt_end.png"
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "end",
+    "end",
+    "side",
+    "side"
+  ]
+}

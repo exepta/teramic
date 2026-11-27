@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 630,
+  "name": "Fossil Bones",
+  "description": "Ribs and a weathered skull preserved in ash.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.25,
+  "resistance": 2.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/fossil_bones.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

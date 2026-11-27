@@ -64,24 +64,27 @@ fn candidate(
     x: i64,
     z: i64,
     temperature: f32,
+    sea_level: f64,
 ) -> Option<Change> {
     let surface = chunks.surface_column_at(x, z)?;
     let level = surface.water_level?;
     let p = [x, level.ceil() as i64 - 1, z];
     let material = chunks.block_at(p)?;
+    let marine = surface.biome_kind(sea_level) == crate::generation::biomes::BiomeKind::Ocean;
     if material == 49 {
         let source = journal.object_state(p)?.frozen_water()?;
         // Thaw even when the player subsequently put a roof above the ice.
-        return (temperature >= 2.).then_some(Change {
+        return (marine || temperature >= 2.).then_some(Change {
             position: p,
             material,
             water: source.amount,
         });
     }
-    if material != 0 || temperature > -2. || !exposed(chunks, journal, p, surface.height) {
+    if marine || material != 0 || temperature > -2. || !exposed(chunks, journal, p, surface.height)
+    {
         return None;
     }
-    let natural = crate::water::fluid::from_columns(surface.water_columns(), p[1]);
+    let natural = crate::water::falls::sampled(surface.water_columns(), p, journal);
     let actual = journal.fluid(p).unwrap_or(natural);
     (natural.amount > 0 && actual == natural && actual.source && actual.flow == [0, 0]).then_some(
         Change {
@@ -190,7 +193,14 @@ pub(crate) fn tick(
             };
             let local =
                 super::from_surface(&weather, surface, terrain.0.config().sea_level, season);
-            let Some(change) = candidate(&chunks, &journal, x, z, local.temperature) else {
+            let Some(change) = candidate(
+                &chunks,
+                &journal,
+                x,
+                z,
+                local.temperature,
+                terrain.0.config().sea_level,
+            ) else {
                 // A warm/cold reversal discards accumulated dwell time.
                 if let Some(level) = surface.water_level {
                     work.progress.remove(&[x, level.ceil() as i64 - 1, z]);

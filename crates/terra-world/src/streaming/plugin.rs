@@ -96,7 +96,7 @@ impl Plugin for TerraWorldPlugin {
                     apply_surface_conditions,
                     crate::weather::tick,
                     crate::weather::ice::tick,
-                    crate::fire::tick,
+                    (crate::lava::tick, crate::fire::tick).chain(),
                     crate::growth::tick,
                     crate::saplings::tick,
                     crate::fruit::tick,

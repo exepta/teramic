@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 508,
+  "name": "Woodland Toadstools",
+  "description": "A mixed cluster of spotted red caps and small brown boletes.",
+  "creative_category": "nature",
+  "hardness": 0.65,
+  "resistance": 1.2,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/woodland_toadstools.glb",
+  "textures": {},
+  "collision_boxes": []
+}

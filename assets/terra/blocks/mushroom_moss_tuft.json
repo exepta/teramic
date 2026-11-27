@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 511,
+  "name": "Flowering Moss Tuft",
+  "description": "Tiny daisies and fern shoots spring from a moss carpet.",
+  "creative_category": "nature",
+  "hardness": 0.65,
+  "resistance": 1.2,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/mushroom_moss_tuft.glb",
+  "textures": {},
+  "collision_boxes": []
+}

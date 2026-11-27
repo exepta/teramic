@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 788,
+  "name": "Sea Thrift",
+  "description": "Sea Thrift",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.22,
+  "resistance": 1.1,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/sea_thrift.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

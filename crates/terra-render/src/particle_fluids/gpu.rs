@@ -123,7 +123,7 @@ struct Gpu {
     tar: Buffer,
     bind: Option<(BindGroup, BindGroup)>,
     images: Option<(bevy::asset::AssetId<Image>, bevy::asset::AssetId<Image>)>,
-    revision: u64,
+    uploaded_input: Option<(u64, [f32; 3])>,
     origin: Vec3,
     initialized: bool,
     frames: u64,
@@ -258,7 +258,7 @@ fn initialize(
         tar: buffer(&device, "thin tar reconstruction", 128 * 128 * 16 * 16),
         bind: None,
         images: None,
-        revision: u64::MAX,
+        uploaded_input: None,
         origin: Vec3::ZERO,
         initialized: false,
         frames: 0,
@@ -400,6 +400,16 @@ fn input_error(input: &ParticleFluidInput) -> Option<String> {
     }
     None
 }
+// The buffers can already contain the current input while the solver is idle
+// or waiting for pipelines. Its last simulated origin is tracked separately.
+fn input_upload_changed(
+    uploaded: &mut Option<(u64, [f32; 3])>,
+    input: &ParticleFluidInput,
+) -> bool {
+    let key = (input.revision, input.origin);
+    uploaded.replace(key) != Some(key)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn prepare(
     mut gpu: ResMut<Gpu>,
@@ -437,14 +447,13 @@ fn prepare(
         report.error = None;
     }
     let origin = Vec3::from_array(input.origin);
-    if gpu.revision != input.revision || !gpu.initialized || origin != gpu.origin {
+    if input_upload_changed(&mut gpu.uploaded_input, input) {
         queue.write_buffer(&gpu.seed, 0, &encoded_seed(input));
         let shapes = encoded_shapes(input);
         if !shapes.is_empty() {
             queue.write_buffer(&gpu.shapes, 0, &shapes);
         }
         queue.write_buffer(&gpu.density, (FIELD * 4) as u64, &encoded_legality(input));
-        gpu.revision = input.revision;
     }
     let mut h = [0.475f32; 4];
     let mut volume = [0f32; 4];
@@ -686,7 +695,36 @@ fn map_readback(mut gpu: ResMut<Gpu>, shared: Res<Shared>) {
 
 #[cfg(test)]
 mod tests {
-    use super::{FIXED_DT, MAX_SUBSTEPS, PhysicsClock};
+    use super::{
+        FIXED_DT, FluidParticleSeed, MAX_SUBSTEPS, ParticleFluidInput, PhysicsClock, WATER,
+        input_upload_changed,
+    };
+
+    #[test]
+    fn authority_uploads_follow_input_revisions_and_domain_rebases_during_idle_frames() {
+        let mut uploaded = None;
+        let mut input = ParticleFluidInput::default();
+        assert!(input_upload_changed(&mut uploaded, &input));
+        for _ in 0..120 {
+            assert!(!input_upload_changed(&mut uploaded, &input));
+        }
+
+        input.particles.push(FluidParticleSeed {
+            kind: WATER,
+            ..Default::default()
+        });
+        input.revision += 1;
+        assert!(input_upload_changed(&mut uploaded, &input));
+        input.particles.clear();
+        input.revision += 1;
+        assert!(input_upload_changed(&mut uploaded, &input));
+        assert!(!input_upload_changed(&mut uploaded, &input));
+
+        input.origin[0] += 16.0;
+        assert!(input_upload_changed(&mut uploaded, &input));
+        input.readback_after_frames = Some(1);
+        assert!(!input_upload_changed(&mut uploaded, &input));
+    }
 
     #[test]
     fn fixed_physics_time_is_independent_of_render_frame_rate() {

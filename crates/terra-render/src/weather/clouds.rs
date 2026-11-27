@@ -35,7 +35,7 @@ struct CloudExtension {
     #[uniform(100)]
     lightning_tint: Vec4,
     #[uniform(100)]
-    sun: Vec4,
+    sun_and_ash: Vec4,
     /// Bottom, top, bounded ray sample count, storm intensity.
     #[uniform(100)]
     volume: Vec4,
@@ -87,7 +87,7 @@ struct Sky {
 }
 
 pub(super) fn install(app: &mut App) {
-    app.add_plugins(MaterialPlugin::<CloudMaterial>::default())
+    crate::material_work::add::<CloudMaterial>(app)
         .init_resource::<Sky>()
         .add_systems(
             Update,
@@ -103,6 +103,7 @@ struct CloudWorld<'w> {
     config: Res<'w, GameConfig>,
     weather: Res<'w, WeatherVisual>,
     daylight: Res<'w, crate::scene::daylight::Daylight>,
+    atmosphere: Option<Res<'w, crate::scene::biome_atmosphere::BiomeAtmosphere>>,
     underwater: Res<'w, crate::UnderwaterState>,
     chunks: Res<'w, ChunkStore>,
     authority: Option<Res<'w, terra_core::WorldWeather>>,
@@ -171,7 +172,7 @@ fn update(
                 haze: Vec4::ZERO,
                 lightning: Vec4::ZERO,
                 lightning_tint: Vec4::ONE,
-                sun: Vec4::ZERO,
+                sun_and_ash: Vec4::ZERO,
                 volume: Vec4::ZERO,
                 drift: Vec4::ZERO,
                 noise,
@@ -237,8 +238,9 @@ fn update(
         .as_ref()
         .and_then(|weather| weather.latest_lightning);
     let extension = &mut material.extension;
+    let ash = world.atmosphere.as_deref().map_or(0., |air| air.ashlands);
     extension.weather = Vec4::new(
-        world.weather.clouds,
+        world.weather.clouds.max(ash * 0.71),
         world.daylight.daylight,
         1.0 - world.underwater.blend,
         world.weather.flash,
@@ -251,7 +253,7 @@ fn update(
     extension.lightning_tint = event.map_or(Vec4::ONE, |event| {
         super::lightning::lightning_tint(event.id).extend(1.0)
     });
-    extension.sun = world.daylight.sun.extend(0.0);
+    extension.sun_and_ash = world.daylight.sun.extend(ash);
     extension.volume = Vec4::new(
         MIN_HEIGHT,
         MAX_HEIGHT,

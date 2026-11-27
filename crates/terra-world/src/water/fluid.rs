@@ -65,12 +65,19 @@ pub fn fluid_cell_at(
 }
 
 pub fn can_hold_fluid(block: u16) -> bool {
-    super::space::partial(block)
+    // Plants, shells and salvage share the open fluid cell. Reef pieces with
+    // collision use their authored partial volumes through FluidSpace.
+    (terra_core::biome_flora::is_prop(block)
+        && terra_voxel::MaterialId::from_raw(block).is_some_and(|material| !material.is_solid()))
+        || super::space::partial(block)
         || matches!(
             terra_voxel::MaterialId::from_raw(block),
             Some(
                 terra_voxel::MaterialId::Air
                     | terra_voxel::MaterialId::FluidWater
+                    | terra_voxel::MaterialId::LilyPad
+                    | terra_voxel::MaterialId::LotusFlower
+                    | terra_voxel::MaterialId::PondBlossoms
                     | terra_voxel::MaterialId::Seagrass
                     | terra_voxel::MaterialId::SaltCrystal
                     | terra_voxel::MaterialId::DripstoneTip
@@ -89,7 +96,15 @@ pub(crate) fn natural_cell(terrain: &TerraGenerator, global: [i64; 3]) -> FluidC
 }
 
 pub(crate) fn from_columns(columns: super::WaterColumns, y: i64) -> FluidCell {
-    from_column(columns.at(y), y)
+    if let Some(pool) = columns.at(y) {
+        return from_column(Some(pool), y);
+    }
+    columns
+        .falls
+        .into_iter()
+        .flatten()
+        .find(|span| span.contains(y))
+        .map_or_else(FluidCell::default, |span| span.cell(y))
 }
 
 pub(crate) fn from_column(column: Option<super::WaterColumn>, y: i64) -> FluidCell {
@@ -125,3 +140,14 @@ pub(crate) const NEIGHBORS: [[i64; 3]; 6] = [
     [0, 0, 1],
     [0, 1, 0],
 ];
+
+/// Both sections at a vertical boundary sample the receiving cell's inlet.
+/// An isolated free jet narrows, while a flooded layer stays joined to its banks.
+pub(crate) fn inlet_width(p: [i64; 3], cell: FluidCell, wet: impl Fn([i64; 3]) -> bool) -> f64 {
+    if cell.source || cell.amount >= 8 || (0..2).any(|axis| super::tongue::wet_flank(p, axis, &wet))
+    {
+        1.
+    } else {
+        cell.height().sqrt()
+    }
+}

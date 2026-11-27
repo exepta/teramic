@@ -55,6 +55,27 @@ impl MeshUploadStatus {
         self.reserve_batch_inner(kind, vertices, bytes, true)
     }
 
+    /// The previous detail level remains on screen until the entire replacement
+    /// is ready. Spread these refinements over frames without delaying a first
+    /// presentation or a player edit. A single legal piece must always progress.
+    pub(crate) fn reserve_terrain_batch(
+        &mut self,
+        vertices: usize,
+        bytes: usize,
+        refinement: bool,
+    ) -> bool {
+        let i = UploadKind::Terrain as usize;
+        if refinement
+            && self.used_bytes[i] != 0
+            && (self.used[i].saturating_add(vertices) > MAX_BATCH_VERTICES
+                || self.used_bytes[i].saturating_add(bytes) > MAX_BATCH_BYTES / 2)
+        {
+            self.deferred_batches += 1;
+            return false;
+        }
+        self.reserve_batch_bytes(UploadKind::Terrain, vertices, bytes)
+    }
+
     fn reserve_batch_inner(
         &mut self,
         kind: UploadKind,
@@ -123,8 +144,10 @@ pub(crate) fn batch_bytes(batch: &crate::meshing::builder::MeshBatch) -> usize {
         (batch.normals.len(), 12),
         (batch.tangents.len(), 16),
         (batch.uvs.len(), 8),
+        (batch.packed_uvs.len(), 4),
         (batch.rooted_wind.len(), 8),
         (batch.surface_water.len(), 8),
+        (batch.bile_motion.len(), 16),
         (batch.growth_anchors.len(), 12),
         (batch.colors.len(), 16),
         (batch.packed_normals.len(), 4),
@@ -151,8 +174,10 @@ fn vertex_stride(batch: &crate::meshing::builder::MeshBatch) -> usize {
         (!batch.normals.is_empty(), 12),
         (!batch.tangents.is_empty(), 16),
         (!batch.uvs.is_empty(), 8),
+        (!batch.packed_uvs.is_empty(), 4),
         (!batch.rooted_wind.is_empty(), 8),
         (!batch.surface_water.is_empty(), 8),
+        (!batch.bile_motion.is_empty(), 16),
         (!batch.growth_anchors.is_empty(), 12),
         (!batch.colors.is_empty(), 16),
         (batch.half_colors.is_some(), 8),
@@ -165,17 +190,67 @@ fn vertex_stride(batch: &crate::meshing::builder::MeshBatch) -> usize {
     .sum()
 }
 
-fn empty_part(source: &crate::meshing::builder::MeshBatch) -> crate::meshing::builder::MeshBatch {
-    crate::meshing::builder::MeshBatch {
-        material: source.material,
-        shadow_only: source.shadow_only,
-        shadow_sources: source.shadow_sources.clone(),
-        half_colors: source
-            .half_colors
-            .as_ref()
-            .map(|_| VertexAttributeValues::Float16x4(Vec::new())),
-        ..Default::default()
+/// Gather each vertex attribute in a single allocation after fixing the part's
+/// indices. Relief templates usually reference a contiguous run in index order.
+fn gather_vertices<T: Copy + Default>(source: &[T], originals: &[usize], ordered: bool) -> Vec<T> {
+    if source.is_empty() {
+        return Vec::new();
     }
+    if ordered {
+        let start = originals[0];
+        let end = start + originals.len();
+        if let Some(vertices) = source.get(start..end) {
+            return vertices.to_vec();
+        }
+    }
+    // Wind and water payloads can be shorter than positions; staging fills
+    // their missing tail with zeroes in exactly the same way.
+    originals
+        .iter()
+        .map(|&i| source.get(i).copied().unwrap_or_default())
+        .collect()
+}
+
+fn finish_part(
+    mut part: crate::meshing::builder::MeshBatch,
+    source: &crate::meshing::builder::MeshBatch,
+    originals: &[usize],
+) -> crate::meshing::builder::MeshBatch {
+    let ordered = originals.windows(2).all(|pair| pair[1] == pair[0] + 1);
+    part.material = source.material;
+    part.tiled_uv_range = source.tiled_uv_range;
+    part.shadow_only = source.shadow_only;
+    part.paired_leaf_shadow = source.paired_leaf_shadow;
+    part.profile_leaf_shadow = source.profile_leaf_shadow;
+    part.shadow_sources.clone_from(&source.shadow_sources);
+    part.flowing_lava = source.flowing_lava;
+    macro_rules! gather {
+        ($($field:ident),+) => {$(
+            part.$field = gather_vertices(&source.$field, originals, ordered);
+        )+};
+    }
+    gather!(
+        positions,
+        normals,
+        tangents,
+        uvs,
+        packed_uvs,
+        growth_anchors,
+        colors,
+        packed_normals,
+        packed_tangents,
+        packed_colors,
+        rooted_wind,
+        surface_water,
+        bile_motion
+    );
+    if let Some(VertexAttributeValues::Float16x4(colors)) = &source.half_colors {
+        part.half_colors = Some(VertexAttributeValues::Float16x4(gather_vertices(
+            colors, originals, ordered,
+        )));
+    }
+    annotate_part(&mut part, source, originals);
+    part
 }
 
 fn remap_ranges(
@@ -261,6 +336,8 @@ fn validate_split_source(batch: &crate::meshing::builder::MeshBatch) -> Result<(
         ("normals", batch.normals.len()),
         ("tangents", batch.tangents.len()),
         ("uvs", batch.uvs.len()),
+        ("packed UVs", batch.packed_uvs.len()),
+        ("bile motion", batch.bile_motion.len()),
         ("growth anchors", batch.growth_anchors.len()),
         ("colors", batch.colors.len()),
         ("packed normals", batch.packed_normals.len()),
@@ -300,16 +377,88 @@ fn validate_split_source(batch: &crate::meshing::builder::MeshBatch) -> Result<(
     Ok(())
 }
 
+/// Keep folded-leaf pieces local to the cells that generated them. Large
+/// canopies otherwise produce budget-sized meshes that span most of a section;
+/// neither the camera nor the sun can cull their hidden parts independently.
+fn crown_ranges(
+    batch: &crate::meshing::builder::MeshBatch,
+    index_count: usize,
+    index: impl Fn(usize) -> usize,
+) -> Vec<Vec<std::ops::Range<usize>>> {
+    // Count modeled faces, independent of their current triangle density.
+    // A sparse octant stays one mesh. Dense octants split on fixed 4 m planes.
+    let group = |[x, y, z]: [u32; 3], shift: u32| {
+        (((x >> shift) & 1) | (((y >> shift) & 1) << 1) | (((z >> shift) & 1) << 2)) as usize
+    };
+    let mut faces = [0; 8];
+    for owner in &batch.foliage_owners {
+        if owner.vertices.len() >= 256 {
+            faces[group(owner.cell, 3)] += 1;
+        }
+    }
+    let mut groups = vec![Vec::<std::ops::Range<usize>>::new(); 65];
+    let mut vertex_groups = vec![64_u8; batch.positions.len()];
+    for owner in &batch.foliage_owners {
+        let octant = group(owner.cell, 3);
+        let tile = if faces[octant] >= 48 {
+            group(owner.cell, 2)
+        } else {
+            0
+        };
+        if let Some(vertices) = vertex_groups.get_mut(owner.vertices.clone()) {
+            vertices.fill((octant * 8 + tile) as u8);
+        }
+    }
+    for start in (0..index_count).step_by(6) {
+        let key = vertex_groups.get(index(start)).copied().unwrap_or(64);
+        let ranges = &mut groups[usize::from(key)];
+        let end = (start + 6).min(index_count);
+        if let Some(previous) = ranges.last_mut().filter(|r| r.end == start) {
+            previous.end = end;
+        } else {
+            ranges.push(start..end);
+        }
+    }
+    groups.retain(|ranges| !ranges.is_empty());
+    groups
+}
+
 /// Worker-only: bound each later main-thread handoff without changing geometry.
 /// Keep adjacent triangle pairs together, remapping shared boundary vertices
 /// and CPU provenance. Call before staging GPU handles and compacting indices.
 pub(crate) fn split_batches(
     batches: Vec<crate::meshing::builder::MeshBatch>,
 ) -> Result<Vec<crate::meshing::builder::MeshBatch>, String> {
+    split_worker_batches(batches, None)
+}
+
+/// Seasonal and wind tags have already been baked into the vertex streams.
+pub(crate) fn split_terrain_batches(
+    batches: Vec<crate::meshing::builder::MeshBatch>,
+    local_crowns: bool,
+) -> Result<Vec<crate::meshing::builder::MeshBatch>, String> {
+    split_worker_batches(batches, Some(local_crowns))
+}
+
+fn split_worker_batches(
+    batches: Vec<crate::meshing::builder::MeshBatch>,
+    terrain: Option<bool>,
+) -> Result<Vec<crate::meshing::builder::MeshBatch>, String> {
     let mut result = Vec::with_capacity(batches.len());
     for mut source in batches {
         validate_half_colors(&source)?;
-        if (source.positions.len() <= MAX_BATCH_VERTICES && batch_bytes(&source) <= MAX_BATCH_BYTES)
+        let local_crown = terrain == Some(true)
+            && source.positions.len() >= 24_000
+            && source
+                .foliage_owners
+                .iter()
+                .any(|owner| owner.vertices.len() >= 256);
+        if terrain.is_some() && !local_crown {
+            source.foliage_owners = Vec::new();
+        }
+        if (!local_crown
+            && source.positions.len() <= MAX_BATCH_VERTICES
+            && batch_bytes(&source) <= MAX_BATCH_BYTES)
             || !source.has_indices()
         {
             result.push(source);
@@ -339,85 +488,65 @@ pub(crate) fn split_batches(
         let index_stride = if compact { 2 } else { 4 };
         let mut remap = vec![u32::MAX; source.positions.len()];
         let mut originals = Vec::with_capacity(MAX_BATCH_VERTICES);
-        let mut part = empty_part(&source);
-        for start in (0..index_count).step_by(6) {
-            let end = (start + 6).min(index_count);
-            let mut new_vertices = [usize::MAX; 6];
-            let mut added = 0;
-            for i in start..end {
-                let old = index(i);
-                if old >= remap.len() {
-                    return Err("Cannot split mesh with an out-of-range triangle index".into());
+        let mut part = crate::meshing::builder::MeshBatch::default();
+        let groups = if local_crown {
+            crown_ranges(&source, index_count, index)
+        } else {
+            vec![vec![0..index_count]]
+        };
+        if terrain.is_some() {
+            source.foliage_owners = Vec::new();
+        }
+        for group in groups {
+            for start in group.into_iter().flat_map(|run| run.step_by(6)) {
+                let end = (start + 6).min(index_count);
+                let indices = part.indices.len() + part.compact_indices.len() + end - start;
+                let over_limit = |vertices| {
+                    vertices > MAX_BATCH_VERTICES
+                        || vertices * stride + indices * index_stride > MAX_BATCH_BYTES
+                };
+                // A triangle pair can introduce at most six vertices. Inspect shared
+                // indices twice only at the part boundary, where their reuse matters.
+                if part.has_indices() && over_limit(originals.len() + end - start) {
+                    let mut fresh = [usize::MAX; 6];
+                    let mut added = 0;
+                    for i in start..end {
+                        let old = index(i);
+                        if remap.get(old) == Some(&u32::MAX) && !fresh[..added].contains(&old) {
+                            fresh[added] = old;
+                            added += 1;
+                        }
+                    }
+                    if over_limit(originals.len() + added) {
+                        result.push(finish_part(std::mem::take(&mut part), &source, &originals));
+                        for old in originals.drain(..) {
+                            remap[old] = u32::MAX;
+                        }
+                    }
                 }
-                if remap[old] == u32::MAX && !new_vertices[..added].contains(&old) {
-                    new_vertices[added] = old;
-                    added += 1;
+                for i in start..end {
+                    let old = index(i);
+                    let slot = remap
+                        .get_mut(old)
+                        .ok_or("Cannot split mesh with an out-of-range triangle index")?;
+                    if *slot == u32::MAX {
+                        *slot = originals.len() as u32;
+                        originals.push(old);
+                    }
+                    let local = *slot;
+                    if compact {
+                        part.compact_indices.push(local as u16);
+                    } else {
+                        part.indices.push(local);
+                    }
                 }
             }
-            let vertices = part.positions.len() + added;
-            let indices = part.indices.len() + part.compact_indices.len() + end - start;
-            if part.has_indices()
-                && (vertices > MAX_BATCH_VERTICES
-                    || vertices * stride + indices * index_stride > MAX_BATCH_BYTES)
-            {
-                annotate_part(&mut part, &source, &originals);
-                result.push(std::mem::replace(&mut part, empty_part(&source)));
+            if part.has_indices() {
+                result.push(finish_part(std::mem::take(&mut part), &source, &originals));
                 for old in originals.drain(..) {
                     remap[old] = u32::MAX;
                 }
             }
-            for i in start..end {
-                let old = index(i);
-                let local = if remap[old] != u32::MAX {
-                    remap[old]
-                } else {
-                    let local = part.positions.len() as u32;
-                    part.positions.push(source.positions[old]);
-                    macro_rules! attribute {
-                        ($field:ident) => {
-                            if !source.$field.is_empty() {
-                                part.$field.push(source.$field[old]);
-                            }
-                        };
-                    }
-                    attribute!(normals);
-                    attribute!(tangents);
-                    attribute!(uvs);
-                    attribute!(growth_anchors);
-                    attribute!(colors);
-                    attribute!(packed_normals);
-                    attribute!(packed_tangents);
-                    attribute!(packed_colors);
-                    if let Some(VertexAttributeValues::Float16x4(colors)) = &source.half_colors {
-                        let Some(VertexAttributeValues::Float16x4(part_colors)) =
-                            &mut part.half_colors
-                        else {
-                            unreachable!("validated half colors retain their format");
-                        };
-                        part_colors.push(colors[old]);
-                    }
-                    if !source.rooted_wind.is_empty() {
-                        part.rooted_wind
-                            .push(source.rooted_wind.get(old).copied().unwrap_or([0.0; 2]));
-                    }
-                    if !source.surface_water.is_empty() {
-                        part.surface_water
-                            .push(source.surface_water.get(old).copied().unwrap_or([0.0; 2]));
-                    }
-                    remap[old] = local;
-                    originals.push(old);
-                    local
-                };
-                if compact {
-                    part.compact_indices.push(local as u16);
-                } else {
-                    part.indices.push(local);
-                }
-            }
-        }
-        if part.has_indices() {
-            annotate_part(&mut part, &source, &originals);
-            result.push(part);
         }
     }
     Ok(result)
@@ -428,7 +557,10 @@ pub(crate) fn release_staged(
     meshes: &mut Assets<Mesh>,
 ) {
     for batch in batches {
-        if let Some(staged) = batch.staged.take() {
+        if let Some(staged) = batch.staged.take()
+            && batch.borrowed_from.take().is_none()
+            && staged.liquid.is_none()
+        {
             meshes.remove(staged.handle.id());
         }
     }
@@ -437,6 +569,17 @@ pub(crate) fn release_staged(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn refinements_make_progress_and_leave_upload_room_for_new_geometry() {
+        let mut budget = MeshUploadStatus::default();
+        assert!(budget.reserve_terrain_batch(MAX_BATCH_VERTICES, MAX_BATCH_BYTES, true));
+        assert!(!budget.reserve_terrain_batch(4, 48, true));
+        assert!(budget.reserve_terrain_batch(4, 48, false));
+        assert!(budget.reserve_batch_bytes(UploadKind::Props, 4, 48));
+        let mut next = MeshUploadStatus::default();
+        assert!(next.reserve_terrain_batch(4, 48, true));
+        assert_eq!(budget.deferred_batches, 1);
+    }
     #[test]
     fn quotas_defer_without_starving_other_domains_or_oversized_sections() {
         let mut status = MeshUploadStatus::default();
@@ -633,6 +776,65 @@ mod tests {
     }
 
     #[test]
+    fn spatial_crowns_keep_exact_triangles_and_isolate_distant_cell_changes() {
+        use crate::meshing::builder::{FoliageOwner, MeshBatch};
+        let crown = |edit: bool| {
+            let mut batch = MeshBatch::default();
+            // Interleave the two octants as the face mesher does.
+            for i in 0..90 {
+                let x = if i % 2 == 0 { 0 } else { 12 };
+                let start = batch.positions.len();
+                let count = if edit && i == 0 { 288 } else { 282 };
+                for j in 0..count {
+                    batch
+                        .positions
+                        .push([x as f32, i as f32 / 90., j as f32 / 282.]);
+                    batch.colors.push([0.1, 0.3, 0.2, (i % 8) as f32 / 8.]);
+                    batch.indices.push((start + j) as u32);
+                }
+                batch.foliage_owners.push(FoliageOwner {
+                    vertices: start..start + count,
+                    cell: [x, 0, 0],
+                    material: 7,
+                });
+            }
+            batch
+        };
+        let mut original = crown(false);
+        let expected = |x: f32| {
+            original
+                .positions
+                .iter()
+                .zip(&original.colors)
+                .filter(|(p, _)| p[0] == x)
+                .map(|(p, c)| (*p, *c))
+                .collect::<Vec<_>>()
+        };
+        let streams = [expected(0.), expected(12.)];
+        original.compact_indices();
+        let parts = split_terrain_batches(vec![original], true).unwrap();
+        let edited = split_terrain_batches(vec![crown(true)], true).unwrap();
+        assert_eq!(parts.len(), 2);
+        for (part, expected) in parts.iter().zip(streams) {
+            let actual = part
+                .compact_indices
+                .iter()
+                .map(|&i| (part.positions[i as usize], part.colors[i as usize]))
+                .collect::<Vec<_>>();
+            assert_eq!(actual, expected);
+            assert!(part.foliage_owners.is_empty());
+        }
+        assert_eq!(parts[1], edited[1]);
+        assert_ne!(parts[0], edited[0]);
+        assert_eq!(
+            split_terrain_batches(vec![crown(false)], false)
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+
+    #[test]
     fn half_color_byte_accounting_uses_the_actual_attribute_storage() {
         let mut batch = half_color_batch(6);
         assert_eq!(vertex_stride(&batch), 12 + 8);
@@ -724,7 +926,10 @@ mod tests {
     #[test]
     fn worker_split_preserves_all_attributes_indices_and_shadow_metadata() {
         let count = 140_004;
-        let parts = split_batches(vec![rich_batch(count)]).unwrap();
+        let mut batch = rich_batch(count);
+        batch.flowing_lava = true;
+        batch.bile_motion = (0..count).map(|i| [i as f32, 0.5, 0.25, 1.0]).collect();
+        let parts = split_batches(vec![batch]).unwrap();
         assert!(parts.len() >= 3);
         assert_eq!(
             reconstructed_indices(&parts),
@@ -736,9 +941,11 @@ mod tests {
             assert_eq!(part.material, 19);
             assert!(part.shadow_only);
             assert_eq!(part.shadow_sources, [3, 7, 11]);
+            assert!(part.flowing_lava);
             for i in 0..part.positions.len() {
                 let old = part.positions[i][0] as usize;
                 assert_eq!(part.positions[i], [old as f32, 1.0, 2.0]);
+                assert_eq!(part.bile_motion[i], [old as f32, 0.5, 0.25, 1.0]);
                 assert_eq!(part.normals[i], [0.0, 1.0, 0.0]);
                 assert_eq!(part.tangents[i], [1.0, 0.0, 0.0, 1.0]);
                 assert_eq!(part.uvs[i], [old as f32 * 0.25, 0.5]);

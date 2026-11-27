@@ -1,5 +1,5 @@
 #[test]
-fn cube_foliage_uses_distinct_cutout_authored_top_and_side_art_without_double_tint() {
+fn cube_foliage_preserves_species_sprays_and_untinted_authored_canopies() {
     use super::definitions::{BlockLibrary, BlockRenderKind};
     let directory = terra_core::asset_directory().join("terra/blocks");
     let library = BlockLibrary::load(&directory).expect("block definitions");
@@ -44,11 +44,19 @@ fn cube_foliage_uses_distinct_cutout_authored_top_and_side_art_without_double_ti
             assert_eq!(material.base_color, [1.0; 4]);
             assert!(material.texture_pattern.is_none());
             assert_eq!(material.emission, [0.0; 3]);
-            let suffix = if side == 3 { "top" } else { "side" };
-            assert_eq!(
-                block.textures[name],
-                format!("textures/foliage/{style}_{suffix}.png")
-            );
+            if id == 7 {
+                assert_eq!(block.textures[name], "textures/sculpted/leaves.png");
+                assert_eq!(
+                    material.normal_texture.as_deref(),
+                    Some("textures/sculpted/leaves_normal.png")
+                );
+            } else {
+                let suffix = if side == 3 { "top" } else { "side" };
+                assert_eq!(
+                    block.textures[name],
+                    format!("textures/foliage/{style}_{suffix}.png")
+                );
+            }
             assert!(directory.join(&block.textures[name]).is_file());
         }
     }
@@ -94,6 +102,13 @@ fn tree_assets_use_botanical_and_bark_textures_not_stone() {
             if [6, 10].contains(&id) {
                 assert!(texture.starts_with("textures/block_palette/"));
                 assert!(texture.contains("oak_") || texture.contains("birch_"));
+            } else if id == 7 {
+                assert!(matches!(
+                    texture.as_str(),
+                    "textures/sculpted/leaves.png"
+                        | "textures/foliage/oak_cluster.png"
+                        | "textures/foliage/spruce_cluster.png"
+                ));
             } else {
                 assert!(texture.starts_with("textures/foliage/"));
             }

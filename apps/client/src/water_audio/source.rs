@@ -45,7 +45,15 @@ impl MixControls {
 }
 
 #[derive(Asset, TypePath)]
-pub(super) struct WaterAudioSource(pub Arc<MixControls>);
+pub(crate) struct WaterAudioSource(pub(super) Arc<MixControls>);
+
+impl WaterAudioSource {
+    pub(crate) fn isolated(gains: [f32; 3]) -> Self {
+        let controls = Arc::new(MixControls::default());
+        controls.update(gains.map(|gain| [gain; 2]), false, 0.0);
+        Self(controls)
+    }
+}
 
 impl Decodable for WaterAudioSource {
     type Decoder = WaterStream;
@@ -72,7 +80,7 @@ impl Decodable for WaterAudioSource {
     }
 }
 
-pub(super) struct WaterStream {
+pub(crate) struct WaterStream {
     controls: Arc<MixControls>,
     voices: [Noise; 3],
     gains: [[f32; 2]; 3],

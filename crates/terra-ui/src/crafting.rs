@@ -6,6 +6,8 @@ use terra_core::crafting::{
 use tilt_ui::html_shared;
 #[path = "crafting_pointer.rs"]
 mod grid_pointer;
+#[path = "crafting_uses.rs"]
+mod usage;
 
 pub(super) fn drag_preview(
     state: &CraftingState,
@@ -48,6 +50,7 @@ pub(super) struct CraftingState {
     selected: Option<u64>,
     selected_kind: RecipeKind,
     recipe_item: Option<ItemKind>,
+    usage_input: Option<ItemKind>,
     pub(super) recipe_open: bool,
     search: String,
     furnace_fuels: bool,
@@ -177,6 +180,7 @@ pub struct CraftingView {
     pub campfire: bool,
     pub recipe_duration: String,
     pub recipe_heading: String,
+    pub showing_uses: bool,
     pub apply_title: String,
     pub recipe_categories: Vec<RecipeCategoryView>,
     pub recipe_alternatives: Vec<RecipeAlternativeView>,
@@ -316,6 +320,17 @@ impl<'a> RecipeChoice<'a> {
         }
     }
 }
+impl RecipeChoice<'_> {
+    fn output(self) -> terra_core::ItemStack {
+        match self {
+            Self::Craft(r) => r.output,
+            Self::Smelt(r) | Self::Campfire(r) => r.output,
+            Self::Crush(r) => r.output,
+            Self::Brew(r) => r.output(),
+        }
+    }
+}
+
 fn alternatives(book: &RecipeBook, item: Option<ItemKind>) -> Vec<RecipeChoice<'_>> {
     let item = item.map(|item| match item {
         ItemKind::HeraldicCape { cape, .. } => ItemKind::Cape(cape.undyed()),
@@ -566,6 +581,7 @@ fn recipe_matches_search(
 #[allow(clippy::too_many_arguments)]
 fn actions(
     mut slots: MessageReader<InventoryAction>,
+    current_view: Res<CraftingView>,
     mut events: MessageReader<CraftingAction>,
     mut state: ResMut<CraftingState>,
     inventory: Res<InventoryState>,
@@ -678,6 +694,30 @@ fn actions(
         {
             continue;
         }
+        if let InventoryAction::Uses(key) = event {
+            if let Some(item) = current_view
+                .recipe_grid
+                .iter()
+                .chain(&current_view.recipe_output)
+                .chain(&current_view.grid)
+                .chain(&current_view.output)
+                .chain(&current_view.cauldron_inputs)
+                .chain(&current_view.cauldron_tools)
+                .chain(&current_view.furnace_fuel)
+                .find(|slot| slot.item_id == *key)
+                .and_then(|slot| slot.item)
+                .or_else(|| inspectable_item(&session, &palette, key))
+                && state.pending.is_none()
+            {
+                state.usage_input = Some(item);
+                state.recipe_open = true;
+                state.selected = None;
+                state.recipe_item = None;
+                state.error.clear();
+                state.furnace_fuels = false;
+            }
+            continue;
+        }
         let inspected = match event {
             InventoryAction::Recipe(item) => Some(item),
             InventoryAction::Pointer { command, item, .. }
@@ -710,6 +750,7 @@ fn actions(
                 state.error = "Waiting for the inventory update.".into();
                 continue;
             }
+            state.usage_input = None;
             state.recipe_item = item;
             if generated {
                 state.selected = None;
@@ -768,6 +809,15 @@ fn actions(
         if state.pending.is_some() && !matches!(event, CraftingAction::CloseRecipe) {
             state.error = "Waiting for the inventory update.".into();
             continue;
+        }
+        if matches!(
+            event,
+            CraftingAction::OpenBook
+                | CraftingAction::CloseRecipe
+                | CraftingAction::Select(_)
+                | CraftingAction::Search(_)
+        ) {
+            state.usage_input = None;
         }
         match event {
             CraftingAction::OpenBook => {
@@ -1054,6 +1104,14 @@ fn actions(
             }
             CraftingAction::SelectAlternative(index)
             | CraftingAction::PreviewAlternative { index, .. } => {
+                if let Some(input) = state.usage_input {
+                    if let Some(choice) =
+                        usage::entries(&book, input, &session).get(*index).copied()
+                    {
+                        choice.select(&mut state, &inventory, &session);
+                    }
+                    continue;
+                }
                 if let Some(choice) = alternatives(&book, state.recipe_item).get(*index).copied() {
                     if let CraftingAction::PreviewAlternative {
                         wood: Some(wood), ..
@@ -1934,24 +1992,51 @@ fn update(
             next.recipe_category,
             next.recipe_alternatives.len().max(1)
         );
-        let used = book
-            .iter()
-            .filter(|recipe| {
-                recipe
-                    .ingredients()
-                    .iter()
-                    .any(|ingredient| ingredient.matches(item))
+        let used = usage::entries(&book, item, &session).len();
+        next.uses_summary = format!("Used in: {used} recipes");
+    }
+    if let Some(input) = state.usage_input {
+        next.showing_uses = true;
+        next.recipe_open = true;
+        next.recipe_heading = "Item uses".into();
+        next.name = view::item_view(input, 1, &palette).name;
+        next.recipe_categories.clear();
+        next.recipe_alternatives = usage::entries(&book, input, &session)
+            .into_iter()
+            .enumerate()
+            .map(|(index, choice)| {
+                let output = choice.output();
+                let slot = view::item_view(output.item, output.count, &palette);
+                RecipeAlternativeView {
+                    id: format!("usage-{index}"),
+                    index,
+                    name: slot.name.clone(),
+                    output: vec![slot],
+                    summary: choice.station().into(),
+                    ..default()
+                }
             })
-            .count();
-        next.uses_summary = format!("Used in: {used} crafting recipes");
+            .collect();
+        next.message = if next.recipe_alternatives.is_empty() {
+            "No registered recipe uses this item."
+        } else {
+            ""
+        }
+        .into();
     }
     if *view != next {
         *view = next;
     }
 }
 
-const WOOD_PREVIEWS: [(&str, u16); 4] =
-    [("Oak", 16), ("Spruce", 18), ("Birch", 17), ("Cherry", 135)];
+const WOOD_PREVIEWS: [(&str, u16); 6] = [
+    ("Oak", 16),
+    ("Spruce", 18),
+    ("Birch", 17),
+    ("Cherry", 135),
+    ("Acacia", 645),
+    ("Willow", 681),
+];
 fn wood_preview(state: &CraftingState) -> ItemKind {
     ItemKind::Block(WOOD_PREVIEWS[state.preview_wood.min(WOOD_PREVIEWS.len() - 1)].1)
 }
@@ -1963,7 +2048,7 @@ fn describe_ingredient(
     if ingredient.wood {
         slot.name = "Any wood planks".into();
         slot.description =
-            "Accepts Oak, Birch, Spruce and Cherry planks, including mixed wood types.".into();
+            "Accepts planks from any woodworking species, including mixed wood types.".into();
         slot.identifier = "Wood planks (any type)".into();
     }
 }
@@ -2075,7 +2160,7 @@ fn browser_view(
                 .map(move |wood| (index, choice, wood))
         })
         .map(|(index, choice, wood)| RecipeAlternativeView {
-            id: format!("recipe-{index}-{}", wood.unwrap_or(4)),
+            id: format!("recipe-{index}-{}", wood.unwrap_or(WOOD_PREVIEWS.len())),
             wood,
             index,
             name: if let Some(wood) = wood {

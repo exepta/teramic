@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 558,
+  "name": "Bladderwrack",
+  "description": "Golden floats lift olive blades toward the light.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 0.7,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/bladderwrack.glb",
+  "collision_boxes": [],
+  "textures": {}
+}

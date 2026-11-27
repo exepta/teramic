@@ -131,7 +131,7 @@ impl WorldLibrary {
             world.id = id;
             world.seed = WorldSeed(seed.unwrap_or_else(|| id.0.rotate_left(17)));
             world.geology_revision = 4;
-            world.ecology_revision = 11;
+            world.ecology_revision = WorldConfig::CURRENT_ECOLOGY_REVISION;
             world.spirit_blossom_revision = 2;
             world.blood_forest_revision = 1;
             world.landscape_revision = WorldConfig::CURRENT_LANDSCAPE_REVISION;
@@ -342,7 +342,10 @@ mod tests {
             entry.manifest.world.structures_revision,
             WorldConfig::CURRENT_STRUCTURES_REVISION
         );
-        assert_eq!(entry.manifest.world.ecology_revision, 11);
+        assert_eq!(
+            entry.manifest.world.ecology_revision,
+            WorldConfig::CURRENT_ECOLOGY_REVISION
+        );
         assert_eq!(entry.manifest.world.river_terrain_revision, 7);
         assert_eq!(library.list().unwrap().0.len(), 1);
         assert_eq!(

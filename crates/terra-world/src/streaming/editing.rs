@@ -205,7 +205,9 @@ fn commit(
             }
         }
     }
-    if request.material == 40 && crate::torches::wet_placement(chunks, journal, request.position) {
+    if terra_core::block_shapes::is_torch(request.material)
+        && crate::torches::wet_placement(chunks, journal, request.position)
+    {
         return Err("Torches cannot be placed in water".into());
     }
     if request.material == terra_core::lantern::LANTERN
@@ -216,7 +218,10 @@ fn commit(
     // Headless generation caches 16x16 columns; mesh generation adds an 18x18
     // halo. Query global coordinates instead of assuming either slice layout.
     let retained_water = (crate::water::space::partial(request.material)
-        && !matches!(request.material, 40 | terra_core::lantern::LANTERN))
+        && !matches!(
+            request.material,
+            40 | terra_core::block_shapes::VIOLET_TORCH | terra_core::lantern::LANTERN
+        ))
     .then(|| {
         if request.expected_material == MaterialId::SolidWater as u16 {
             return crate::water::FluidCell {
@@ -231,7 +236,7 @@ fn commit(
                 .get(&[owner.x, owner.z])
                 .and_then(|column| column.surface_at(request.position[0], request.position[2]))
                 .map_or_else(Default::default, |surface| {
-                    crate::water::fluid::from_columns(surface.water_columns(), request.position[1])
+                    crate::water::falls::sampled(surface.water_columns(), request.position, journal)
                 })
         })
     });
@@ -255,7 +260,7 @@ fn commit(
                         .get(&[section.x, section.z])
                         .and_then(|column| column.surface_at(p[0], p[2]))
                         .map_or_else(Default::default, |surface| {
-                            crate::water::fluid::from_columns(surface.water_columns(), p[1])
+                            crate::water::falls::sampled(surface.water_columns(), p, journal)
                         })
                 });
                 (water.amount > 0 && (p[1] >= request.position[1] || water.amount == 8))
@@ -319,12 +324,12 @@ fn commit(
         let position = std::array::from_fn(|i| request.position[i] + offset[i]);
         let Some(material) = chunks
             .block_at(position)
-            .filter(|m| *m == 40 || terra_core::lantern::is_part(*m))
+            .filter(|m| terra_core::block_shapes::is_torch(*m) || terra_core::lantern::is_part(*m))
         else {
             continue;
         };
         let facing = journal.object_state(position).map_or(0, |s| s.facing);
-        let (anchor, supported) = if material == 40 {
+        let (anchor, supported) = if terra_core::block_shapes::is_torch(material) {
             (
                 crate::torches::support(position, facing),
                 Some(crate::torches::supported(
@@ -378,6 +383,14 @@ fn commit(
             )?;
         }
     }
+    crate::water::falls::invalidate(chunks, journal, request.position)
+        .map_err(|e| e.to_string())?;
+    crate::lava::after_edit(
+        chunks,
+        request.position,
+        request.expected_material,
+        request.material,
+    );
     if reconcile {
         super::support::after_edit(chunks, journal, request.position, properties)?;
     }
@@ -557,6 +570,15 @@ pub fn commit_prop_removal(
     let changed = journal
         .remove_prop(request.section, request.id)
         .map_err(|e| e.to_string())?;
+    if changed && prop.kind == crate::props::PropKind::Coconut && prop.wall_attached() {
+        // At the saved timer limit harvesting still succeeds, as with grazed forage.
+        if let Err(error) = journal.set_forage_regrowth(crate::farming::ForageRegrowth {
+            prop: *prop,
+            remaining_seconds: 240.0 + (prop.id.0 % 121) as f32,
+        }) {
+            tracing::warn!(%error, "Cannot schedule coconut regrowth");
+        }
+    }
     prop.removed = true;
     crate::props::placement::reflow(&mut section.props);
     Ok(changed)

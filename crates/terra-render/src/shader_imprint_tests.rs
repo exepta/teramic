@@ -412,3 +412,190 @@ fn actual_fluid_handoff_fragments_compile_in_both_binding_modes() {
         }
     }
 }
+
+#[test]
+fn certified_oak_paint_omits_alpha_texture_fetch_in_both_shadow_binding_modes() {
+    let mut resolver = engine_shaders();
+    resolver.root = include_str!("../../../assets/shaders/terra_foliage_prepass.wesl").into();
+    let path = "terra::imprint".parse::<ModulePath>().unwrap();
+    for bindless in [false, true] {
+        for (opaque, profile) in [(false, false), (true, false), (true, true)] {
+            let mut options = wesl::CompileOptions {
+                visibility: false,
+                ..default()
+            };
+            for feature in [
+                "PREPASS_PIPELINE",
+                "MAY_DISCARD",
+                "VERTEX_UVS",
+                "VERTEX_UVS_A",
+                "VERTEX_COLORS",
+                "VERTEX_OUTPUT_INSTANCE_INDEX",
+            ] {
+                options.features.set(feature, true);
+            }
+            options.features.set("BINDLESS", bindless);
+            options.features.set("OPAQUE_LEAF_PAINT", opaque);
+            options.features.set("LEAF_SHADOW_PROFILE", profile);
+            let wgsl = wesl::compile(&path, &options, &resolver)
+                .unwrap()
+                .syntax
+                .to_string();
+            let module = naga::front::wgsl::parse_str(&wgsl)
+                .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&wgsl)));
+            naga::valid::Validator::new(
+                naga::valid::ValidationFlags::all(),
+                naga::valid::Capabilities::all(),
+            )
+            .validate(&module)
+            .unwrap();
+            // This variant outputs depth only, so the sole purpose of any
+            // remaining image sample is coverage. Both paths still discard.
+            assert_eq!(
+                module
+                    .functions
+                    .iter()
+                    .any(|(_, function)| function.expressions.iter().any(
+                        |(_, expression)| matches!(
+                            expression,
+                            naga::Expression::ImageSample { .. }
+                        )
+                    )),
+                !opaque
+            );
+            assert!(wgsl.contains("discard;"));
+        }
+    }
+}
+
+#[test]
+fn canopy_opaque_surfaces_and_surf_translate_to_direct3d_and_vulkan() {
+    let mut resolver = engine_shaders();
+    let path = "terra::imprint".parse::<ModulePath>().unwrap();
+    let leaf = include_str!("../../../assets/shaders/terra_foliage.wesl");
+    let liquid = include_str!("../../../assets/shaders/terra_liquid_vertex.wesl");
+    for (source, prepass, fragment, compressed, deferred, flame, dry_oak) in [
+        (
+            include_str!("../../../assets/shaders/terra_surf.wesl"),
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+        ),
+        (leaf, false, false, false, false, false, false),
+        (leaf, false, false, false, false, false, true),
+        (leaf, true, false, true, false, false, false),
+        (leaf, true, false, true, false, false, true),
+        (leaf, true, false, true, true, false, false),
+        (leaf, true, false, true, true, false, true),
+        (leaf, true, false, false, false, true, false),
+        (
+            include_str!("../../../assets/shaders/terra_foliage_prepass.wesl"),
+            true,
+            true,
+            false,
+            false,
+            false,
+            false,
+        ),
+        (liquid, false, false, true, false, false, false),
+        (liquid, true, false, false, false, false, false),
+    ] {
+        resolver.root = source.into();
+        let mut options = wesl::CompileOptions {
+            visibility: false,
+            ..default()
+        };
+        for (name, enabled) in [
+            ("PREPASS_PIPELINE", prepass),
+            ("DEFERRED_PREPASS", deferred),
+            ("FLAME_GEOMETRY", flame),
+            ("DRY_OAK_WIND", dry_oak),
+            ("PREPASS_FRAGMENT", fragment),
+            ("NORMAL_PREPASS", prepass),
+            ("NORMAL_PREPASS_OR_DEFERRED_PREPASS", prepass),
+            ("MOTION_VECTOR_PREPASS", prepass),
+            ("MAY_DISCARD", fragment),
+            ("VERTEX_POSITIONS_COMPRESSED", compressed),
+            ("VERTEX_NORMALS_COMPRESSED", compressed),
+            ("VERTEX_POSITIONS", true),
+            ("VERTEX_NORMALS", true),
+            ("VERTEX_TANGENTS", true),
+            ("VERTEX_COLORS", true),
+            ("PACKED_LEAF_COLOR", true),
+            ("VERTEX_UVS", true),
+            ("VERTEX_UVS_A", true),
+            ("VERTEX_UVS_B", !dry_oak),
+            ("VERTEX_OUTPUT_INSTANCE_INDEX", true),
+            ("VISIBILITY_RANGE_DITHER", true),
+        ] {
+            options.features.set(name, enabled);
+        }
+        let wgsl = wesl::compile(&path, &options, &resolver)
+            .unwrap()
+            .syntax
+            .to_string();
+        if source == leaf {
+            assert_eq!(
+                wgsl.contains("let climate_tag"),
+                !flame && (!prepass || deferred)
+            );
+            assert_eq!(wgsl.contains("let seed = clamp"), !flame);
+        }
+        let module = naga::front::wgsl::parse_str(&wgsl)
+            .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&wgsl)));
+        if source == leaf && !flame {
+            let wind = module
+                .functions
+                .iter()
+                .map(|(_, f)| f)
+                .find(|f| {
+                    f.name
+                        .as_deref()
+                        .is_some_and(|n| n.contains("wind_position"))
+                })
+                .unwrap();
+            let sines = wind
+                .expressions
+                .iter()
+                .filter(|(_, e)| {
+                    matches!(
+                        e,
+                        naga::Expression::Math {
+                            fun: naga::MathFunction::Sin,
+                            ..
+                        }
+                    )
+                })
+                .count();
+            assert_eq!(sines, if dry_oak { 3 } else { 5 });
+            assert_eq!(
+                module
+                    .global_variables
+                    .iter()
+                    .any(|(_, v)| v.binding.as_ref().is_some_and(|b| b.binding == 100)),
+                !dry_oak
+            );
+        }
+        let info = naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        )
+        .validate(&module)
+        .unwrap();
+        let hlsl_options = naga::back::hlsl::Options {
+            shader_model: naga::back::hlsl::ShaderModel::V6_0,
+            ..default()
+        };
+        let mut hlsl = String::new();
+        let written = naga::back::hlsl::Writer::new(&mut hlsl, &hlsl_options, &default())
+            .write(&module, &info, None)
+            .unwrap();
+        assert!(written.entry_point_names.iter().all(Result::is_ok));
+        assert!(!hlsl.is_empty());
+        let spirv = naga::back::spv::write_vec(&module, &info, &default(), None).unwrap();
+        assert_eq!(spirv[0], 0x0723_0203);
+    }
+}

@@ -1,6 +1,7 @@
 """Gravestones, bordered graves, sarcophagi and the small sculpted cemetery props."""
 import math
-from .geometry import cylinder,ellipsoid,cross,skull,leaf,crystal,candle
+from voxel_props.geometry import VoxelSculpt
+from .geometry import cylinder,ellipsoid,cross,skull,leaf,candle
 
 def bones(mesh,count=7):
     for i in range(count):
@@ -107,8 +108,25 @@ def build(mesh,family):
         return True
     if family in ('crystal_small','crystal_large'):
         scale=.65 if family=='crystal_small' else 1
+        sculpt = VoxelSculpt(24)
+        mesh.materials['cleavage'] = ([.45,.18,.64], None, .12, .46)
         for x,z,h,r in [(.5,.5,.92,.15),(.28,.38,.50,.10),(.70,.43,.60,.11),(.35,.70,.40,.08),(.69,.69,.35,.08)]:
-            crystal(mesh,[x,0,z],r*scale,h*scale)
-            mesh.collision.append({'minimum':[x-r*scale,0,z-r*scale],'maximum':[x+r*scale,h*scale,z+r*scale]})
+            h, r = h*scale, r*scale
+            mesh.collision.append({'minimum':[x-r,0,z-r],'maximum':[x+r,h,z+r]})
+            # Long square shafts terminate in a few chipped courses. A seam of
+            # cool, nonluminous quartz keeps the lit face readable underground.
+            steps = max(1, round(h*24))
+            for y in range(steps):
+                t = y/steps
+                width = max(.5/24, r * min(1., (1.-t)*2.9))
+                cx, cz = int(x*24), int(z*24)
+                extent = max(0, round(width*24-.5))
+                for dx in range(-extent, extent+1):
+                    for dz in range(-extent, extent+1):
+                        if extent > 1 and abs(dx) == extent and abs(dz) == extent:
+                            continue
+                        key = cx+dx, y, cz+dz
+                        sculpt.cells[key] = 'cleavage' if dx == -extent and y < steps-2 else 'crystal'
+        sculpt.emit(mesh)
         return True
     return False

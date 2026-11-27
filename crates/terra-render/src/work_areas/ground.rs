@@ -17,6 +17,17 @@ pub(super) fn height(
     z: i64,
     fallback: i64,
 ) -> Option<f32> {
+    height_matching(chunks, journal, x, z, fallback, supports_band)
+}
+
+pub(super) fn height_matching(
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    x: i64,
+    z: i64,
+    fallback: i64,
+    supports: impl Fn(u16) -> bool,
+) -> Option<f32> {
     let hint = chunks
         .surface_column_at(x, z)
         .map_or(fallback, |column| column.height.ceil() as i64);
@@ -32,7 +43,7 @@ pub(super) fn height(
             None => continue,
         };
         let material = journal.block(p).unwrap_or(raw);
-        if supports_band(material) {
+        if supports(material) {
             return Some(y as f32 + 1.045);
         }
     }

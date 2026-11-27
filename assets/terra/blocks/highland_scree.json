@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 757,
+  "name": "Loose Highland Stones",
+  "description": "Weathered fragments gather at the foot of a cliff.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.65,
+  "resistance": 1.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/highland_scree.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

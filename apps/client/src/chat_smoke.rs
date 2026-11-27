@@ -52,6 +52,7 @@ enum Stage {
     HelpSecond,
     HelpSecondCapture,
     Weather,
+    DismissHelp,
     Done,
 }
 
@@ -256,15 +257,11 @@ fn advance(world: &mut World, state: &mut ChatSmoke, input: &mut Input) -> Resul
                         "Expected a real teleportable Desert result: {found:?}"
                     ));
                 }
-                let biome = world
-                    .resource::<WorldTerrain>()
-                    .0
-                    .biome_at(
-                        found.position[0] as f64 + 0.5,
-                        found.position[2] as f64 + 0.5,
-                    )
-                    .weights
-                    .dominant();
+                let terrain = &world.resource::<WorldTerrain>().0;
+                let biome = terrain.surface_biome(&terrain.surface_column(
+                    found.position[0] as f64 + 0.5,
+                    found.position[2] as f64 + 0.5,
+                ));
                 if biome != BiomeKind::Desert {
                     return Err("Locate result does not match generated biome".into());
                 }
@@ -449,11 +446,20 @@ fn advance(world: &mut World, state: &mut ChatSmoke, input: &mut Input) -> Resul
             {
                 world.write_message(ChatAction::Change("/weather set clear".into()));
                 world.write_message(ChatAction::Send);
-                return Ok(true);
+                click(world, "chat-help-dismiss")?;
+                state.advance(Stage::DismissHelp);
+                return Ok(false);
             }
             if state.elapsed(10.0) {
                 return Err("Native /weather set did not reach real server authority".into());
             }
+        }
+        Stage::DismissHelp if state.elapsed(0.4) => {
+            let view = world.resource::<ChatView>();
+            if !view.open || view.help || view.rows.is_empty() {
+                return Err("Dismissing help should leave chat and message history visible".into());
+            }
+            return Ok(true);
         }
         _ => {}
     }
@@ -577,8 +583,10 @@ fn require_help_page(world: &mut World, page: usize) -> Result<(), String> {
         ));
     }
     for entry in expected {
+        let usage = terra_ui::localized_text(world, entry.usage);
+        let description = terra_ui::localized_text(world, entry.description);
         if !rows.iter().any(|row| {
-            contains_text(world, *row, entry.usage) && contains_text(world, *row, entry.description)
+            contains_text(world, *row, &usage) && contains_text(world, *row, &description)
         }) {
             return Err(format!(
                 "Help page {label} did not render its command and description: {}",
@@ -603,9 +611,15 @@ fn require_help_page(world: &mut World, page: usize) -> Result<(), String> {
 fn require_text_colors(world: &mut World, found: Option<&LocateResult>) -> Result<(), String> {
     let [x, y, z] = found.ok_or("Missing locate result")?.position;
     for (text, expected) in [
-        ("Desert".to_owned(), [228.0, 161.0, 235.0]),
-        (format!("{x}, {y}, {z}"), [228.0, 161.0, 235.0]),
-        ("[Click Me]".to_owned(), [245.0, 211.0, 110.0]),
+        (
+            terra_ui::localized_text(world, "Desert"),
+            [242.0, 223.0, 196.0],
+        ),
+        (format!("{x}, {y}, {z}"), [242.0, 223.0, 196.0]),
+        (
+            terra_ui::localized_text(world, "[Click Me]"),
+            [245.0, 211.0, 110.0],
+        ),
     ] {
         let color = world
             .query::<(&Text, &TextColor)>()

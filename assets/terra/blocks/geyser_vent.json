@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "id": 731,
+  "name": "Geyser Vent",
+  "description": "Mineral rings surround a hot spring that periodically erupts.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.4,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/relics/geyser_vent.png",
+    "sidewall": "textures/relics/scoria_bricks.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.88,
+      "reflectance": 0.13,
+      "normal_texture": "textures/relics/geyser_vent_normal.png"
+    },
+    "sidewall": {
+      "roughness": 0.87,
+      "normal_texture": "textures/relics/scoria_bricks_normal.png"
+    }
+  },
+  "face_materials": [
+    "sidewall",
+    "sidewall",
+    "sidewall",
+    "side",
+    "sidewall",
+    "sidewall"
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": 497,
+  "name": "Standing Blood Lantern",
+  "description": "A crimson glass lamp on a squat iron plinth.",
+  "creative_category": "nature",
+  "hardness": 0.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/standing_blood_lantern.glb",
+  "textures": {},
+  "struct_block": true,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.15,
+        0,
+        0.15
+      ],
+      "maximum": [
+        0.85,
+        0.11,
+        0.85
+      ]
+    },
+    {
+      "minimum": [
+        0.34,
+        0.39,
+        0.34
+      ],
+      "maximum": [
+        0.66,
+        0.75,
+        0.66
+      ]
+    }
+  ],
+  "light": {
+    "color": [
+      1.0,
+      0.075,
+      0.1
+    ],
+    "intensity": 155,
+    "range": 6,
+    "falloff": "soft_core",
+    "flicker": 0,
+    "cave_intensity": 0.8,
+    "shadows": false
+  }
+}

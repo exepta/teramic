@@ -13,5 +13,6 @@
     <p class="tooltip-name">{{ slot.empty ? slot.ghost_name : slot.name }}</p>
     <p class="tooltip-identifier">{{ slot.identifier }}</p>
     <p class="tooltip-description">{{ slot.description }}</p>
+    @if (!slot.empty && slot.command != 'preview') { <p class="tooltip-description">{{ i18n.text_u_show_uses_cbd3d6e382be }}</p> }
   </tooltip>
 </div>

@@ -720,6 +720,7 @@ fn update(scene: Scene, mut view: ResMut<TargetView>, mut next: Local<f32>) {
             B::Climb => "Klettert",
             B::Ceiling => "An der Decke",
             B::Descend => "Seilt sich ab",
+            B::DragonBurrow => "Retreat",
             B::Burrowed => "Burrowed",
             B::Tremor => "Tremor",
             B::Emerge => "Emerge",

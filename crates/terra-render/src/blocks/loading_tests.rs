@@ -12,6 +12,333 @@ mod profession_station_tests;
 mod road_tests;
 
 #[test]
+fn sculpted_palette_loads_tiled_pbr_and_opens_each_canopy_in_mesh_depth_and_color() {
+    use bevy::{image::ImageFilterMode, render::render_resource::TextureFormat};
+
+    let mut app = App::new();
+    app.add_plugins((
+        MinimalPlugins,
+        AssetPlugin {
+            file_path: terra_core::asset_directory().to_string_lossy().into_owned(),
+            ..default()
+        },
+    ))
+    .init_asset::<Gltf>()
+    .init_asset::<GltfMesh>()
+    .init_asset::<GltfNode>()
+    .init_asset::<Mesh>()
+    .init_asset::<Image>()
+    .init_asset::<StandardMaterial>()
+    .register_asset_loader(bevy::image::ImageLoader::new(
+        bevy::image::CompressedImageFormats::NONE,
+    ));
+    app.finish();
+    app.cleanup();
+    let mut assets = BlockAssets::default();
+    let server = app.world().resource::<AssetServer>().clone();
+    let mut materials = app.world_mut().resource_mut::<Assets<StandardMaterial>>();
+    let mut blocks = BlockLibrary::load(&terra_core::asset_directory().join("terra/blocks"))
+        .unwrap()
+        .blocks;
+    blocks.retain(|b| {
+        terra_voxel::MaterialId::FOLIAGE.contains(&b.id) || [77, 85, 93].contains(&b.id)
+    });
+    for block in &blocks {
+        assets.load_block_textures(&server, block);
+        for (name, material) in &block.materials {
+            let slot =
+                assets.shared_material(material, Some(&block.textures[name]), &mut materials);
+            assets
+                .cube_material_slots
+                .insert((block.id, name.clone()), slot);
+        }
+    }
+    assets.load_reference_materials(&server, &mut materials);
+    assets.library = Some(BlockLibrary {
+        blocks: blocks.into(),
+    });
+    let mut state = bevy::ecs::system::SystemState::<SourceAssets>::new(app.world_mut());
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    loop {
+        app.update();
+        if prepare_mipmaps(&mut state.get_mut(app.world_mut()).unwrap(), &mut assets).unwrap() {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "texture mip preparation timed out"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    let mut source = state.get_mut(app.world_mut()).unwrap();
+    let templates = collect_templates(&mut source, &mut assets)
+        .unwrap()
+        .unwrap();
+    let palette = &assets.reference_palette;
+    for slot in [
+        palette.grass_top,
+        palette.grass_side,
+        palette.soil,
+        palette.rock,
+        palette.gravel,
+        palette.leaves,
+    ] {
+        let slot = slot.unwrap();
+        assert!(templates.normal_mapped_materials.contains(&slot));
+        let material = source.materials.get(&assets.materials[slot]).unwrap();
+        assert_eq!(
+            material.alpha_mode,
+            if Some(slot) == palette.leaves {
+                AlphaMode::Mask(0.5)
+            } else {
+                AlphaMode::Opaque
+            }
+        );
+        for (handle, format) in [
+            (&material.base_color_texture, TextureFormat::Rgba8UnormSrgb),
+            (&material.normal_map_texture, TextureFormat::Rgba8Unorm),
+        ] {
+            let image = source.images.get(handle.as_ref().unwrap()).unwrap();
+            assert_eq!(image.texture_descriptor.format, format);
+            assert_eq!(
+                image.texture_descriptor.mip_level_count,
+                image.width().max(image.height()).ilog2() + 1
+            );
+            let ImageSampler::Descriptor(sampler) = &image.sampler else {
+                panic!("missing PBR sampler")
+            };
+            assert_eq!(sampler.address_mode_u, ImageAddressMode::Repeat);
+            assert_eq!(sampler.address_mode_v, ImageAddressMode::Repeat);
+            assert_eq!(sampler.mipmap_filter, ImageFilterMode::Linear);
+        }
+    }
+    let rock = assets.reference_palette.rock.unwrap();
+    for id in [77, 85, 93] {
+        assert_eq!(templates.blocks[&id].face_materials, [rock; 6]);
+        assert!(
+            templates.blocks[&id]
+                .model
+                .iter()
+                .all(|p| p.material == rock && p.positions.len() == p.tangents.len())
+        );
+    }
+    // Only oak paints its side and top with the identical material after
+    // the wind shader's overrides. Other species retain their distinct art.
+    assert_eq!(
+        templates
+            .batched_wind_leaves
+            .keys()
+            .copied()
+            .collect::<Vec<_>>(),
+        vec![7]
+    );
+    assert_oak_wind_batch(&templates);
+    for id in terra_voxel::MaterialId::FOLIAGE {
+        for side in [0, 3] {
+            let original = templates.blocks[&id].face_materials[side];
+            let core = templates.sculpted_blocks[&id].core.face_materials[side];
+            assert!(templates.foliage_material(original));
+            assert!(templates.foliage_material(core));
+            let paint = source.materials.get(&assets.materials[original]).unwrap();
+            let pigment = paint.base_color_texture.as_ref().unwrap().id();
+            assert_eq!(
+                assets.opaque_oak_paint == Some(pigment),
+                id == 7 && !server.watching_for_changes()
+            );
+            let core = source.materials.get(&assets.materials[core]).unwrap();
+            assert_ne!(
+                assets.opaque_oak_paint,
+                core.base_color_texture.as_ref().map(Handle::id)
+            );
+            let image = source
+                .images
+                .get(core.base_color_texture.as_ref().unwrap())
+                .unwrap();
+            assert_eq!(core.alpha_mode, AlphaMode::Mask(0.5));
+            assert!(core.double_sided && core.cull_mode.is_none());
+            let size = image.width() as usize;
+            let samples = &image.data.as_ref().unwrap()[..size * size * 4];
+            let uncovered = samples.chunks_exact(4).filter(|p| p[3] < 128).count();
+            assert!((0.06..0.38).contains(&(uncovered as f32 / (size * size) as f32)));
+            let [u, v, span] = templates.sculpted_blocks[&id].leaf_openings[side].unwrap();
+            let u = (u * size as f32).ceil() as usize;
+            let v = (v * size as f32).ceil() as usize;
+            let span = (span * size as f32).floor() as usize;
+            assert!(span >= 2, "leaf {id} side {side}, span {span}");
+            for y in v..v + span {
+                for x in u..u + span {
+                    assert!(samples[4 * (x + y * size) + 3] < 128);
+                }
+            }
+        }
+        let mut padded = vec![0; terra_voxel::meshing::PADDED_VOLUME];
+        padded[1 + 18 + 18 * 18] = id;
+        let faces = terra_voxel::meshing::mesh_section_faces(&padded)
+            .unwrap()
+            .faces;
+        use crate::meshing::{
+            DetailLevel,
+            builder::{RenderOptions, compose_section_with_options},
+        };
+        for detail_level in [DetailLevel::Near, DetailLevel::Middle, DetailLevel::Far] {
+            let batches = compose_section_with_options(
+                &faces,
+                &templates,
+                terra_voxel::SectionPos::new(0, 0, 0),
+                &RenderOptions {
+                    detail_level,
+                    water_level: None,
+                    terrain: None,
+                    exposure: None,
+                    conditions: Default::default(),
+                    tints: Default::default(),
+                },
+            )
+            .unwrap();
+            let count = canopy_sight_lines(
+                &batches,
+                &source.images,
+                &source.materials,
+                &assets.materials,
+            );
+            assert!(
+                count > 2 && count < 1400,
+                "foliage {id}, {detail_level:?}: {count} open rays"
+            );
+        }
+    }
+}
+
+fn assert_oak_wind_batch(templates: &TemplateSet) {
+    use crate::meshing::{
+        DetailLevel,
+        builder::{RenderOptions, compose_section_with_options},
+    };
+    let mut padded = vec![0; terra_voxel::meshing::PADDED_VOLUME];
+    padded[1 + 18 + 18 * 18] = 7;
+    let faces = terra_voxel::meshing::mesh_section_faces(&padded)
+        .unwrap()
+        .faces;
+    let section = terra_voxel::SectionPos::new(0, 64, 0);
+    let options = RenderOptions {
+        detail_level: DetailLevel::Near,
+        terrain: Some(terra_world::TerraGenerator::new(Default::default()).unwrap()),
+        water_level: None,
+        exposure: None,
+        conditions: Default::default(),
+        tints: Default::default(),
+    };
+    let mut separate = templates.clone();
+    separate.batched_wind_leaves.clear();
+    let before = compose_section_with_options(&faces, &separate, section, &options).unwrap();
+    let after = compose_section_with_options(&faces, templates, section, &options).unwrap();
+    let top = templates.sculpted_blocks[&7].slots[3];
+    let side = templates.sculpted_blocks[&7].slots[0];
+    assert_ne!(top, side);
+    assert_eq!(before.len(), after.len() + 1);
+    let triangles = |batches: &[crate::meshing::builder::MeshBatch]| {
+        let mut triangles = Vec::new();
+        for b in batches {
+            let slot = if b.material == top { side } else { b.material };
+            for t in b.indices.chunks_exact(3) {
+                triangles.push((
+                    slot,
+                    [t[0], t[1], t[2]].map(|i| {
+                        let i = i as usize;
+                        (
+                            b.positions[i].map(f32::to_bits),
+                            b.normals[i].map(f32::to_bits),
+                            b.uvs[i].map(f32::to_bits),
+                            b.surface_water.get(i).map(|uv| uv.map(f32::to_bits)),
+                            b.foliage_owners
+                                .iter()
+                                .find(|o| o.vertices.contains(&i))
+                                .map(|o| (o.cell, o.material)),
+                            b.tangents.get(i).map(|t| t.map(f32::to_bits)),
+                            b.colors
+                                .get(i)
+                                .copied()
+                                .unwrap_or([1.0; 4])
+                                .map(f32::to_bits),
+                        )
+                    }),
+                ));
+            }
+        }
+        triangles.sort_unstable();
+        triangles
+    };
+    assert!(
+        triangles(&before) == triangles(&after),
+        "wind batch must retain every PBR triangle exactly"
+    );
+    let preview = compose_section_with_options(
+        &faces,
+        templates,
+        section,
+        &RenderOptions {
+            terrain: None,
+            ..options
+        },
+    )
+    .unwrap();
+    assert!(preview.iter().any(|b| b.material == top));
+    assert!(preview.iter().any(|b| b.material == side));
+}
+
+/// Composite both sides of one real block onto a grid of parallel sight lines.
+/// Sampling each triangle's own material also catches an accidental opaque
+/// backing or incorrect wrapping on the opposite side.
+fn canopy_sight_lines(
+    batches: &[crate::meshing::builder::MeshBatch],
+    images: &Assets<Image>,
+    materials: &Assets<StandardMaterial>,
+    handles: &[Handle<StandardMaterial>],
+) -> usize {
+    const GRID: usize = 48;
+    let mut covered = [[false; GRID]; GRID];
+    for batch in batches {
+        let material = materials.get(&handles[batch.material]).unwrap();
+        let art = images
+            .get(material.base_color_texture.as_ref().unwrap())
+            .unwrap();
+        let size = Vec2::new(art.width() as f32, art.height() as f32);
+        let data = art.data.as_ref().unwrap();
+        for tri in batch.indices.chunks_exact(3) {
+            let [a, b, c] = [tri[0], tri[1], tri[2]].map(|i| {
+                let [_, y, z] = batch.positions[i as usize];
+                (Vec2::new(z, y), Vec2::from_array(batch.uvs[i as usize]))
+            });
+            let (ab, ac) = (b.0 - a.0, c.0 - a.0);
+            let area = ab.perp_dot(ac);
+            if area.abs() < 1e-8 {
+                continue;
+            }
+            let lo = a.0.min(b.0).min(c.0) * GRID as f32;
+            let hi = a.0.max(b.0).max(c.0) * GRID as f32;
+            for y in lo.y.max(0.0) as usize..(hi.y.ceil() as usize).min(GRID) {
+                for x in lo.x.max(0.0) as usize..(hi.x.ceil() as usize).min(GRID) {
+                    let p = (Vec2::new(x as f32 + 0.5, y as f32 + 0.5) / GRID as f32) - a.0;
+                    let (u, v) = (p.perp_dot(ac) / area, ab.perp_dot(p) / area);
+                    if u.min(v) < 0.0 || u + v > 1.0 {
+                        continue;
+                    }
+                    let uv = (a.1 + (b.1 - a.1) * u + (c.1 - a.1) * v).rem_euclid(Vec2::ONE) * size;
+                    let texel = (uv.y as usize * art.width() as usize + uv.x as usize) * 4;
+                    covered[y][x] |=
+                        material.alpha_mode == AlphaMode::Opaque || data[texel + 3] >= 128;
+                }
+            }
+        }
+    }
+    covered
+        .into_iter()
+        .flatten()
+        .filter(|covered| !covered)
+        .count()
+}
+
+#[test]
 fn authored_tangents_follow_nonuniform_node_scale_rotation_and_reflection() {
     let direction = Vec3::new(1.0, 1.0, 0.0).normalize();
     let mut primitive = PrimitiveTemplate {
@@ -183,10 +510,58 @@ fn torch_emits_but_ores_only_reflect_existing_light() {
             terra_voxel::MaterialId::CaveCrystalCluster as u16,
             terra_voxel::MaterialId::GlowVine as u16,
             terra_voxel::MaterialId::GlacialCrystalCluster as u16,
+            terra_voxel::MaterialId::GoldenSporePods as u16,
+            terra_voxel::MaterialId::BloodBrazier as u16,
+            terra_voxel::MaterialId::BloodCrystalGrowth as u16,
+            terra_voxel::MaterialId::StandingBloodLantern as u16,
+            terra_voxel::MaterialId::HangingBloodLantern as u16,
+            terra_voxel::MaterialId::LuminousCoral as u16,
+            terra_voxel::MaterialId::SeaCrystal as u16,
+            terra_voxel::MaterialId::SakuraGardenLantern as u16,
+            terra_voxel::MaterialId::RunePillar as u16,
+            terra_voxel::MaterialId::EmberCrystals as u16,
+            terra_voxel::MaterialId::Fumarole as u16,
+            terra_voxel::MaterialId::PyricRuneStone as u16,
+            terra_voxel::MaterialId::AshenBrazier as u16,
+            terra_voxel::MaterialId::CrystalLantern as u16,
+            terra_voxel::MaterialId::VaultSigil as u16,
+            terra_voxel::MaterialId::CrystalObservatoryLens as u16,
+            terra_voxel::MaterialId::BeaconLens as u16,
+            terra_voxel::MaterialId::AmethystPrismTip as u16,
+            terra_voxel::MaterialId::VioletTorch as u16,
+            terra_voxel::MaterialId::AltarCrystalHeart as u16,
+            terra_voxel::MaterialId::TempleCrystalCluster as u16,
         ]
         .into_iter()
         .collect()
     );
+    // The three altar pieces and the crafted handheld source really light room geometry.
+    for id in [769, 791, 794, 796] {
+        let (_, quartz) = assets.lights().find(|(m, _)| *m == id).unwrap();
+        assert!(quartz.color[2] > quartz.color[0] && quartz.color[0] > 2.0 * quartz.color[1]);
+        assert!(quartz.range >= 12.0 && quartz.intensity >= 1500.0);
+    }
+    let (_, beacon) = assets
+        .lights()
+        .find(|(id, _)| *id == terra_voxel::MaterialId::BeaconLens as u16)
+        .unwrap();
+    assert_eq!(beacon.color, [1., 0.76, 0.39]);
+    assert_eq!(
+        (beacon.range, beacon.intensity, beacon.shadows),
+        (23., 2400., false)
+    );
+    let (_, seal) = assets
+        .lights()
+        .find(|(id, _)| *id == terra_voxel::MaterialId::VaultSigil as u16)
+        .unwrap();
+    assert_eq!(seal.color, [0.70, 0.30, 1.0]);
+    assert_eq!((seal.range, seal.intensity), (10.0, 1200.0));
+    assert_eq!(
+        seal.falloff,
+        super::super::definitions::LightFalloff::SoftCore
+    );
+    assert_eq!(seal.flicker, 0.0);
+    assert!(!seal.shadows);
     for (id, light) in assets.lights().filter(|(id, _)| (306..=323).contains(id)) {
         assert!(
             !light.shadows,
@@ -504,6 +879,144 @@ fn shipped_cube_materials_share_soil_but_keep_whole_snow_distinct_from_rock() {
             .iter()
             .all(|((id, _), s)| *id >= terra_core::bile::FLUID || !new_slots.contains(s))
     );
+    let plains_faces = [
+        (terra_voxel::MaterialId::BlueSlateShingles as u16, "surface"),
+        (terra_voxel::MaterialId::BoundHayBale as u16, "end"),
+        (terra_voxel::MaterialId::BoundHayBale as u16, "surface"),
+        (terra_voxel::MaterialId::MeadowLimestone as u16, "surface"),
+    ];
+    let plains_slots = std::collections::BTreeSet::from(plains_faces.map(|face| slots[&face]));
+    assert_eq!(plains_slots.len(), plains_faces.len());
+    assert!(
+        slots
+            .iter()
+            .all(|(face, slot)| plains_faces.contains(face) || !plains_slots.contains(slot))
+    );
+    let savanna_slots: std::collections::BTreeSet<_> = slots
+        .iter()
+        .filter(|((id, _), _)| (632..=647).contains(id))
+        .map(|(_, slot)| *slot)
+        .collect();
+    assert_ne!(slots[&(632, "top")], slots[&(633, "top")]);
+    assert_ne!(slots[&(644, "spray")], slots[&(647, "spray")]);
+    let petrified_slots: std::collections::BTreeSet<_> = slots
+        .iter()
+        .filter(|((id, _), _)| matches!(id,703..=709|720..=721|724..=731))
+        .map(|(_, slot)| *slot)
+        .collect();
+    let swamp_slots: std::collections::BTreeSet<_> = slots
+        .iter()
+        .filter(|((id, _), _)| (670..=682).contains(id))
+        .map(|(_, slot)| *slot)
+        .collect();
+    assert_ne!(slots[&(682, "side")], slots[&(682, "spray")]);
+    use terra_voxel::MaterialId as M;
+    let coast_slots: std::collections::BTreeSet<_> = (M::CoastalGranite as u16
+        ..=M::HarborRoofTiles as u16)
+        .map(|id| slots[&(id, "side")])
+        .collect();
+    assert_eq!(coast_slots.len(), 11);
+    let crystal_faces: std::collections::BTreeSet<_> = library
+        .blocks
+        .iter()
+        .filter(|b| (M::CrystalStone as u16..=M::AmethystPrismTip as u16).contains(&b.id))
+        .flat_map(|b| {
+            b.face_materials
+                .iter()
+                .flatten()
+                .map(move |name| (b.id, name.as_str()))
+        })
+        .collect();
+    // Twelve cube textures. The two spires also need their own shaded edge and cap.
+    let expected_crystal_faces: std::collections::BTreeSet<_> = (M::CrystalStone as u16
+        ..=M::VioletRoofSlate as u16)
+        .chain([M::VaultKeystone as u16])
+        .map(|id| (id, "side"))
+        .chain(
+            [M::AmethystSpire, M::CyanSpire]
+                .into_iter()
+                .flat_map(|m| [(m as u16, "edge"), (m as u16, "cap")]),
+        )
+        .collect();
+    assert_eq!(crystal_faces, expected_crystal_faces);
+    let crystal_slots: std::collections::BTreeSet<_> =
+        crystal_faces.iter().map(|face| slots[face]).collect();
+    assert_eq!(crystal_slots.len(), crystal_faces.len());
+    assert!(
+        slots
+            .iter()
+            .all(|(face, slot)| crystal_faces.contains(face) || !crystal_slots.contains(slot))
+    );
+    let regional_faces = [
+        (519, "surface"),
+        (519, "side"),
+        (520, "surface"),
+        (520, "side"),
+        (527, "top"),
+        (527, "side"),
+        (528, "top"),
+        (528, "side"),
+        (529, "top"),
+        (529, "side"),
+        (530, "surface"),
+        (531, "surface"),
+        (541, "wet_sand"),
+        (542, "marine_limestone"),
+        (543, "reef_stone"),
+        (544, "sea_basalt"),
+        (581, "side"),
+        (581, "top"),
+        (582, "side"),
+        (582, "top"),
+        (583, "side"),
+        (583, "top"),
+        (584, "side"),
+        (584, "top"),
+        (584, "soil"),
+        (585, "side"),
+        (585, "top"),
+        (585, "spray"),
+        (586, "side"),
+        (586, "top"),
+        (586, "spray"),
+        // The fence has its own lacquer texture. Stairs and slabs still share planks.
+        (138, "Cherry boards"),
+        (596, "side"),
+        (596, "top"),
+        (596, "bottom"),
+        (597, "side"),
+        (597, "top"),
+        (598, "side"),
+        (598, "top"),
+        (606, "side"),
+        (606, "top"),
+        (606, "spray"),
+        (607, "side"),
+        (607, "top"),
+        (607, "spray"),
+        (613, "side"),
+        (614, "side"),
+        (615, "side"),
+        (616, "side"),
+        (617, "side"),
+        (617, "end"),
+        (618, "side"),
+        (619, "side"),
+        (620, "side"),
+        (621, "side"),
+        (621, "end"),
+        (622, "side"),
+        (623, "side"),
+        (629, "side"),
+        (629, "top"),
+    ];
+    let regional_slots = std::collections::BTreeSet::from(regional_faces.map(|face| slots[&face]));
+    assert_eq!(regional_slots.len(), regional_faces.len());
+    assert!(
+        slots
+            .iter()
+            .all(|(face, slot)| regional_faces.contains(face) || !regional_slots.contains(slot))
+    );
     assert_eq!(
         materials.len(),
         72 + terra_core::OreKind::ALL.len() + terra_core::beds::DyeColor::ALL.len()
@@ -522,6 +1035,15 @@ fn shipped_cube_materials_share_soil_but_keep_whole_snow_distinct_from_rock() {
             + 14 // Salt gallery bedding, cleavage faces and halite ore matrix.
             + 9 // Five karst bedding/flank pairs replace one procedural dripstone material.
             + 24 // Twelve living cave surfaces, each with a separate side and top.
+            + 4 // Root soil, wet mud and the two sanctuary stones.
+            + 13 // Parasol gills, caps, woodland soil, shingles and timber.
+            + savanna_slots.len()
+            + swamp_slots.len()
+            + petrified_slots.len()
+            + crystal_slots.len()
+            + coast_slots.len()
+            + regional_slots.len() // Independently painted regional surfaces and foliage sprays.
+            + plains_slots.len() // Blue slate, meadow limestone and both hay bale textures.
             + new_slots.len()
     );
     let spirit_slots: std::collections::BTreeSet<_> = slots

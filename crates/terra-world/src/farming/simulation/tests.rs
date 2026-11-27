@@ -1100,3 +1100,68 @@ fn natural_water_columns_are_valid_fill_targets_without_recorded_source_blocks()
     chunks.loaded.clear();
     assert_eq!(water_target(&chunks, &journal, origin, direction), None);
 }
+
+#[test]
+fn harvested_coconuts_regrow_only_on_surviving_trunks() {
+    for remove_trunk in [false, true] {
+        let mut app = scene();
+        let support = [-4, 10, -4];
+        let (owner, local) = global_to_section(support);
+        let nut = WorldProp {
+            kind: PropKind::Coconut,
+            position: [-3.5, 10.12, -2.68],
+            variant: 128,
+            ..prop(CropKind::Corn, support, 91)
+        };
+        assert_eq!(placement::support(&nut), support);
+        app.world_mut()
+            .resource_scope(|world, mut journal: Mut<EditJournal>| {
+                let mut chunks = world.resource_mut::<ChunkStore>();
+                let section = chunks.loaded.get_mut(&owner).unwrap();
+                section
+                    .data
+                    .set_block(local, MaterialId::Wood as u16)
+                    .unwrap();
+                section.props.push(nut);
+                assert!(
+                    commit_prop_removal(
+                        &mut chunks,
+                        &mut journal,
+                        &PropRemoveRequest {
+                            section: owner,
+                            id: nut.id
+                        }
+                    )
+                    .unwrap()
+                );
+                let mut timer = *journal.forage_regrowth().next().unwrap();
+                assert_eq!(timer.prop, nut);
+                timer.remaining_seconds = 1.0;
+                journal.set_forage_regrowth(timer).unwrap();
+                if remove_trunk {
+                    chunks
+                        .loaded
+                        .get_mut(&owner)
+                        .unwrap()
+                        .data
+                        .set_block(local, 0)
+                        .unwrap();
+                }
+            });
+        for _ in 0..5 {
+            app.update();
+        }
+        let journal = app.world().resource::<EditJournal>();
+        assert_eq!(journal.forage_regrowth().count(), 0);
+        assert_eq!(journal.prop_removed(owner, nut.id), remove_trunk);
+        let section = &app.world().resource::<ChunkStore>().loaded[&owner];
+        assert_eq!(
+            section
+                .props
+                .iter()
+                .filter(|p| p.id == nut.id && !p.removed)
+                .count(),
+            usize::from(!remove_trunk)
+        );
+    }
+}

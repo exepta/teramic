@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 755,
+  "name": "Hardy Highland Grass",
+  "description": "Narrow blades bend away from the exposed ridge.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.65,
+  "resistance": 1.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/highland_tussock.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

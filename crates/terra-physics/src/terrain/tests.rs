@@ -5,6 +5,26 @@ use terra_core::{GameConfig, TerraCorePlugin};
 use terra_world::streaming::LoadedSection;
 
 #[test]
+fn collision_interest_tracks_overlapping_departing_and_returning_foci() {
+    let mut state = TerrainCollisionState::default();
+    let left = SectionPos::default();
+    let right = SectionPos::new(1, 0, 0);
+    let left_edge = SectionPos::new(-2, 0, 0);
+    let right_edge = SectionPos::new(3, 0, 0);
+    state.update_interest(&[left, right]);
+    assert_eq!(state.interest.len(), 150);
+    assert!(state.in_dispatch_interest(left_edge) && state.in_dispatch_interest(right_edge));
+    state.update_interest(&[right]);
+    state.update_interest(&[right]);
+    assert_eq!(state.interest.len(), 125);
+    assert!(!state.in_dispatch_interest(left_edge) && state.in_dispatch_interest(right_edge));
+    state.update_interest(&[]);
+    assert!(state.interest.is_empty());
+    state.update_interest(&[left]);
+    assert!(state.in_dispatch_interest(left_edge) && !state.in_dispatch_interest(right_edge));
+}
+
+#[test]
 fn fluid_source_blocks_never_create_solid_voxel_colliders() {
     let data = BlockSection::from_blocks(
         SectionPos::default(),
@@ -244,6 +264,17 @@ fn forgotten_neighbor_and_vertical_profile_bases_block_collision_publication() {
             !collision_inputs_known(owner, &chunks),
             "unknown halo {offset:?}"
         );
+        let mut ready = TerrainCollisionState::default();
+        ready.sections.insert(
+            owner,
+            ReadySection {
+                entity: None,
+                epoch: replica.mesh_epoch(owner),
+                profile: None,
+                plain: None,
+            },
+        );
+        assert!(!ready.ready_for_aabb(Vec3::ZERO, Vec3::ONE, &chunks, &replica));
         assert!(collision_snapshot(owner, &chunks, &replica).is_err());
         let mut restored = replica.section_delta(neighbor);
         restored.revision += 1;

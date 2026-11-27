@@ -6,6 +6,7 @@ use terra_voxel::{MaterialId, SectionPos};
 #[test]
 fn independent_surface_and_cave_reservoirs_leave_dry_rock_and_preserve_waterlogged_plants() {
     let columns = WaterColumns {
+        falls: [None; 3],
         intervals: [
             Some(WaterColumn {
                 bed: 3.0,
@@ -44,7 +45,13 @@ fn independent_surface_and_cave_reservoirs_leave_dry_rock_and_preserve_waterlogg
     assert_eq!(journal.fluid(p), Some(source));
     journal.record(p, 3).unwrap();
     assert_eq!(journal.fluid(p).unwrap_or_default(), FluidCell::default());
-    for material in 50..=55 {
+    for material in (50..=55).chain([
+        MaterialId::SwampCattails as u16,
+        MaterialId::SwampReeds as u16,
+        MaterialId::LotusFlower as u16,
+        MaterialId::LilyPad as u16,
+        MaterialId::PondBlossoms as u16,
+    ]) {
         assert!(can_hold_fluid(material));
         journal.set_fluid(p, source).unwrap();
         journal.record(p, material).unwrap();

@@ -93,6 +93,35 @@ pub(super) fn breath(mesh: &mut Builder, c: Coat, light: bool) -> Result<(), Str
     if c.kind == Kind::EarthDragon {
         return rock_volley(mesh, c, light);
     }
+    if c.kind == Kind::FireDragon {
+        // Interlocking pointed tongues form a billowing cone with a hot core.
+        for i in 0..29 {
+            let t = i as f32 / 32.;
+            let theta = i as f32 * 2.399963;
+            let spread = (0.10 + t * 1.65) * if light { 0.46 } else { 1. };
+            let base = v(theta.cos() * spread, theta.sin() * spread, -t);
+            let r = (0.11 + 0.55 * t) * if light { 0.43 } else { 1. };
+            let tip = base + v(0.38 * r * theta.cos(), 0.70 * r, -0.10);
+            let color = if light {
+                c.light
+            } else if i % 4 == 0 {
+                c.growth
+            } else {
+                c.wing
+            };
+            for j in 0..5 {
+                let edge = |j: usize| {
+                    let a = theta + TAU * j as f32 / 5.;
+                    base + v(a.cos() * r, a.sin() * r, 0.)
+                };
+                mesh.triangle(
+                    [edge(j), tip, edge(j + 1)],
+                    tint(color, 0.84 + 0.03 * j as f32),
+                )?;
+            }
+        }
+        return Ok(());
+    }
     let (arms, turns, spread) = match c.kind {
         Kind::WaterDragon => (3, 8.8, 0.87),
         _ => (2, 5.4, 1.21),

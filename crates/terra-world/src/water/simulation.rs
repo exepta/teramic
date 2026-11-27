@@ -51,6 +51,7 @@ pub struct FluidStep {
     pub removed_props: usize,
     pub flooded_torches: Vec<[i64; 3]>,
     prop_sections: Vec<terra_voxel::SectionPos>,
+    lava_contacts: Vec<[i64; 3]>,
     wetted: Vec<[i64; 3]>,
 }
 
@@ -68,7 +69,18 @@ impl Sampler<'_> {
         if !super::can_hold_fluid(block) {
             return Some(FluidCell::default());
         }
-        let cell = journal.fluid(p).unwrap_or_else(|| self.natural(p));
+        let cell = journal.fluid(p).unwrap_or_else(|| {
+            let natural = self.natural(p);
+            if let Some(c) = self
+                .columns
+                .get(&[p[0], p[2]])
+                .filter(|c| c.falls.iter().any(Option::is_some))
+            {
+                super::falls::sampled(*c, p, journal)
+            } else {
+                natural
+            }
+        });
         Some(self.space(journal, p).clamp(cell))
     }
     fn natural(&mut self, p: [i64; 3]) -> FluidCell {
@@ -197,6 +209,18 @@ fn simulate_sampled_step(
         if !chunks.block_at(p).is_some_and(super::can_hold_fluid) {
             continue;
         }
+        if journal.fluid(p).is_none()
+            && chunks.surface_column_at(p[0], p[2]).is_some_and(|c| {
+                c.falls
+                    .into_iter()
+                    .flatten()
+                    .any(|s| s.contains(p[1]) && s.live(p, journal))
+            })
+        {
+            // Each segment is continuously supplied by its prepared source.
+            // No tick or journal entries are required for the resting stream.
+            continue;
+        }
         if cell.amount > 0 {
             // Pending proof and recession still contain real, visible water.
             result.wetted.push(p);
@@ -288,7 +312,13 @@ fn simulate_sampled_step(
             for y in -1..=1 {
                 for z in -1..=1 {
                     let q = [p[0] + x, p[1] + y, p[2] + z];
-                    if matches!(chunks.block_at(q), Some(40 | terra_core::lantern::LANTERN)) {
+                    if matches!(
+                        chunks.block_at(q),
+                        Some(
+                            40 | terra_core::block_shapes::VIOLET_TORCH
+                                | terra_core::lantern::LANTERN
+                        )
+                    ) {
                         torches.insert(q);
                     }
                 }
@@ -340,6 +370,9 @@ pub(crate) fn tick(
         CELL_BUDGET,
     ) {
         Ok(step) => {
+            for p in step.lava_contacts {
+                chunks.wake_lava(p);
+            }
             if !step.flooded_torches.is_empty()
                 && let Err(error) =
                     crate::torches::wash_away(&mut chunks, &mut journal, &step.flooded_torches)
@@ -383,6 +416,12 @@ fn retire_flooded_props(
         let cell = super::fluid_cell_at(terrain, journal, p, block);
         if cell.amount == 0 {
             continue;
+        }
+        for d in crate::lava::NEIGHBORS {
+            let other = std::array::from_fn(|i| p[i] + d[i]);
+            if chunks.lava_at(other) {
+                step.lava_contacts.push(other);
+            }
         }
         let low = global_to_section([p[0] - 2, p[1] - 4, p[2] - 2]).0;
         let high = global_to_section([p[0] + 2, p[1], p[2] + 2]).0;

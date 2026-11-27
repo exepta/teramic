@@ -25,6 +25,15 @@ pub(super) fn install(app: &mut App) {
     if !std::env::args().any(|arg| arg == "--smoke-test-ocean-habitats") {
         return;
     }
+    if !app
+        .world()
+        .contains_resource::<terra_core::GraphicsConfig>()
+    {
+        let graphics = terra_core::GraphicsConfig::from_client(
+            &app.world().resource::<terra_core::GameConfig>().client,
+        );
+        app.insert_resource(graphics);
+    }
     let benchmark = std::env::var("TERRA_HABITAT_BENCH")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
@@ -106,7 +115,7 @@ fn run(world: &mut World) {
             error!(%error, "Ocean habitat acceptance failed");
             world.write_message(AppExit::error());
         } else if state.stage == 7 {
-            info!("Natural reef, segmented seagrass and ice-free cold ocean acceptance passed");
+            info!("Natural reef, seagrass forest and cold ocean acceptance passed");
             world.write_message(AppExit::Success);
         }
     });
@@ -183,9 +192,16 @@ fn advance(world: &mut World, state: &mut Habitats) -> Result<(), String> {
         .flat_map(|s| s.data.blocks())
         .filter(|&&m| m == 50)
         .count();
-    if natural + seagrass < 10 || ice != 0 {
+    let marine_props = chunks
+        .loaded
+        .values()
+        .flat_map(|s| s.data.blocks())
+        .filter(|&&m| (545..=580).contains(&m))
+        .count();
+    let modern = world.resource::<WorldTerrain>().0.marine_overhaul();
+    if natural + seagrass < 10 || (!modern && ice != 0) || (modern && marine_props == 0) {
         return Err(format!(
-            "Missing habitat geometry: props {natural}, ice {ice}"
+            "Missing habitat geometry: aquatic props {natural}, marine blocks {marine_props}, ice {ice}"
         ));
     }
     info!(stage=state.stage, area=?AREAS[index], natural_props=natural, ice_blocks=ice,

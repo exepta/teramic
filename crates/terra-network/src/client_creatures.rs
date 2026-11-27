@@ -17,6 +17,32 @@ pub struct CreatureTrack {
     pub received: Instant,
     pub interval: f32,
 }
+fn ground_stride(animal: &terra_core::creatures::Creature) -> bool {
+    use terra_core::creatures::{CreatureBehavior as B, CreatureKind as K};
+    if animal.kind.is_aquatic() || matches!(animal.kind, K::SandWorm | K::LavaWorm) {
+        return false;
+    }
+    let walking = matches!(
+        animal.behavior,
+        B::Rest
+            | B::Wander
+            | B::Hunt
+            | B::Flee
+            | B::Attack
+            | B::SeekFood
+            | B::SeekWater
+            | B::Graze
+            | B::Drink
+            | B::Crawl
+    );
+    walking
+        && (!animal.kind.is_flying()
+            || matches!(animal.kind, K::EarthDragon | K::FireDragon | K::DarkDragon)
+                && matches!(animal.behavior, B::Wander | B::Hunt | B::Rest))
+        && (animal.velocity[1].abs() < 0.01
+            || (animal.position[1] * 16. - (animal.position[1] * 16.).round()).abs() < 0.003)
+}
+
 impl CreatureTrack {
     fn apply(&mut self, current: Creature, stamp: f64, now: Instant) {
         // The server broadcasts full snapshots at 10 Hz, including distant
@@ -44,7 +70,17 @@ impl CreatureTrack {
             )
             && current.behavior != self.current.behavior;
         let mut previous = self.current.clone();
-        if reanchor {
+        let shadow_step = current.kind == terra_core::creatures::CreatureKind::DarkDragon
+            && current.behavior == terra_core::creatures::CreatureBehavior::DragonSurge
+            && self
+                .current
+                .position
+                .iter()
+                .zip(current.position)
+                .map(|(a, b)| (a - b).powi(2))
+                .sum::<f64>()
+                > 16.;
+        if reanchor || shadow_step {
             self.playback = Default::default();
             previous.position = current.position;
         } else {
@@ -59,12 +95,7 @@ impl CreatureTrack {
             Vec3::from_array(current.velocity),
             stamp,
             now,
-            current.kind.is_dragon()
-                && matches!(
-                    current.behavior,
-                    terra_core::creatures::CreatureBehavior::Hunt
-                        | terra_core::creatures::CreatureBehavior::Wander
-                ),
+            ground_stride(&current),
         );
         self.previous = previous;
         self.current = current;

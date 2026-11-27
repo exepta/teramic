@@ -46,12 +46,18 @@ pub enum TreeAppearance {
     Cherry,
     Fir,
     Apple,
+    Acacia,
+    Baobab,
+    Willow,
 }
 
 impl TreeAppearance {
     pub(in crate::generation) fn of(tree: &Tree) -> Self {
         match tree.species {
             TreeSpecies::Green => Self::Oak,
+            TreeSpecies::Acacia => Self::Acacia,
+            TreeSpecies::Willow => Self::Willow,
+            TreeSpecies::Baobab => Self::Baobab,
             TreeSpecies::Autumn => Self::Autumn,
             TreeSpecies::Birch => Self::Birch,
             TreeSpecies::Spruce => Self::Spruce,
@@ -114,6 +120,7 @@ impl TerraGenerator {
                 terra_core::TreeSpecies::Birch => TreeAppearance::Birch,
                 terra_core::TreeSpecies::Cherry => TreeAppearance::Cherry,
                 terra_core::TreeSpecies::Apple => TreeAppearance::Apple,
+                terra_core::TreeSpecies::Acacia => TreeAppearance::Acacia,
             };
             for (cells, material) in [
                 (&tree.wood, tree.species.wood()),
@@ -194,9 +201,28 @@ impl TerraGenerator {
     }
 }
 
+/// One piece of a natural pinnate frond. Endpoints are relative to the cell.
+#[derive(Debug, Clone, Copy)]
+pub struct PalmSpan {
+    pub endpoints: [[f32; 3]; 2],
+    pub progress: [f32; 2],
+}
+
 impl TreeAppearanceSnapshot {
-    /// Existing generated roots around this section, without resampling terrain.
-    /// Neighboring snapshots can contain the same tree.
+    pub fn palm_spans(&self, cell: [i64; 3], material: u16) -> Vec<PalmSpan> {
+        let Some(tree) = self.trees.iter().find(|t| {
+            t.leaves_material as u16 == terra_voxel::MaterialId::PalmFrondEast as u16
+                && t.leaves_at(cell).is_some_and(|m| m as u16 == material)
+        }) else {
+            return Vec::new();
+        };
+        let point = std::array::from_fn(|i| (cell[i] - tree.origin[i]) as f32 + 0.5);
+        tree.crowns
+            .iter()
+            .filter_map(|c| c.palm_span(point))
+            .collect()
+    }
+
     pub fn tree_roots(&self) -> impl Iterator<Item = ([i64; 3], TreeAppearance)> + '_ {
         self.trees
             .iter()
@@ -222,7 +248,8 @@ impl TreeAppearanceSnapshot {
         if material == 195 {
             return Some(TreeAppearance::Apple);
         }
-        if matches!(material, 36 | 134 | 310..=313 | 405..=406) {
+        if matches!(material, 36 | 134 | 310..=313 | 405..=406 | 585..=586 | 643..=644 | 646..=647 | 679..=680 | 682..=683)
+        {
             return self.uncached(global, material);
         }
         if !matches!(material, 6..=10) || self.trees.is_empty() {
@@ -246,6 +273,9 @@ impl TreeAppearanceSnapshot {
                     8 => Some(TreeAppearance::Cherry),
                     9 => Some(TreeAppearance::Fir),
                     10 => Some(TreeAppearance::Apple),
+                    11 => Some(TreeAppearance::Acacia),
+                    12 => Some(TreeAppearance::Baobab),
+                    13 => Some(TreeAppearance::Willow),
                     _ => None,
                 };
             }
@@ -259,8 +289,20 @@ impl TreeAppearanceSnapshot {
     fn uncached(&self, global: [i64; 3], material: u16) -> Option<TreeAppearance> {
         let tree = self.trees.iter().find(|tree| {
             let generated = match material {
-                6 | 10 | 36 | 134 | 313 | 405 => tree.wood_at(global),
-                7..=9 | 132 | 133 | 195 | 310..=312 | 406 => tree.leaves_at(global),
+                6 | 10 | 36 | 134 | 313 | 405 | 643 | 646 | 679 | 680 => tree.wood_at(global),
+                7..=9
+                | 132
+                | 133
+                | 195
+                | 310..=312
+                | 606..=607
+                | 406
+                | 537..=540
+                | 585..=586
+                | 644
+                | 647
+                | 682
+                | 683 => tree.leaves_at(global),
                 _ => None,
             };
             generated.is_some_and(|generated| generated as u16 == material)
@@ -305,6 +347,7 @@ mod tests {
                 })
                 .expect("generated crown");
             let column = crate::PreparedColumn {
+                fall_columns: Vec::new(),
                 structures: Vec::new(),
                 natural_features: Vec::new(),
                 config: Default::default(),

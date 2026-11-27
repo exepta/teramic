@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": 664,
+  "name": "Tall Termite Mound",
+  "description": "A tall fluted tower of baked earth.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/tall_termite_mound.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.24,
+        0,
+        0.24
+      ],
+      "maximum": [
+        0.76,
+        0.45,
+        0.76
+      ]
+    },
+    {
+      "minimum": [
+        0.32,
+        0.45,
+        0.35
+      ],
+      "maximum": [
+        0.66,
+        0.68,
+        0.65
+      ]
+    },
+    {
+      "minimum": [
+        0.43,
+        0.68,
+        0.42
+      ],
+      "maximum": [
+        0.62,
+        0.91,
+        0.62
+      ]
+    }
+  ]
+}

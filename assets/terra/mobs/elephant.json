@@ -1,0 +1,24 @@
+{
+  "id": "elephant",
+  "title": "Elephant",
+  "health": 52,
+  "food": 40,
+  "water": 35,
+  "size": [
+    1.9,
+    3.03,
+    3.59
+  ],
+  "speed": 1.05,
+  "group_size": 3,
+  "sleeps": true,
+  "spawn": {
+    "biomes": [
+      "savanna"
+    ],
+    "herd_size": [
+      2,
+      3
+    ]
+  }
+}

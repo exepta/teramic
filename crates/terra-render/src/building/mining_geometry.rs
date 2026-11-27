@@ -2,7 +2,7 @@ use crate::meshing::builder::MeshBatch;
 use bevy::prelude::*;
 use terra_voxel::meshing::BlockFace;
 
-/// Restore only faces that the opaque target originally occluded. Neighbor cells
+/// Restore the faces the target originally occluded. Neighbor cells
 /// keep their real material and global origin, including opposite section borders.
 pub(super) fn cavity_faces(
     position: [i64; 3],
@@ -12,15 +12,19 @@ pub(super) fn cavity_faces(
     templates: &crate::blocks::TemplateSet,
     options: &crate::meshing::builder::RenderOptions,
 ) -> Result<Vec<MeshBatch>, String> {
-    if !terra_voxel::MaterialId::from_raw(target).is_some_and(|id| id.is_opaque()) {
+    let target_occludes = terra_voxel::meshing::occludes_face(target);
+    if !target_occludes && !terra_voxel::MaterialId::FOLIAGE.contains(&target) {
         return Ok(Vec::new());
     }
     let (target_section, _) = terra_voxel::blocks::global_to_section(position);
     let target_origin = target_section.origin().map_err(|error| error.to_string())?;
     let mut flat = templates.clone();
+    flat.block_details.micro_geometry = false;
     let mut result = Vec::new();
     for (side, material) in neighbors.into_iter().enumerate() {
-        if !terra_voxel::MaterialId::from_raw(material).is_some_and(|id| id.is_opaque()) {
+        if !terra_voxel::MaterialId::FOLIAGE.contains(&material)
+            && !(target_occludes && terra_voxel::meshing::occludes_face(material))
+        {
             continue;
         }
         let Some(template) = flat.blocks.get_mut(&material) else {

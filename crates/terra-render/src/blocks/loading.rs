@@ -2,7 +2,10 @@ use super::{
     BlockTemplate, DetailTemplate, ItemMaterials, PrimitiveTemplate, PropMaterials, SideCap,
     TemplateSet,
     cube::cube_faces,
-    definitions::{BlockLibrary, BlockRenderKind, CubeMaterialDefinition, ModelLayout},
+    definitions::{
+        BlockDefinition, BlockLibrary, BlockRenderKind, CubeMaterialDefinition, ModelLayout,
+    },
+    sculpt::ReferencePalette,
 };
 use bevy::{
     asset::{LoadState, RecursiveDependencyLoadState, RenderAssetUsages},
@@ -42,8 +45,15 @@ pub(crate) struct BlockAssets {
     item_materials: ItemMaterials,
     textures: HashMap<String, Handle<Image>>,
     patterns: HashMap<super::definitions::TexturePattern, Handle<Image>>,
-    mipmap_jobs: HashMap<String, Task<Result<Image, String>>>,
+    mipmap_jobs: HashMap<String, Task<Result<PreparedTexture, String>>>,
+    oak_canopy_cutout: Option<Handle<Image>>,
+    /// Final, unmasked oak pigment whose alpha is one at every sampled mip.
+    pub(crate) opaque_oak_paint: Option<AssetId<Image>>,
+    leaf_openings: HashMap<AssetId<Image>, [f32; 3]>,
+    leaf_face_textures: HashSet<String>,
+    reference_palette: ReferencePalette,
     mipmaps_ready: HashSet<String>,
+    foliage_albedos: HashMap<String, Vec3>,
     pub materials: Vec<Handle<StandardMaterial>>,
     pub templates: Option<Arc<TemplateSet>>,
     pub error: Option<String>,
@@ -74,13 +84,10 @@ impl BlockAssets {
             }
         }
         if let Some(item) = item {
-            if let Some(block) = item.block_material().and_then(|id| {
-                self.library
-                    .as_ref()?
-                    .blocks
-                    .iter()
-                    .find(|block| block.id == id)
-            }) && !block.model.is_empty()
+            if let Some(block) = item
+                .block_material()
+                .and_then(|id| self.library.as_ref()?.by_id(id))
+                && !block.model.is_empty()
             {
                 return format!("Icon: terra/blocks/{}", block.model);
             }
@@ -122,12 +129,7 @@ impl BlockAssets {
         id: u16,
         side: usize,
     ) -> Option<&CubeMaterialDefinition> {
-        let block = self
-            .library
-            .as_ref()?
-            .blocks
-            .iter()
-            .find(|block| block.id == id)?;
+        let block = self.library.as_ref()?.by_id(id)?;
         let name = block.face_materials.as_ref()?.get(side)?;
         block.materials.get(name)
     }
@@ -232,33 +234,7 @@ pub(crate) fn load_blocks(
                 })
                 .collect();
             for block in &library.blocks {
-                for path in block.textures.values().chain(
-                    block
-                        .materials
-                        .values()
-                        .filter_map(|material| material.normal_texture.as_ref()),
-                ) {
-                    let linear = block
-                        .materials
-                        .values()
-                        .any(|material| material.normal_texture.as_ref() == Some(path));
-                    assets.textures.entry(path.clone()).or_insert_with(|| {
-                        server
-                            .load_builder()
-                            .with_settings(move |settings: &mut ImageLoaderSettings| {
-                                settings.is_srgb = !linear;
-                                // Publish only the completed mip chain to the renderer.
-                                settings.asset_usage = RenderAssetUsages::MAIN_WORLD;
-                                settings.sampler =
-                                    ImageSampler::Descriptor(ImageSamplerDescriptor {
-                                        address_mode_u: ImageAddressMode::Repeat,
-                                        address_mode_v: ImageAddressMode::Repeat,
-                                        ..ImageSamplerDescriptor::linear()
-                                    });
-                            })
-                            .load(format!("terra/blocks/{path}"))
-                    });
-                }
+                assets.load_block_textures(&server, block);
             }
             for block in &library.blocks {
                 // Custom scene materials may opt into the same declared PBR
@@ -287,6 +263,7 @@ pub(crate) fn load_blocks(
                     }
                 }
             }
+            assets.load_reference_materials(&server, &mut materials);
             assets.prop_materials = load_prop_materials(&mut assets, &mut materials);
             assets.item_materials = ItemMaterials {
                 opaque: assets.shared_material(
@@ -357,6 +334,155 @@ struct MaterialKey {
 }
 
 impl BlockAssets {
+    fn load_block_textures(&mut self, server: &AssetServer, block: &BlockDefinition) {
+        if terra_voxel::MaterialId::FOLIAGE.contains(&block.id)
+            && let Some(faces) = &block.face_materials
+        {
+            self.leaf_face_textures.extend(
+                faces
+                    .iter()
+                    .filter_map(|name| block.textures.get(name))
+                    .cloned(),
+            );
+        }
+        for path in block.textures.values() {
+            self.load_tiled_texture(server, path, true);
+        }
+        for path in block
+            .materials
+            .values()
+            .filter_map(|material| material.normal_texture.as_ref())
+        {
+            self.load_tiled_texture(server, path, false);
+        }
+    }
+
+    fn load_tiled_texture(
+        &mut self,
+        server: &AssetServer,
+        path: &str,
+        is_srgb: bool,
+    ) -> Handle<Image> {
+        self.textures
+            .entry(path.to_owned())
+            .or_insert_with(|| {
+                server
+                    .load_builder()
+                    .with_settings(move |settings: &mut ImageLoaderSettings| {
+                        settings.is_srgb = is_srgb;
+                        settings.asset_usage = RenderAssetUsages::MAIN_WORLD;
+                        settings.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+                            address_mode_u: ImageAddressMode::Repeat,
+                            address_mode_v: ImageAddressMode::Repeat,
+                            ..ImageSamplerDescriptor::linear()
+                        });
+                    })
+                    .load(format!("terra/blocks/{path}"))
+            })
+            .clone()
+    }
+
+    fn load_reference_materials(
+        &mut self,
+        server: &AssetServer,
+        materials: &mut Assets<StandardMaterial>,
+    ) {
+        let mut tiled = |name: &str, roughness: f32| {
+            let base =
+                self.load_tiled_texture(server, &format!("textures/sculpted/{name}.png"), true);
+            let normal = self.load_tiled_texture(
+                server,
+                &format!("textures/sculpted/{name}_normal.png"),
+                false,
+            );
+            let slot = self.materials.len();
+            self.materials.push(materials.add(StandardMaterial {
+                base_color_texture: Some(base),
+                normal_map_texture: Some(normal),
+                perceptual_roughness: roughness,
+                reflectance: 0.13,
+                ..default()
+            }));
+            Some(slot)
+        };
+
+        self.reference_palette = ReferencePalette {
+            grass_top: tiled("grass_top", 0.89),
+            grass_side: tiled("grass_side", 0.91),
+            soil: tiled("soil", 0.94),
+            rock: tiled("rock", 0.84),
+            gravel: tiled("gravel", 0.91),
+            leaves: tiled("leaves", 0.86),
+            ..default()
+        };
+        // Light reaches the projecting blades; the deeper canopy between them
+        // uses the same paint in shade even in diffuse outdoor lighting.
+        if let Some(slot) = self.reference_palette.leaves
+            && let Some(mut core) = materials.get_mut(&self.materials[slot])
+        {
+            core.base_color = Color::linear_rgb(0.56, 0.59, 0.54);
+            core.alpha_mode = AlphaMode::Mask(0.5);
+            core.double_sided = true;
+            core.cull_mode = None;
+        }
+    }
+
+    fn bind_leaf_cutouts(
+        &mut self,
+        templates: &mut TemplateSet,
+        materials: &mut Assets<StandardMaterial>,
+    ) -> Result<(), String> {
+        let palette = &mut self.reference_palette;
+        templates.normal_mapped_materials.extend(
+            [
+                palette.grass_top,
+                palette.grass_side,
+                palette.soil,
+                palette.rock,
+                palette.gravel,
+                palette.leaves,
+            ]
+            .into_iter()
+            .flatten(),
+        );
+        for id in terra_voxel::MaterialId::FOLIAGE {
+            let Some(block) = templates.blocks.get(&id) else {
+                continue;
+            };
+            // The sculpted oak keeps uncut pigment on its individual leaf
+            // bodies. Its inner canopy uses the same art with openings.
+            for slot in if id == 7 {
+                palette
+                    .leaves
+                    .map_or(block.face_materials, |slot| [slot; 6])
+            } else {
+                block.face_materials
+            } {
+                if palette.leaf_openings.contains_key(&slot) {
+                    continue;
+                }
+                let mut material = materials
+                    .get_mut(&self.materials[slot])
+                    .ok_or_else(|| format!("Missing foliage material {slot}"))?;
+                if let Some(image) = &material.base_color_texture {
+                    let id = image.id();
+                    if let Some(&opening) = self.leaf_openings.get(&id) {
+                        palette.leaf_openings.insert(slot, opening);
+                    }
+                    if Some(slot) == palette.leaves
+                        && let Some(masked) = &self.oak_canopy_cutout
+                    {
+                        material.base_color_texture = Some(masked.clone());
+                    }
+                }
+                material.alpha_mode = AlphaMode::Mask(0.5);
+                material.double_sided = true;
+                material.cull_mode = None;
+            }
+        }
+        Ok(())
+    }
+
     fn shared_material(
         &mut self,
         definition: &CubeMaterialDefinition,
@@ -587,6 +713,13 @@ fn authored_foliage_texture(path: &str) -> bool {
     path.starts_with("textures/foliage/") && path.ends_with(".png")
 }
 
+struct PreparedTexture {
+    image: Image,
+    cutout: Option<Image>,
+    opening: Option<[f32; 3]>,
+    opaque_oak_paint: bool,
+}
+
 fn prepare_mipmaps(source: &mut SourceAssets, assets: &mut BlockAssets) -> Result<bool, String> {
     for (path, handle) in assets.textures.clone() {
         if assets.mipmaps_ready.contains(&path) {
@@ -594,8 +727,33 @@ fn prepare_mipmaps(source: &mut SourceAssets, assets: &mut BlockAssets) -> Resul
         }
         if let Some(job) = assets.mipmap_jobs.get_mut(&path) {
             if let Some(result) = future::block_on(future::poll_once(job)) {
-                let image = result?;
+                let PreparedTexture {
+                    image,
+                    cutout,
+                    opening,
+                    opaque_oak_paint,
+                } = result?;
+                if opaque_oak_paint {
+                    assets.opaque_oak_paint = Some(handle.id());
+                }
+                if let Some(mut cutout) = cutout {
+                    cutout.asset_usage = RenderAssetUsages::RENDER_WORLD;
+                    assets.oak_canopy_cutout = Some(source.images.add(cutout));
+                }
+                if let Some(opening) = opening {
+                    assets.leaf_openings.insert(handle.id(), opening);
+                }
                 let mip_levels = image.texture_descriptor.mip_level_count;
+                // Publishing releases the CPU pixels on the following render frame.
+                if (authored_foliage_texture(&path) || path == "textures/sculpted/leaves.png")
+                    && let Some(bytes) = image.data.as_ref().and_then(|data| data.last_chunk::<4>())
+                {
+                    let mean = Color::srgb_u8(bytes[0], bytes[1], bytes[2])
+                        .to_linear()
+                        .to_vec4()
+                        .truncate();
+                    assets.foliage_albedos.insert(path.clone(), mean);
+                }
                 let rebound_materials = publish_mipmapped_image(
                     &mut source.images,
                     &mut source.materials,
@@ -619,18 +777,45 @@ fn prepare_mipmaps(source: &mut SourceAssets, assets: &mut BlockAssets) -> Resul
             let canopy = path == "textures/canopy-stylized.png" || authored_foliage_texture(&path);
             let authored = path.starts_with("model:");
             let normal_map = path.ends_with("_normal.png");
+            let leaf_face = assets.leaf_face_textures.contains(&path);
+            let meadow_cap = path == "textures/sculpted/grass_top.png";
+            let separate_oak_paint = path == "textures/sculpted/leaves.png";
+            // A watched source may gain transparent texels after materials have
+            // been created. Its shadow/depth shaders must keep sampling the image.
+            let static_oak_paint = separate_oak_paint && !source.server.watching_for_changes();
             assets.mipmap_jobs.insert(
                 path,
                 AsyncComputeTaskPool::get().spawn(async move {
-                    if normal_map {
+                    let mut cutout = if leaf_face {
+                        crate::foliage::mask::cutout_from_paint(&image)?
+                    } else {
+                        None
+                    };
+                    let opening = leaf_face
+                        .then(|| {
+                            crate::foliage::mask::mesh_opening(cutout.as_ref().unwrap_or(&image))
+                        })
+                        .flatten();
+                    let image = if !separate_oak_paint && let Some(masked) = cutout.take() {
+                        Ok(masked)
+                    } else if normal_map {
                         super::mipmaps::generate_normal(image)
                     } else if canopy {
                         crate::foliage::masked_canopy(image)
+                    } else if meadow_cap {
+                        super::mipmaps::meadow_turf(image)
                     } else if authored {
                         super::mipmaps::generate_authored(image)
                     } else {
                         super::mipmaps::generate(image)
-                    }
+                    }?;
+                    Ok(PreparedTexture {
+                        opaque_oak_paint: static_oak_paint
+                            && super::mipmaps::opaque_tiled_paint(&image),
+                        image,
+                        cutout,
+                        opening,
+                    })
                 }),
             );
         }
@@ -715,11 +900,21 @@ fn collect_templates(
                             definition.id
                         )
                     })?;
-                    let slot = source.face_materials[reference.side];
+                    let authored = source.face_materials[reference.side];
+                    let slot = match (reference.block, reference.side) {
+                        (1, 2) => assets.reference_palette.soil.unwrap_or(authored),
+                        _ => authored,
+                    };
                     assets
                         .cube_material_slots
                         .insert((definition.id, name.clone()), slot);
                     authored_materials.insert(slot);
+                    if source.faces[reference.side]
+                        .iter()
+                        .any(|p| !p.tangents.is_empty())
+                    {
+                        templates.normal_mapped_materials.insert(slot);
+                    }
                 }
             }
             let names = definition
@@ -734,6 +929,13 @@ fn collect_templates(
                     .ok_or_else(|| {
                         format!("Block {}: missing cube material {name}", definition.id)
                     })?;
+            }
+            if definition.render_kind == BlockRenderKind::Boxes
+                && terra_core::construction::base_material(definition.id) == Some(3)
+                && let Some(rock) = assets.reference_palette.rock
+            {
+                face_materials.fill(rock);
+                authored_materials.insert(rock);
             }
             let side_cap = definition
                 .side_cap
@@ -781,6 +983,26 @@ fn collect_templates(
                             )
                         })
                 };
+                // The last mip is the alpha-weighted linear mean of the artwork. The
+                // cutout atlas for spruce needles and the shared oak cube differ by
+                // nearly fourfold in green. Match their pigments on distant boughs.
+                let albedo = |name: &String| -> Option<Vec3> {
+                    assets
+                        .foliage_albedos
+                        .get(definition.textures.get(name)?)
+                        .copied()
+                };
+                for cluster_name in std::iter::once(&cluster.material).chain(cluster.needles.iter())
+                {
+                    for face in names {
+                        if let (Some(detail), Some(proxy)) = (albedo(cluster_name), albedo(face)) {
+                            templates.foliage_proxy_tints.insert(
+                                (slot(cluster_name)?, slot(face)?),
+                                (detail / proxy.max(Vec3::splat(0.001))).to_array(),
+                            );
+                        }
+                    }
+                }
                 templates.foliage_clusters.insert(
                     definition.id,
                     super::FoliageClusterMaterials {
@@ -1112,6 +1334,8 @@ fn collect_templates(
             return Ok(None);
         }
     }
+    assets.bind_leaf_cutouts(&mut templates, &mut source.materials)?;
+    super::sculpt::register(&library, &mut templates, &assets.reference_palette);
     Ok(Some(templates))
 }
 
@@ -1148,7 +1372,14 @@ fn apply_textures(source: &mut SourceAssets, assets: &BlockAssets) -> Result<(),
                 .get_mut(&assets.materials[slot])
                 .ok_or("StandardMaterial unavailable")?;
             // JSON paths are authoritative: a PNG can be replaced without re-exporting its GLB.
-            material.into_inner().base_color_texture = Some(assets.textures[path].clone());
+            let material = material.into_inner();
+            let texture = assets.textures[path].clone();
+            if material.emissive_texture.is_some()
+                && material.emissive_texture == material.base_color_texture
+            {
+                material.emissive_texture = Some(texture.clone());
+            }
+            material.base_color_texture = Some(texture);
         }
     }
     Ok(())

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": 536,
+  "name": "Sun Banner",
+  "description": "A gold sun embroidered on wind-folded crimson cloth.",
+  "creative_category": "nature",
+  "hardness": 0.25,
+  "resistance": 0.4,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/sun_banner.glb",
+  "collision_boxes": [],
+  "struct_block": true,
+  "textures": {
+    "oak": "textures/machinery-oak-hd.png"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": 629,
+  "name": "Lava Fumarole",
+  "description": "Scalding steam escapes through this burning vent.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.25,
+  "resistance": 2.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/ashlands/dark_volcanic_stone_side.png",
+    "top": "textures/ashlands/fumarole_top.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.89,
+      "normal_texture": "textures/ashlands/dark_volcanic_stone_side_normal.png"
+    },
+    "top": {
+      "roughness": 0.81
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "top",
+    "side",
+    "side"
+  ],
+  "light": {
+    "color": [
+      1.0,
+      0.28,
+      0.06
+    ],
+    "intensity": 85,
+    "range": 4.0,
+    "shadows": false
+  }
+}

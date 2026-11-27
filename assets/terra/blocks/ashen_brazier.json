@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": 737,
+  "name": "Basalt Brazier",
+  "description": "Golden fire burns above a carved basalt pedestal.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.4,
+  "resistance": 3.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/ashen_brazier.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [],
+  "light": {
+    "color": [
+      1.0,
+      0.48,
+      0.14
+    ],
+    "intensity": 680,
+    "range": 11,
+    "falloff": "soft_core",
+    "flicker": 0.025,
+    "shadows": false
+  }
+}

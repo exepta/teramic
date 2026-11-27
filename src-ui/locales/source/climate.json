@@ -5,6 +5,16 @@
     "de": "Ozean · Warm"
   },
   {
+    "source": "Ocean · Cold",
+    "en": "Ocean · Cold",
+    "de": "Ozean · Kalt"
+  },
+  {
+    "source": "Ocean · Temperate",
+    "en": "Ocean · Temperate",
+    "de": "Ozean · Gemäßigt"
+  },
+  {
     "source": "Plains · Warm",
     "en": "Plains · Warm",
     "de": "Ebene · Warm"
@@ -48,5 +58,10 @@
     "source": "Blood Forest · Warm",
     "en": "Blood Forest · Warm",
     "de": "Blutwald · Warm"
+  },
+  {
+    "source": "Ashlands · Hot",
+    "en": "Ashlands · Hot",
+    "de": "Aschelande · Heiß"
   }
 ]

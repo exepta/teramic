@@ -10,15 +10,26 @@ pub const MAX_INCUBATING: usize = 512;
 pub fn kind(material: u16) -> Option<CreatureKind> {
     match MaterialId::from_raw(material)? {
         MaterialId::DarkDragonEgg => Some(CreatureKind::DarkDragon),
+        MaterialId::FireDragonEgg => Some(CreatureKind::FireDragon),
         MaterialId::EarthDragonEgg => Some(CreatureKind::EarthDragon),
         MaterialId::WaterDragonEgg => Some(CreatureKind::WaterDragon),
         _ => None,
     }
 }
 
+pub fn supports_egg(shell: u16, floor: Option<u16>) -> bool {
+    kind(shell).is_some_and(|species| supports_nest(species, floor))
+}
+
+pub fn supports_nest(species: CreatureKind, floor: Option<u16>) -> bool {
+    floor == Some(MaterialId::StrawBlock as u16)
+        || species == CreatureKind::FireDragon && floor == Some(MaterialId::LavaCrust as u16)
+}
+
 pub fn material(kind: CreatureKind) -> Option<u16> {
     Some(match kind {
         CreatureKind::DarkDragon => MaterialId::DarkDragonEgg,
+        CreatureKind::FireDragon => MaterialId::FireDragonEgg,
         CreatureKind::EarthDragon => MaterialId::EarthDragonEgg,
         CreatureKind::WaterDragon => MaterialId::WaterDragonEgg,
         _ => return None,

@@ -4,7 +4,7 @@ use bevy::input_focus::{FocusCause, InputFocus, tab_navigation::TabGroup};
 use bevy::prelude::*;
 use terra_core::{BiomeKind, GameConfig, GameRules, StructureSettings};
 
-pub(super) const BIOMES: [(Option<BiomeKind>, &str, &str, &str); 11] = [
+pub(super) const BIOMES: [(Option<BiomeKind>, &str, &str, &str); 16] = [
     (None, "random", "Any biome", "dices"),
     (Some(BiomeKind::Plains), "plains", "Plains", "leaf"),
     (Some(BiomeKind::Forest), "forest", "Forest", "trees"),
@@ -20,12 +20,6 @@ pub(super) const BIOMES: [(Option<BiomeKind>, &str, &str, &str); 11] = [
         "mushroom-park",
         "Mushroom Park",
         "mushroom",
-    ),
-    (
-        Some(BiomeKind::ClifftedDesert),
-        "cliffted-desert",
-        "Cliffted Desert",
-        "mountain",
     ),
     (
         Some(BiomeKind::CherryForest),
@@ -44,6 +38,27 @@ pub(super) const BIOMES: [(Option<BiomeKind>, &str, &str, &str); 11] = [
         "blood-forest",
         "Blood Forest",
         "trees",
+    ),
+    (Some(BiomeKind::Ashlands), "ashlands", "Ashlands", "flame"),
+    (Some(BiomeKind::Savanna), "savanna", "Savanna", "trees"),
+    (Some(BiomeKind::Swamp), "swamp", "Swamp", "trees"),
+    (
+        Some(BiomeKind::MistyCoast),
+        "misty-coast",
+        "Misty Coast",
+        "waves-horizontal",
+    ),
+    (
+        Some(BiomeKind::CrystalHighlands),
+        "crystal-highlands",
+        "Crystal Highlands",
+        "mountain",
+    ),
+    (
+        Some(BiomeKind::PetrifiedForest),
+        "petrified-forest",
+        "Petrified Forest",
+        "mountain",
     ),
     (
         Some(BiomeKind::Ocean),

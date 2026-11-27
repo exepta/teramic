@@ -669,6 +669,8 @@ fn compose_item(
         | ItemKind::Bitumen
         | ItemKind::GloomEssence
         | ItemKind::DragonLoot(_)
+        | ItemKind::RuneCore
+        | ItemKind::ForestCrystal
         | ItemKind::LightSplitter
         | ItemKind::RoadAggregate => forest_items::batches(item, templates.item_materials.opaque),
         ItemKind::Apple | ItemKind::AppleCore => {
@@ -768,6 +770,8 @@ fn render_next(
                     | ItemKind::Bitumen
                     | ItemKind::GloomEssence
                     | ItemKind::DragonLoot(_)
+                    | ItemKind::RuneCore
+                    | ItemKind::ForestCrystal
                     | ItemKind::LightSplitter
                     | ItemKind::RoadAggregate
                     | ItemKind::Flower(_)
@@ -1111,13 +1115,21 @@ pub(crate) fn block_batches(
         }
     }
     if material == 1
+        && !templates
+            .sculpted_blocks
+            .get(&1)
+            .is_some_and(|shape| shape.reference_grass)
         && let Some(block) = templates.blocks.get(&1)
     {
         let color = Color::srgb(0.66, 0.83, 0.36).to_linear().to_f32_array();
-        for batch in batches
-            .iter_mut()
-            .filter(|batch| batch.material == block.face_materials[3])
-        {
+        let top = templates
+            .sculpted_blocks
+            .get(&1)
+            .filter(|_| {
+                options.detail_level == DetailLevel::Near && templates.block_details.micro_geometry
+            })
+            .map_or(block.face_materials[3], |shape| shape.slots[3]);
+        for batch in batches.iter_mut().filter(|batch| batch.material == top) {
             batch.colors.resize(batch.positions.len(), [1.0; 4]);
             for vertex in &mut batch.colors {
                 for axis in 0..3 {

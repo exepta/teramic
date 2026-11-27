@@ -294,6 +294,7 @@ struct PropChanges {
     removed: Vec<SectionPos>,
     columns: HashSet<[i64; 2]>,
     water: bool,
+    water_sections: Vec<SectionPos>,
 }
 
 impl PropChanges {
@@ -307,11 +308,15 @@ impl PropChanges {
 
 impl PropChangeReader {
     fn read(&mut self, world: &PropWorld) -> PropChanges {
+        let water_sections: Vec<_> = world.water.as_ref().map_or_else(Vec::new, |messages| {
+            self.water
+                .read(messages)
+                .map(|event| event.position)
+                .collect()
+        });
         PropChanges {
-            water: world
-                .water
-                .as_ref()
-                .is_some_and(|messages| self.water.read(messages).count() > 0),
+            water: !water_sections.is_empty(),
+            water_sections,
             published: world.published.as_ref().map_or_else(Vec::new, |messages| {
                 self.published
                     .read(messages)
@@ -729,6 +734,30 @@ fn dispatch(
             }
         }
     }
+    // A draining cell can belong to the section adjacent to the plant's rock.
+    for wet in &changes.water_sections {
+        for offset in [
+            [0, 0, 0],
+            [0, -1, 0],
+            [0, 1, 0],
+            [-1, 0, 0],
+            [1, 0, 0],
+            [0, 0, -1],
+            [0, 0, 1],
+        ] {
+            if let Ok(owner) = wet.offset(offset)
+                && queue.vegetated.contains(&owner)
+                && world
+                    .chunks
+                    .loaded
+                    .get(&owner)
+                    .is_some_and(|s| s.props.iter().any(|p| p.kind.reef_attachment()))
+            {
+                queue.changed.insert(owner);
+                queue.support_changes.insert(owner);
+            }
+        }
+    }
     queue.invalidate_web_neighbors(changes.published.iter().chain(&changes.removed).copied());
     let journal_selection_changed = world.journal.is_changed()
         && appearance
@@ -1032,6 +1061,7 @@ fn dispatch(
                     terra_world::props::placement::supported(p, |cell| world.chunks.block_at(cell));
                 unknown_support |= support.is_none();
                 support == Some(true)
+                    && terra_world::props::reef_flora::submerged(p, &world.chunks, &world.journal)
                     && terra_world::props::visible_at_density(p, density)
                     && !terra_world::props::seasonal::snow_buried(p, &world.chunks, &world.journal)
             })
@@ -1209,7 +1239,7 @@ fn compose_with_exposure_mode(
             })
         })
         .collect::<Result<Vec<_>, &str>>()?;
-    let plan = batch_plan::plan(&entries);
+    let plan = batch_plan::plan(&entries, packed);
     let mut batches: Vec<_> = plan
         .pieces
         .iter()
@@ -3238,11 +3268,11 @@ mod growth_tests {
                     .iter()
                     .map(|batch| batch.positions.len())
                     .sum::<usize>();
-                if vertices <= batch_plan::VERTEX_LIMIT {
+                if vertices <= crate::upload_budget::MAX_BATCH_VERTICES {
                     assert_eq!(batches.len(), 1, "small material batches remain unsplit");
                 }
                 for batch in &mut batches {
-                    assert!(batch.positions.len() <= batch_plan::VERTEX_LIMIT);
+                    assert!(batch.positions.len() <= crate::upload_budget::MAX_BATCH_VERTICES);
                     assert_eq!(batch.positions.capacity(), batch.positions.len());
                     assert_eq!(batch.uvs.capacity(), batch.positions.len());
                     let indices = batch.indices.len();

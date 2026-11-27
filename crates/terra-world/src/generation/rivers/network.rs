@@ -245,11 +245,7 @@ impl TerraGenerator {
         let mut caps = [0.0; POINTS];
         for i in 0..POINTS {
             let world = frame.world(points[i][0], points[i][2]);
-            ground[i] = self.base_height_with_biome(
-                world[0],
-                world[1],
-                self.climate_biome_at(world[0], world[1]),
-            );
+            ground[i] = self.watershed_height(world[0], world[1]);
             let mut support = ground[i];
             let a = points[i.saturating_sub(1)];
             let b = points[(i + 1).min(POINTS - 1)];
@@ -265,8 +261,7 @@ impl TerraGenerator {
                     points[i][0] + offset * normal,
                     points[i][2] - offset * slope * normal,
                 );
-                support =
-                    support.min(self.base_height_with_biome(x, z, self.climate_biome_at(x, z)));
+                support = support.min(self.watershed_height(x, z));
             }
             caps[i] = support - 1.6;
             if i < POINTS - 5 && caps[i] < join.level {

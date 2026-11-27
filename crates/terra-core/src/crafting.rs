@@ -36,10 +36,15 @@ pub struct Ingredient {
     #[serde(default)]
     pub wood: bool,
 }
+
+fn is_crafting_plank(item: ItemKind) -> bool {
+    matches!(item, ItemKind::Block(16..=18 | 135 | 645 | 681))
+}
+
 impl Ingredient {
     pub fn matches(self, item: ItemKind) -> bool {
         if self.wood {
-            matches!(item, ItemKind::Block(16..=18 | 135))
+            is_crafting_plank(item)
         } else if let ItemKind::Block(material) = self.item
             && ItemKind::supports_wood(material)
         {
@@ -97,13 +102,11 @@ impl WoodInputs {
         {
             *self.source_pigments.entry(color).or_default() += u32::from(count);
         }
-        if let Some(species) = item.wood_species() {
-            let counts = if matches!(item, ItemKind::Block(16..=18 | 135)) {
-                &mut self.planks
-            } else {
-                &mut self.parts
-            };
-            counts[species as usize] += u32::from(count);
+        if is_crafting_plank(item) {
+            // Acacia uses the standard finish on equipment with four existing wood finishes.
+            self.planks[item.wood_species().unwrap_or_default() as usize] += u32::from(count);
+        } else if let Some(species) = item.wood_species() {
+            self.parts[species as usize] += u32::from(count);
         }
     }
 }
@@ -286,7 +289,7 @@ impl Recipe {
         if ingredients.iter().any(|i| {
             !i.item.valid()
                 || !(1..=STACK_LIMIT).contains(&i.count)
-                || i.wood && !matches!(i.item, ItemKind::Block(16..=18 | 135))
+                || i.wood && !is_crafting_plank(i.item)
         }) {
             return Err(format!("Invalid ingredients: {}", self.id));
         }
@@ -367,6 +370,23 @@ impl RecipeBook {
             cape_heraldry: heraldry,
             ..self.clone()
         }
+    }
+
+    /// Preview the real material, pigment and heraldry when one known input
+    /// satisfies a recipe wildcard and the other slots use their default items.
+    pub fn output_with_ingredient(&self, recipe: &Recipe, item: ItemKind) -> ItemStack {
+        let mut inputs = WoodInputs::default();
+        for ingredient in recipe.ingredients() {
+            inputs.consume(
+                if ingredient.matches(item) {
+                    item
+                } else {
+                    ingredient.item
+                },
+                ingredient.count,
+            );
+        }
+        self.resolve_output(recipe.output, inputs)
     }
 
     fn resolve_output(&self, output: ItemStack, inputs: WoodInputs) -> ItemStack {

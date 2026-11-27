@@ -2,7 +2,7 @@
 import json
 import math
 from build_castle import Mesh, BLOCKS
-from build_spirit_blossom import export
+from voxel_props.surface import export_voxels
 
 def geode(number, slug, title, description, color):
     mesh = Mesh('stone')
@@ -24,7 +24,7 @@ def geode(number, slug, title, description, color):
             mesh.polygon([base[i],waist[i],waist[j],base[j]],'mineral')
             mesh.polygon([waist[i],cap[i],cap[j],waist[j]],keys[i%3])
             mesh.polygon([cap[i],tip,cap[j]],keys[(i+1)%3])
-    export(mesh,slug,('facet','edge'))
+    export_voxels(mesh, slug, ('facet','edge'), resolution=16)
     definition=dict(schema_version=1,id=number,name=title,description=description,creative_category='decoration',
         hardness=1.2,resistance=3,mining_level=0,render_kind='custom_mesh',model_layout='scene',
         model='models/'+slug+'.glb',struct_block=True,textures={},

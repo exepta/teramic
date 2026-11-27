@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": 598,
+  "name": "Mossy Blossom Stone",
+  "description": "Soft green moss grows between the blocks of blossom stone.",
+  "creative_category": "nature",
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0.0,
+  "hardness": 1.7,
+  "resistance": 2.0,
+  "face_materials": [
+    "side",
+    "side",
+    "top",
+    "top",
+    "side",
+    "side"
+  ],
+  "textures": {
+    "side": "textures/sakura/mossy_blossom_stone_side.png",
+    "top": "textures/sakura/mossy_blossom_stone_top.png"
+  },
+  "materials": {
+    "side": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.92,
+      "reflectance": 0.09
+    },
+    "top": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.92,
+      "reflectance": 0.09
+    }
+  }
+}

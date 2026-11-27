@@ -9,6 +9,7 @@ pub(super) enum Kind {
     Dark,
     Earth,
     Water,
+    Fire,
 }
 
 impl Kind {
@@ -17,14 +18,17 @@ impl Kind {
             Self::Dark => "dragon-lair-dark",
             Self::Earth => "dragon-lair-earth",
             Self::Water => "dragon-lair-water",
+            Self::Fire => "dragon-lair-fire",
         }
     }
 
-    fn sample(self) -> ([i64; 2], StructureKind) {
+    fn sample(self, ecology_revision: u8) -> ([i64; 2], StructureKind) {
         match self {
             Self::Dark => ([-1, -5], StructureKind::DarkDragonLair),
+            Self::Earth if ecology_revision >= 17 => ([-20, -8], StructureKind::EarthDragonLair),
             Self::Earth => ([-1, 3], StructureKind::EarthDragonLair),
             Self::Water => ([-6, 5], StructureKind::WaterDragonLair),
+            Self::Fire => ([-6, 18], StructureKind::FireDragonLair),
         }
     }
 }
@@ -37,7 +41,7 @@ struct Nest {
 }
 
 pub(super) fn views(world: &mut World, terrain: &TerraGenerator, kind: Kind) -> Option<Views> {
-    let (region, structure) = kind.sample();
+    let (region, structure) = kind.sample(terrain.config().ecology_revision);
     let site = terrain.structure_site(region)?;
     if site.kind != structure {
         return None;
@@ -52,6 +56,10 @@ pub(super) fn views(world: &mut World, terrain: &TerraGenerator, kind: Kind) -> 
     let mut overview = center + forward * 56.0 - right * 19.;
     let natural = terrain.surface_height(f64::from(overview.x), f64::from(overview.z)) as f32;
     overview.y = (natural + 10.).max(center.y + 33.0);
+    let tidal = kind == CreatureKind::WaterDragon && terrain.config().structures_revision >= 16;
+    if tidal {
+        overview = center + forward * 30. + right * 3. + Vec3::Y * 7.4;
+    }
     let generator = SectionGenerator::new(terrain.clone());
     for _ in 0..52 {
         if generator
@@ -63,23 +71,30 @@ pub(super) fn views(world: &mut World, terrain: &TerraGenerator, kind: Kind) -> 
         }
         overview.y += 1.;
     }
-    let close = center + right * 18.0 + forward * 11.0 + Vec3::Y * 6.3;
+    let close = if tidal {
+        center + right * 14. + forward * 4. + Vec3::Y * 6.0
+    } else {
+        center + right * 18.0 + forward * 11.0 + Vec3::Y * 6.3
+    };
     // Soft fill from the open mouth for a readable photograph of the actual grotto.
     let tint = match kind {
+        CreatureKind::FireDragon => Color::srgb(1., 0.67, 0.43),
         CreatureKind::DarkDragon => Color::srgb(0.79, 0.62, 1.),
         CreatureKind::EarthDragon => Color::srgb(1., 0.82, 0.60),
         _ => Color::srgb(0.65, 0.87, 1.),
     };
-    world.spawn((
-        PointLight {
-            color: tint,
-            intensity: 520_000.,
-            range: 48.,
-            radius: 5.,
-            ..default()
-        },
-        Transform::from_translation(center + forward * 12. - right * 6. + Vec3::Y * 12.),
-    ));
+    if std::env::var_os("TERRA_CAVE_NATURAL").is_none() {
+        world.spawn((
+            PointLight {
+                color: tint,
+                intensity: 520_000.,
+                range: 48.,
+                radius: 5.,
+                ..default()
+            },
+            Transform::from_translation(center + forward * 12. - right * 6. + Vec3::Y * 12.),
+        ));
+    }
     let floor = [cx, y - 1, cz];
     let probes = vec![(floor, generator.block_at(floor).ok()?), (site.center, 0)];
     for eye in [overview, close] {
@@ -92,8 +107,14 @@ pub(super) fn views(world: &mut World, terrain: &TerraGenerator, kind: Kind) -> 
     world.init_resource::<ReplicatedCreatures>();
     world.insert_resource(Nest { home, kind, anchor });
     Some(Views {
-        overview: Transform::from_translation(overview)
-            .looking_at(center + forward * 19. + Vec3::Y * 13., Vec3::Y),
+        overview: Transform::from_translation(overview).looking_at(
+            if tidal {
+                center + Vec3::Y * 4.
+            } else {
+                center + forward * 19. + Vec3::Y * 13.
+            },
+            Vec3::Y,
+        ),
         close: Transform::from_translation(close).looking_at(center + Vec3::Y * 4.2, Vec3::Y),
         anchor: center,
         probes,

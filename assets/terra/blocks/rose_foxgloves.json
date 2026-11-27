@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 515,
+  "name": "Rose Foxgloves",
+  "description": "Rose and cream bells climb each side of the slender stems.",
+  "creative_category": "nature",
+  "hardness": 0.15,
+  "resistance": 0.3,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/rose_foxgloves.glb",
+  "textures": {},
+  "collision_boxes": [],
+  "struct_block": true
+}

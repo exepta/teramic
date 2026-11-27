@@ -169,7 +169,9 @@ pub fn model_reference_size(kind: Kind) -> [f64; 3] {
         // size then scales both rendered wings and anatomical targets by 50%.
         Kind::Butterfly => [0.22, 0.22, 0.30],
         Kind::Bear => [1.0, 1.3, 1.8],
-        Kind::Horse => [0.595, 1.95, 2.15],
+        Kind::Horse | Kind::Zebra => [0.595, 1.95, 2.15],
+        Kind::Elephant => [1.9, 3.03, 3.59],
+        Kind::StoneGolem => [3.5, 3.95, 1.95],
         Kind::Squid => [0.95, 0.95, 2.0],
         Kind::MoonJelly
         | Kind::FireJelly
@@ -217,7 +219,41 @@ pub fn for_creature(a: &Creature) -> Hitboxes {
         },
     };
     match a.kind {
-        Kind::DarkDragon | Kind::EarthDragon | Kind::WaterDragon => dragon::add(&mut result, a),
+        Kind::DarkDragon | Kind::EarthDragon | Kind::FireDragon | Kind::WaterDragon => {
+            dragon::add(&mut result, a)
+        }
+        Kind::StoneGolem
+            if matches!(
+                a.behavior,
+                CreatureBehavior::Sleep | CreatureBehavior::Rest | CreatureBehavior::Emerge
+            ) =>
+        {
+            // The guardian spreads over the soil asleep; its limbs rise and
+            // draw inward during the same timed action seen by remote clients.
+            let phase = f64::from(super::golem::phase(a.behavior, a.timer));
+            let t = phase * phase * (3. - 2. * phase);
+            let pile = [4.90, 1.51, 4.34];
+            let size = std::array::from_fn(|i| pile[i] + (reference[i] - pile[i]) * t);
+            result.add([-0.11 * (1. - t), size[1] * 0.5, 0.], size);
+        }
+        Kind::LavaWorm => {
+            for i in 0..super::lava_worm::SEGMENTS {
+                let p = super::lava_worm::center(a.behavior, a.timer, a.age, i);
+                let radius = super::lava_worm::segment_radius(i);
+                let low = (p.y - radius).max(0.);
+                let high = p.y + radius;
+                if high > low {
+                    result.add(
+                        [
+                            f64::from(p.x),
+                            f64::from((low + high) * 0.5),
+                            f64::from(p.z),
+                        ],
+                        [f64::from(radius * 1.85), f64::from(high - low), 0.64],
+                    );
+                }
+            }
+        }
         Kind::SandWorm => {
             if matches!(
                 a.behavior,
@@ -248,6 +284,10 @@ pub fn for_creature(a: &Creature) -> Hitboxes {
             }
         }
         Kind::Skeleton => {
+            if a.behavior == CreatureBehavior::Emerge {
+                result.origin[1] -=
+                    f64::from(1.72 * (1. - super::skeleton_rise(a.timer))) * scale[1];
+            }
             result.add([0.0, 1.20, 0.0], [0.47, 0.46, 0.34]);
             result.add([0.0, 1.69, 0.0], [0.48, 0.47, 0.42]);
             result.add([0.0, 0.83, 0.0], [0.43, 0.22, 0.25]);
@@ -294,7 +334,18 @@ pub fn for_creature(a: &Creature) -> Hitboxes {
                 result.add([side * 0.12, 0.36, 0.0], [0.21, 0.72, 0.28]);
             }
         }
-        Kind::Horse => {
+        Kind::Elephant => {
+            result.add([0., 1.75, 0.23], [1.45, 1.58, 2.42]);
+            result.add([0., 2.14, -0.98], [1.26, 1.21, 1.08]);
+            result.add([0., 1.36, -1.47], [0.37, 1.46, 0.44]);
+            for side in [-1., 1.] {
+                result.add([side * 0.70, 2.14, -0.96], [0.45, 1.12, 0.36]);
+                for z in [-0.53, 0.88] {
+                    result.add([side * 0.47, 0.68, z], [0.48, 1.36, 0.48]);
+                }
+            }
+        }
+        Kind::Horse | Kind::Zebra => {
             result.add([0.0, 1.035, 0.0], [0.515, 0.65, 1.30]);
             result.add([0.0, 1.40, -0.58], [0.39, 0.58, 0.43]);
             result.add([0.0, 1.57, -0.65], [0.33, 0.39, 0.39]);

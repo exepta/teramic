@@ -66,7 +66,7 @@ pub(super) fn squid() -> Parts {
     )];
     for group in 0..4 {
         let mut arms = Builder::default();
-        for arm in [group, group + 4] {
+        for arm in [group * 2, group * 2 + 1] {
             let angle = arm as f32 * std::f32::consts::TAU / 8.0;
             let radial = Vec3::new(angle.cos(), angle.sin(), 0.0);
             let start = radial * 0.18;
@@ -93,7 +93,7 @@ pub(super) fn squid() -> Parts {
             }
         }
         parts.push((
-            Part::Tentacles(group as f32 * 1.57),
+            Part::Tentacles((group as f32 * 2. + 0.5) * std::f32::consts::FRAC_PI_4),
             Vec3::new(0.0, 0.475, -0.02),
             arms.finish()?,
         ));

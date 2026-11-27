@@ -16,6 +16,10 @@ pub fn blood_forest(material: u16, position: [i64; 3]) -> Option<[Option<ItemSta
             value ^ (value >> 31)
         });
     Some(match material {
+        MaterialId::AcaciaSapling => [
+            stack(ItemKind::Prop(crate::ResourcePropKind::AcaciaSapling), 1),
+            None,
+        ],
         MaterialId::BloodLeaves => [
             stack(ItemKind::BloodLeaf, 1),
             hash.is_multiple_of(5).then_some(ItemStack {

@@ -100,15 +100,16 @@ fn dry_trunk_bank_never_overrides_a_wet_incoming_tributary() {
         .unwrap();
     assert!(main.distance > main.width && main.distance <= main.width + 1.0);
     assert_eq!(tributary.distance, 0.0);
-    let selected =
-        super::super::connected::select_network_sample(Some(main), Some(tributary)).unwrap();
+    let selected = terrain
+        .select_network_sample(3.2, 0.0, Some(main), Some(tributary))
+        .unwrap();
     assert_eq!(selected.distance, 0.0);
     assert!((selected.bed_height() - 0.5).floor() + 1.0 < selected.level);
     let wet_main = terrain
         .sample_drainage(&path(0.0, 3.0, false), 0.0, 0.0, None)
         .unwrap();
     assert_eq!(
-        super::super::connected::select_network_sample(Some(wet_main), Some(tributary)),
+        terrain.select_network_sample(0.0, 0.0, Some(wet_main), Some(tributary)),
         Some(wet_main)
     );
 }

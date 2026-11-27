@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 496,
+  "name": "Torn Blood Banner",
+  "description": "An embroidered oath banner with a ragged hem.",
+  "creative_category": "nature",
+  "hardness": 0.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/torn_blood_banner.glb",
+  "textures": {},
+  "struct_block": true,
+  "collision_boxes": []
+}

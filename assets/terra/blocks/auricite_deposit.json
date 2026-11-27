@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 752,
+  "name": "Auricite Deposit",
+  "description": "Facets of amber-gold auricite emerge from a gray matrix.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.65,
+  "resistance": 1.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/auricite_deposit.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

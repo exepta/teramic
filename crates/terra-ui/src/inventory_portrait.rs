@@ -45,11 +45,17 @@ fn drag(
     mut rotation: ResMut<InventoryPortraitRotation>,
     mut captured: Local<Drag>,
 ) {
-    rotation.active = view.open && view.player && !crafting.recipe_open;
+    let active = view.open && view.player && !crafting.recipe_open;
+    if rotation.active != active {
+        rotation.active = active;
+    }
+    if !active {
+        captured.previous = None;
+        return;
+    }
     let window = windows.iter().next();
     let cursor = window.and_then(Window::physical_cursor_position);
-    let active = rotation.active
-        && !view.sort_player_open
+    let active = !view.sort_player_open
         && !view.sort_storage_open
         && window.is_some_and(|window| window.focused);
     let node = nodes
@@ -84,12 +90,7 @@ fn drag(
 fn fit(
     images: Res<Assets<Image>>,
     parents: Query<&ComputedNode>,
-    mut nodes: Query<(
-        &ElementId,
-        &ChildOf,
-        &bevy::ui::widget::ImageNode,
-        &mut Node,
-    )>,
+    mut nodes: Query<(&ElementId, &ChildOf, &ImageNode, &mut Node), Without<tilt_ui::ParkedUi>>,
 ) {
     for (id, parent, image, mut node) in &mut nodes {
         if id.0 != "inventory-character-preview" {
@@ -105,17 +106,17 @@ fn fit(
         let height = available.y.min(available.x / ratio).max(0.0);
         let size = Vec2::new(height * ratio, height);
         let offset = (available - size) * 0.5;
-        let node = &mut *node;
-        node.position_type = PositionType::Absolute;
-        for (current, value) in [
-            (&mut node.width, size.x),
-            (&mut node.height, size.y),
-            (&mut node.left, offset.x),
-            (&mut node.top, offset.y),
-        ] {
-            if *current != Val::Px(value) {
-                *current = Val::Px(value);
-            }
+        if node.position_type != PositionType::Absolute
+            || node.width != Val::Px(size.x)
+            || node.height != Val::Px(size.y)
+            || node.left != Val::Px(offset.x)
+            || node.top != Val::Px(offset.y)
+        {
+            node.position_type = PositionType::Absolute;
+            node.width = Val::Px(size.x);
+            node.height = Val::Px(size.y);
+            node.left = Val::Px(offset.x);
+            node.top = Val::Px(offset.y);
         }
     }
 }
@@ -123,6 +124,74 @@ fn fit(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn retained_portrait_only_invalidates_layout_when_its_visible_fit_changes() {
+        let mut app = App::new();
+        app.init_resource::<Assets<Image>>()
+            .add_systems(Update, fit);
+        let handle = app
+            .world_mut()
+            .resource_mut::<Assets<Image>>()
+            .add(Image::default());
+        let parent = app
+            .world_mut()
+            .spawn(ComputedNode {
+                size: Vec2::new(160.0, 100.0),
+                inverse_scale_factor: 1.0,
+                ..default()
+            })
+            .id();
+        let portrait = app
+            .world_mut()
+            .spawn((
+                ElementId("inventory-character-preview".into()),
+                ImageNode::new(handle),
+                ChildOf(parent),
+            ))
+            .id();
+        app.update();
+        let node = app.world().entity(portrait).get_ref::<Node>().unwrap();
+        assert_eq!(node.width, Val::Px(100.0));
+        assert_eq!(node.left, Val::Px(30.0));
+        let initial = node.last_changed();
+
+        app.update();
+        assert_eq!(
+            app.world()
+                .entity(portrait)
+                .get_ref::<Node>()
+                .unwrap()
+                .last_changed(),
+            initial
+        );
+        app.world_mut()
+            .entity_mut(portrait)
+            .insert(tilt_ui::ParkedUi);
+        app.world_mut()
+            .get_mut::<ComputedNode>(parent)
+            .unwrap()
+            .size
+            .y = 80.0;
+        app.update();
+        assert_eq!(
+            app.world()
+                .entity(portrait)
+                .get_ref::<Node>()
+                .unwrap()
+                .last_changed(),
+            initial
+        );
+        app.world_mut()
+            .entity_mut(portrait)
+            .remove::<tilt_ui::ParkedUi>();
+        app.update();
+        let node = app.world().entity(portrait).get_ref::<Node>().unwrap();
+        assert_ne!(node.last_changed(), initial);
+        assert_eq!(node.width, Val::Px(80.0));
+        assert_eq!(node.left, Val::Px(40.0));
+    }
+
     #[test]
     fn rotation_requires_press_on_portrait_and_captures_until_release() {
         let mut drag = Drag::default();

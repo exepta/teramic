@@ -12,11 +12,14 @@ pub struct MenuLayoutPlugin;
 
 impl Plugin for MenuLayoutPlugin {
     fn build(&self, app: &mut App) {
+        crate::layout_classes::install(app);
         app.add_systems(
             PostUpdate,
             (
                 labels::wrap_control_captions,
-                categories::equalize_category_widths,
+                categories::equalize_category_widths
+                    .after(crate::layout_classes::track)
+                    .run_if(crate::layout_classes::active_categories),
             )
                 .chain()
                 .before(bevy::ui::UiSystems::Prepare),
@@ -33,15 +36,24 @@ pub(crate) fn install(app: &mut App) {
         PostUpdate,
         (
             nine_slice,
-            inventory_aspect,
-            inventory_slot_size,
-            catalog_slot_size,
+            (inventory_aspect, inventory_slot_size, catalog_slot_size)
+                .chain()
+                .run_if(inventory_grids_active),
             content_density,
             responsive_inventory_scale,
         )
             .chain()
             .before(bevy::ui::UiSystems::Prepare),
     );
+}
+
+// The player inventory stays mounted after prewarming. Its closed grids and
+// the train workshop cannot affect the independently sized in-game hotbar.
+fn inventory_grids_active(
+    inventory: Res<crate::InventoryView>,
+    train: Res<crate::TrainView>,
+) -> bool {
+    inventory.open || inventory.prewarming || train.open
 }
 
 // Keep the compact layout in logical pixels and enlarge the complete workspace.
@@ -111,21 +123,18 @@ fn hotbar_zoom(viewport: Vec2, requested: f32, global: f32) -> f32 {
 #[allow(clippy::type_complexity)]
 fn content_density(
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
-    parents: Query<(
-        Option<&ElementId>,
-        Option<&tilt_ui::TiltElement>,
-        Option<&ChildOf>,
-    )>,
+    roots: Query<(Entity, &ElementId), Without<tilt_ui::ParkedUi>>,
+    children: Query<&Children, Without<tilt_ui::ParkedUi>>,
     mut nodes: Query<
         (
-            Entity,
-            Option<&TextFont>,
+            Has<TextFont>,
             Option<&tilt_ui::TiltElement>,
-            Option<&tilt_ui::ControlPart>,
+            Has<tilt_ui::ControlPart>,
             &mut UiTransform,
         ),
-        With<Node>,
+        (With<Node>, Without<tilt_ui::ParkedUi>),
     >,
+    mut pending: Local<Vec<Entity>>,
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("ui.frames.content_density");
     let Some(window) = windows.iter().next() else {
@@ -134,76 +143,49 @@ fn content_density(
     let factor = (1080.0 / window.physical_height().max(1) as f32)
         .sqrt()
         .min(1.0);
-    for (entity, font, element, part, mut transform) in &mut nodes {
-        if font.is_none()
-            && !element.is_some_and(|e| {
-                matches!(
-                    e.kind,
-                    tilt_ui::ElementKind::Icon
-                        | tilt_ui::ElementKind::Input
-                        | tilt_ui::ElementKind::TextArea
+    pending.extend(roots.iter().filter_map(|(entity, id)| {
+        matches!(id.0.as_str(), "inventory-workspace" | "inventory-hud").then_some(entity)
+    }));
+    while let Some(entity) = pending.pop() {
+        if let Ok((has_font, element, control_part, mut transform)) = nodes.get_mut(entity) {
+            use tilt_ui::ElementKind;
+            let kind = element.map(|element| element.kind);
+            let control = matches!(
+                kind,
+                Some(
+                    ElementKind::Input
+                        | ElementKind::TextArea
+                        | ElementKind::ChoiceBox
+                        | ElementKind::ColorPicker
                 )
-            })
-        {
-            continue;
-        }
-        // Scale the input as one unit so text, caret, selection and picking
-        // retain the same coordinate system. Its surrounding click target stays.
-        if part.is_some() {
-            continue;
-        }
-        let mut ancestor = Some(entity);
-        let mut inventory = false;
-        let mut nested_control = false;
-        while let Some(current) = ancestor {
-            let Ok((id, element, parent)) = parents.get(current) else {
-                break;
-            };
-            if current != entity
-                && element.is_some_and(|e| {
-                    matches!(
-                        e.kind,
-                        tilt_ui::ElementKind::Input
-                            | tilt_ui::ElementKind::TextArea
-                            | tilt_ui::ElementKind::ChoiceBox
-                            | tilt_ui::ElementKind::ColorPicker
-                    )
-                })
-            {
-                nested_control = true;
+            );
+            let scaled = !control_part
+                && (has_font
+                    || matches!(
+                        kind,
+                        Some(ElementKind::Input | ElementKind::TextArea | ElementKind::Icon)
+                    ));
+            if scaled && transform.scale != Vec2::splat(factor) {
+                transform.scale = Vec2::splat(factor);
             }
-            if id.is_some_and(|id| matches!(id.0.as_str(), "inventory-workspace" | "inventory-hud"))
-            {
-                inventory = true;
-                break;
+            if scaled && control {
+                // Intrinsically sized color pickers stay centered with their value.
+                let left = if kind == Some(ElementKind::ColorPicker) {
+                    Val::Px(0.0)
+                } else {
+                    Val::Percent(-50.0 * (1.0 - factor))
+                };
+                if transform.translation.x != left {
+                    transform.translation.x = left;
+                }
             }
-            ancestor = parent.map(ChildOf::parent);
-        }
-        if inventory && !nested_control && transform.scale != Vec2::splat(factor) {
-            transform.scale = Vec2::splat(factor);
-        }
-        if inventory
-            && !nested_control
-            && element.is_some_and(|e| {
-                matches!(
-                    e.kind,
-                    tilt_ui::ElementKind::Input
-                        | tilt_ui::ElementKind::TextArea
-                        | tilt_ui::ElementKind::ChoiceBox
-                        | tilt_ui::ElementKind::ColorPicker
-                )
-            })
-        {
-            // Color pickers have an intrinsic width in a centered row. Keep
-            // their chip and editable value centered together as they shrink.
-            let left = if element.is_some_and(|e| e.kind == tilt_ui::ElementKind::ColorPicker) {
-                Val::Px(0.0)
-            } else {
-                Val::Percent(-50.0 * (1.0 - factor))
-            };
-            if transform.translation.x != left {
-                transform.translation.x = left;
+            // Children inherit the control's scale, including its caret and click targets.
+            if control {
+                continue;
             }
+        }
+        if let Ok(children) = children.get(entity) {
+            pending.extend(children.iter());
         }
     }
 }
@@ -402,7 +384,9 @@ fn catalog_slot_size(
     }
 }
 
-fn nine_slice(mut images: Query<(&ElementClasses, &ComputedNode, &mut ImageNode)>) {
+fn nine_slice(
+    mut images: Query<(&ElementClasses, &ComputedNode, &mut ImageNode), Without<tilt_ui::ParkedUi>>,
+) {
     let _scope = terra_core::profiling::ScopeTimer::new("ui.frames.nine_slice");
     for (classes, node, mut image) in &mut images {
         if classes
@@ -480,6 +464,43 @@ mod tests {
     use super::*;
 
     #[test]
+    fn mounted_grids_resume_layout_for_prewarm_inventory_and_train_windows() {
+        let mut app = App::new();
+        app.init_resource::<crate::InventoryView>()
+            .init_resource::<crate::TrainView>()
+            .add_systems(PostUpdate, inventory_aspect.run_if(inventory_grids_active));
+        let slot = app
+            .world_mut()
+            .spawn((
+                Node::default(),
+                ElementClasses {
+                    classes: vec!["square-player-slot".into()],
+                },
+            ))
+            .id();
+        for (open, prewarming, train) in [
+            (false, false, false),
+            (false, true, false),
+            (true, false, false),
+            (false, false, true),
+            (false, false, false),
+        ] {
+            {
+                let mut inventory = app.world_mut().resource_mut::<crate::InventoryView>();
+                inventory.open = open;
+                inventory.prewarming = prewarming;
+            }
+            app.world_mut().resource_mut::<crate::TrainView>().open = train;
+            app.world_mut().get_mut::<Node>(slot).unwrap().aspect_ratio = None;
+            app.update();
+            assert_eq!(
+                app.world().get::<Node>(slot).unwrap().aspect_ratio,
+                (open || prewarming || train).then_some(1.0)
+            );
+        }
+    }
+
+    #[test]
     fn inventory_and_hotbar_grow_with_resolution_and_fit_linked_storage() {
         let mut previous = 0.0;
         for viewport in [
@@ -532,6 +553,61 @@ mod tests {
         assert!(
             inventory_zoom(physical, 1.0, 1.0, false) <= inventory_zoom(physical, 1.5, 1.0, false)
         );
+    }
+
+    #[test]
+    fn retained_inventory_resumes_at_the_current_density_and_hotbar_updates_while_parked() {
+        let mut app = App::new();
+        app.add_systems(PostUpdate, content_density);
+        let window = app
+            .world_mut()
+            .spawn((Window::default(), bevy::window::PrimaryWindow))
+            .id();
+        let workspace = app
+            .world_mut()
+            .spawn((Node::default(), ElementId("inventory-workspace".into())))
+            .id();
+        let shell = app
+            .world_mut()
+            .spawn((Node::default(), ChildOf(workspace)))
+            .id();
+        let item = app
+            .world_mut()
+            .spawn((Text::new("Item"), ChildOf(shell)))
+            .id();
+        let hotbar = app
+            .world_mut()
+            .spawn((Node::default(), ElementId("inventory-hud".into())))
+            .id();
+        let name = app
+            .world_mut()
+            .spawn((Text::new("Selected"), ChildOf(hotbar)))
+            .id();
+        let outside = app.world_mut().spawn(Text::new("Other HUD")).id();
+        app.update();
+        let parked = tilt_ui::ParkedUiBindings::take(app.world_mut(), shell);
+        app.world_mut()
+            .get_mut::<Window>(window)
+            .unwrap()
+            .resolution
+            .set_physical_resolution(3840, 2160);
+        app.update();
+        let scale = |app: &App, entity| app.world().get::<UiTransform>(entity).unwrap().scale;
+        let expected = Vec2::splat(0.5f32.sqrt());
+        assert_eq!(scale(&app, item), Vec2::ONE);
+        assert_eq!(scale(&app, name), expected);
+        assert_eq!(scale(&app, outside), Vec2::ONE);
+
+        parked.restore(app.world_mut());
+        app.world_mut().get_mut::<UiTransform>(name).unwrap().scale = Vec2::ONE;
+        let added = app
+            .world_mut()
+            .spawn((Text::new("New slot"), ChildOf(shell)))
+            .id();
+        app.update();
+        for entity in [item, name, added] {
+            assert_eq!(scale(&app, entity), expected);
+        }
     }
 
     #[test]

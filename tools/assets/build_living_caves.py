@@ -1,7 +1,6 @@
 """Build the lush and glacial cave palettes and their rooted modular set pieces.
 
-The checked-in maps are production inputs. --lush and --ice resample the
-1448 × 1086 artist boards with the same orthographic unwrap as the salt palette.
+Lush faces share the native rock and soil swatches. --ice resamples the glacial board.
 """
 import argparse
 import json
@@ -11,18 +10,11 @@ import random
 from build_castle import BLOCKS, Mesh
 from build_dripstone_cave import column
 from build_salt_cave import sample_swatches, save_json, stone
-from build_spirit_blossom import export
+from voxel_props.surface import export_voxels
+from lush_cave_tiles import build_lush_tiles
 
 DIRECTORY = 'living_caves'
 # Six corners in the 920 px board preview (left, back, right, front, front foot, right foot).
-LUSH = {
-    'rock': [(31,217),(77,197),(121,214),(77,236),(77,288),(121,270)],
-    'overgrown': [(255,217),(300,196),(343,214),(301,232),(301,288),(343,269)],
-    'roots': [(370,216),(414,199),(457,214),(413,232),(413,288),(457,269)],
-    'turf': [(480,216),(522,201),(568,213),(526,232),(526,289),(566,269)],
-    'moss': [(588,215),(633,197),(677,214),(633,233),(633,288),(675,270)],
-    'glow': [(699,215),(741,196),(787,214),(744,234),(743,288),(784,269)],
-}
 ICE = {
     'clear': [(24,168),(86,143),(150,166),(86,190),(86,276),(150,247)],
     'packed': [(174,168),(236,142),(299,165),(237,192),(237,276),(298,250)],
@@ -158,7 +150,7 @@ def mesh_prop(slug, number):
     else:
         vine(mesh, slug == "frost_vine", rng)
     emission = {"glow_vine": ("amber",), "glacial_crystal_cluster": ("core",)}
-    maps = export(mesh, slug, emission.get(slug, ()))
+    maps = export_voxels(mesh, slug, emission.get(slug, ()), resolution=16)
     return dict(
         render_kind="custom_mesh", model_layout="scene", model=f"models/{slug}.glb", textures=maps,
         collision_boxes=[dict(minimum=[0.15, 0, 0.15], maximum=[0.85, 0.25, 0.85])] if crystal else [],
@@ -170,7 +162,7 @@ def build():
     for number, (slug, name, de, tile, rough, reflection) in enumerate(SURFACES, 471):
         description, translated = DESCRIPTIONS[slug]
         stone(number, slug, name, description, tile, rough, reflection,
-              alpha=0.90 if tile == "clear" else 1, directory=DIRECTORY)
+              directory=DIRECTORY)
         path = BLOCKS / f"{slug}.json"
         definition = json.loads(path.read_text())
         definition.update(name=name, description=description)
@@ -202,10 +194,12 @@ def build():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--lush")
+    parser.add_argument("--lush-tiles-only", action="store_true")
     parser.add_argument("--ice")
     args = parser.parse_args()
-    for path, table in [(args.lush, LUSH), (args.ice, ICE)]:
-        if path:
-            sample_swatches(path, BLOCKS / "textures" / DIRECTORY, swatches(table))
-    build()
+    tiles = BLOCKS / "textures" / DIRECTORY
+    build_lush_tiles(tiles)
+    if not args.lush_tiles_only:
+        if args.ice:
+            sample_swatches(args.ice, tiles, swatches(ICE))
+        build()

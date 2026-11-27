@@ -21,7 +21,8 @@ impl EcologyClimate {
         let local = super::from_climate_seasonal(weather, biome, altitude, sea_level, season);
         Self {
             temperature: local.temperature,
-            moisture: ((biome.humidity as f32 * (1.0 - biome.aridity() as f32 * 0.9))
+            moisture: ((biome.humidity as f32
+                * (1.0 - (biome.aridity() + biome.weights.ashlands) as f32 * 0.9))
                 .max(local.wetness)
                 .max(soil_wetness)
                 + local.rain * 0.35)
@@ -59,6 +60,12 @@ mod tests {
             cherry_forest: 0.,
             spirit_blossom: 0.,
             blood_forest: 0.,
+            ashlands: 0.,
+            savanna: 0.0,
+            swamp: 0.0,
+            petrified_forest: 0.0,
+            crystal_highlands: 0.0,
+            misty_coast: 0.0,
         };
         let mut weather = WorldWeather::default();
         weather.set_pattern(terra_core::WeatherPattern::Clear);

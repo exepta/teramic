@@ -112,6 +112,38 @@ pub(crate) fn batches(item: ItemKind, material: usize) -> Result<Vec<MeshBatch>,
                             [0.14, 0.68, 0.85]
                         })
                     }
+                    ItemKind::RuneCore => {
+                        let offset = dx - dy * 0.18;
+                        (offset.abs() + dz.abs() < (14.0 - dy.abs()) * 0.61).then_some(
+                            if (offset + dy * 0.55).abs() < 1.1 {
+                                [0.99, 0.61, 1.]
+                            } else if offset > 0. {
+                                [0.53, 0.16, 0.86]
+                            } else {
+                                [0.26, 0.08, 0.49]
+                            },
+                        )
+                    }
+                    ItemKind::ForestCrystal => {
+                        let foot = (dx * dx + dz * dz < 87.) && y < 8;
+                        let point = [(0., 0., 25.), (-6., -2., 18.), (5., 2., 16.)]
+                            .into_iter()
+                            .any(|(cx, cz, top)| {
+                                y > 5
+                                    && f32::from(y) < top
+                                    && (dx - cx).abs() + (dz - cz).abs()
+                                        < ((top - f32::from(y)) * 0.65).min(3.6)
+                            });
+                        if point {
+                            Some(if (x + z) % 7 < 3 {
+                                [0.88, 0.48, 0.98]
+                            } else {
+                                [0.46, 0.16, 0.72]
+                            })
+                        } else {
+                            foot.then_some([0.31, 0.26, 0.33])
+                        }
+                    }
                     ItemKind::LightSplitter => {
                         let prism = (dx.abs() + dz.abs()) < (13.0 - dy.abs()) * 0.45;
                         (prism && (4..28).contains(&y)).then_some(if x < 16 {
@@ -255,6 +287,8 @@ mod tests {
             ItemKind::RoadAggregate,
             ItemKind::GloomEssence,
             ItemKind::LightSplitter,
+            ItemKind::RuneCore,
+            ItemKind::ForestCrystal,
         ] {
             let batches = batches(item, 0).unwrap();
             assert_eq!(batches.len(), 1);

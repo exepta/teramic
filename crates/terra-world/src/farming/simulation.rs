@@ -452,12 +452,21 @@ pub(crate) fn tick(
                 .unwrap_or(now - 1.0))
         .clamp(0.0, 30.0) as f32;
         let support = placement::support(&state.prop);
-        if !chunks
-            .block_at(support)
-            .and_then(MaterialId::from_raw)
-            .is_some_and(MaterialId::is_natural_ground)
-            || chunks.block_at([support[0], support[1] + 1, support[2]]) != Some(0)
-        {
+        let coconut = state.prop.kind == crate::props::PropKind::Coconut;
+        let supported = if coconut {
+            let Some(supported) = placement::supported(&state.prop, |cell| chunks.block_at(cell))
+            else {
+                continue; // The adjacent section containing the nut is still streaming.
+            };
+            supported && journal.block(support).is_none()
+        } else {
+            chunks
+                .block_at(support)
+                .and_then(MaterialId::from_raw)
+                .is_some_and(MaterialId::is_natural_ground)
+                && chunks.block_at([support[0], support[1] + 1, support[2]]) == Some(0)
+        };
+        if !supported {
             journal.forage_regrowth.remove(&state.prop.id);
             continue;
         }
@@ -472,7 +481,8 @@ pub(crate) fn tick(
                 .loaded
                 .get(&state.prop.section)
                 .is_some_and(|section| {
-                    placement::next_slot(&section.props, support, state.prop.kind).is_some()
+                    coconut
+                        || placement::next_slot(&section.props, support, state.prop.kind).is_some()
                 });
             if available {
                 match journal.revive_forage(state.prop) {

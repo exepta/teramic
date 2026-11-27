@@ -1,26 +1,60 @@
 //! Revision-gated Spirit Blossom ecology. Every decision uses global coordinates;
 //! section ordering, meshing and clients cannot change the generated cells.
 use super::{SurfaceColumn, TerraGenerator, biomes::smoothstep, seed::layer_seed};
+use noise::NoiseFn;
 use terra_voxel::MaterialId;
 mod wetlands;
 
 impl TerraGenerator {
     /// Broad mossy shelves preserve the existing river/lake erosion afterwards.
-    pub(super) fn spirit_terraced_height(&self, x: f64, z: f64, height: f64) -> f64 {
-        if self.config().spirit_blossom_revision == 0 || !self.config().biomes {
+    pub(super) fn regional_base_height(
+        &self,
+        x: f64,
+        z: f64,
+        height: f64,
+        climate: super::biomes::BiomeSample,
+    ) -> f64 {
+        let park_enabled =
+            self.config().ecology_revision >= 12 && self.config().landscape_revision >= 9;
+        if !self.config().biomes || (self.config().spirit_blossom_revision == 0 && !park_enabled) {
             return height;
         }
-        let weight = self.climate_biome_at(x, z).weights.spirit_blossom;
-        if weight <= 0.0 {
-            return height;
-        }
-        if self.config().landscape_revision >= 8 {
-            use noise::NoiseFn;
+        let weights = climate.weights;
+        let height = self.marine_height(x, z, climate, height);
+        let height = self.cherry_terraces(x, z, height, weights.cherry_forest);
+        let weight = weights.spirit_blossom;
+        let spirit_height = if self.config().spirit_blossom_revision == 0 || weight <= 0.0 {
+            height
+        } else if self.config().landscape_revision >= 8 {
             let district = self.hills.get([x / 875.0 + 6.7, z / 875.0 - 4.1]);
-            let fraction = smoothstep(0.12, 0.58, district) * 0.45;
+            let fraction = if self.config().ecology_revision >= 15
+                && self.config().spirit_blossom_revision >= 2
+            {
+                // Broad meadow treads alternate with exposed lilac risers. Hydrology
+                // carves the stream bed and pond shore after this terrain stage.
+                0.30 + smoothstep(-0.48, 0.49, district) * 0.68
+            } else {
+                smoothstep(0.12, 0.58, district) * 0.45
+            };
             height + (terraced_height(height, weight) - height) * fraction
         } else {
             terraced_height(height, weight)
+        };
+        let height_with_desert = self.desert_height(
+            x,
+            z,
+            self.highland_height(x, z, spirit_height, weights.highland),
+            weights.desert,
+        );
+        let height_with_plains = self.plains_height(x, z, height_with_desert, weights.plains);
+        if park_enabled && weights.mushroom_park > 0.10 {
+            // The park's offset shelf contours add continuously to those from
+            // the neighbouring Spirit region. Existing rivers cut through later.
+            let offset = self.hills.get([x / 116.0, z / 116.0]) * 3.5;
+            let shifted = height + offset;
+            height_with_plains + (terraced_height(shifted, weights.mushroom_park) - shifted)
+        } else {
+            height_with_plains
         }
     }
 
@@ -253,7 +287,7 @@ mod integration_tests {
         let decoration = (-2..=2)
             .flat_map(|z| (-2..=2).map(move |x| [tile[0] + x, tile[1] + z]))
             .flat_map(|tile| terrain.surface_flora(tile))
-            .find(|(_, material)| (316..=323).contains(material))
+            .find(|(_, material)| matches!(material, 316..=323 | 610..=612))
             .expect("the Spirit interior must contain a real regional decoration group");
         let generator = SectionGenerator::new(terrain);
         let ground = global_to_section(center).0;
@@ -285,9 +319,9 @@ mod integration_tests {
         let cells: Vec<_> = first.iter().flat_map(|s| s.blocks()).copied().collect();
         assert!(cells.contains(&(MaterialId::SpiritBlossomGrass as u16)));
         assert!(cells.contains(&(MaterialId::SpiritBlossomLog as u16)));
-        assert!(cells.iter().any(|m| (310..=312).contains(m)));
+        assert!(cells.iter().any(|m| (606..=607).contains(m)));
         assert!(
-            cells.iter().any(|m| (316..=323).contains(m)),
+            cells.iter().any(|m| matches!(m, 316..=323 | 610..=612)),
             "the region must contain actual placed flowers, petals or lanterns"
         );
         let (_, local) = global_to_section(decoration.0);

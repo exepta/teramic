@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 735,
+  "name": "Layered Mineral",
+  "description": "Alternating belts of turquoise and amber cross the broken slab.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.4,
+  "resistance": 3.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/mineral_strata.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

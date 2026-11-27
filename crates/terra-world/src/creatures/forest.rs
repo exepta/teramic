@@ -1,6 +1,7 @@
 //! Blood Forest fauna and crypt guardians: bounded authority steering and strikes.
 //! No teleporting, through-wall damage, terrain generation or client-side AI.
 use super::{Behavior, Creature, Habitat, Kind, bears::Effect, distance, navigation, random};
+use bevy_math::DVec3;
 use terra_core::creatures::{definitions, intentions::IntentReason};
 
 pub mod graves;
@@ -22,7 +23,7 @@ pub(super) fn surface_species(biome: &str, seed: u64) -> Option<Kind> {
         6 => Kind::BloodStalker,
         7 => Kind::BloodWisp,
         8 => Kind::ThornBrute,
-        _ => Kind::Skeleton,
+        _ => Kind::Raven,
     })
 }
 
@@ -53,18 +54,39 @@ pub fn step(
     if search {
         a.needs.search_in = 0.6;
     }
+    if a.kind == Kind::Skeleton && a.behavior == Behavior::Emerge {
+        a.velocity = [0.0; 3];
+        if a.timer == 0.0 {
+            a.behavior = Behavior::Rest;
+        }
+        return Effect::None;
+    }
     let Some(combat) = definitions::get(a.kind).combat else {
         return Effect::None;
     };
-    let eye = |p: [f64; 3]| [p[0], p[1] + a.size()[1] * 0.65, p[2]];
-    let seen = super::perception::nearest_visible(
-        h,
-        eye(a.position),
-        a.position,
-        players,
-        combat.aggro_radius,
-        |_| true,
-    );
+    let [x, y, z] = a.position;
+    let eye = [x, y + a.size()[1] * 0.65, z];
+    let committed = a.behavior == Behavior::Attack;
+    // Once facing is locked, resolve the swing against a visible target in
+    // its arc. A closer enemy outside the arc must not cancel that swing.
+    let swing_target = if committed {
+        super::perception::nearest_visible(h, eye, [x, y + 0.9, z], players, combat.reach, |p| {
+            super::perception::in_melee_arc(a.yaw, a.position, p)
+        })
+    } else {
+        None
+    };
+    let seen = swing_target.or_else(|| {
+        let chasing = matches!(a.behavior, Behavior::Hunt | Behavior::Attack);
+        super::perception::nearest_visible(
+            h,
+            eye,
+            a.position,
+            players,
+            combat.aggro_radius * if chasing { 1.25 } else { 1.0 },
+            |_| true,
+        )
+    });
     let observed = seen.map(|(_, player)| [player[0], player[1] - 0.9, player[2]]);
     if let Some(target) = observed
         && let Some(nav) = nav.as_deref_mut()
@@ -79,10 +101,15 @@ pub fn step(
         };
     if let Some(target) = observed.or(remembered) {
         let visible = observed.is_some();
-        a.yaw = ((a.position[0] - target[0]).atan2(a.position[2] - target[2]) as f32)
-            .rem_euclid(std::f32::consts::TAU);
-        if visible && distance(a.position, target) <= combat.reach.powi(2) {
-            let entering = a.behavior != Behavior::Attack;
+        if !committed {
+            a.yaw = ((a.position[0] - target[0]).atan2(a.position[2] - target[2]) as f32)
+                .rem_euclid(std::f32::consts::TAU);
+        }
+        if visible
+            && distance(a.position, target) <= combat.reach.powi(2)
+            && super::perception::in_melee_arc(a.yaw, a.position, target)
+        {
+            let entering = !committed;
             a.behavior = Behavior::Attack;
             a.velocity = [0.0; 3];
             if let Some(nav) = nav.as_deref_mut() {
@@ -166,10 +193,26 @@ fn fly_toward(a: &mut Creature, h: &Habitat, target: [f64; 3], dt: f32) {
     if swept(next) {
         a.position = next;
     } else {
-        // Try ascending beside an obstruction, never crossing its opaque volume.
-        let above = [before[0], before[1] + speed * f64::from(dt), before[2]];
-        if swept(above) {
-            a.position = above;
+        // A low branch or crypt ceiling also blocks a vertical detour. Sweep
+        // the flanks and lower passage, keeping one handedness at equal cost.
+        let forward = DVec3::from_array(target) - DVec3::from_array(before);
+        let heading = forward.with_y(0.).normalize_or(DVec3::NEG_Z);
+        let side =
+            DVec3::new(-heading.z, 0., heading.x) * if a.id.is_multiple_of(2) { 1. } else { -1. };
+        for direction in [
+            heading + side,
+            heading - side,
+            DVec3::Y,
+            side,
+            -side,
+            DVec3::NEG_Y,
+        ] {
+            let step = direction.normalize() * speed * f64::from(dt);
+            let point = (DVec3::from_array(before) + step).to_array();
+            if swept(point) {
+                a.position = point;
+                break;
+            }
         }
     }
     a.velocity = std::array::from_fn(|i| ((a.position[i] - before[i]) / f64::from(dt)) as f32);
@@ -180,7 +223,7 @@ fn fly_toward(a: &mut Creature, h: &Habitat, target: [f64; 3], dt: f32) {
     }
 }
 
-fn travel(
+pub(super) fn travel(
     a: &mut Creature,
     h: &Habitat,
     target: [f64; 3],

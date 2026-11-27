@@ -8,6 +8,7 @@ use bevy::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 use terra_voxel::{SectionPos, global_to_section};
 
+const WOODLAND_FRUIT_SCALE: f32 = 1.45;
 const DISCOVERY_BUDGET: usize = 32;
 const REFRESH_BUDGET: usize = 32;
 #[derive(PartialEq, Eq)]
@@ -42,9 +43,12 @@ fn source(
     root: [i64; 3],
     chunks: &ChunkStore,
     publications: &BTreeMap<SectionPos, u64>,
+    woodland: bool,
 ) -> Vec<Source> {
-    let low = global_to_section([root[0] - 4, root[1], root[2] - 4]).0;
-    let high = global_to_section([root[0] + 4, root[1] + 16, root[2] + 4]).0;
+    let radius = if woodland { 7 } else { 4 };
+    let height = if woodland { 23 } else { 16 };
+    let low = global_to_section([root[0] - radius, root[1], root[2] - radius]).0;
+    let high = global_to_section([root[0] + radius, root[1] + height, root[2] + radius]).0;
     let mut source = Vec::new();
     for x in low.x..=high.x {
         for y in low.y..=high.y {
@@ -134,7 +138,12 @@ fn publish(
 
 /// Locate actual exposed canopy cells; both replicas and the authority derive
 /// the same eight slots. Unknown space and replaced leaves never hold fruit.
-fn positions(tree: &TreeRecord, chunks: &ChunkStore) -> [Option<[f64; 3]>; 8] {
+fn positions(
+    tree: &TreeRecord,
+    chunks: &ChunkStore,
+    woodland: bool,
+    scale: f32,
+) -> [Option<[f64; 3]>; 8] {
     let directions = [
         [1, 0],
         [1, 1],
@@ -145,24 +154,36 @@ fn positions(tree: &TreeRecord, chunks: &ChunkStore) -> [Option<[f64; 3]>; 8] {
         [0, -1],
         [1, -1],
     ];
-    let radius = if tree.planted_by.is_some() { 2 } else { 3 };
+    let legacy_radius = if tree.planted_by.is_some() { 2 } else { 3 };
+    let distances: &[i64] = if woodland {
+        &[6, 4, 2]
+    } else {
+        std::slice::from_ref(&legacy_radius)
+    };
+    let max_y = if woodland { 23 } else { 15 };
     let mut used = BTreeSet::new();
     std::array::from_fn(|slot| {
         let [dx, dz] = directions[slot];
-        for ox in [0, -1, 1] {
-            for oz in [0, -1, 1] {
-                for y in 2..=15 {
-                    let p = [
-                        tree.root[0] + dx * radius + ox,
-                        tree.root[1] + y,
-                        tree.root[2] + dz * radius + oz,
-                    ];
-                    if !used.contains(&p)
-                        && chunks.block_at(p) == Some(195)
-                        && chunks.block_at([p[0], p[1] - 1, p[2]]) == Some(0)
-                    {
-                        used.insert(p);
-                        return Some([p[0] as f64 + 0.5, p[1] as f64 - 0.425, p[2] as f64 + 0.5]);
+        for &radius in distances {
+            for ox in [0, -1, 1] {
+                for oz in [0, -1, 1] {
+                    for y in 2..=max_y {
+                        let p = [
+                            tree.root[0] + dx * radius + ox,
+                            tree.root[1] + y,
+                            tree.root[2] + dz * radius + oz,
+                        ];
+                        if !used.contains(&p)
+                            && chunks.block_at(p) == Some(195)
+                            && chunks.block_at([p[0], p[1] - 1, p[2]]) == Some(0)
+                        {
+                            used.insert(p);
+                            return Some([
+                                p[0] as f64 + 0.5,
+                                p[1] as f64 - 0.425 * f64::from(scale),
+                                p[2] as f64 + 0.5,
+                            ]);
+                        }
                     }
                 }
             }
@@ -171,7 +192,7 @@ fn positions(tree: &TreeRecord, chunks: &ChunkStore) -> [Option<[f64; 3]>; 8] {
     })
 }
 
-pub(crate) fn derive(tree: &TreeRecord, chunks: &ChunkStore) -> Vec<WorldProp> {
+fn derive(tree: &TreeRecord, chunks: &ChunkStore, woodland: bool) -> Vec<WorldProp> {
     let Some(fruit) = tree.fruit else {
         return Vec::new();
     };
@@ -182,7 +203,8 @@ pub(crate) fn derive(tree: &TreeRecord, chunks: &ChunkStore) -> Vec<WorldProp> {
     {
         return Vec::new();
     }
-    positions(tree, chunks)
+    let scale = if woodland { WOODLAND_FRUIT_SCALE } else { 1.0 };
+    positions(tree, chunks, woodland, scale)
         .into_iter()
         .enumerate()
         .filter_map(|(slot, position)| {
@@ -195,7 +217,7 @@ pub(crate) fn derive(tree: &TreeRecord, chunks: &ChunkStore) -> Vec<WorldProp> {
                 kind: PropKind::AppleFruit,
                 position,
                 rotation: 0.0,
-                scale: 1.0,
+                scale,
                 variant: match fruit.phase {
                     FruitPhase::Blossom => 2,
                     FruitPhase::Unripe => 1,
@@ -256,13 +278,10 @@ pub(crate) fn tick(
         && config.ecology_revision >= 3
         && journal.gameplay().trees.trees.len() < terra_core::trees::MAX_TREES
     {
-        let columns = chunks
-            .loaded
-            .keys()
-            .map(|p| [p.x, p.z])
-            .collect::<BTreeSet<_>>()
-            .into_iter()
-            .collect::<Vec<_>>();
+        // Discovery reads prepared columns. Each vertical stack already has
+        // one entry here, and the root voxel is checked before registration.
+        let mut columns: Vec<_> = chunks.prepared_column_coordinates().collect();
+        columns.sort_unstable();
         let start = work.column_cursor.min(columns.len());
         for &coordinate in columns
             .iter()
@@ -314,7 +333,7 @@ pub(crate) fn tick(
         };
     }
     // A fair bounded cursor covers the entire authoritative registry. Each visit
-    // performs at most eight section-stamp reads; expensive canopy searches run
+    // checks the bounded canopy section stamps; expensive canopy searches run
     // only when a tree/voxel/publication stamp changed.
     let ids = visit_ids(&journal.gameplay().trees.trees, work.cursor);
     for id in ids {
@@ -353,7 +372,12 @@ pub(crate) fn tick(
             }
         }
         let tree = journal.gameplay().trees.get(id).unwrap();
-        let source = source(tree.root, &chunks, &work.publications);
+        let source = source(
+            tree.root,
+            &chunks,
+            &work.publications,
+            config.ecology_revision >= 14,
+        );
         if work
             .trees
             .get(&id)
@@ -361,7 +385,7 @@ pub(crate) fn tick(
         {
             continue;
         }
-        let props = derive(tree, &chunks);
+        let props = derive(tree, &chunks, config.ecology_revision >= 14);
         work.trees.insert(
             id,
             Cached {
@@ -473,6 +497,47 @@ mod tests {
             .advance_by(Duration::from_millis(300));
         app.world_mut().run_schedule(Update);
     }
+    #[test]
+    fn taller_forest_crowns_hold_pickable_fruit_above_the_legacy_search_window() {
+        let mut app = app(true);
+        let tree = app
+            .world()
+            .resource::<EditJournal>()
+            .gameplay()
+            .trees
+            .trees
+            .values()
+            .next()
+            .unwrap()
+            .clone();
+        let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
+        let high = SectionPos::new(0, 1, 0);
+        let mut section = BlockSection::empty(high).unwrap();
+        section.set_block([14, 3, 8], 195).unwrap();
+        chunks.loaded.insert(
+            high,
+            LoadedSection {
+                data: section,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
+        );
+        assert!(
+            derive(&tree, &chunks, false)
+                .iter()
+                .all(|p| p.position[1] < 16.)
+        );
+        let props = derive(&tree, &chunks, true);
+        let hanging = props.iter().find(|p| p.position[1] > 16.).unwrap();
+        assert!(hanging.valid());
+        assert_eq!(crate::props::placement::support(hanging), [14, 19, 8]);
+        assert_eq!(hanging.section, high);
+        assert!(slot(tree.id, hanging.id).is_some());
+    }
+
     #[test]
     fn stable_fruit_tick_leaves_chunk_store_and_regular_prop_epochs_unchanged() {
         for fruit in [false, true] {

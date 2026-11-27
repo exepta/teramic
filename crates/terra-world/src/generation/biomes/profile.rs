@@ -10,6 +10,12 @@ pub struct BiomeWeights {
     pub cherry_forest: f64,
     pub spirit_blossom: f64,
     pub blood_forest: f64,
+    pub ashlands: f64,
+    pub savanna: f64,
+    pub swamp: f64,
+    pub petrified_forest: f64,
+    pub crystal_highlands: f64,
+    pub misty_coast: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -32,7 +38,7 @@ pub struct TerrainProfile {
 pub use terra_core::BiomeKind;
 
 impl BiomeWeights {
-    pub fn values(self) -> [f64; 10] {
+    pub fn values(self) -> [f64; 16] {
         [
             self.ocean,
             self.plains,
@@ -44,9 +50,15 @@ impl BiomeWeights {
             self.cherry_forest,
             self.spirit_blossom,
             self.blood_forest,
+            self.ashlands,
+            self.savanna,
+            self.swamp,
+            self.petrified_forest,
+            self.crystal_highlands,
+            self.misty_coast,
         ]
     }
-    pub(super) fn from_values(values: [f64; 10]) -> Self {
+    pub(in crate::generation) fn from_values(values: [f64; 16]) -> Self {
         let [
             ocean,
             plains,
@@ -58,6 +70,12 @@ impl BiomeWeights {
             cherry_forest,
             spirit_blossom,
             blood_forest,
+            ashlands,
+            savanna,
+            swamp,
+            petrified_forest,
+            crystal_highlands,
+            misty_coast,
         ] = values;
         Self {
             ocean,
@@ -70,10 +88,42 @@ impl BiomeWeights {
             cherry_forest,
             spirit_blossom,
             blood_forest,
+            ashlands,
+            savanna,
+            swamp,
+            petrified_forest,
+            crystal_highlands,
+            misty_coast,
         }
     }
 
-    /// Only for diagnostics; generation always blends every weight.
+    /// Dry islands use the strongest land biome even in a marine climate.
+    pub fn dominant_land(mut self) -> BiomeKind {
+        self.ocean = 0.;
+        if self.values().iter().all(|w| *w <= f64::EPSILON) {
+            BiomeKind::Plains
+        } else {
+            self.dominant()
+        }
+    }
+
+    /// Travel destinations in patchy biomes need enough coverage to actually
+    /// grow their native ground and landmarks, including on coastal islands.
+    pub fn is_land_destination(self, kind: BiomeKind) -> bool {
+        self.dominant_land() == kind
+            && match kind {
+                BiomeKind::Ashlands => {
+                    self.ashlands > 0.45 && self.ashlands > 0.80 * (1. - self.ocean)
+                }
+                BiomeKind::Swamp => self.swamp > 0.65,
+                BiomeKind::Savanna => self.savanna > 0.65,
+                BiomeKind::PetrifiedForest => self.petrified_forest > 0.65,
+                BiomeKind::CrystalHighlands => self.crystal_highlands > 0.65,
+                BiomeKind::MistyCoast => self.misty_coast > 0.60 * (1. - self.ocean),
+                _ => true,
+            }
+    }
+
     pub fn dominant(self) -> BiomeKind {
         let mut best = 0;
         let values = self.values();
@@ -82,18 +132,7 @@ impl BiomeWeights {
                 best = i;
             }
         }
-        [
-            BiomeKind::Ocean,
-            BiomeKind::Plains,
-            BiomeKind::Forest,
-            BiomeKind::Desert,
-            BiomeKind::Highland,
-            BiomeKind::MushroomPark,
-            BiomeKind::ClifftedDesert,
-            BiomeKind::CherryForest,
-            BiomeKind::SpiritBlossom,
-            BiomeKind::BloodForest,
-        ][best]
+        BiomeKind::ALL[best]
     }
 }
 
@@ -144,9 +183,18 @@ impl BiomeSample {
     }
     /// Climate creates the mountain range; altitude decides its visible ecology.
     /// Redistribute suppressed highland cover without changing the ocean or desert.
-    pub(crate) fn at_height(mut self, height: f64) -> Self {
+    pub(crate) fn at_height(self, height: f64) -> Self {
+        self.with_highland_band(height, 80.0, 108.0)
+    }
+
+    pub(in crate::generation) fn with_highland_band(
+        mut self,
+        height: f64,
+        floor: f64,
+        top: f64,
+    ) -> Self {
         let highland = self.weights.highland;
-        self.weights.highland *= super::smoothstep(80.0, 108.0, height);
+        self.weights.highland *= super::smoothstep(floor, top, height);
         let lowland = highland - self.weights.highland;
         let forest = super::smoothstep(0.35, 0.72, self.humidity);
         self.weights.forest += lowland * forest;
@@ -168,6 +216,12 @@ impl BiomeSample {
                 + w.cherry_forest * forest
                 + w.spirit_blossom * forest
                 + w.blood_forest * forest
+                + w.ashlands * desert
+                + w.savanna * plains
+                + w.swamp * plains
+                + w.petrified_forest * desert
+                + w.crystal_highlands * highland
+                + w.misty_coast * forest
         };
         TerrainProfile {
             elevation: blend(-40.0, 6.0, 12.0, 10.0, 18.0, 9.0) + w.cliffted_desert * 22.0,

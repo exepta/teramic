@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 527,
+  "name": "Dune Sand",
+  "description": "Pale wind-rippled sand over compact amber sediment.",
+  "creative_category": "terrain",
+  "hardness": 0.55,
+  "resistance": 2,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "face_materials": [
+    "side",
+    "side",
+    "top",
+    "top",
+    "side",
+    "side"
+  ],
+  "textures": {
+    "side": "textures/desert/dune_sand_side.png",
+    "top": "textures/desert/dune_sand_top.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.94,
+      "reflectance": 0.14,
+      "normal_texture": "textures/desert/dune_sand_side_normal.png"
+    },
+    "top": {
+      "roughness": 0.94,
+      "reflectance": 0.14,
+      "normal_texture": "textures/desert/dune_sand_top_normal.png"
+    }
+  }
+}

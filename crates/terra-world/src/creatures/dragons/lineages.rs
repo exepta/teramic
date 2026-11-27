@@ -21,7 +21,8 @@ pub(super) fn resolve(
     h: &Habitat,
     form: Lineage,
     airborne: bool,
-    players: &[(PlayerUuid, [f64; 3])],
+    targets: &[(Target, [f64; 3])],
+    prey_yaw: Option<f32>,
 ) {
     if a.behavior == B::DragonWard && form == Lineage::Tidal {
         a.health = (a.health + 0.035 * a.kind.health()).min(a.kind.health());
@@ -33,11 +34,16 @@ pub(super) fn resolve(
     let aim = DVec3::from_array(goal.position.map(|v| v as f64 + 0.5));
     let from = DVec3::from_array(a.position);
     let forward = (aim - from).with_y(0.).normalize_or_zero();
-    let side = DVec3::new(-forward.z, 0., forward.x);
-    // A phase jump flanks the locked target but never materialises inside unloaded
+    let behind = prey_yaw.map_or(forward, |yaw| {
+        let (s, c) = f64::from(yaw).sin_cos();
+        DVec3::new(s, 0., c)
+    });
+    let side = DVec3::new(-behind.z, 0., behind.x);
+    // The gate opens behind the locked target. Two nearby rearward offsets handle a narrow ledge.
+    // The dragon never materialises inside unloaded
     // terrain, a player or the cave wall. Failed landings simply fizzle.
-    for sign in [1., -1.] {
-        let flank = aim + (side * sign * 0.84 - forward * 0.54) * 17.;
+    for sign in [0., 1., -1.] {
+        let flank = aim + behind * 9. + side * sign * 5.;
         let yaw = (flank.x - aim.x).atan2(flank.z - aim.z);
         let destination = if airborne {
             let pos = flank.with_y(from.y.max(aim.y + 7.));
@@ -50,7 +56,7 @@ pub(super) fn resolve(
                 })
         };
         if let Some(p) = destination
-            && players.iter().all(|(_, pos)| {
+            && targets.iter().all(|(_, pos)| {
                 let delta = DVec3::from_array(*pos) - DVec3::from_array(p);
                 let size = a.size();
                 delta.y < -1.9
@@ -131,7 +137,7 @@ impl Encounter {
         a: &Creature,
         h: &Habitat,
         form: Lineage,
-        players: &[(PlayerUuid, [f64; 3])],
+        targets: &[(Target, [f64; 3])],
         previous: f32,
     ) -> Vec<Strike> {
         let Some(goal) = a.needs.goal else {
@@ -170,7 +176,7 @@ impl Encounter {
                     break;
                 }
                 let path = next - prev;
-                for &(target, at) in players {
+                for &(target, at) in targets {
                     let p = DVec3::from_array(at);
                     let u = ((p - prev).dot(path) / path.length_squared().max(1e-8)).clamp(0., 1.);
                     let nearest = prev + path * u;

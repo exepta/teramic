@@ -3,7 +3,9 @@
 mod anatomy;
 mod effects;
 mod forms;
+mod frill;
 mod geometry;
+mod species;
 mod spells;
 use terra_core::creatures::dragons::{Lineage, lineage};
 mod wings;
@@ -11,8 +13,8 @@ pub(in crate::creatures) use terra_core::creatures::dragon_pose::Joint;
 use terra_core::creatures::dragon_pose::{TAIL_BONES, tail_node, wrist};
 pub(in crate::creatures) use terra_core::creatures::dragons::model_scale as scale;
 
+use super::voxel::Builder;
 use super::{Kind, Part};
-use crate::players::model::Builder;
 use bevy::prelude::*;
 use geometry::*;
 
@@ -34,6 +36,46 @@ impl Coat {
     fn new(kind: Kind, variant: u8) -> Self {
         let (shadow, scale, ridge, belly, horn, wing, light, growth) = match (kind, variant) {
             // Obsidian, granite and tidal coats use the shape vocabulary of their bloodline.
+            (Kind::FireDragon, _) => {
+                // Cinder, obsidian and sulfur are recognisable even in silhouette:
+                // the number of swept cheek spines also varies.
+                let (scale, ridge, wing, glow) = match variant {
+                    1 => (
+                        [0.34, 0.15, 0.10],
+                        [0.55, 0.37, 0.25],
+                        [0.68, 0.31, 0.10],
+                        [1.0, 0.55, 0.10],
+                    ),
+                    2 => (
+                        [0.105, 0.105, 0.15],
+                        [0.30, 0.28, 0.35],
+                        [0.45, 0.11, 0.13],
+                        [1.0, 0.21, 0.05],
+                    ),
+                    3 => (
+                        [0.56, 0.33, 0.09],
+                        [0.79, 0.59, 0.21],
+                        [0.80, 0.43, 0.11],
+                        [1.0, 0.86, 0.29],
+                    ),
+                    _ => (
+                        [0.56, 0.095, 0.055],
+                        [0.80, 0.23, 0.065],
+                        [0.66, 0.14, 0.05],
+                        [1.0, 0.42, 0.065],
+                    ),
+                };
+                (
+                    [0.14, 0.065, 0.06],
+                    scale,
+                    ridge,
+                    [0.77, 0.46, 0.24],
+                    [0.49, 0.39, 0.32],
+                    wing,
+                    glow,
+                    [1.0, 0.48, 0.09],
+                )
+            }
             (Kind::EarthDragon, 2) => (
                 [0.18, 0.20, 0.24],
                 [0.39, 0.42, 0.46],
@@ -181,6 +223,14 @@ impl Coat {
                 [0.75, 0.34, 0.91],
             ),
         };
+        let (wing, light) = if kind == Kind::DarkDragon && variant != 5 {
+            (
+                [wing[0] * 0.82, wing[1] * 0.53, wing[2] * 0.63],
+                [1.0, 0.09 + f32::from(variant) * 0.025, 0.30],
+            )
+        } else {
+            (wing, light)
+        };
         Self {
             kind,
             variant,
@@ -208,7 +258,14 @@ pub(super) fn parts(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, 
     ];
     joints.extend((0..TAIL_BONES).map(Joint::Tail));
     for side in [-1, 1] {
-        joints.extend([Joint::WingArm(side), Joint::Sail(side)]);
+        joints.push(Joint::Frill(side));
+        if terra_core::creatures::dragons::flies(kind) {
+            joints.extend([Joint::WingArm(side), Joint::Sail(side)]);
+        }
+        if kind == Kind::WaterDragon {
+            continue;
+        }
+
         for hind in [false, true] {
             joints.extend([
                 Joint::Thigh { side, hind },
@@ -222,14 +279,32 @@ pub(super) fn parts(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, 
         joints.extend((0..3).map(Joint::Missile));
         joints.extend([Joint::Ward, Joint::Surge]);
     }
+    if kind == Kind::DarkDragon && form.is_none() {
+        joints.push(Joint::Surge);
+    }
     let mut parts = joints
         .into_iter()
         .map(|joint| {
-            let mut mesh = Builder::default();
+            // Large wings and tiny eye facets keep different voxel pitches. The rigid
+            // parts share the same pivots as the collision and animation skeleton.
+            let mut mesh = match joint {
+                Joint::Sail(_) => Builder::with_cell_size(0.68),
+                Joint::Trunk | Joint::WingArm(_) => Builder::with_cell_size(0.50),
+                Joint::Skull | Joint::Jaw => Builder::with_cell_size(0.21),
+                Joint::Frill(_) => Builder::with_cell_size(0.26),
+                Joint::Eyes => Builder::with_cell_size(0.12),
+                Joint::Neck | Joint::Tail(0) => Builder::with_cell_size(0.37),
+                Joint::Tail(_) => Builder::with_cell_size(0.40),
+                Joint::Thigh { .. } | Joint::Foot { .. } => Builder::with_cell_size(0.33),
+                Joint::Paw { .. } => Builder::with_cell_size(0.30),
+                _ => Builder::with_resolution(18),
+            };
             match joint {
+                Joint::Trunk if kind == Kind::WaterDragon => species::serpent(&mut mesh, coat)?,
                 Joint::Trunk => anatomy::trunk(&mut mesh, coat)?,
                 Joint::Neck => anatomy::neck(&mut mesh, coat)?,
                 Joint::Skull | Joint::Eyes | Joint::Jaw => anatomy::head(&mut mesh, coat, joint)?,
+                Joint::Frill(side) => frill::build(&mut mesh, coat, side)?,
                 Joint::Tail(i) => anatomy::tail(&mut mesh, coat, i)?,
                 Joint::Thigh { side, hind }
                 | Joint::Foot { side, hind }
@@ -246,7 +321,13 @@ pub(super) fn parts(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, 
                 | Joint::Ward
                 | Joint::Surge => effects::build(&mut mesh, coat, joint)?,
             }
-            if let Some(form) = form {
+            species::details(&mut mesh, coat, joint)?;
+            if let Some(form) = form.or(match kind {
+                Kind::WaterDragon => Some(Lineage::Tidal),
+                Kind::EarthDragon => Some(Lineage::Stone),
+                Kind::DarkDragon => Some(Lineage::Shadow),
+                _ => None,
+            }) {
                 forms::sculpt(&mut mesh, coat, form, joint)?;
             }
             let offset = joint.pivot() * scale(kind, variant);
@@ -261,14 +342,17 @@ pub(super) fn parts(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, 
             } else {
                 1.
             };
-            let mesh = mesh
-                .finish()?
-                .translated_by(shift)
-                .scaled_by(Vec3::splat(scale(kind, variant) * wing_factor));
+            let mesh = if matches!(joint, Joint::Skull | Joint::Neck | Joint::Trunk) {
+                mesh.finish_painted(|p, tint| species::coat_marking(coat, joint, p, tint))
+            } else {
+                mesh.finish()
+            }?
+            .translated_by(shift)
+            .scaled_by(Vec3::splat(scale(kind, variant) * wing_factor));
             Ok((Part::Dragon(joint), offset, mesh))
         })
         .collect::<Result<Vec<_>, String>>()?;
-    let mut stream = Builder::default();
+    let mut stream = Builder::with_resolution(16);
     effects::breath(&mut stream, coat, true)?;
     parts.push((
         Part::DragonLight(Joint::Breath),
@@ -277,9 +361,16 @@ pub(super) fn parts(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, 
             .finish()?
             .scaled_by(Vec3::splat(scale(kind, variant))),
     ));
-    if kind == Kind::DarkDragon {
+    if matches!(kind, Kind::DarkDragon | Kind::FireDragon) {
         for joint in [Joint::Neck, Joint::Sail(-1), Joint::Sail(1)] {
-            let mut mesh = Builder::default();
+            if kind == Kind::FireDragon && joint == Joint::Neck {
+                continue;
+            }
+            let mut mesh = if matches!(joint, Joint::Sail(_)) {
+                Builder::with_cell_size(0.44)
+            } else {
+                Builder::with_resolution(16)
+            };
             match joint {
                 Joint::Neck => anatomy::heart(&mut mesh, coat)?,
                 Joint::Sail(side) => wings::lit_rims(&mut mesh, coat, f32::from(side))?,
@@ -296,7 +387,7 @@ pub(super) fn parts(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, 
             ));
         }
     }
-    if let Some(form) = form {
+    if let Some(form) = form.or((kind == Kind::WaterDragon).then_some(Lineage::Tidal)) {
         for joint in [
             Joint::Trunk,
             Joint::Skull,
@@ -304,7 +395,7 @@ pub(super) fn parts(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, 
             Joint::Tail(4),
             Joint::Tail(5),
         ] {
-            let mut mesh = Builder::default();
+            let mut mesh = Builder::with_resolution(16);
             forms::marks(&mut mesh, coat, form, joint)?;
             let mesh = mesh
                 .finish()?
@@ -318,7 +409,7 @@ pub(super) fn parts(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, Mesh)>, 
         }
     }
     if matches!(form, Some(Lineage::Stone | Lineage::Shadow)) {
-        let mut lit = Builder::default();
+        let mut lit = Builder::with_resolution(16);
         spells::fissure(&mut lit, coat, true)?;
         parts.push((
             Part::DragonLight(Joint::Rune),
@@ -334,18 +425,24 @@ mod tests {
     use super::*;
     #[test]
     fn greater_dragon_shapes_and_spell_parts_are_finite_for_every_coat() {
-        for kind in [Kind::DarkDragon, Kind::EarthDragon, Kind::WaterDragon] {
+        for kind in [
+            Kind::DarkDragon,
+            Kind::EarthDragon,
+            Kind::WaterDragon,
+            Kind::FireDragon,
+        ] {
             for variant in 0..kind.variant_count() {
-                let Some(_) = lineage(kind, variant) else {
+                let form = lineage(kind, variant);
+                if form.is_none() && kind != Kind::FireDragon {
                     continue;
-                };
+                }
                 let parts = parts(kind, variant).unwrap();
                 assert_eq!(
                     parts
                         .iter()
                         .filter(|(part, _, _)| matches!(part, Part::Dragon(Joint::Missile(_))))
                         .count(),
-                    3
+                    if form.is_some() { 3 } else { 0 }
                 );
                 for (_, _, mesh) in parts {
                     let positions = mesh

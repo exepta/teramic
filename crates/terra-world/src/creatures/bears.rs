@@ -17,6 +17,9 @@ pub enum Effect {
     CatchFish {
         id: u64,
     },
+    Ignite {
+        position: [i64; 3],
+    },
     SpitBile {
         origin: [f64; 3],
         velocity: [f64; 3],
@@ -163,8 +166,11 @@ pub fn step_with_navigation(
         if let Some((index, player)) = nearest {
             let before = a.behavior;
             a.needs.goal = None;
-            face(a, player, h);
-            if distance(a.position, player) <= combat.reach.powi(2)
+            if before != Behavior::Attack {
+                face(a, player, h);
+            }
+            if super::perception::in_melee_arc(a.yaw, a.position, player)
+                && distance(a.position, player) <= combat.reach.powi(2)
                 && visible(h, head(a.position), head(player))
             {
                 a.behavior = Behavior::Attack;

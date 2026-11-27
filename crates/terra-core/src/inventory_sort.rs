@@ -45,6 +45,8 @@ fn category(item: ItemKind) -> u8 {
         | ItemKind::Bitumen
         | ItemKind::GloomEssence
         | ItemKind::DragonLoot(_)
+        | ItemKind::RuneCore
+        | ItemKind::ForestCrystal
         | ItemKind::LightSplitter
         | ItemKind::RoadAggregate
         | ItemKind::Stick

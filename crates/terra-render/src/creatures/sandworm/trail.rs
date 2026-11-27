@@ -57,6 +57,13 @@ pub(super) fn install(app: &mut App) {
         .add_systems(Update, update.after(CreatureAnimationSet));
 }
 
+type TrackMark = (
+    &'static WormTrail,
+    &'static mut Transform,
+    &'static mut Visibility,
+    Option<&'static mut MeshMaterial3d<StandardMaterial>>,
+);
+
 #[allow(clippy::too_many_arguments)]
 fn update(
     mut commands: Commands,
@@ -67,7 +74,7 @@ fn update(
     models: Option<Res<Models>>,
     mut state: ResMut<Trail>,
     roots: Query<(&CreatureAvatar, &Transform, &Motion)>,
-    mut marks: Query<(&WormTrail, &mut Transform, &mut Visibility), Without<CreatureAvatar>>,
+    mut marks: Query<TrackMark, Without<CreatureAvatar>>,
 ) {
     let ready = access.is_none_or(|a| a.ready());
     if !ready {
@@ -87,7 +94,7 @@ fn update(
     }));
     if state.entities.is_empty()
         && !worms.is_empty()
-        && let Some(models) = models
+        && let Some(models) = &models
     {
         let mesh = models.parts.get(&(Kind::SandWorm, 0)).and_then(|parts| {
             parts
@@ -173,7 +180,7 @@ fn update(
             }
         }
     }
-    for (mark, mut transform, mut visibility) in &mut marks {
+    for (mark, mut transform, mut visibility, material) in &mut marks {
         let stamp = state.stamps[mark.0].filter(|s| ready && now - s.born < LIFETIME);
         let Some(stamp) = stamp else {
             if *visibility != Visibility::Hidden {
@@ -186,17 +193,22 @@ fn update(
             stamp.point.y.round() as i64 - 1,
             stamp.point.z.floor() as i64,
         ];
-        let known = chunks.as_ref().and_then(|c| c.block_at(cell)).map(|block| {
-            journal
-                .as_ref()
-                .and_then(|j| j.block(cell))
-                .unwrap_or(block)
-        });
-        if known != Some(terra_voxel::MaterialId::Sand as u16) {
+        let edit = journal.as_ref().and_then(|journal| journal.block(cell));
+        let ground = chunks
+            .as_ref()
+            .and_then(|chunks| chunks.block_at(cell))
+            .map(|block| edit.unwrap_or(block))
+            .filter(|block| {
+                terra_core::creatures::sandworm::burrowable_ground(*block, edit.is_some())
+            });
+        let Some(block) = ground else {
             if *visibility != Visibility::Hidden {
                 *visibility = Visibility::Hidden;
             }
             continue;
+        };
+        if let (Some(mut material), Some(models)) = (material, &models) {
+            super::ground::apply_sand_material(&mut material, models, block);
         }
         let fade = ((now - stamp.born) / LIFETIME).clamp(0.0, 1.0);
         transform.translation = stamp.point + Vec3::Y * (0.16 * (1.0 - fade));
@@ -246,7 +258,12 @@ mod tests {
         let mut data = BlockSection::empty(position).unwrap();
         for x in 0..16 {
             for z in 0..16 {
-                data.set_block([x, 0, z], MaterialId::Sand as u16).unwrap();
+                let material = if x < 3 {
+                    MaterialId::RedDuneSand
+                } else {
+                    MaterialId::RedSandstone
+                };
+                data.set_block([x, 0, z], material as u16).unwrap();
             }
         }
         chunks.loaded.insert(

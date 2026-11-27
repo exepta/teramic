@@ -330,21 +330,38 @@ fn build(
     result
 }
 
-fn index_vertices(mesh: &mut PrimitiveTemplate) {
+pub(super) fn index_vertices(mesh: &mut PrimitiveTemplate) {
+    debug_assert!(mesh.tangents.is_empty() || mesh.tangents.len() == mesh.positions.len());
     let mut vertices = HashMap::with_capacity(mesh.positions.len());
     let mut positions = Vec::with_capacity(mesh.positions.len());
     let mut normals = Vec::with_capacity(mesh.normals.len());
+    let mut tangents = Vec::with_capacity(mesh.tangents.len());
     let mut uvs = Vec::with_capacity(mesh.uvs.len());
     let mut remap = Vec::with_capacity(mesh.positions.len());
     let bits = |value: f32| if value == 0.0 { 0 } else { value.to_bits() };
-    for ((&position, &normal), &uv) in mesh.positions.iter().zip(&mesh.normals).zip(&mesh.uvs) {
+    for (i, ((&position, &normal), &uv)) in mesh
+        .positions
+        .iter()
+        .zip(&mesh.normals)
+        .zip(&mesh.uvs)
+        .enumerate()
+    {
+        let tangent = mesh.tangents.get(i).copied();
         // Preserve every hard normal and texture seam; only exact attribute
         // matches can reuse an index. This cache work happens once on workers.
-        let key = (position.map(bits), normal.map(bits), uv.map(bits));
+        let key = (
+            position.map(bits),
+            normal.map(bits),
+            uv.map(bits),
+            tangent.map(|t| t.map(bits)),
+        );
         let index = *vertices.entry(key).or_insert_with(|| {
             let index = positions.len() as u32;
             positions.push(position);
             normals.push(normal);
+            if let Some(tangent) = tangent {
+                tangents.push(tangent);
+            }
             uvs.push(uv);
             index
         });
@@ -356,6 +373,7 @@ fn index_vertices(mesh: &mut PrimitiveTemplate) {
     mesh.positions = positions;
     mesh.normals = normals;
     mesh.uvs = uvs;
+    mesh.tangents = tangents;
 }
 
 fn hash(x: usize, y: usize, variant: usize) -> u32 {

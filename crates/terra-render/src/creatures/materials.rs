@@ -29,6 +29,17 @@ impl Models {
         variant: u8,
         part: Part,
     ) -> Handle<StandardMaterial> {
+        if matches!(part, Part::Golem(_, true)) {
+            return self.violet_glow_material.clone();
+        }
+        if kind == Kind::LavaWorm
+            && matches!(
+                part,
+                Part::LavaRing { glowing: true, .. } | Part::WormSpit(_)
+            )
+        {
+            return self.dragon_glow[1].clone();
+        }
         if let Part::Dragon(joint) | Part::DragonLight(joint) = part {
             let fissure = joint == super::model::dragon::Joint::Rune
                 && matches!(
@@ -41,13 +52,11 @@ impl Models {
             let bright = matches!(part, Part::DragonLight(_))
                 || !fissure
                     && joint != super::model::dragon::Joint::Breath
-                    && (matches!(
-                        joint,
-                        super::model::dragon::Joint::Eyes | super::model::dragon::Joint::Rune
-                    ) || joint.is_effect() && kind != Kind::EarthDragon);
+                    && (matches!(joint, super::model::dragon::Joint::Rune)
+                        || joint.is_effect() && kind != Kind::EarthDragon);
             let index = match kind {
                 Kind::DarkDragon => 0,
-                Kind::EarthDragon => 1,
+                Kind::EarthDragon | Kind::FireDragon => 1,
                 _ => 2,
             };
             return if bright {

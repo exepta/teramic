@@ -6,6 +6,7 @@ use terra_voxel::blocks::raycast_blocks;
 use terra_world::{edits::EditJournal, streaming::ChunkStore};
 
 pub(super) struct Opening {
+    pub anchor: (i64, i64),
     pub window: Vec4,
     pub transmission: f32,
     pub depths: Vec4,
@@ -76,12 +77,13 @@ pub(super) fn measure(
     chunks: &ChunkStore,
     journal: &EditJournal,
     eye: Vec3,
-    previous: Vec4,
+    previous: Option<(i64, i64)>,
     sun: Vec3,
+    lair_top: Option<i64>,
 ) -> Option<Opening> {
     let cell = eye.floor().as_i64vec3();
     let column = chunks.surface_column_at(cell.x, cell.z)?;
-    if column.height < f64::from(eye.y + 2.) {
+    if lair_top.map_or(column.height, |top| column.height.max(top as f64)) < f64::from(eye.y + 2.) {
         return None;
     }
     let bounds = RefCell::new(HashMap::new());
@@ -100,7 +102,16 @@ pub(super) fn measure(
         None => top(p[0], p[2]).is_some_and(|sky| p[1] as f32 > sky - 1.5),
     };
     let mut sample = |x: i64, z: i64, radius: Option<f32>| {
-        let roof = chunks.surface_column_at(x, z)?.height.ceil() as f32 + 0.5;
+        let surface = chunks.surface_column_at(x, z)?.height;
+        let roof = if lair_top.is_some() {
+            chunks
+                .prepared_column([x.div_euclid(16), z.div_euclid(16)])?
+                .dragon_lair_top([x, cell.y, z])
+                .map_or(surface, |top| surface.max(top as f64))
+        } else {
+            surface
+        };
+        let roof = roof.ceil() as f32 + 0.5;
         if roof < eye.y + 2. {
             return None;
         }
@@ -174,6 +185,7 @@ pub(super) fn measure(
             cross_radii[i] = span.y;
         }
         (open > 0).then_some(Opening {
+            anchor: (x, z),
             window,
             transmission: open as f32 / 4.,
             depths,
@@ -189,8 +201,8 @@ pub(super) fn measure(
     }
     // Anchor unplanned windows to a stable grid, reusing the last valid mouth.
     let grid = |n: i64| (n + 4).div_euclid(8) * 8;
-    let previous =
-        (previous.w > 0.).then_some((previous.x.floor() as i64, previous.z.floor() as i64));
+    // Reuse the actual probe coordinate. The fitted centre can lie on the
+    // opposite bank; feeding it back moves an asymmetric opening every tick.
     previous
         .into_iter()
         .filter(|&(x, z)| (x - cell.x).abs() <= 24 && (z - cell.z).abs() <= 24)

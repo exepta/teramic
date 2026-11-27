@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 736,
+  "name": "Excavation Urn",
+  "description": "A painted field jar with a brush for cleaning fossils.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.4,
+  "resistance": 3.0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/archaeology_urn.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

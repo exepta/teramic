@@ -36,7 +36,8 @@ GPU_ENVIRONMENT_KEYS = (
     "WGPU_GLES_MINOR_VERSION", "VK_ICD_FILENAMES", "VK_DRIVER_FILES",
     "MESA_VK_DEVICE_SELECT", "DRI_PRIME", "__NV_PRIME_RENDER_OFFLOAD",
     "__VK_LAYER_NV_optimus", "TERRA_WGPU_MEMORY_BLOCK_MIB", "TERRA_MESH_SLAB_MIB",
-    "TERRA_PACKED_TERRAIN", "TERRA_PACKED_ROOTED",
+    "TERRA_PACKED_TERRAIN", "TERRA_PACKED_ROOTED", "TERRA_FAR_BATCHES",
+    "TERRA_MESH_SLAB_LEGACY_GROWTH",
 )
 
 
@@ -220,6 +221,10 @@ def parse_summary(contents, scenario):
             rapid.append(fields)
         elif "Real-input performance route phase" in line:
             routes.append(fields)
+        elif "Grounded performance route progress" in line:
+            routes.append({**fields, "phase": "walk"})
+        elif "Grounded performance route completed a real return" in line:
+            routes.append({**fields, "phase": "walk_return"})
         elif "Effective benchmark configuration (" in line:
             configuration.append(fields)
         elif "CPU scope within native sampling window" in line:
@@ -273,7 +278,9 @@ def parse_summary(contents, scenario):
     render_fields = ("loaded_sections", "rendered_sections", "occluded_sections", "mesh_assets",
                      "visible_mesh_entities", "point_lights", "shadowed_point_lights",
                      "loaded_active_props", "represented_props", "prop_batches", "water_tiles",
-                     "terrain_composition_jobs", "far_groups", "far_cache_bytes",
+                     "terrain_composition_jobs", "reused_shadow_meshes", "reused_shadow_bytes",
+                     "reused_edit_meshes", "reused_edit_bytes",
+                     "far_groups", "far_source_batches", "far_cache_bytes",
                      "peak_admitted_upload_vertices", "peak_admitted_upload_bytes",
                      "deferred_upload_batches")
     native = wall[0] if wall else None

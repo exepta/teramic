@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "id": 603,
+  "name": "Sakura Garden Lantern",
+  "description": "A swept cherry roof shelters warm amber light.",
+  "creative_category": "decoration",
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "struct_block": true,
+  "model_layout": "scene",
+  "model": "models/sakura_garden_lantern.glb",
+  "hardness": 1.2,
+  "resistance": 2,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.2,
+        0,
+        0.2
+      ],
+      "maximum": [
+        0.8,
+        0.08,
+        0.8
+      ]
+    },
+    {
+      "minimum": [
+        0.25,
+        0.08,
+        0.25
+      ],
+      "maximum": [
+        0.75,
+        0.16,
+        0.75
+      ]
+    },
+    {
+      "minimum": [
+        0.38,
+        0.16,
+        0.38
+      ],
+      "maximum": [
+        0.62,
+        0.42,
+        0.62
+      ]
+    },
+    {
+      "minimum": [
+        0.22,
+        0.42,
+        0.22
+      ],
+      "maximum": [
+        0.78,
+        0.49,
+        0.78
+      ]
+    },
+    {
+      "minimum": [
+        0.3,
+        0.49,
+        0.3
+      ],
+      "maximum": [
+        0.7,
+        0.71,
+        0.7
+      ]
+    },
+    {
+      "minimum": [
+        0.12,
+        0.71,
+        0.12
+      ],
+      "maximum": [
+        0.88,
+        0.76,
+        0.88
+      ]
+    },
+    {
+      "minimum": [
+        0.2,
+        0.76,
+        0.2
+      ],
+      "maximum": [
+        0.8,
+        0.81,
+        0.8
+      ]
+    },
+    {
+      "minimum": [
+        0.29,
+        0.81,
+        0.29
+      ],
+      "maximum": [
+        0.71,
+        0.87,
+        0.71
+      ]
+    }
+  ],
+  "light": {
+    "color": [
+      1,
+      0.69,
+      0.35
+    ],
+    "intensity": 730,
+    "range": 11,
+    "falloff": "soft_core",
+    "flicker": 0.025,
+    "cave_intensity": 0.6,
+    "shadows": false
+  }
+}

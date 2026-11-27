@@ -49,6 +49,7 @@ fn real_server_contacts_hurt_players_and_mobs_with_cooldown_immunity_and_one_dea
     let mut app = App::new();
     app.insert_resource(Time::<()>::default())
         .init_resource::<GameConfig>()
+        .init_resource::<ServerRuntime>()
         .init_resource::<EditJournal>()
         .init_resource::<riding::Mounts>()
         .insert_resource(chunks)

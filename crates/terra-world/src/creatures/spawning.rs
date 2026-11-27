@@ -24,9 +24,13 @@ pub fn near(
         velocity: [0.0; 3],
         yaw: yaw.rem_euclid(std::f32::consts::TAU),
         health: mob.kind.health(),
-        behavior: if mob.kind == Kind::SandWorm {
+        behavior: if mob.kind == Kind::StoneGolem {
+            Behavior::Sleep
+        } else if mob.kind == Kind::LavaWorm {
+            Behavior::Burrowed
+        } else if mob.kind == Kind::SandWorm {
             Behavior::Attack
-        } else if mob.kind.is_aquatic() {
+        } else if mob.kind.is_aquatic() || mob.kind == Kind::WaterDragon {
             Behavior::Swim
         } else if mob.kind.is_flying() {
             Behavior::Fly
@@ -59,13 +63,18 @@ pub fn near(
         }
         for dy in [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, -6, -7, -8] {
             let candidate = [x, origin[1].floor() + f64::from(dy) + 0.1, z];
-            let position = if mob.kind == Kind::SandWorm {
+            let position = if mob.kind == Kind::LavaWorm {
+                let Some(p) = super::lava_worm::anchor(habitat, candidate) else {
+                    continue;
+                };
+                p
+            } else if mob.kind == Kind::SandWorm {
                 let Some(position) = super::sandworm::command_surface(habitat, candidate) else {
                     continue;
                 };
                 position
-            } else if mob.kind.is_aquatic() {
-                if !habitat.clear(candidate, size, true) {
+            } else if mob.kind.is_aquatic() || mob.kind == Kind::WaterDragon {
+                if !habitat.clear_rotated(candidate, size, true, yaw.into()) {
                     continue;
                 }
                 candidate
@@ -105,9 +114,11 @@ pub fn near(
             return Ok(animal);
         }
     }
-    Err(if mob.kind == Kind::SandWorm {
+    Err(if mob.kind == Kind::LavaWorm {
+        "No open lava pool nearby."
+    } else if mob.kind == Kind::SandWorm {
         "No dry loaded ground with enough room nearby. Move to open ground."
-    } else if mob.kind.is_aquatic() {
+    } else if mob.kind.is_aquatic() || mob.kind == Kind::WaterDragon {
         "No loaded water with enough room nearby. Move closer to deeper water."
     } else {
         "No safe loaded space nearby. Move to open ground."

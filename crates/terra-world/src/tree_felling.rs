@@ -56,12 +56,18 @@ pub fn eligible(chunks: &ChunkStore, journal: &EditJournal, foot: [i64; 3]) -> b
         return chunks.block_at(foot) == Some(t.species.wood());
     }
     journal.block(foot).is_none()
-        && chunks
-            .block_at(foot)
-            .is_some_and(|m| matches!(m, 6 | 10 | 36 | 134 | 313))
+        && chunks.block_at(foot).is_some_and(is_fellable_log)
         && chunks
             .prepared_column([foot[0].div_euclid(16), foot[2].div_euclid(16)])
             .is_some_and(|column| column.felling_foot(foot))
+}
+
+fn is_fellable_log(material: u16) -> bool {
+    matches!(material, 6 | 10 | 36 | 134 | 313 | 643 | 646 | 679 | 680)
+}
+
+fn is_fellable_leaf(material: u16) -> bool {
+    matches!(material, 7..=9 | 132 | 133 | 195 | 310..=312 | 537..=540 | 585..=586 | 606..=607 | 644 | 647)
 }
 
 /// Dedicated servers need not normally simulate a tree's upper canopy. A valid
@@ -185,9 +191,9 @@ impl Plan {
         for cell in shape.leaves {
             if journal.block(cell).is_none()
                 && owner(cell, shape.leaves_material)? == Some(shape.origin)
-                && chunks
-                    .block_at(cell)
-                    .is_none_or(|m| m == shape.leaves_material)
+                && chunks.block_at(cell).is_none_or(|m| {
+                    terra_voxel::MaterialId::same_tree_material(shape.leaves_material, m)
+                })
             {
                 leaves.push(cell);
             }
@@ -376,9 +382,9 @@ pub(crate) fn worker_cut_one(
     // autumn/white crowns and historic wood skins instead of canonical species
     // materials. Every player edit remains excluded by remove_owned below.
     let correct_kind = if wood {
-        matches!(material, 6 | 10 | 36 | 134 | 313)
+        is_fellable_log(material)
     } else {
-        matches!(material, 7..=9 | 132 | 133 | 195 | 310..=312)
+        is_fellable_leaf(material)
     };
     let sapling = !wood && crate::saplings::leaf_drop_roll(cell);
     let extra = usize::from(wood || sapling);
@@ -747,6 +753,7 @@ fn species(wood: u16, leaves: u16) -> Option<terra_core::TreeSpecies> {
     use terra_core::TreeSpecies;
     Some(match (wood, leaves) {
         (6, 195) => TreeSpecies::Apple,
+        (643, 644) => TreeSpecies::Acacia,
         (6, 7 | 8) => TreeSpecies::Oak,
         (10, 9) => TreeSpecies::Birch,
         (36, 7) => TreeSpecies::Spruce,
@@ -806,7 +813,7 @@ fn remove_natural(
         return Ok(false);
     }
     if let Some(current) = chunks.block_at(cell) {
-        if current != material {
+        if !terra_voxel::MaterialId::same_tree_material(material, current) {
             return Ok(false);
         }
         return commit_block_edit(
@@ -814,7 +821,7 @@ fn remove_natural(
             journal,
             &BlockEditRequest {
                 position: cell,
-                expected_material: material,
+                expected_material: current,
                 material: 0,
             },
             properties,

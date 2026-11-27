@@ -6,15 +6,26 @@ pub(super) fn sample(pattern: TexturePattern, px: u32, py: u32) -> Option<[f32; 
     let seed = hash(x / 3, y / 3);
     let grain = (hash(px / 2, py / 2) % 11) as f32 * 0.002;
     let (base, shade) = if pattern == TexturePattern::Ice {
-        let layer = (x + y + (y / 16) * 2) % 64;
-        let seam = layer <= 1 || (x + 3 * y) % 64 == 0 && layer < 18;
-        let frost = (hash(x / 16, y / 16) % 17) as f32 / 16.0;
-        let base = if seam {
-            [207.0, 237.0, 249.0]
+        // Interpolate the trapped frost on a periodic lattice so neighbouring
+        // cubes share their edges even across large greedy faces.
+        let frost_knot = |dx, dy| (hash((x / 16 + dx) % 4, (y / 16 + dy) % 4) % 101) as f32 * 0.01;
+        let u = (x % 16) as f32 / 16.0;
+        let v = (y % 16) as f32 / 16.0;
+        let low = frost_knot(0, 0) * (1.0 - u) + frost_knot(1, 0) * u;
+        let high = frost_knot(0, 1) * (1.0 - u) + frost_knot(1, 1) * u;
+        let frost = low * (1.0 - v) + high * v;
+        let seam = (x + y + (frost * 13.0) as u32) % 64;
+        let air = hash(x / 5, y / 5).is_multiple_of(9) && x % 5 == 2 && y % 5 == 3;
+        let base = if seam <= 1 || air {
+            [217.0, 239.0, 249.0]
         } else {
-            [162.0, 204.0, 229.0]
+            [
+                145.0 + 65.0 * frost,
+                192.0 + 39.0 * frost,
+                216.0 + 26.0 * frost,
+            ]
         };
-        (base, 0.91 + frost * 0.09 + grain * 0.20)
+        (base, 0.97 + grain)
     } else if pattern == TexturePattern::Mud {
         let patch = hash(x / 7, y / 7);
         let pebble = patch % 13 < 2 && (2..=4).contains(&(x % 7)) && (2..=4).contains(&(y % 7));

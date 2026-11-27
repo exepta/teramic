@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 659,
+  "name": "Small Savanna Boulder",
+  "description": "A low group of sun-warmed stones.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/small_savanna_boulder.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.14,
+        0,
+        0.25
+      ],
+      "maximum": [
+        0.8,
+        0.25,
+        0.75
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": 695,
+  "name": "Fallen Willow",
+  "description": "Shelf mushrooms line a moss-covered fallen trunk.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.46,
+  "resistance": 0.62,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/fallen_willow.glb",
+  "struct_block": true,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.09,
+        0.035,
+        0.18
+      ],
+      "maximum": [
+        0.53,
+        0.35,
+        0.54
+      ]
+    },
+    {
+      "minimum": [
+        0.48,
+        0.08,
+        0.45
+      ],
+      "maximum": [
+        0.91,
+        0.4,
+        0.82
+      ]
+    }
+  ],
+  "textures": {}
+}

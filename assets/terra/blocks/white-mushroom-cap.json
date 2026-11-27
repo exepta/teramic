@@ -9,8 +9,8 @@
   "bevel_width": 0.0,
   "materials": {
     "Mushroom cap": {
-      "texture_pattern": "white_mushroom_cap",
-      "roughness": 0.86
+      "roughness": 0.86,
+      "normal_texture": "textures/mushroom_park/cream_top_normal.png"
     },
     "Mushroom gills": {
       "texture_pattern": "mushroom_gills",
@@ -28,5 +28,8 @@
   "hardness": 0.55,
   "resistance": 0.5,
   "required_tool": null,
-  "mining_level": 0
+  "mining_level": 0,
+  "textures": {
+    "Mushroom cap": "textures/mushroom_park/cream_top.png"
+  }
 }

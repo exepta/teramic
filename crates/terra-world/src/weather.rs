@@ -101,7 +101,7 @@ pub fn from_climate_seasonal(
     sea_level: f64,
     season: terra_core::SeasonSample,
 ) -> LocalWeather {
-    let continental = (biome.temperature - 0.5) * 22.0 + 12.0;
+    let continental = (biome.temperature - 0.5) * 22.0 + 12.0 + biome.weights.ashlands * 25.0;
     let maritime = biome.weights.ocean.clamp(0.0, 1.0);
     let temperature = (continental + (continental.max(8.0) - continental) * maritime
         - (altitude - sea_level).max(0.0) * 0.11) as f32
@@ -128,6 +128,7 @@ pub fn from_climate_seasonal(
             }
         }
     };
+    let snow = snow * (1.0 - biome.weights.ashlands as f32);
     let climate_moisture = ((biome.humidity as f32 * 0.7 + 0.5)
         * (1.0 - biome.aridity() as f32 * 0.94))
         .clamp(0.02, 1.0);
@@ -139,6 +140,17 @@ pub fn from_climate_seasonal(
         | WeatherPattern::Thunderstorm
         | WeatherPattern::Blizzard => 1.0,
         _ => climate_moisture,
+    };
+    // Fade on the adjoining biome's side of the border. Even a forced
+    // blizzard must be completely dry where the HUD identifies Ashlands.
+    let moisture = if biome.weights.ashlands > 0.0 {
+        let mut neighbors = biome.weights;
+        neighbors.ashlands = 0.0;
+        let adjacent = neighbors.values().into_iter().fold(0.0, f64::max);
+        let t = ((adjacent - biome.weights.ashlands) / 0.25).clamp(0.0, 1.0) as f32;
+        moisture * t * t * (3.0 - 2.0 * t)
+    } else {
+        moisture
     };
     let precipitation = weather.intensity() * moisture;
     LocalWeather {
@@ -321,6 +333,12 @@ mod tests {
                     cherry_forest: 0.0,
                     spirit_blossom: 0.0,
                     blood_forest: 0.0,
+                    ashlands: 0.0,
+                    savanna: 0.0,
+                    swamp: 0.0,
+                    petrified_forest: 0.0,
+                    crystal_highlands: 0.0,
+                    misty_coast: 0.0,
                 },
             };
             let local = from_surface(&weather, &surface, 8.0, spring);
@@ -524,7 +542,51 @@ mod tests {
     }
 
     #[test]
-    fn explicit_weather_commands_select_precipitation_in_any_biome() {
+    fn volcanic_ground_stays_dry_during_forced_storms_and_blizzards() {
+        let terrain = TerraGenerator::new(Default::default()).unwrap();
+        let mut biome = terrain.biome_at(0.0, 0.0);
+        biome.weights = crate::generation::biomes::BiomeWeights {
+            ocean: 0.,
+            plains: 0.,
+            forest: 0.,
+            desert: 0.,
+            highland: 0.,
+            mushroom_park: 0.,
+            cliffted_desert: 0.,
+            cherry_forest: 0.,
+            spirit_blossom: 0.,
+            blood_forest: 0.,
+            ashlands: 1.,
+            savanna: 0.,
+            swamp: 0.,
+            petrified_forest: 0.0,
+            crystal_highlands: 0.0,
+            misty_coast: 0.0,
+        };
+        for pattern in [
+            WeatherPattern::Rain,
+            WeatherPattern::Blizzard,
+            WeatherPattern::Thunderstorm,
+        ] {
+            let mut weather = WorldWeather::new(5);
+            weather.set_pattern(pattern);
+            weather.advance(30., 5);
+            weather.wetness = 1.;
+            for weight in [1.0, 0.75, 0.501] {
+                biome.weights.forest = 1.0 - weight;
+                biome.weights.ashlands = weight;
+                let sample = from_climate(&weather, biome, 200., 8.);
+                assert_eq!((sample.rain, sample.snow, sample.wetness), (0., 0., 0.));
+            }
+            biome.weights.ashlands = 0.;
+            biome.weights.forest = 1.;
+            let sample = from_climate(&weather, biome, 200., 8.);
+            assert!(sample.rain + sample.snow > 0.6);
+        }
+    }
+
+    #[test]
+    fn explicit_weather_commands_select_precipitation_in_the_desert() {
         let terrain = TerraGenerator::new(Default::default()).unwrap();
         let mut biome = terrain.biome_at(0.0, 0.0);
         biome.weights.forest = 0.0;

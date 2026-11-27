@@ -13,7 +13,7 @@ pub use model::{
     LoadingProgress, MenuAction, MenuDialog, MenuPage, MenuPaths, MenuState, ServerMenu,
     SessionInfo, SessionRequest, StartupProgress, WorldCreateTab, WorldMenu,
 };
-pub use options::{OptionsDraft, OptionsTab};
+pub use options::{AudioAudition, OptionsDraft, OptionsTab};
 pub use view::{DialogView, MenuView, OptionsView, ServersView, SessionView, WorldsView};
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -36,6 +36,7 @@ pub fn install(app: &mut App) {
         .init_resource::<DialogView>()
         .init_resource::<browser::ServerBrowser>()
         .add_message::<MenuAction>()
+        .add_message::<AudioAudition>()
         .add_message::<SessionRequest>()
         .add_systems(Startup, options::load_preferences)
         .add_systems(

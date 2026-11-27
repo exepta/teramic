@@ -24,6 +24,7 @@ mod erosion;
 mod fantasy;
 mod macro_courses;
 mod network;
+pub(super) mod savanna_cascades;
 mod width;
 
 #[derive(Default)]
@@ -246,6 +247,28 @@ impl TerraGenerator {
 
     /// Small bounded immutable drainage paths, shared by all vertical jobs and clones.
     pub fn river_at(&self, x: f64, z: f64) -> Option<RiverSample> {
+        let main = self.river_course_at(x, z);
+        self.surface_river(x, z, main, self.savanna_cascade_at(x, z, main, None))
+    }
+
+    pub(super) fn surface_river(
+        &self,
+        x: f64,
+        z: f64,
+        course: Option<RiverSample>,
+        cascade: Option<RiverSample>,
+    ) -> Option<RiverSample> {
+        cascade
+            .filter(|_| !self.volcanic_watershed_at(x, z))
+            .or(course)
+    }
+
+    pub(super) fn river_course_at(&self, x: f64, z: f64) -> Option<RiverSample> {
+        self.freshwater_course(x, z)
+            .filter(|_| !self.volcanic_watershed_at(x, z))
+    }
+
+    fn freshwater_course(&self, x: f64, z: f64) -> Option<RiverSample> {
         if !self.config().water || !x.is_finite() || !z.is_finite() {
             return None;
         }
@@ -270,7 +293,14 @@ impl TerraGenerator {
             .then(|| self.drainage_at(x, z, true))
             .flatten()
             .map(|river| self.spirit_river_sample(river, x, z, true));
-        brook.or(main)
+        if self.config().river_terrain_revision >= 5
+            && main.is_some_and(|r| r.distance >= r.width)
+            && brook.is_some_and(|r| r.distance >= r.width)
+        {
+            self.select_network_sample(x, z, main, brook)
+        } else {
+            brook.or(main)
+        }
     }
 
     fn spirit_river_sample(
@@ -325,7 +355,10 @@ impl TerraGenerator {
                 .then(|| self.build_drainage(cell, brook));
             let path = path
                 .filter(|path| {
-                    !self.connected_hydrology() || !brook || !self.brook_conflicts_with_region(path)
+                    self.freshwater_route_allowed(path)
+                        && (!self.connected_hydrology()
+                            || !brook
+                            || !self.brook_conflicts_with_region(path))
                 })
                 .map(Arc::new);
             if let Ok(mut cache) = self.rivers.0.lock() {
@@ -338,6 +371,33 @@ impl TerraGenerator {
             }
         })?;
         self.sample_drainage(&path, x, z, Some(cell))
+    }
+
+    // Screen the actual meandering course, both banks, and its end caps once
+    // while building the cache. Cutting individual wet cells would leave
+    // unsupported waterfalls on either side of the basalt.
+    fn freshwater_route_allowed(&self, path: &RiverPath) -> bool {
+        if self.config().ecology_revision < 21 || self.config().landscape_revision < 9 {
+            return true;
+        }
+        let margin = if path.brook { 13.0 } else { 30.0 };
+        for pair in path.points.windows(2) {
+            let a = pair[0];
+            let b = pair[1];
+            let steps = ((b[2] - a[2]).hypot(b[0] - a[0]) / 22.).ceil().max(1.) as usize;
+            for index in 0..=steps {
+                let t = index as f64 / steps as f64;
+                let x = a[0] + (b[0] - a[0]) * t;
+                let z = a[2] + (b[2] - a[2]) * t;
+                for offset in [-margin, 0., margin] {
+                    let [wx, wz] = path.frame.world(x + offset, z);
+                    if self.volcanic_watershed_at(wx, wz) {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
     }
 
     fn sample_drainage(
@@ -437,7 +497,9 @@ impl TerraGenerator {
         };
         (distance <= width + bank_reach).then(|| {
             let length = flow_dx.hypot(1.0);
-            let mut level = path.level(index, along);
+            let hydraulic = path.level(index, along);
+            let mut level = hydraulic;
+            let mut bank_level = path.bank_level(index, core_t, hydraulic, lateral);
             if let Some(lake) = path.lake {
                 let sample = lake.sample(world_x, world_z);
                 let shore = sample.radius + super::oases::BANK_REACH;
@@ -447,8 +509,16 @@ impl TerraGenerator {
                 } else {
                     level += (sample.level - level) * blend;
                 }
+                if bounded_width {
+                    // The bank profile already removes the full hydraulic drop.
+                    // Fade that continuous profile into the lake along with its
+                    // water. Removing a full drop from lake-blended water left
+                    // a second, inverted waterfall across the dry hillside.
+                    bank_level += (sample.level - bank_level) * blend;
+                } else {
+                    bank_level = path.bank_level(index, core_t, level, lateral);
+                }
             }
-            let bank_level = path.bank_level(index, core_t, level, lateral);
             let ground = path.ground[index] + (path.ground[next] - path.ground[index]) * along;
             let erosion = (core_t * 0.075 + lateral * 0.055 + path.phase).sin() * 1.6
                 + (lateral * 0.09 + path.phase * 1.7).sin() * 0.5;
@@ -459,11 +529,17 @@ impl TerraGenerator {
             } else {
                 super::biomes::smoothstep(8.0, 23.0, ground - bank_level + erosion)
             };
-            if path.lake.is_some_and(|lake| {
+            if let Some(lake) = path.lake {
+                // Open the covered channel towards its lake over an entire bank.
+                // A binary cutoff here leaves the full hillside on one side of
+                // a single voxel and the submerged bed on the other.
                 let sample = lake.sample(world_x, world_z);
-                sample.distance <= sample.radius + super::oases::BANK_REACH
-            }) {
-                roof_blend = 0.0;
+                let shore = sample.radius + super::oases::BANK_REACH;
+                if bounded_width {
+                    roof_blend *= super::biomes::smoothstep(shore, shore + 30.0, sample.distance);
+                } else if sample.distance <= shore {
+                    roof_blend = 0.0;
+                }
             }
             let fall_erosion = if self.config().river_terrain_revision > 0 && !path.brook {
                 path.fall_erosion(index, core_t, lateral, width)
@@ -638,11 +714,7 @@ impl TerraGenerator {
                 for dx in (-support..=support).step_by(4) {
                     let sx = x + f64::from(dx);
                     let sz = z + f64::from(dz);
-                    spill = spill.min(self.base_height_with_biome(
-                        sx,
-                        sz,
-                        self.climate_biome_at(sx, sz),
-                    ));
+                    spill = spill.min(self.watershed_height(sx, sz));
                 }
             }
             // A centre-line sample alone can put the river above a lower bank.
@@ -653,8 +725,7 @@ impl TerraGenerator {
                 previous.min((spill - if brook { 0.8 } else { 1.0 }).max(self.config().sea_level));
             [x, previous, z]
         });
-        let ground = points
-            .map(|p| self.base_height_with_biome(p[0], p[2], self.climate_biome_at(p[0], p[2])));
+        let ground = points.map(|p| self.watershed_height(p[0], p[2]));
         // A substantial natural descent can drain through one rock step and a
         // covered lower reach. Only lower the downstream level, never perch water
         // above its original bank support. Limit this to one <=44m cataract per path.
@@ -679,11 +750,10 @@ impl TerraGenerator {
             for extension in 1..=5 {
                 let z = points[index][2] + direction * f64::from(extension) * step;
                 let x = points[index][0] + dx * f64::from(extension) * step;
-                let roof = self.base_height_with_biome(x, z, self.climate_biome_at(x, z));
-                let supported = [-16.0, 0.0, 16.0].into_iter().all(|offset| {
-                    self.base_height_with_biome(x + offset, z, self.climate_biome_at(x + offset, z))
-                        > points[index][1] + 1.0
-                });
+                let roof = self.watershed_height(x, z);
+                let supported = [-16.0, 0.0, 16.0]
+                    .into_iter()
+                    .all(|offset| self.watershed_height(x + offset, z) > points[index][1] + 1.0);
                 if roof < points[index][1] + 10.0 || !supported {
                     break;
                 }
@@ -1517,6 +1587,11 @@ mod tests {
         let mut chunks = crate::streaming::ChunkStore::default();
         for dz in -1..=1 {
             for dx in -1..=1 {
+                let coordinate = [x.div_euclid(16) + dx, z.div_euclid(16) + dz];
+                let prepared =
+                    std::sync::Arc::new(generator.prepare_column(coordinate, true).unwrap());
+                #[cfg(feature = "bevy")]
+                chunks.set_prepared_column_for_test(coordinate, Some(prepared.clone()));
                 for sy in low..=high {
                     let owner = terra_voxel::SectionPos::new(
                         x.div_euclid(16) + dx,
@@ -1524,7 +1599,7 @@ mod tests {
                         z.div_euclid(16) + dz,
                     );
                     let section = generator
-                        .build(owner, 0, &Default::default(), true)
+                        .build_prepared(owner, 0, &Default::default(), &prepared)
                         .unwrap();
                     wakes.extend(section.fluid_wake.iter().copied());
                     if let Some(water) = &section.water {
@@ -1562,40 +1637,24 @@ mod tests {
             "headless and meshed generation must activate identical source lips"
         );
         assert!(
-            wakes.contains(&outlet),
-            "a real open source lip must seed the gravity scheduler: {outlet:?}"
+            wakes.is_empty(),
+            "a pristine cataract must leave the simulation queue empty"
         );
         #[cfg(feature = "bevy")]
         {
-            let mut journal = crate::edits::EditJournal::default();
+            let journal = crate::edits::EditJournal::default();
             let middle = [
                 x as f64 + 0.5,
                 (upstream.level + downstream.level) * 0.5,
                 z as f64 + 0.5,
             ];
-            assert_eq!(
-                crate::water::fluid_motion_at(&terrain, &chunks, &journal, middle),
-                crate::water::FluidMotion::default(),
-                "dry air has no projected waterfall force"
-            );
-            for p in wakes {
-                journal.wake_fluid_neighbors(p);
-            }
             let shaft = downstream.level.ceil() as i64..upstream.level.floor() as i64;
-            for _ in 0..240 {
-                crate::water::simulate_fluid_step(&terrain, &chunks, &mut journal, 1024).unwrap();
-                if shaft
-                    .clone()
-                    .all(|y| journal.fluid([x, y, z]).is_some_and(|c| c.amount > 0))
-                {
-                    break;
-                }
-            }
             assert!(
-                shaft
-                    .clone()
-                    .all(|y| journal.fluid([x, y, z]).is_some_and(|c| c.amount > 0)),
-                "all vertical sections must contain real persistent nonsource flow"
+                shaft.clone().all(|y| {
+                    let cell = chunks.fluid_cell_at(&terrain, &journal, [x, y, z], 0);
+                    cell.amount > 0 && !cell.source
+                }),
+                "the complete 30-metre shaft must already flow at first publication"
             );
             let motion = crate::water::fluid_motion_at(&terrain, &chunks, &journal, middle);
             assert!(motion.immersion > 0.0 && motion.velocity[1] < 0.0);

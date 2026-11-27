@@ -25,6 +25,7 @@ struct SmokeTest {
     mined: Option<[i64; 3]>,
     mining_complete: bool,
     water_check: bool,
+    capture_motion: bool,
     motion_captured: bool,
     started_at: Instant,
     previous_frame: Instant,
@@ -133,6 +134,8 @@ pub(crate) fn install(app: &mut App) {
             mined: None,
             mining_complete: !mine,
             water_check: std::env::args().any(|arg| arg == "--smoke-test-water"),
+            capture_motion: std::env::args().any(|arg| arg == "--smoke-test-water")
+                || std::env::var_os("TERRA_BENCH_CAPTURE_MOTION").is_some(),
             motion_captured: false,
             started_at: now,
             previous_frame: now,
@@ -313,6 +316,7 @@ struct SmokeWorld<'w, 's> {
     renderer: Res<'w, RenderStatus>,
     visibility: Option<Res<'w, terra_render::TerrainVisibility>>,
     water: Res<'w, WaterStatus>,
+    biome_mist: Option<Res<'w, terra_render::SpiritMistStatus>>,
     props: Res<'w, PropRenderStatus>,
     previews: Res<'w, terra_render::RenderBlockPreviews>,
     portrait: Res<'w, terra_render::PlayerPreviewImage>,
@@ -522,12 +526,13 @@ fn smoke_test(
         smoke.captured = true;
         tracing::info!(
             water_tiles = scene.water.visible_tiles,
+        biome_mist = ?scene.biome_mist.as_ref().map(|mist| (mist.volumes, mist.blood_cells, mist.mushroom_cells)),
             water_triangles = scene.water.triangles,
             "Scene capture ready"
         );
         smoke.captured_at = smoke.elapsed;
     }
-    if smoke.water_check
+    if smoke.capture_motion
         && smoke.captured
         && !smoke.motion_captured
         && smoke.elapsed - smoke.captured_at > Duration::from_secs(1)
@@ -720,6 +725,8 @@ fn report_metrics(
         minimum_fps = ?samples.last().filter(|seconds| **seconds > 0.0).map(|seconds| seconds.recip()),
         maximum_fps = ?samples.first().filter(|seconds| **seconds > 0.0).map(|seconds| seconds.recip()),
         worst_frame_ms = ?samples.last().map(|seconds| seconds * 1000.0),
+        frames_over_60_fps_budget = samples.iter().filter(|&&seconds| seconds > 1.0 / 60.0).count(),
+        p50_frame_ms = percentile(&samples, 0.50) * 1000.0,
         frames_below_32_fps = samples.iter().filter(|&&seconds| seconds > 1.0 / 32.0).count(),
         p95_frame_ms = percentile(&samples, 0.95) * 1000.0,
         p99_frame_ms = percentile(&samples, 0.99) * 1000.0,
@@ -730,6 +737,16 @@ fn report_metrics(
         occluded_sections = scene.renderer.occluded_sections,
         mesh_assets = scene.meshes.len(),
         terrain_composition_jobs = scene.renderer.completed_mesh_jobs,
+        reused_shadow_meshes = scene.renderer.reused_shadow_meshes,
+        reused_edit_meshes = scene.renderer.reused_edit_meshes,
+        reused_edit_bytes = scene.renderer.reused_edit_bytes,
+        reused_streaming_meshes = scene.renderer.reused_streaming_meshes,
+        reused_streaming_bytes = scene.renderer.reused_streaming_bytes,
+        reused_wind_meshes = scene.renderer.reused_wind_meshes,
+        reused_wind_bytes = scene.renderer.reused_wind_bytes,
+        peak_deferred_resident_bytes = scene.renderer.peak_deferred_resident_bytes,
+        retained_draw_entities = scene.renderer.retained_draw_entities,
+        reused_shadow_bytes = scene.renderer.reused_shadow_bytes,
         far_groups = scene.renderer.far_groups,
         far_source_batches = scene.renderer.far_source_batches,
         far_cache_bytes = scene.renderer.far_cache_bytes,
@@ -744,6 +761,7 @@ fn report_metrics(
         prop_composition_jobs = scene.props.completed_jobs,
         prop_composition_worker_seconds = scene.props.composition_seconds,
         water_tiles = scene.water.visible_tiles,
+        biome_mist = ?scene.biome_mist.as_ref().map(|mist| (mist.volumes, mist.blood_cells, mist.mushroom_cells)),
         peak_admitted_upload_vertices = scene.upload.peak_admitted_vertices,
         peak_admitted_upload_bytes = scene.upload.peak_admitted_bytes,
         deferred_upload_batches = scene.upload.deferred_batches,

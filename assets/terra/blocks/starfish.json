@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": 564,
+  "name": "Starfish",
+  "description": "Five orange arms spread across the seafloor.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 0.7,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/starfish.glb",
+  "collision_boxes": [],
+  "textures": {}
+}

@@ -148,9 +148,51 @@ fn help_is_five_styled_commands_per_page_and_clicks_do_not_send_chat() {
         CATALOGUE.len() - (pages - 1) * HELP_PAGE_SIZE
     );
     assert!(!view.has_help_next);
-    app.world_mut().resource_mut::<ClientChat>().clear();
+    app.world_mut()
+        .resource_mut::<ClientChat>()
+        .notice("Keep this message");
+    app.world_mut()
+        .write_message(ChatAction::Change("Keep this draft".into()));
+    app.world_mut().write_message(ChatAction::DismissHelp);
     app.update();
-    assert!(!app.world().resource::<ChatView>().help);
+    let view = app.world().resource::<ChatView>();
+    assert!(view.open && !view.help);
+    assert_eq!(view.draft, "Keep this draft");
+    assert_eq!(view.rows[0].text, "Keep this message");
+    app.world_mut()
+        .write_message(ChatAction::Change("/help".into()));
+    app.world_mut().write_message(ChatAction::Send);
+    app.update();
+    assert!(app.world().resource::<ChatView>().help);
+}
+
+#[test]
+fn suggestion_list_preserves_manual_scroll_until_the_next_keyboard_navigation() {
+    let mut app = app();
+    app.add_systems(PostUpdate, focus_and_scroll);
+    let list = app
+        .world_mut()
+        .spawn((
+            ElementId("chat-suggestions".into()),
+            ComputedNode {
+                size: Vec2::new(340.0, 162.0),
+                content_size: Vec2::new(340.0, 780.0),
+                ..default()
+            },
+            ScrollPosition::default(),
+        ))
+        .id();
+    key(&mut app, KeyCode::Slash);
+    let manual = 270.0;
+    app.world_mut().get_mut::<ScrollPosition>(list).unwrap().0.y = manual;
+    app.update();
+    app.update();
+    assert_eq!(app.world().get::<ScrollPosition>(list).unwrap().0.y, manual);
+    key(&mut app, KeyCode::ArrowDown);
+    assert_eq!(app.world().get::<ScrollPosition>(list).unwrap().0.y, 26.0);
+    app.world_mut().get_mut::<ScrollPosition>(list).unwrap().0.y = manual;
+    app.update();
+    assert_eq!(app.world().get::<ScrollPosition>(list).unwrap().0.y, manual);
 }
 
 #[test]

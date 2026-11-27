@@ -8547,6 +8547,7 @@ dependencies = [
  "terra-ui",
  "terra-voxel",
  "terra-world",
+ "tikv-jemallocator",
  "tilt-ui",
  "tilt-ui-runtime",
  "tracing",
@@ -8614,6 +8615,8 @@ name = "terra-render"
 version = "1.0.0"
 dependencies = [
  "bevy",
+ "blake3",
+ "bytemuck",
  "naga",
  "serde",
  "serde_json",
@@ -8689,6 +8692,7 @@ dependencies = [
  "bevy",
  "bevy_math",
  "fastnoise-lite",
+ "gltf",
  "noise",
  "serde",
  "serde_json",

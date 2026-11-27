@@ -42,7 +42,13 @@ pub fn climate_step(animal: &mut Creature, habitat: &Habitat, dt: f32) -> bool {
     }
     if matches!(
         animal.kind,
-        Kind::Cow | Kind::Pig | Kind::Sheep | Kind::Horse | Kind::Bear
+        Kind::Cow
+            | Kind::Pig
+            | Kind::Sheep
+            | Kind::Horse
+            | Kind::Bear
+            | Kind::Elephant
+            | Kind::Zebra
     ) {
         let heat = ((climate.temperature - 20.0) / 15.0).clamp(0.0, 2.0);
         let cold = ((5.0 - climate.temperature) / 15.0).clamp(0.0, 2.0);

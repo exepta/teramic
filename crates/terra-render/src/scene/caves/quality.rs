@@ -115,6 +115,8 @@ fn update(
             }
         }
         let volumetric = active
+            && cave.roof_coverage > 0.02
+            && !cave.inside_lair
             && cave.gallery_air() > 0.001
             && underwater.blend < 0.01
             && graphics
@@ -195,6 +197,7 @@ mod tests {
     fn quality_switches_real_components_and_cleans_them_on_exit() {
         let mut app = App::new();
         app.insert_resource(super::super::CaveState {
+            roof_coverage: 1.,
             blend: 1.0,
             ceiling: 12.0,
             beam_depths: Vec4::splat(12.),
@@ -302,6 +305,7 @@ mod tests {
     fn underwater_and_msaa_transitions_release_only_incompatible_cave_passes() {
         let mut app = App::new();
         app.insert_resource(super::super::CaveState {
+            roof_coverage: 1.,
             blend: 1.0,
             ceiling: 12.0,
             beam_depths: Vec4::splat(12.),
@@ -379,6 +383,7 @@ mod tests {
                 ..default()
             })
             .insert_resource(super::super::CaveState {
+                roof_coverage: 1.,
                 ceiling: 12.0,
                 beam_depths: Vec4::splat(12.),
                 salt_skylight: 1.,

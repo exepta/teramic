@@ -1,6 +1,6 @@
 use super::{
     DetailLevel, RenderStatus, RenderedSections,
-    builder::{MeshBatch, RenderOptions, compose_section_with_segments},
+    builder::{MeshBatch, RenderOptions, compose_section_with_leaf_detail},
     lod::{distance_squared, select_level},
 };
 use crate::blocks::BlockAssets;
@@ -80,6 +80,7 @@ pub(crate) fn refresh_growth(
     Arc::make_mut(geometry).mineral_growth = growth;
 }
 pub(crate) struct RenderJob {
+    pub folded_leaves: Option<super::lod::FoldedLeaves>,
     pub ready: Option<MeshResult>,
     pub micro_detail: bool,
     pub epoch: u64,
@@ -115,6 +116,8 @@ pub(crate) struct MeshQueue {
     dirty: bool,
     selection_dirty: bool,
     initial_ready: bool,
+    frame_load: f32,
+    pace_workers: bool,
     arrival_scan: bool,
     arrivals: HashSet<SectionPos>,
     sweep: Option<SelectionSweep>,
@@ -126,6 +129,34 @@ struct SelectionSweep {
 }
 
 impl MeshQueue {
+    /// Large woodlands can fill all composition slots with multi-megabyte jobs
+    /// while the render thread is still publishing their predecessors. Retain
+    /// full throughput on the loading screen and whenever the frame has room.
+    fn play_job_limit(&mut self, configured: usize, frame_seconds: f32, fps_limit: u16) -> usize {
+        if !self.initial_ready || frame_seconds <= 0.0 {
+            self.frame_load = 1.0;
+            self.pace_workers = false;
+            return configured;
+        }
+        let target = if fps_limit == 0 {
+            60
+        } else {
+            fps_limit.min(60)
+        };
+        let load = (frame_seconds * f32::from(target)).min(3.0);
+        self.frame_load += (load - self.frame_load) * 0.0625;
+        if self.frame_load > 1.05 {
+            self.pace_workers = true;
+        } else if self.frame_load < 0.87 {
+            self.pace_workers = false;
+        }
+        if self.pace_workers {
+            configured.min(3)
+        } else {
+            configured
+        }
+    }
+
     fn uploads_consumed(chunks: &ChunkStore, mut hidden: impl FnMut(SectionPos) -> bool) -> bool {
         // Portal-culled sections deliberately retain CPU geometry for later
         // exposure. They must not keep the renderer in unbudgeted startup mode.
@@ -275,17 +306,13 @@ pub(super) fn interactive_edit(
     journal: &EditJournal,
     rendered: &RenderedSections,
 ) -> bool {
-    journal.revision(position)
-        != rendered
-            .block_revisions
-            .get(&position)
-            .copied()
-            .unwrap_or(0)
+    journal.revision(position) != rendered.block_revision(position).unwrap_or(0)
 }
 #[derive(Default)]
 pub(crate) struct AppearanceInputs {
     heraldry_revision: Option<(bool, u64)>,
     journal_dirty: bool,
+    section_revisions: HashMap<SectionPos, (u64, u64)>,
     chunks_dirty: bool,
     fluid_revisions: HashMap<[i64; 2], u64>,
     columns: HashSet<[i64; 2]>,
@@ -295,12 +322,111 @@ pub(crate) struct AppearanceInputs {
     water: MessageCursor<WaterPublished>,
     imported: MessageCursor<SectionEditApplied>,
 }
+impl AppearanceInputs {
+    fn refresh_journal(
+        &mut self,
+        journal: &EditJournal,
+        chunks: &ChunkStore,
+        terrain: &terra_world::TerraGenerator,
+        cache: &mut GeometryCache,
+        arrivals: &mut HashSet<SectionPos>,
+    ) {
+        // Gameplay and clock updates share the journal with visual edits. Compare
+        // the sparse source revisions, including removals when a replica is replaced.
+        let before = std::mem::take(&mut self.section_revisions);
+        cache.1.clear();
+        let mut fluid_revisions = HashMap::<[i64; 2], u64>::new();
+        for section in journal.changed_sections() {
+            let column = [section.x, section.z];
+            let block = journal.revision(section);
+            let appearance = journal.appearance_epoch(section);
+            if block != 0 || appearance != 0 {
+                self.section_revisions.insert(section, (block, appearance));
+            }
+            if block != 0 {
+                let sum = cache.1.entry(column).or_default();
+                *sum = sum.wrapping_add(block);
+            }
+            let fluid = journal.fluid_epoch(section);
+            if fluid != 0 {
+                let sum = fluid_revisions.entry(column).or_default();
+                *sum = sum.wrapping_add(fluid);
+            }
+        }
+
+        let mut changed_columns = HashSet::new();
+        if before != self.section_revisions {
+            for &position in before.keys().chain(self.section_revisions.keys()) {
+                let old = before.get(&position).copied().unwrap_or_default();
+                let new = self
+                    .section_revisions
+                    .get(&position)
+                    .copied()
+                    .unwrap_or_default();
+                if old.0 != new.0 {
+                    changed_columns.insert([position.x, position.z]);
+                }
+                if old.1 != new.1 && chunks.loaded.contains_key(&position) {
+                    arrivals.insert(position);
+                }
+            }
+        }
+        // Block edits affect the whole roof column, including salt formations
+        // across vertical seams. Coastal exposure also samples adjacent columns.
+        let mut affected = neighboring_columns(&changed_columns);
+        if self.fluid_revisions != fluid_revisions {
+            self.fluid_revisions = fluid_revisions;
+            for (&column, state) in &mut cache.3 {
+                let before = state.epoch;
+                state.refresh(
+                    chunks,
+                    column,
+                    terrain,
+                    journal,
+                    self.fluid_revisions.get(&column).copied().unwrap_or(0),
+                );
+                if state.epoch != before {
+                    affected.insert(column);
+                }
+            }
+        }
+        for column in affected {
+            cache.4.remove(&column);
+            if let Some(watched) = cache.5.columns.get(&column) {
+                arrivals.extend(&watched.owners);
+            }
+        }
+    }
+}
+
 struct CachedGeometry {
+    foliage: Option<u8>,
     salt: bool,
     coastal: bool,
     epoch: u64,
     geometry: Arc<BlockMesh>,
     models: Option<Arc<super::custom::ModelSnapshot>>,
+}
+
+impl CachedGeometry {
+    fn folded_leaves(
+        &self,
+        position: SectionPos,
+        world: &MeshWorld,
+        previous: Option<&super::RenderedSection>,
+        level: DetailLevel,
+    ) -> Option<super::lod::FoldedLeaves> {
+        self.foliage.map(|occupied| {
+            super::lod::select_folded_leaves(
+                position,
+                world.focus.0,
+                previous.and_then(|entry| entry.folded_leaves),
+                level,
+                world.config.client.blocks.leaf_geometry_quality,
+                occupied,
+            )
+        })
+    }
 }
 
 #[derive(Default)]
@@ -554,24 +680,25 @@ fn capture_models(
     let edits = journal
         .snapshot(section.position())
         .map_err(|error| error.to_string())?;
-    let mut models = super::custom::capture(section, templates, journal, |global| {
-        edits
-            .get(&global)
-            .copied()
-            .or_else(|| chunks.block_at(global))
-    });
+    let coordinate = [section.position().x, section.position().z];
+    let column = chunks.prepared_column(coordinate);
+    let mut models = super::custom::capture_prepared(
+        section,
+        templates,
+        journal,
+        column.as_deref(),
+        &edits,
+        |global| chunks.block_at(global),
+    );
     if let Some(models) = &mut models {
         // Joinery can use persisted neighbor metadata; physical support cannot
         // stand in for a neighboring section which has not actually loaded.
-        let coordinate = [section.position().x, section.position().z];
-        let domains = chunks
-            .prepared_column(coordinate)
-            .map_or_else(Vec::new, |column| {
-                column
-                    .village_settlements()
-                    .map(|site| site.domain())
-                    .collect()
-            });
+        let domains = column.map_or_else(Vec::new, |column| {
+            column
+                .village_settlements()
+                .map(|site| site.domain())
+                .collect()
+        });
         models.set_domains(domains);
         models.refresh_heraldry(section.position(), &journal.gameplay().kingdoms);
         models.refresh_funnel_supports(section.position(), chunks, journal);
@@ -688,25 +815,6 @@ impl GeometryCache {
         }
     }
 
-    fn update_column_revisions(&mut self, revisions: HashMap<[i64; 2], u64>) {
-        let changed: HashSet<_> = revisions
-            .iter()
-            .filter_map(|(&column, &revision)| {
-                (self.1.get(&column).copied().unwrap_or(0) != revision).then_some(column)
-            })
-            .chain(
-                self.1
-                    .keys()
-                    .filter(|column| !revisions.contains_key(*column))
-                    .copied(),
-            )
-            .collect();
-        for column in neighboring_columns(&changed) {
-            self.4.remove(&column);
-        }
-        self.1 = revisions;
-    }
-
     pub(crate) fn invalidate_details(&mut self) {
         self.6 = self.6.wrapping_add(1);
     }
@@ -795,6 +903,7 @@ impl GeometryCache {
         self.0.insert(
             position,
             CachedGeometry {
+                foliage: super::lod::foliage_octants(&geometry.faces),
                 coastal: false,
                 salt: !geometry.segments.is_empty()
                     || geometry
@@ -818,6 +927,7 @@ impl GeometryCache {
         self.0.insert(
             position,
             CachedGeometry {
+                foliage: super::lod::foliage_octants(&geometry.faces),
                 coastal: false,
                 salt: !geometry.segments.is_empty()
                     || geometry
@@ -851,6 +961,7 @@ impl GeometryCache {
 
 #[derive(SystemParam)]
 pub(crate) struct MeshWorld<'w, 's> {
+    time: Option<Res<'w, Time<Real>>>,
     visibility: Option<Res<'w, super::visibility::TerrainVisibility>>,
     chunks: ResMut<'w, ChunkStore>,
     generation: Option<Res<'w, terra_world::streaming::WorldGeneration>>,
@@ -870,7 +981,7 @@ pub(crate) struct MeshWorld<'w, 's> {
     terrain_sections: Query<'w, 's, &'static super::TerrainSection>,
     entering_removed: RemovedComponents<'w, 's, crate::transitions::EnteringChunk>,
     foliage_reference: Option<Res<'w, crate::foliage::FoliageReferenceBenchmark>>,
-    exact_shadows: super::shadows::ExactInputs<'w>,
+    exact_shadows: super::shadows::ExactInputs<'w, 's>,
 }
 
 fn needs_mesh(
@@ -940,8 +1051,10 @@ fn needs_mesh(
         previous.map(|r| r.micro_detail),
         world.config.client.blocks,
     );
+    let folded_leaves = cached.folded_leaves(position, world, previous, level);
     !previous.is_some_and(|r| {
-        r.mesh_epoch == cached.epoch
+        r.folded_leaves == folded_leaves
+            && r.mesh_epoch == cached.epoch
             && r.micro_detail == micro_detail
             && r.detail_level == level
             && r.appearance_epoch == cache.appearance_epoch(position, &world.journal)
@@ -1077,6 +1190,14 @@ pub(crate) fn dispatch_meshes(
     // Clear state from the previous world before recording this world's first
     // publications. Otherwise a full worker pool can permanently lose an edit.
     queue.update_initial_ready(world.terrain.is_changed(), initial_ready);
+    let normal_job_limit = queue.play_job_limit(
+        world.config.client.max_mesh_jobs,
+        world.time.as_ref().map_or(0., |time| time.delta_secs()),
+        world
+            .graphics
+            .as_ref()
+            .map_or(0, |graphics| graphics.fps_limit),
+    );
     // A confirmed block is already solid for gameplay. Its published remesh must
     // not wait for a time-sliced full-world LOD sweep or obsolete render workers.
     for &position in &published {
@@ -1169,7 +1290,6 @@ pub(crate) fn dispatch_meshes(
     let dispatch_started = Instant::now();
     queue.selection_dirty |= visibility_changed
         || focus_changed
-        || world.journal.is_changed()
         || world.config.is_changed()
         || world.terrain.is_changed()
         || assets.is_changed();
@@ -1205,7 +1325,7 @@ pub(crate) fn dispatch_meshes(
     if arrival_scan {
         world
             .rendered
-            .block_revisions
+            .presentations
             .retain(|p, _| world.chunks.loaded.contains_key(p));
         jobs.0.retain(|p, job| {
             let loaded = world.chunks.loaded.contains_key(p);
@@ -1232,7 +1352,7 @@ pub(crate) fn dispatch_meshes(
             world.chunks.loaded.contains_key(&position)
         });
         for position in removed {
-            world.rendered.block_revisions.remove(&position);
+            world.rendered.presentations.remove(&position);
             jobs.cancel(&position, meshes.as_deref_mut());
             cache.forget(position);
         }
@@ -1246,7 +1366,7 @@ pub(crate) fn dispatch_meshes(
         .positions
         .iter()
         .any(|&p| interactive_edit(p, &world.journal, &world.rendered));
-    let job_limit = world.config.client.max_mesh_jobs + usize::from(edit_waiting);
+    let job_limit = normal_job_limit.saturating_add(usize::from(edit_waiting));
     if let Some(templates) = assets
         .templates
         .as_ref()
@@ -1254,39 +1374,13 @@ pub(crate) fn dispatch_meshes(
     {
         if appearance_inputs.journal_dirty {
             let _scope = terra_core::profiling::ScopeTimer::new("terrain.refresh.appearance");
-            let mut revisions = HashMap::new();
-            appearance_inputs.fluid_revisions.clear();
-            for section in world.journal.changed_sections() {
-                let epoch = revisions.entry([section.x, section.z]).or_insert(0_u64);
-                *epoch = epoch.wrapping_add(world.journal.revision(section));
-                let fluid = appearance_inputs
-                    .fluid_revisions
-                    .entry([section.x, section.z])
-                    .or_default();
-                *fluid = fluid.wrapping_add(world.journal.fluid_epoch(section));
-            }
-            cache.update_column_revisions(revisions);
-            let mut water_changed = Vec::new();
-            for (&column, state) in &mut cache.3 {
-                let before = state.epoch;
-                state.refresh(
-                    &world.chunks,
-                    column,
-                    &world.terrain.0,
-                    &world.journal,
-                    appearance_inputs
-                        .fluid_revisions
-                        .get(&column)
-                        .copied()
-                        .unwrap_or(0),
-                );
-                if state.epoch != before {
-                    water_changed.push(column);
-                }
-            }
-            for column in water_changed {
-                cache.4.remove(&column);
-            }
+            appearance_inputs.refresh_journal(
+                &world.journal,
+                &world.chunks,
+                &world.terrain.0,
+                &mut cache,
+                &mut queue.arrivals,
+            );
             appearance_inputs.journal_dirty = false;
         }
         if appearance_inputs.chunks_dirty {
@@ -1321,6 +1415,7 @@ pub(crate) fn dispatch_meshes(
             .is_none_or(|(source, _)| !Arc::ptr_eq(source, templates))
         {
             let mut coarse = templates.as_ref().clone();
+            coarse.block_details.micro_geometry = false;
             for block in coarse.blocks.values_mut() {
                 block.surface = None;
             }
@@ -1426,7 +1521,7 @@ pub(crate) fn dispatch_meshes(
             else {
                 break;
             };
-            if jobs.0.len() >= world.config.client.max_mesh_jobs
+            if jobs.0.len() >= normal_job_limit
                 && !interactive_edit(position, &world.journal, &world.rendered)
             {
                 queue.enqueue(position);
@@ -1510,6 +1605,7 @@ pub(crate) fn dispatch_meshes(
                 cache.0.insert(
                     position,
                     CachedGeometry {
+                        foliage: super::lod::foliage_octants(&geometry.faces),
                         coastal,
                         salt: !geometry.segments.is_empty()
                             || geometry
@@ -1528,8 +1624,11 @@ pub(crate) fn dispatch_meshes(
             if cached.epoch != section.mesh_epoch {
                 continue;
             }
-            if world.rendered.sections.get(&position).is_some_and(|r| {
-                r.mesh_epoch == cached.epoch
+            let previous = world.rendered.sections.get(&position);
+            let folded_leaves = cached.folded_leaves(position, &world, previous, level);
+            if previous.is_some_and(|r| {
+                r.folded_leaves == folded_leaves
+                    && r.mesh_epoch == cached.epoch
                     && r.micro_detail == micro_detail
                     && r.detail_level == level
                     && r.appearance_epoch == cache.appearance_epoch(position, &world.journal)
@@ -1541,20 +1640,18 @@ pub(crate) fn dispatch_meshes(
                 && cached.models.is_none()
                 && !world.rendered.sections.contains_key(&position)
             {
-                world
-                    .rendered
-                    .block_revisions
-                    .insert(position, world.journal.revision(position));
+                world.rendered.record_presentation(
+                    position,
+                    world.journal.revision(position),
+                    Some(cached.epoch),
+                );
                 continue;
             }
             let mut geometry = cached.geometry.clone();
             let models = cached.models.clone();
             let epoch = cached.epoch;
             let salt = cached.salt;
-            let seasonal_foliage = geometry
-                .faces
-                .iter()
-                .any(|face| terra_voxel::MaterialId::FOLIAGE.contains(&face.material));
+            let seasonal_foliage = cached.foliage.is_some();
             let exposure = cache
                 .4
                 .entry([position.x, position.z])
@@ -1619,6 +1716,20 @@ pub(crate) fn dispatch_meshes(
             } else {
                 None
             };
+            let lava_surface = world
+                .chunks
+                .loaded
+                .get(&position)
+                .filter(|s| super::lava::near_lava(&s.data, &world.chunks))
+                .map(|s| {
+                    super::lava::capture(&s.data, &world.chunks, &world.journal, |raw| {
+                        templates
+                            .blocks
+                            .get(&raw)
+                            .is_some_and(|block| !block.model.is_empty())
+                    })
+                })
+                .unwrap_or_default();
             let appearance_epoch = cache.appearance_epoch(position, &world.journal);
             let options =
                 RenderOptions {
@@ -1635,10 +1746,29 @@ pub(crate) fn dispatch_meshes(
                     tints: Arc::new(world.journal.tint_snapshot(position)),
                     conditions: world.journal.surface_snapshot(position),
                 };
+            let local_crowns =
+                world.config.client.chunk_animation == terra_core::ChunkAnimation::None;
             let pack_foliage =
                 world.foliage_reference.is_none() && crate::foliage::packing::enabled();
+            let canopy_uv_slots = world
+                .exact_shadows
+                .foliage
+                .as_ref()
+                .map(|a| a.primary_uv_only.clone());
             let pack_static = super::builder::static_frame_packing_enabled();
             let shadow_proxies = super::shadows::enabled(world.graphics.as_deref());
+            let blade_shadow_slots = world
+                .exact_shadows
+                .foliage
+                .as_ref()
+                .filter(|_| {
+                    shadow_proxies && pack_foliage && super::shadows::leaf_shadows_enabled()
+                })
+                .map(|assets| assets.opaque_blades.clone());
+            // Near shells ignore foliage faces and mineral/segment animation.
+            // Use their canonical source even when the color mesh splits leaves.
+            let near_shadow_geometry =
+                (shadow_proxies && level == DetailLevel::Near).then(|| geometry.clone());
             let exact_shadows = if shadow_proxies && level != DetailLevel::Near {
                 exact_shadow_materials
                     .get_or_insert_with(|| world.exact_shadows.capture(&assets))
@@ -1646,6 +1776,7 @@ pub(crate) fn dispatch_meshes(
             } else {
                 None
             };
+            let prepared = world.chunks.prepared_column([position.x, position.z]);
             let task = AsyncComputeTaskPool::get().spawn(async move {
                 let start = std::time::Instant::now();
                 if let Some(edits) = mineral_edits.as_ref()
@@ -1671,28 +1802,54 @@ pub(crate) fn dispatch_meshes(
                     }
                 }
                 let result = match models {
-                    Some(models) => {
-                        super::custom::compose(&geometry, &models, &templates, position, &options)
-                    }
-                    None => compose_section_with_segments(
+                    Some(models) => super::custom::compose_with_leaf_detail(
+                        &geometry,
+                        &models,
+                        &templates,
+                        position,
+                        &options,
+                        folded_leaves.unwrap_or(super::lod::FoldedLeaves::FULL),
+                        prepared.as_deref(),
+                    ),
+                    None => compose_section_with_leaf_detail(
                         &geometry.faces,
                         &templates,
                         position,
                         &options,
                         &geometry.mineral_growth,
                         &geometry.segments,
+                        folded_leaves.unwrap_or(super::lod::FoldedLeaves::FULL),
+                        prepared.as_deref(),
                     ),
                 };
                 let result = result.and_then(|mut batches| {
+                    // Far replicated sections can arrive as mesh geometry before their
+                    // voxel base. Their static reservoir still needs its animated material.
+                    if let Some(template) = templates.blocks.get(&terra_world::lava::LAVA) {
+                        let terrain = options.terrain.as_ref().zip(position.origin().ok());
+                        super::lava::surface(
+                            &mut batches,
+                            &geometry.faces,
+                            template.face_materials[3],
+                            &lava_surface,
+                            |p| {
+                                terrain.map_or([0.; 2], |(t, origin)| {
+                                    t.lava_current(
+                                        origin[0] as f64 + f64::from(p[0]),
+                                        origin[2] as f64 + f64::from(p[2]),
+                                    )
+                                })
+                            },
+                        );
+                    }
                     if let Some(edges) = &material_edges {
                         edges.apply(&mut batches, &templates);
                     }
                     super::lighting::apply(&mut batches, &geometry.occluders, &templates);
-                    if shadow_proxies {
-                        super::shadows::append(&mut batches, &geometry.faces, &templates, level)?;
-                        if let Some(materials) = &exact_shadows {
-                            super::shadows::append_exact(&mut batches, materials, level)?;
-                        }
+                    if let Some(source) = &near_shadow_geometry {
+                        super::shadows::append(&mut batches, &source.faces, &templates, level)?;
+                    } else if let Some(materials) = &exact_shadows {
+                        super::shadows::append_exact(&mut batches, materials, level)?;
                     }
                     if seasonal_foliage
                         && let (Some(terrain), Some(edits), Ok(origin)) =
@@ -1720,12 +1877,14 @@ pub(crate) fn dispatch_meshes(
                         );
                     }
                     for batch in &mut batches {
-                        let foliage = terra_voxel::MaterialId::FOLIAGE
-                            .into_iter()
-                            .filter_map(|id| templates.blocks.get(&id))
-                            .any(|block| block.face_materials.contains(&batch.material));
-                        if foliage {
+                        if templates.foliage_material(batch.material) {
                             if pack_foliage {
+                                if canopy_uv_slots
+                                    .as_ref()
+                                    .is_some_and(|slots| slots.contains(&batch.material))
+                                {
+                                    crate::foliage::packing::omit_unused_exposure(batch);
+                                }
                                 crate::foliage::packing::pack(batch);
                             }
                         } else if pack_static
@@ -1736,13 +1895,40 @@ pub(crate) fn dispatch_meshes(
                             batch.pack_static_frame();
                         }
                     }
-                    let mut batches = crate::upload_budget::split_batches(batches)?;
+                    if let Some(slots) = &blade_shadow_slots
+                        && let Some(folded) = folded_leaves
+                        && templates.block_details.leaf_geometry_quality
+                            == terra_core::BlockDetailQuality::High
+                        && super::shadows::profile_shadows_enabled()
+                    {
+                        super::shadows::append_profiles(&mut batches, slots, position, folded);
+                    }
+                    for batch in &mut batches {
+                        batch.leaf_shadow_sides = Vec::new();
+                    }
+                    let mut batches =
+                        crate::upload_budget::split_terrain_batches(batches, local_crowns)?;
                     for batch in &mut batches {
                         batch.compact_indices();
                         if !batch.shadow_only && !templates.water_material(batch.material) {
                             super::precision::compact_batch_tints(batch);
+                            super::precision::pack_surface_uvs(
+                                batch,
+                                templates.foliage_material(batch.material),
+                            );
                         }
                     }
+                    if let Some(slots) = blade_shadow_slots {
+                        super::shadows::append_leaf_shadows(
+                            &mut batches,
+                            &slots,
+                            folded_leaves.is_some_and(|folded| folded.nearby),
+                        )?;
+                    }
+                    if let Some(source) = &near_shadow_geometry {
+                        super::resident::ShadowPiece::identify(&mut batches, source, &templates);
+                    }
+                    super::resident::StaticPiece::identify(&mut batches, &templates);
                     Ok(batches)
                 });
                 (result, start.elapsed().as_secs_f64())
@@ -1751,6 +1937,7 @@ pub(crate) fn dispatch_meshes(
                 position,
                 RenderJob {
                     ready: None,
+                    folded_leaves,
                     micro_detail,
                     epoch,
                     appearance_epoch,
@@ -1798,6 +1985,27 @@ pub(crate) fn focus_bucket(focus: [f64; 3]) -> [i64; 3] {
 #[cfg(test)]
 mod dispatch_tests {
     use super::*;
+
+    #[test]
+    fn streaming_concurrency_tracks_frame_pressure_and_respects_lower_player_limits() {
+        let mut queue = MeshQueue::default();
+        assert_eq!(queue.play_job_limit(8, 0.10, 0), 8);
+        queue.initial_ready = true;
+        for _ in 0..16 {
+            queue.play_job_limit(8, 0.025, 0);
+        }
+        assert_eq!(queue.play_job_limit(8, 1.0 / 60.0, 0), 3);
+        assert_eq!(queue.play_job_limit(2, 1.0 / 60.0, 0), 2);
+        for _ in 0..48 {
+            queue.play_job_limit(8, 0.010, 0);
+        }
+        assert_eq!(queue.play_job_limit(8, 0.010, 0), 8);
+        for _ in 0..48 {
+            assert_eq!(queue.play_job_limit(8, 1.0 / 30.0, 30), 8);
+        }
+        queue.initial_ready = false;
+        assert_eq!(queue.play_job_limit(8, 0.1, 60), 8);
+    }
 
     #[test]
     fn portal_culled_cpu_meshes_allow_the_play_budget_but_visible_pending_meshes_do_not() {
@@ -2057,7 +2265,7 @@ mod dispatch_tests {
         assert_eq!(queue.pop_for_dispatch(0, Duration::ZERO), Some(far));
         assert_eq!(queue.pop_for_dispatch(1, Duration::ZERO), Some(near));
         assert_eq!(queue.pop_for_dispatch(2, Duration::ZERO), Some(halo));
-        rendered.block_revisions.insert(far, journal.revision(far));
+        rendered.record_presentation(far, journal.revision(far), None);
         assert!(
             !interactive_edit(far, &journal, &rendered),
             "priority ends after the actual revision is visible"
@@ -2307,28 +2515,78 @@ mod stream_exposure_tests {
     #[test]
     fn appearance_only_journal_updates_retain_exposure_and_block_edits_invalidate_only_their_halo()
     {
+        let mut inputs = AppearanceInputs::default();
         let mut cache = GeometryCache::default();
-        let local = [-2, -3];
-        let neighbor = [-1, -3];
-        let distant = [20, 30];
+        let mut arrivals = HashSet::new();
+        let mut journal = EditJournal::default();
+        let mut chunks = ChunkStore::default();
+        let terrain = terra_world::TerraGenerator::new(Default::default()).unwrap();
+        let local = SectionPos::new(-2, 1, -3);
+        let neighbor = SectionPos::new(-1, 2, -3);
+        let distant = SectionPos::new(20, 4, 30);
         let snapshot = mask(32);
-        for column in [local, neighbor, distant] {
-            cache.4.insert(column, Some(snapshot.clone()));
-        }
-        cache.1.insert(local, 7);
-        for _ in 0..128 {
-            cache.update_column_revisions(HashMap::from([(local, 7)]));
-            assert_eq!(
-                cache.4.len(),
-                3,
-                "rain wetness or remote inventory state must not flush all captured roofs"
+        for position in [local, neighbor, distant] {
+            chunks.loaded.insert(
+                position,
+                terra_world::streaming::LoadedSection {
+                    data: terra_voxel::BlockSection::empty(position).unwrap(),
+                    mesh: None,
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: Vec::new(),
+                },
             );
-            assert!(Arc::ptr_eq(cache.4[&local].as_ref().unwrap(), &snapshot));
+            cache.5.watch(position, Some(snapshot.clone()));
+            cache
+                .4
+                .insert([position.x, position.z], Some(snapshot.clone()));
         }
-        cache.update_column_revisions(HashMap::from([(local, 8)]));
-        assert!(!cache.4.contains_key(&local));
-        assert!(!cache.4.contains_key(&neighbor));
-        assert!(Arc::ptr_eq(cache.4[&distant].as_ref().unwrap(), &snapshot));
+
+        journal.record(local.origin().unwrap(), 3).unwrap();
+        inputs.refresh_journal(&journal, &chunks, &terrain, &mut cache, &mut arrivals);
+        assert_eq!(arrivals, HashSet::from([local, neighbor]));
+        assert!(!cache.4.contains_key(&[local.x, local.z]));
+        assert!(!cache.4.contains_key(&[neighbor.x, neighbor.z]));
+        assert!(Arc::ptr_eq(
+            cache.4[&[distant.x, distant.z]].as_ref().unwrap(),
+            &snapshot
+        ));
+
+        arrivals.clear();
+        for day in 1..=128 {
+            journal.clock = Some(terra_core::WorldClock {
+                day,
+                ..Default::default()
+            });
+            inputs.refresh_journal(&journal, &chunks, &terrain, &mut cache, &mut arrivals);
+            assert!(
+                arrivals.is_empty(),
+                "clock updates cannot restart terrain selection"
+            );
+        }
+        journal
+            .set_surface_condition(
+                distant.origin().unwrap(),
+                terra_world::environment::SurfaceCondition {
+                    snow: 0.5,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        inputs.refresh_journal(&journal, &chunks, &terrain, &mut cache, &mut arrivals);
+        assert_eq!(arrivals, HashSet::from([distant]));
+        assert!(cache.4.contains_key(&[distant.x, distant.z]));
+
+        arrivals.clear();
+        inputs.refresh_journal(
+            &EditJournal::default(),
+            &chunks,
+            &terrain,
+            &mut cache,
+            &mut arrivals,
+        );
+        assert_eq!(arrivals, HashSet::from([local, neighbor, distant]));
     }
 
     #[test]
@@ -2480,6 +2738,7 @@ mod stream_exposure_tests {
                     owner,
                     RenderJob {
                         ready: Some((Ok(batches), 0.0)),
+                        folded_leaves: None,
                         micro_detail: true,
                         epoch: 0,
                         appearance_epoch: epoch,
@@ -2499,7 +2758,7 @@ mod stream_exposure_tests {
             assert!(
                 app.world()
                     .resource::<RenderedSections>()
-                    .block_revisions
+                    .presentations
                     .contains_key(&unrelated),
                 "one pending column cannot block unrelated uploads"
             );
@@ -2573,6 +2832,7 @@ mod stream_exposure_tests {
             position,
             RenderJob {
                 ready: Some((Ok(Vec::new()), 0.0)),
+                folded_leaves: None,
                 micro_detail: true,
                 epoch: 0,
                 appearance_epoch: old_epoch,

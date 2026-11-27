@@ -1,5 +1,19 @@
 //! Stable coat indices; patterns are painted onto the continuous body surface.
 pub(super) fn coat(variant: u8, p: [f32; 3]) -> [f32; 3] {
+    if variant == super::ZEBRA_COAT {
+        // Flank bands curve towards the belly; the narrow lower legs have transverse rings.
+        let [x, y, z] = p;
+        let phase = if y < 0.66 {
+            y * 34. + z * 4.
+        } else {
+            z * 27. + 3.6 * (y - 1.0).powi(2) + x.abs() * 5.0 + (z * 8. + y * 3.0).sin() * 0.92
+        };
+        return if phase.sin() > -0.04 {
+            [0.115, 0.105, 0.095]
+        } else {
+            [0.91, 0.885, 0.81]
+        };
+    }
     let base: [f32; 3] = [
         [0.47, 0.29, 0.16],
         [0.10, 0.105, 0.11],

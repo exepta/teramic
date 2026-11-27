@@ -12,15 +12,35 @@ use std::{
 };
 use terra_voxel::MaterialId;
 
+mod ashlands;
+mod ashlands_sanctuary;
 mod cactus;
+pub(in crate::generation) mod coast;
+pub use coast::{CoastalLandmarkKind, CoastalLandmarkSite};
+mod cherry;
+mod crystal_highlands;
+mod crystal_landmarks;
+mod desert;
 mod fantasy;
 mod flora;
+mod forest;
+mod highlands;
+mod marine;
+mod marine_landmarks;
 mod mist;
 mod monumental;
+mod mushroom_park;
+mod petrified_forest;
+pub use crystal_landmarks::{CrystalLandmarkKind, CrystalLandmarkSite};
+mod plains;
 mod regional;
 #[cfg(test)]
 mod regional_tests;
+mod relic_trees;
 mod rocks;
+mod savanna;
+mod swamp;
+pub use swamp::{SwampLandmark, SwampSite};
 #[cfg(test)]
 mod tests;
 
@@ -55,7 +75,12 @@ pub(super) struct NaturalCache {
 
 #[derive(Default, Debug, PartialEq, Eq)]
 pub(super) struct NaturalPatch {
+    pub(super) streams: Vec<(Cell, crate::water::falls::Fall)>,
     cells: Vec<(Cell, u16)>,
+    pub(super) objects: Vec<super::structures::StructureObject>,
+    pub(super) geyser: Option<Cell>,
+    crystal_landmark: Option<CrystalLandmarkSite>,
+    coastal_landmark: Option<CoastalLandmarkSite>,
     rocks: Vec<RockFormation>,
     cacti: Vec<CactusPlant>,
 }
@@ -75,8 +100,10 @@ impl NaturalPatch {
             }
         }
     }
-    pub(super) fn maximum(&self) -> Option<i64> {
-        self.cells.iter().map(|(p, _)| p[1]).max()
+    pub(super) fn vertical_bounds(&self) -> Option<[i64; 2]> {
+        let mut heights = self.cells.iter().map(|(p, _)| p[1]);
+        let first = heights.next()?;
+        Some(heights.fold([first, first], |[lo, hi], y| [lo.min(y), hi.max(y)]))
     }
 }
 
@@ -106,7 +133,7 @@ impl TerraGenerator {
             .iter()
             .copied()
             .filter(
-                |(_, material)| matches!(material, 316..=318 | 322..=323 | 412..=421 | 423..=429),
+                |(_, material)| matches!(material, 316..=318 | 322..=323 | 412..=421 | 423..=429 | 489..=491 | 499..=501 | 503 | 508..=511 | 514..=515 | 521..=526 | 587..=595 | 599..=605 | 610..=612 | 624..=631 | 648..=669 | 683..=701 | 710..=719 | 722..=723 | 731..=738 | 750..=758 | 760..=769 | 788..=789),
             )
             .collect()
     }
@@ -176,6 +203,24 @@ fn ticket(seed: u64, coordinate: Tile, salt: u64) -> u32 {
     )
 }
 
+impl TerraGenerator {
+    /// Neighboring candidates share a clearing and a species-specific patch.
+    /// Both fields use world coordinates so patches continue across section seams.
+    pub(in crate::generation) fn in_prop_patch(&self, point: [i64; 2], species: u16) -> bool {
+        use noise::NoiseFn;
+        if self.config().ecology_revision < 19 || self.config().landscape_revision < 9 {
+            return true;
+        }
+        let [x, z] = point.map(|n| n as f64 + 0.5);
+        let clearing = self.valleys.get([x / 53. + 41.6, z / 65. - 72.3]);
+        let phase = f64::from(species);
+        let patch = self
+            .hills
+            .get([x / 19. + phase * 1.371, z / 24. - phase * 0.817]);
+        clearing > -0.43 && patch + 0.45 * clearing > -0.26
+    }
+}
+
 struct Habitat<'a> {
     terrain: &'a TerraGenerator,
     trees: Vec<Tree>,
@@ -192,7 +237,8 @@ impl Habitat<'_> {
     fn ground(&mut self, point: Tile) -> Option<(i64, SurfaceColumn)> {
         let column = self.column(point);
         let ground = (column.height - 0.5).floor() as i64;
-        if !column.surface_material.is_natural_ground()
+        if column.lava_level.is_some()
+            || !column.surface_material.is_natural_ground()
             || column.slope > 2.0
             || column
                 .water_level
@@ -271,10 +317,82 @@ fn build(terrain: &TerraGenerator, tile: Tile) -> NaturalPatch {
     } else {
         Vec::new()
     };
+    let mut objects = Vec::new();
+    if terrain.config().ecology_revision >= 17 {
+        savanna::build(&mut habitat, tile, &mut cells);
+    }
+    if terrain.config().ecology_revision >= 16 {
+        ashlands::build(&mut habitat, tile, &mut cells, &mut objects);
+    }
+    if terrain.config().ecology_revision >= 15 {
+        cherry::build(&mut habitat, tile, &mut cells, &mut objects);
+    }
     flora::build(&mut habitat, tile, &mut cells);
     mist::build(&mut habitat, tile, &mut cells);
+    if terrain.config().ecology_revision >= 12 {
+        mushroom_park::build(&mut habitat, tile, &mut cells, &mut objects);
+    }
+    if terrain.config().ecology_revision >= 13 {
+        plains::build(&mut habitat, tile, &mut cells);
+    }
+    if terrain.config().ecology_revision >= 14 {
+        forest::build(&mut habitat, tile, &mut cells);
+    }
+    if terrain.highland_overhaul() {
+        highlands::build(&mut habitat, tile, &mut cells);
+    }
+    if terrain.desert_overhaul() {
+        desert::build(&mut habitat, tile, &mut cells);
+    }
+    if terrain.marine_overhaul() {
+        marine_landmarks::build(&mut habitat, tile, &mut cells);
+        marine::build(&mut habitat, tile, &mut cells);
+    }
+    if terrain.config().ecology_revision >= 18 {
+        swamp::build(&mut habitat, tile, &mut cells);
+    }
+    if terrain.config().ecology_revision >= 19 {
+        petrified_forest::build(&mut habitat, tile, &mut cells, &mut objects);
+    }
+    let mut streams = Vec::new();
+    let crystal_landmark =
+        if terrain.config().ecology_revision >= 21 && terrain.config().landscape_revision >= 9 {
+            let site = crystal_landmarks::build(&mut habitat, tile, &mut cells, &mut objects);
+            if site.is_none() {
+                crystal_highlands::build(&mut habitat, tile, &mut cells, &mut objects);
+                crystal_highlands::glacial_spring(
+                    &mut habitat,
+                    tile,
+                    &mut cells,
+                    &mut objects,
+                    &mut streams,
+                );
+            }
+            site
+        } else {
+            None
+        };
+    let coastal_landmark = if terrain.config().ecology_revision >= 22 && terrain.marine_overhaul() {
+        coast::build(&mut habitat, tile, &mut cells, &mut objects)
+    } else {
+        None
+    };
+    let geyser = objects
+        .iter()
+        .any(|o| o.material == MaterialId::FluidWater as u16)
+        .then(|| {
+            cells
+                .iter()
+                .find_map(|(p, m)| (*m == MaterialId::GeyserVent as u16).then_some(*p))
+        })
+        .flatten();
     NaturalPatch {
+        streams,
+        crystal_landmark,
+        coastal_landmark,
+        geyser,
         cells: cells.into_iter().collect(),
+        objects,
         rocks,
         cacti,
     }

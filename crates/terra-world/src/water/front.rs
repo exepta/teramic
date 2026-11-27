@@ -2,15 +2,16 @@
 use super::{FluidCell, can_hold_fluid};
 use crate::{TerraGenerator, edits::EditJournal, streaming::ChunkStore};
 
-/// Both sections at a vertical boundary sample the receiving cell's inlet.
-/// An isolated free jet narrows, while a flooded layer stays joined to its banks.
-pub(crate) fn inlet_width(p: [i64; 3], cell: FluidCell, wet: impl Fn([i64; 3]) -> bool) -> f64 {
-    if cell.source || cell.amount >= 8 || (0..2).any(|axis| super::tongue::wet_flank(p, axis, &wet))
-    {
-        1.
-    } else {
-        cell.height().sqrt()
+pub(crate) use super::fluid::inlet_width;
+
+fn exposed_depth(chunks: &ChunkStore, p: [i64; 3], cell: FluidCell) -> f64 {
+    if cell.flow == [0; 2] {
+        return cell.height();
     }
+    chunks
+        .surface_column_at(p[0], p[2])
+        .and_then(|column| super::falls::crest_depth(column, p[1], cell))
+        .unwrap_or(cell.height())
 }
 
 pub fn leading_front(
@@ -46,8 +47,19 @@ pub fn leading_front(
         return None;
     }
     let m = chunks.block_at(back)?;
-    let head = chunks.fluid_cell_at(terrain, journal, back, m).height() as f32;
-    terra_core::fluid_surface::Front::new(cell.height() as f32, head, axis, component > 0)
+    let upstream = chunks.fluid_cell_at(terrain, journal, back, m);
+    let head = if upstream.source
+        && journal.fluid(back).is_none()
+        && let Some(pool) = chunks
+            .surface_column_at(back[0], back[2])
+            .and_then(|column| column.water_columns().at(back[1]))
+    {
+        (pool.level - back[1] as f64).min(1.)
+    } else {
+        exposed_depth(chunks, back, upstream)
+    };
+    let depth = exposed_depth(chunks, p, cell);
+    terra_core::fluid_surface::Front::new(depth as f32, head as f32, axis, component > 0)
 }
 pub fn flowing_surface_height(
     chunks: &ChunkStore,
@@ -126,7 +138,7 @@ pub fn flowing_surface_height(
             f64::from(front.height_at((position[axis] - p[axis] as f64) as f32)?)
         }
     } else {
-        cell.height()
+        exposed_depth(chunks, p, cell)
     };
     Some(p[1] as f64 + height)
 }

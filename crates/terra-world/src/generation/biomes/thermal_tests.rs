@@ -17,6 +17,12 @@ fn thermal_weights_preserve_water_and_mass_with_a_real_temperate_band() {
             cherry_forest: 0.0,
             spirit_blossom: 0.0,
             blood_forest: 0.0,
+            ashlands: 0.0,
+            savanna: 0.0,
+            swamp: 0.0,
+            petrified_forest: 0.0,
+            crystal_highlands: 0.0,
+            misty_coast: 0.0,
         },
     };
     for i in 0..=100 {

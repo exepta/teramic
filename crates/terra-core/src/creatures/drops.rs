@@ -2,7 +2,29 @@
 use super::CreatureKind;
 use crate::{ItemKind, ItemStack};
 
-pub fn forest_loot(kind: CreatureKind, variant: u8, id: u64) -> [Option<ItemStack>; 2] {
+pub fn forest_loot(kind: CreatureKind, variant: u8, id: u64) -> [Option<ItemStack>; 4] {
+    if kind == CreatureKind::StoneGolem {
+        let roll = id.wrapping_mul(0x9e3779b97f4a7c15).rotate_left(21);
+        let stack = |item, count| Some(ItemStack { item, count });
+        return [
+            stack(
+                ItemKind::Block(terra_voxel::MaterialId::Stone as u16),
+                2 + (roll % 5) as u16,
+            ),
+            stack(
+                ItemKind::Block(terra_voxel::MaterialId::PetrifiedLog as u16),
+                1 + ((roll >> 8) % 3) as u16,
+            ),
+            (roll >> 21).is_multiple_of(13).then_some(ItemStack {
+                item: ItemKind::RuneCore,
+                count: 1,
+            }),
+            (roll >> 36).is_multiple_of(17).then_some(ItemStack {
+                item: ItemKind::ForestCrystal,
+                count: 1,
+            }),
+        ];
+    }
     if kind.is_dragon() {
         use super::dragons::DragonLoot::*;
         let roll = (id ^ (id >> 33))
@@ -19,6 +41,15 @@ pub fn forest_loot(kind: CreatureKind, variant: u8, id: u64) -> [Option<ItemStac
                     28..=42 => Membrane,
                     43..=57 => Fang,
                     _ => Hide,
+                },
+            ),
+            CreatureKind::FireDragon => (
+                Hide,
+                match roll % 5 {
+                    0 => Horn,
+                    1 => Membrane,
+                    2 => Claw,
+                    _ => Fang,
                 },
             ),
             CreatureKind::EarthDragon => (
@@ -53,6 +84,8 @@ pub fn forest_loot(kind: CreatureKind, variant: u8, id: u64) -> [Option<ItemStac
                 item: ItemKind::DragonLoot(secondary),
                 count: 1,
             }),
+            None,
+            None,
         ];
     }
     if kind == CreatureKind::SpiritGloom {
@@ -75,6 +108,8 @@ pub fn forest_loot(kind: CreatureKind, variant: u8, id: u64) -> [Option<ItemStac
                     item: ItemKind::LightSplitter,
                     count: 1,
                 }),
+            None,
+            None,
         ];
     }
     let (item, count, extra) = match kind {
@@ -91,9 +126,9 @@ pub fn forest_loot(kind: CreatureKind, variant: u8, id: u64) -> [Option<ItemStac
                 count: 1,
             }),
         ),
-        _ => return [None, None],
+        _ => return [None; 4],
     };
-    [Some(ItemStack { item, count }), extra]
+    [Some(ItemStack { item, count }), extra, None, None]
 }
 
 #[cfg(test)]
@@ -107,7 +142,7 @@ mod tests {
                 assert_eq!(loot, forest_loot(kind, variant, 42));
                 assert!(loot.iter().flatten().all(|s| s.valid()));
                 if (kind as u8) < 24 && kind != CreatureKind::SpiritGloom {
-                    assert_eq!(loot, [None, None]);
+                    assert_eq!(loot, [None; 4]);
                 }
             }
         }
@@ -169,4 +204,28 @@ mod tests {
         assert!(crate::food(ItemKind::CrimsonMushroom).is_some());
         assert!(crate::food(ItemKind::BloodSlimeGel).is_none());
     }
+}
+
+#[cfg(test)]
+#[test]
+fn stone_guardian_loot_includes_two_guaranteed_stacks_and_independent_rare_crystals() {
+    let mut counts = [0; 2];
+    let mut together = false;
+    for id in 1..=1024 {
+        let [stone, wood, core, crystal] =
+            forest_loot(CreatureKind::StoneGolem, (id % 2) as u8, id);
+        let stone = stone.unwrap();
+        let wood = wood.unwrap();
+        assert_eq!(
+            stone.item,
+            ItemKind::Block(terra_voxel::MaterialId::Stone as u16)
+        );
+        assert!((2..=6).contains(&stone.count));
+        assert!((1..=3).contains(&wood.count));
+        counts[0] += usize::from(core.is_some());
+        counts[1] += usize::from(crystal.is_some());
+        together |= core.is_some() && crystal.is_some();
+    }
+    assert!(counts.iter().all(|n| (20..130).contains(n)));
+    assert!(together);
 }

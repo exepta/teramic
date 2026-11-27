@@ -85,7 +85,7 @@ fn version_four_keeps_shore_snow_and_exploration_separate_from_new_blood_fractio
     }
     save_cached(&root, &cached).unwrap();
     let bytes = fs::read(path(&root, coordinate)).unwrap();
-    assert_eq!(&bytes[..8], b"TRMAP005");
+    assert_eq!(&bytes[..8], b"TRMAP011");
     assert_eq!(bytes.len(), SOURCE_BYTES);
     assert_eq!(load_cached(&root, coordinate).unwrap(), Some(cached));
     assert_eq!(
@@ -104,7 +104,7 @@ fn version_four_keeps_shore_snow_and_exploration_separate_from_new_blood_fractio
 }
 
 #[test]
-fn version_five_roundtrips_blood_forest_spirit_shore_and_snow_without_aliasing() {
+fn map_roundtrips_blood_spirit_and_crystal_weights_separately_from_shore_and_snow() {
     let root = root();
     let sample = MapSample {
         material: 400,
@@ -112,7 +112,9 @@ fn version_five_roundtrips_blood_forest_spirit_shore_and_snow_without_aliasing()
         water_depth: 9,
         known: true,
         canopy: true,
-        biome_weights: [0.0, 0.15, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.6],
+        biome_weights: [
+            0.0, 0.15, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.3, 0.0, 0.0, 0.0, 0.0, 0.2, 0.1,
+        ],
         shore: 0.125,
         snow: 0.875,
     };
@@ -131,7 +133,7 @@ fn version_five_roundtrips_blood_forest_spirit_shore_and_snow_without_aliasing()
     assert_eq!(load_cached(&root, [-1, -1]).unwrap(), Some(cached.clone()));
     let file = path(&root, [-1, -1]);
     let original = fs::read(&file).unwrap();
-    assert_eq!(&original[..8], b"TRMAP005");
+    assert_eq!(&original[..8], b"TRMAP011");
     for invalid in [f32::NAN, f32::INFINITY, -0.01, 1.01] {
         cached.source.as_mut().unwrap().cells[0].biome_weights[9] = invalid;
         assert!(
@@ -156,5 +158,55 @@ fn version_five_roundtrips_blood_forest_spirit_shore_and_snow_without_aliasing()
             .unwrap_err()
             .contains("header or size")
     );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn previous_biome_widths_append_empty_fractions_and_keep_shore_and_snow() {
+    let root = root();
+    let coordinate = [18, -3];
+    let cached = CachedMapTile {
+        tile: MapTile {
+            coordinate,
+            pixels: [1; TILE_BYTES],
+            relief: None,
+        },
+        source: Some(Box::new(MapRasterSource {
+            palette: 17,
+            cells: [MapSample {
+                known: true,
+                biome_weights: [
+                    0., 0., 0.35, 0., 0., 0., 0., 0., 0.2, 0.45, 0., 0.0, 0.0, 0.0, 0.0, 0.0,
+                ],
+                shore: 0.17,
+                snow: 0.68,
+                ..Default::default()
+            }; TILE_SIZE * TILE_SIZE],
+        })),
+    };
+    save_cached(&root, &cached).unwrap();
+    let latest = fs::read(path(&root, coordinate)).unwrap();
+    let start = 24 + TILE_BYTES + 9 + RELIEF_BYTES;
+    for (magic, width, byte_count) in [
+        (BLOOD_SOURCE_MAGIC, 10, BLOOD_SOURCE_BYTES),
+        (ASH_SOURCE_MAGIC, 11, ASH_SOURCE_BYTES),
+        (SAVANNA_SOURCE_MAGIC, 12, SAVANNA_SOURCE_BYTES),
+        (SWAMP_SOURCE_MAGIC, 13, SWAMP_SOURCE_BYTES),
+        (PETRIFIED_SOURCE_MAGIC, 14, PETRIFIED_SOURCE_BYTES),
+        (CRYSTAL_SOURCE_MAGIC, 15, CRYSTAL_SOURCE_BYTES),
+    ] {
+        let mut previous = latest[..start].to_vec();
+        previous[..8].copy_from_slice(magic);
+        for sample in latest[start..latest.len() - 8].chunks_exact(SAMPLE_BYTES) {
+            previous.extend_from_slice(&sample[..6 + width * 4]);
+            previous.extend_from_slice(&sample[SAMPLE_BYTES - 8..]);
+        }
+        assert_eq!(previous.len() + 8, byte_count);
+        write(&root, coordinate, previous).unwrap();
+        assert_eq!(
+            load_cached(&root, coordinate).unwrap(),
+            Some(cached.clone())
+        );
+    }
     fs::remove_dir_all(root).unwrap();
 }

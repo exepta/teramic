@@ -6,14 +6,14 @@ pub struct MapPalette {
     /// Indexed by the existing block ID. Empty until block assets are ready.
     pub colors: Vec<[f32; 3]>,
     /// The renderer's grass tint, in `BiomeWeights::values()` order.
-    pub biome_colors: [[f32; 3]; 10],
+    pub biome_colors: [[f32; 3]; 16],
     /// The grass block uses the painted face-group model rather than neutral turf.
     pub authored_grass: bool,
     /// Authored upper-face albedo after its surface palette, before biome tint.
     /// Separate from `colors` so cave cartography keeps its existing albedos.
     pub surface_grass: Option<[f32; 3]>,
     /// The water shader's linear scattering tint, in the same biome order.
-    pub water_colors: [[f32; 3]; 10],
+    pub water_colors: [[f32; 3]; 16],
     pub revision: u64,
 }
 
@@ -27,7 +27,7 @@ impl MapPalette {
                 hash = (hash ^ u64::from(*byte)).wrapping_mul(0x100000001b3);
             }
         };
-        bytes(b"terra-map-albedo-4");
+        bytes(b"terra-map-albedo-6");
         bytes(&(self.colors.len() as u64).to_le_bytes());
         for color in self
             .colors
@@ -57,8 +57,37 @@ impl MapPalette {
     }
 }
 
+pub const DUNE_ALBEDO: [f32; 3] = [0.7729, 0.5007, 0.2145];
+pub const RED_DUNE_ALBEDO: [f32; 3] = [0.4714, 0.1579, 0.0606];
+
+/// Linear mean top albedos of regionally painted soil. These are measured
+/// from the shipped tiles; relief and individual grains remain in the texture.
+pub fn regional_soil_albedo(material: u16) -> Option<[f32; 3]> {
+    Some(match material {
+        401 => [0.2057, 0.0872, 0.0963],
+        407 => [0.2447, 0.0538, 0.0680],
+        408 => [0.2445, 0.0474, 0.0714],
+        492 => [0.1899, 0.0644, 0.0590],
+        493 => [0.1331, 0.0155, 0.0250],
+        505 => [0.1531, 0.2040, 0.0543],
+        519 => [0.1138, 0.1009, 0.0276],
+        520 => [0.2098, 0.1422, 0.0651],
+        527 => DUNE_ALBEDO,
+        528 => RED_DUNE_ALBEDO,
+        596 => [0.2674, 0.3084, 0.1171],
+        _ => return None,
+    })
+}
+
+/// Mixed biomes share their local palette. Single-biome interiors retain the
+/// authored variation of their separate surface materials.
+pub fn biome_edge_strength(dominant: f32) -> f32 {
+    let t = ((0.985 - dominant) / 0.21).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
 /// Preserve the established green-biome palette, while allowing the blossom
-/// forests to shift painted green turf into lilac and turquoise. The weight is
+/// forests to shift painted green turf into sage, silver moss and crimson. The weight is
 /// interpolated with the climate field, so neither section nor biome boundaries
 /// introduce a hue step. Multipliers stay bounded for saturated colors.
 pub fn relative_grass_tint(color: [f32; 3], forest: [f32; 3], blossom_weight: f32) -> [f32; 3] {
@@ -77,7 +106,7 @@ mod tests {
     #[test]
     fn authored_grass_preserves_forest_albedo_and_bounds_relative_biomes() {
         let palette = MapPalette {
-            biome_colors: [[0.2, 0.5, 0.1]; 10],
+            biome_colors: [[0.2, 0.5, 0.1]; 16],
             ..Default::default()
         };
         assert_eq!(palette.authored_grass_tint([0.2, 0.5, 0.1], 0.0), [1.0; 3]);

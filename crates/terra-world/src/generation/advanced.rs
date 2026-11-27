@@ -108,7 +108,7 @@ impl TerrainNode {
 
 struct TerrainTile {
     key: [i64; 2],
-    nodes: [OnceLock<TerrainNode>; SIDE * SIDE],
+    nodes: [OnceLock<[f64; 19]>; SIDE * SIDE],
 }
 
 impl TerrainTile {
@@ -230,12 +230,13 @@ impl AdvancedSampler {
         tile
     }
 
-    fn node_at<'a>(&self, tile: &'a TerrainTile, index: usize) -> &'a TerrainNode {
+    fn node_at<'a>(&self, tile: &'a TerrainTile, index: usize) -> &'a [f64; 19] {
         tile.nodes[index].get_or_init(|| {
             self.node(
                 (tile.key[0] * CELLS + (index % SIDE) as i64 - 1) as f64 * SPACING,
                 (tile.key[1] * CELLS + (index / SIDE) as i64 - 1) as f64 * SPACING,
             )
+            .values()
         })
     }
 
@@ -250,7 +251,7 @@ impl AdvancedSampler {
         let rows = std::array::from_fn(|row| {
             cubic(
                 std::array::from_fn(|column| {
-                    self.node_at(&tile, ix + column + (iz + row) * SIDE).height
+                    self.node_at(&tile, ix + column + (iz + row) * SIDE)[7]
                 }),
                 tx,
             )
@@ -266,19 +267,12 @@ impl AdvancedSampler {
         let iz = gz.rem_euclid(CELLS) as usize;
         let tx = x / SPACING - gx as f64;
         let tz = z / SPACING - gz as f64;
-        let mut rows = [[0.0; 19]; 4];
-        for (row, values) in rows.iter_mut().enumerate() {
-            let samples = std::array::from_fn::<_, 4, _>(|column| {
-                self.node_at(&tile, ix + column + (iz + row) * SIDE)
-                    .values()
-            });
-            for channel in 0..19 {
-                values[channel] = cubic(samples.map(|s| s[channel]), tx);
-            }
-        }
-        TerrainNode::from_values(std::array::from_fn(|channel| {
-            cubic(rows.map(|s| s[channel]), tz)
-        }))
+        let rows: [[f64; 19]; 4] = std::array::from_fn(|row| {
+            let samples =
+                std::array::from_fn(|column| self.node_at(&tile, ix + column + (iz + row) * SIDE));
+            cubic_channels(samples, tx)
+        });
+        TerrainNode::from_values(cubic_channels(rows.each_ref(), tz))
     }
 
     fn node(&self, x: f64, z: f64) -> TerrainNode {
@@ -606,6 +600,10 @@ fn field(noise: &FastNoiseLite, x: f64, z: f64, scale: f64) -> f64 {
     a + (b - a) * tz
 }
 
+fn cubic_channels([a, b, c, d]: [&[f64; 19]; 4], t: f64) -> [f64; 19] {
+    std::array::from_fn(|i| cubic([a[i], b[i], c[i], d[i]], t))
+}
+
 fn cubic(v: [f64; 4], t: f64) -> f64 {
     0.5 * ((2.0 * v[1])
         + (-v[0] + v[2]) * t
@@ -651,8 +649,14 @@ impl TerraGenerator {
                 BiomeKind::Ocean => TerrainKind::Ocean,
                 BiomeKind::Plains => TerrainKind::Plains,
                 BiomeKind::Forest | BiomeKind::BloodForest => TerrainKind::Forest,
-                BiomeKind::Desert | BiomeKind::ClifftedDesert => TerrainKind::Desert,
-                BiomeKind::Highland => TerrainKind::SnowyHighlands,
+                BiomeKind::Desert
+                | BiomeKind::ClifftedDesert
+                | BiomeKind::Ashlands
+                | BiomeKind::PetrifiedForest
+                | BiomeKind::Savanna => TerrainKind::Desert,
+                BiomeKind::Swamp => TerrainKind::Forest,
+                BiomeKind::MistyCoast => TerrainKind::Forest,
+                BiomeKind::Highland | BiomeKind::CrystalHighlands => TerrainKind::SnowyHighlands,
                 BiomeKind::MushroomPark => TerrainKind::SpiritForest,
                 BiomeKind::CherryForest => TerrainKind::CherryGrove,
                 BiomeKind::SpiritBlossom => TerrainKind::SpiritForest,
@@ -678,11 +682,12 @@ impl TerraGenerator {
     }
 
     pub(super) fn advanced_height(&self, x: f64, z: f64) -> f64 {
-        self.spirit_terraced_height(x, z, self.advanced.height(x, z))
-    }
-
-    pub(super) fn advanced_biome(&self, x: f64, z: f64) -> BiomeSample {
-        self.biome_from_node(self.advanced.sample(x, z))
+        self.regional_base_height(
+            x,
+            z,
+            self.advanced.height(x, z),
+            self.climate_biome_at(x, z),
+        )
     }
 
     /// Region centres need only one noise evaluation, independent of the
@@ -691,7 +696,7 @@ impl TerraGenerator {
         self.biome_from_node(self.advanced.node(x, z))
     }
 
-    fn biome_from_node(&self, sample: TerrainNode) -> BiomeSample {
+    pub(super) fn biome_from_node(&self, sample: TerrainNode) -> BiomeSample {
         let f = sample.fields;
         let w = sample.weights;
         let ocean = w[9];
@@ -699,7 +704,7 @@ impl TerraGenerator {
         if self.config().landscape_revision >= 7 {
             let mushrooms =
                 w[2] * smoothstep(0.50, 0.82, f.humidity) * (1.0 - unit(f.weirdness)) * 0.75;
-            let cliffs = if self.config().geology_revision > 0 {
+            let cliffs = if self.config().geology_revision > 0 && !self.desert_overhaul() {
                 // Ridge interiors must be able to become a visible Cliffted
                 // Desert, including the selected-biome world creation path.
                 w[8] * smoothstep(0.40, 0.75, f.ridge_strength)
@@ -722,6 +727,12 @@ impl TerraGenerator {
                     spirit_blossom: w[7],
                     mushroom_park: mushrooms,
                     blood_forest: 0.0,
+                    ashlands: 0.0,
+                    savanna: 0.0,
+                    swamp: 0.0,
+                    petrified_forest: 0.0,
+                    crystal_highlands: 0.0,
+                    misty_coast: 0.0,
                 },
             };
         }
@@ -757,6 +768,12 @@ impl TerraGenerator {
                 cherry_forest,
                 spirit_blossom: 0.0,
                 blood_forest: 0.0,
+                ashlands: 0.0,
+                savanna: 0.0,
+                swamp: 0.0,
+                petrified_forest: 0.0,
+                crystal_highlands: 0.0,
+                misty_coast: 0.0,
                 mushroom_park,
                 cliffted_desert,
             },

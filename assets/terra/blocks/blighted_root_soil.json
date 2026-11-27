@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": 492,
+  "name": "Blighted Root Soil",
+  "description": "Crimson roots wind through damp forest earth.",
+  "creative_category": "terrain",
+  "hardness": 1.8,
+  "resistance": 4,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "surface": "earth",
+  "materials": {
+    "blighted_root_soil": {
+      "base_color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.93,
+      "reflectance": 0.19
+    }
+  },
+  "textures": {
+    "blighted_root_soil": "textures/blighted_root_soil.png"
+  },
+  "face_materials": [
+    "blighted_root_soil",
+    "blighted_root_soil",
+    "blighted_root_soil",
+    "blighted_root_soil",
+    "blighted_root_soil",
+    "blighted_root_soil"
+  ]
+}

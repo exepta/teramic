@@ -65,6 +65,7 @@ LONG = {
 FAMILY = {
     "dark": (721, 2.3),
     "earth": (507, 1.65),
+    "fire": (1271, 1.43),
     "water": (816, 2.05),
 }
 BANK = {}
@@ -398,6 +399,13 @@ def finish(stage, frames, family):
     result = np.sign(result) * (
         np.minimum(np.abs(result), 0.72) + 0.18 * np.tanh(excess / 0.18)
     )
+    # A short raised-cosine bridge removes the remaining PCM discontinuity
+    # where the last reverb tail wraps onto the first instrumental attack.
+    discontinuity = result[0] - result[-1]
+    if np.max(np.abs(discontinuity)) > 0.01:
+        seam = round(0.004 * RATE)
+        bridge = (0.5 - 0.5 * np.cos(np.linspace(0., np.pi, seam)))[:, None]
+        result[-seam:] += bridge * discontinuity
     return result * 0.9  # Leave true-peak headroom for downmixing.
 
 

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": 552,
+  "name": "Luminous Coral",
+  "description": "Azure coral tips glow on the reef at dusk.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 0.7,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/luminous_coral.glb",
+  "collision_boxes": [],
+  "textures": {},
+  "light": {
+    "color": [
+      0.19,
+      0.65,
+      0.96
+    ],
+    "intensity": 62,
+    "range": 3.5,
+    "shadows": false
+  }
+}

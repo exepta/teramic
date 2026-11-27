@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "id": 512,
+  "name": "Weathered Cedar Shingles",
+  "description": "Overlapping cedar shakes from mushroom-grove lookouts.",
+  "creative_category": "nature",
+  "hardness": 0.65,
+  "resistance": 1.2,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "top": {
+      "roughness": 0.84,
+      "normal_texture": "textures/mushroom_park/shingles_top_normal.png"
+    },
+    "side": {
+      "roughness": 0.84,
+      "normal_texture": "textures/mushroom_park/shingles_side_normal.png"
+    }
+  },
+  "textures": {
+    "top": "textures/mushroom_park/shingles_top.png",
+    "side": "textures/mushroom_park/shingles_side.png"
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "top",
+    "side",
+    "side"
+  ],
+  "surface": "wood"
+}

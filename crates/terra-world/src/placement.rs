@@ -621,7 +621,7 @@ pub fn environment(
         if chunks.block_at(edit.position) != Some(edit.expected_material) {
             return Err("Object cell unavailable".into());
         }
-        if edit.material == 40 {
+        if terra_core::block_shapes::is_torch(edit.material) {
             if crate::torches::wet_placement(chunks, journal, edit.position) {
                 return Err("Torches cannot be placed in water".into());
             }
@@ -1252,7 +1252,7 @@ pub fn propose_with_chest(
                 ..Default::default()
             }),
         ));
-    } else if material == 40 {
+    } else if terra_core::block_shapes::is_torch(material) {
         let facing = crate::torches::facing(hit.normal).ok_or("Torch needs floor or wall")?;
         if crate::torches::support(position, facing) != Some(hit.position) {
             return Err("Torch must attach to the clicked supporting face".into());
@@ -2460,7 +2460,7 @@ mod tests {
                 (0..64)
                     .filter(|&f| crate::objects::chimney_basis(f).is_some())
                     .collect()
-            } else if material == 40 {
+            } else if terra_core::block_shapes::is_torch(material) {
                 vec![0, 4, 5, 6, 7]
             } else {
                 (0..4).collect()

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 777,
+  "name": "Beach Shingle",
+  "description": "Beach Shingle",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.7,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "textures": {
+    "side": "textures/misty_coast/beach_shingle.png"
+  },
+  "materials": {
+    "side": {
+      "normal_texture": "textures/misty_coast/beach_shingle_normal.png",
+      "roughness": 0.84,
+      "reflectance": 0.12
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

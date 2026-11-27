@@ -881,3 +881,190 @@ fn legacy_spruce_and_cherry_wood_skins_keep_their_real_species_in_felling_and_le
         );
     }
 }
+
+#[test]
+fn modern_park_caps_have_attached_gills_on_upright_and_fallen_parasols() {
+    for seed in [21, 39, 77, 94] {
+        let origin = [-16, 51, 31];
+        let shape =
+            Tree::with_species_revision(origin, seed, [0.; 4], TreeSpecies::Mushroom(1), 12);
+        let gills = MaterialId::MushroomGill as u16;
+        let blocks = raster(&shape);
+        assert!(blocks.iter().filter(|id| **id == gills).count() >= 10);
+        assert!(blocks.contains(&(shape.species.leaves() as u16)));
+        let start = [origin[0] - 16, origin[1] - 4, origin[2] - 16];
+        for (index, &material) in blocks.iter().enumerate() {
+            let cell = [
+                start[0] + (index % 40) as i64,
+                start[1] + (index / 40 % 40) as i64,
+                start[2] + (index / 1600) as i64,
+            ];
+            let sample = shape
+                .wood_at(cell)
+                .or_else(|| shape.leaves_at(cell))
+                .map_or(0, |m| m as u16);
+            assert_eq!(material, sample);
+        }
+        let old = Tree::with_species_revision(origin, seed, [0.; 4], TreeSpecies::Mushroom(1), 11);
+        assert!(!raster(&old).contains(&gills));
+    }
+}
+
+#[test]
+fn mature_park_parasols_reach_across_sections_above_the_lower_canopy() {
+    let origin = [-17, 47, -1];
+    let mut mature = 0;
+    for n in 0..128 {
+        let seed = mix(n);
+        let tree = Tree::with_species_revision(origin, seed, [0.; 4], TreeSpecies::Mushroom(1), 13);
+        for axis in [0, 2] {
+            assert!(i64::from(tree.bounds.min[axis]) >= -MAX_TREE_REACH);
+            assert!(i64::from(tree.bounds.max[axis]) <= MAX_TREE_REACH);
+        }
+        assert!(i64::from(tree.bounds.max[1]) <= MAX_TREE_HEIGHT);
+        let old = Tree::with_species_revision(origin, seed, [0.; 4], TreeSpecies::Mushroom(1), 12);
+        if tree == old {
+            continue;
+        }
+        mature += 1;
+        let cap = &tree.crowns[0].bounds;
+        assert!(cap.max[2] - cap.min[2] >= 22);
+        assert!(tree.bounds.max[1] >= 24);
+        if mature != 1 {
+            continue;
+        }
+        let blocks = raster(&tree);
+        let mut sections = std::collections::BTreeSet::new();
+        let mut covered = 0;
+        let mut width = [i64::MAX, i64::MIN];
+        for (i, &material) in blocks.iter().enumerate() {
+            if material == 0 || material == MaterialId::MushroomStem as u16 {
+                continue;
+            }
+            let p = [
+                origin[0] - 16 + (i % 40) as i64,
+                origin[1] - 4 + (i / 40 % 40) as i64,
+                origin[2] - 16 + (i / 1600) as i64,
+            ];
+            width[0] = width[0].min(p[0]);
+            width[1] = width[1].max(p[0]);
+            sections.insert(global_to_section(p).0);
+            covered += 1;
+        }
+        assert!(width[1] - width[0] + 1 >= 20);
+        assert!(sections.len() >= 4);
+        let mut stamped = 0;
+        for section in sections {
+            let start = section.origin().unwrap();
+            let mut local = vec![0; 16_usize.pow(3)];
+            tree.stamp_wood(start, 16, &mut local);
+            tree.stamp_leaves(start, 16, &mut local);
+            stamped += local
+                .iter()
+                .filter(|&&m| m != 0 && m != MaterialId::MushroomStem as u16)
+                .count();
+        }
+        assert_eq!(stamped, covered);
+    }
+    assert!(
+        (30..75).contains(&mature),
+        "mature trees in a 128-seed sample: {mature}"
+    );
+}
+
+#[cfg(feature = "bevy")]
+#[test]
+fn oasis_palm_felling_owns_and_decays_every_oriented_frond_except_later_edits() {
+    use crate::streaming::{ChunkStore, LoadedSection};
+    use std::sync::Arc;
+    use terra_voxel::BlockSection;
+    // This eight-frond palm exercises all four material orientations in one collapse.
+    let tree = Tree::oasis_palm([-1, 16, -1], 1, false);
+    let shape = tree.felling_shape().unwrap();
+    let sections = SectionGenerator::new(flat(1, false));
+    let mut chunks = ChunkStore::default();
+    let mut orientations = std::collections::BTreeSet::new();
+    for &cell in shape.wood.iter().chain(&shape.leaves) {
+        let id = tree.wood_at(cell).or_else(|| tree.leaves_at(cell)).unwrap() as u16;
+        if MaterialId::is_palm_frond(id) {
+            orientations.insert(id);
+        }
+        let (s, local) = global_to_section(cell);
+        chunks
+            .loaded
+            .entry(s)
+            .or_insert_with(|| LoadedSection {
+                data: BlockSection::empty(s).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            })
+            .data
+            .set_block(local, id)
+            .unwrap();
+        if chunks.prepared_column([s.x, s.z]).is_none() {
+            let mut column = sections.prepare_column([s.x, s.z], false).unwrap();
+            column.trees = vec![tree.clone()];
+            chunks.set_prepared_column_for_test([s.x, s.z], Some(Arc::new(column)));
+        }
+    }
+    assert_eq!(
+        orientations.into_iter().collect::<Vec<_>>(),
+        (537..=540).collect::<Vec<_>>()
+    );
+    let mut journal = EditJournal::default();
+    let plan = crate::tree_felling::Plan::prepare(&chunks, &journal, tree.origin).unwrap();
+    let protected = shape.leaves[0];
+    let material = chunks.block_at(protected).unwrap();
+    journal.record(protected, material).unwrap();
+    assert!(plan.collapse([0., 1.]).valid());
+    let mut queue = crate::tree_felling::Queue::default();
+    assert!(queue.enqueue(plan, terra_core::PlayerUuid::from_u128(1)));
+    queue
+        .finish(&mut chunks, &mut journal, &Default::default())
+        .unwrap();
+    for cell in shape.leaves {
+        assert_eq!(
+            chunks.block_at(cell),
+            Some(if cell == protected { material } else { 0 })
+        );
+    }
+}
+#[test]
+fn modern_conifers_hide_the_leader_under_living_needles() {
+    for seed in 0..24 {
+        for species in [TreeSpecies::Fir, TreeSpecies::Spruce] {
+            let tree = Tree::with_species_revision([0; 3], seed, [0.; 4], species, 15);
+            let mut previous = usize::MAX;
+            let mut apex = 0;
+            for y in 0..i64::from(tree.bounds.max[1]) {
+                let occupied = (-9..=9)
+                    .flat_map(|x| (-9..=9).map(move |z| [x, y, z]))
+                    .filter(|&p| tree.leaves_at(p).is_some())
+                    .count();
+                if occupied > 0 {
+                    assert!(
+                        occupied <= previous,
+                        "{species:?} seed {seed} widens at y={y}"
+                    );
+                    previous = occupied;
+                    apex = occupied;
+                }
+            }
+            assert_eq!(apex, 1);
+            let top = (1..i64::from(tree.bounds.max[1]))
+                .rev()
+                .find(|&y| tree.wood_at([0, y, 0]).is_some())
+                .unwrap();
+            for [x, dy, z] in [[0, 1, 0], [-1, 0, 0], [1, 0, 0], [0, 0, -1], [0, 0, 1]] {
+                assert_eq!(
+                    tree.leaves_at([x, top + dy, z]),
+                    Some(species.leaves()),
+                    "seed {seed}, {species:?}, leader {top}"
+                );
+            }
+        }
+    }
+}

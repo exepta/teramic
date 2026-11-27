@@ -14,6 +14,7 @@ pub(crate) struct Daylight {
     pub daylight: f32,
     pub twilight: f32,
     pub fog: Vec3,
+    pub humidity: f32,
     pub ambient: f32,
     pub ambient_color: Vec3,
     pub exposure: f32,
@@ -45,6 +46,13 @@ impl Daylight {
         }
     }
 
+    pub(crate) fn fog_range(self, (start, end): (f32, f32), offset: f32) -> (f32, f32) {
+        (
+            start + (start.min(14. + offset) - start) * self.humidity,
+            end + (end.min(110. + offset) - end) * self.humidity,
+        )
+    }
+
     pub fn at(phase: f64) -> Self {
         let rotation = ((phase - 0.25) * std::f64::consts::TAU) as f32;
         let sun = Vec3::new(
@@ -62,6 +70,7 @@ impl Daylight {
             daylight,
             twilight,
             fog,
+            humidity: 0.,
             // Keep shadowed ground readable after dusk without exposing the sky more.
             ambient: (300.0 * 8.0 + (super::SURFACE_AMBIENT - 300.0 * 8.0) * daylight)
                 * 2.0_f32.powf(-3.0 * (1.0 - daylight)),
@@ -74,6 +83,7 @@ impl Daylight {
 
 pub(crate) fn install(app: &mut App) {
     super::biome_atmosphere::install(app);
+    super::sky_reflections::install(app);
     app.init_resource::<Daylight>().add_systems(
         Update,
         update
@@ -112,7 +122,10 @@ fn terrain_light_direction(direction: Vec3) -> Vec3 {
 pub(super) fn update(
     clock: Res<WorldClock>,
     config: Res<terra_core::GameConfig>,
-    graphics: Option<Res<GraphicsConfig>>,
+    (graphics, cave): (
+        Option<Res<GraphicsConfig>>,
+        Option<Res<super::caves::CaveState>>,
+    ),
     atmosphere: Option<Res<super::biome_atmosphere::BiomeAtmosphere>>,
     mut state: ResMut<Daylight>,
     mut lights: CelestialLights,
@@ -148,7 +161,6 @@ pub(super) fn update(
         let direction = if sun { state.sun } else { -state.sun };
         *transform = Transform::from_translation(terrain_light_direction(direction))
             .looking_at(Vec3::ZERO, Vec3::Y);
-        light.illuminance = state.illuminance(sun);
         light.color = if sun {
             Color::srgb(
                 1.0,
@@ -160,10 +172,18 @@ pub(super) fn update(
         };
         // Keep the map until its light fades to zero. A horizon-angle cutoff
         // exposes still strongly lit foliage/props for an abrupt unshadowed flash.
-        light.shadow_maps_enabled = shadows && light.illuminance > 0.0;
+        if cave.is_none() {
+            light.illuminance = state.illuminance(sun);
+            light.shadow_maps_enabled = shadows && light.illuminance > 0.0;
+        }
     }
     for (mut exposure, mut ambient) in &mut cameras {
-        exposure.ev100 = state.exposure - graphics.as_ref().map_or(1.0, |g| g.brightness).log2();
+        // In a playable scene the cave system owns final exposure and light
+        // energy. Other systems may read these between Update and PostUpdate.
+        if cave.is_none() {
+            exposure.ev100 =
+                state.exposure - graphics.as_ref().map_or(1.0, |g| g.brightness).log2();
+        }
         ambient.color = Color::srgb(
             state.ambient_color.x,
             state.ambient_color.y,

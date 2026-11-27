@@ -85,7 +85,7 @@ pub(super) struct SoundWorld<'w, 's> {
     journal: Res<'w, EditJournal>,
     access: Res<'w, WorldAccess>,
     menu: Option<Res<'w, MenuState>>,
-    audio: Option<Res<'w, AudioConfig>>,
+    preferences: crate::audio_preferences::AudioPreferences<'w>,
     bodies: Query<'w, 's, &'static Transform, With<PlayerBody>>,
     cameras: Query<'w, 's, &'static Transform, With<TerraCamera>>,
     sinks: Query<'w, 's, (), With<bevy::audio::AudioSink>>,
@@ -226,10 +226,7 @@ pub(super) fn update(
                 .map(|gain| gain * sounds.transmission[kind])
         })
     });
-    let gains = world
-        .audio
-        .as_ref()
-        .map_or(gains, |config| apply_audio_settings(gains, config));
+    let gains = apply_audio_settings(gains, world.preferences.current());
     sounds.controls.update(gains, sounds.submerged, now);
     *status = WaterSoundStatus {
         listener: Some(listener),
@@ -261,7 +258,15 @@ fn include_fluid_sources(
                 if !chunks.loaded.contains_key(&section) {
                     continue;
                 }
-                for (cell, fluid) in journal.fluid_cells_in(section) {
+                let fall = chunks
+                    .prepared_column([section.x, section.z])
+                    .and_then(|c| c.nearest_waterfall(section, listener.to_array().map(f64::from)))
+                    .and_then(|p| {
+                        chunks
+                            .block_at(p)
+                            .map(|m| (p, chunks.fluid_cell_at(terrain, journal, p, m)))
+                    });
+                for (cell, fluid) in journal.fluid_cells_in(section).chain(fall) {
                     if fluid.amount == 0
                         || !chunks
                             .block_at(cell)

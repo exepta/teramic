@@ -44,6 +44,7 @@ pub(super) fn template(
     };
     let green = match species {
         TreeSpecies::Spruce => [0.24, 0.43, 0.25],
+        TreeSpecies::Acacia => [0.58, 0.63, 0.17],
         TreeSpecies::Birch => [0.75, 0.80, 0.34],
         TreeSpecies::Cherry => [0.93, 0.54, 0.67],
         _ => [0.48, 0.67, 0.20],
@@ -103,13 +104,23 @@ pub(super) fn template(
             }
         }
     } else {
-        let crown = [
-            [-0.18, 0.49, 0.09],
-            [0.19, 0.57, 0.04],
-            [-0.10, 0.72, -0.13],
-            [0.10, h, 0.10],
-            [0.0, 0.64, 0.0],
-        ];
+        let crown = if species == TreeSpecies::Acacia {
+            [
+                [-0.27, 0.70, 0.07],
+                [0.22, 0.75, 0.03],
+                [-0.12, 0.79, -0.20],
+                [0.12, 0.80, 0.18],
+                [0., 0.76, 0.],
+            ]
+        } else {
+            [
+                [-0.18, 0.49, 0.09],
+                [0.19, 0.57, 0.04],
+                [-0.10, 0.72, -0.13],
+                [0.10, h, 0.10],
+                [0.0, 0.64, 0.0],
+            ]
+        };
         let w = if species == TreeSpecies::Birch {
             0.20
         } else {

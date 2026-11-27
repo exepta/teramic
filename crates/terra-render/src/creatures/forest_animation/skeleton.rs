@@ -7,6 +7,29 @@ fn ease(value: f32) -> f32 {
 }
 
 pub(super) fn animate(m: &Motion, part: &Limb, t: &mut Transform) {
+    if m.behavior == Behavior::Emerge {
+        let progress = m.attack;
+        let folded = 1. - progress;
+        let torso = Quat::from_rotation_x(-0.90 * folded);
+        let hip = Vec3::Y * 0.74;
+        t.translation = hip + torso * (part.1 - hip) - Vec3::Y * (1.72 * folded);
+        t.rotation = torso;
+        match part.0 {
+            Part::VillagerArm(side) => {
+                let pull = (progress * std::f32::consts::TAU + side * 0.9).sin() * folded;
+                t.rotation *= Quat::from_euler(
+                    EulerRot::XYZ,
+                    -1.6 * folded + 0.65 * pull,
+                    0.,
+                    side * folded * 0.22,
+                );
+            }
+            Part::Leg(side) => t.rotation *= Quat::from_rotation_x(folded * (0.78 + 0.20 * side)),
+            Part::Head | Part::SkeletonEyes => t.rotation *= Quat::from_rotation_x(0.45 * folded),
+            _ => {}
+        }
+        return;
+    }
     let walk = (m.speed / 1.5).clamp(0.0, 1.0);
     let running = ((m.speed - 1.5) / 1.5).clamp(0.0, 1.0);
     let stride = m.phase.sin();

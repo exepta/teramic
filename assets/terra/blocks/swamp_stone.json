@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 676,
+  "name": "Swamp Stone",
+  "description": "Fractures split this grey marsh rock into small plates.",
+  "creative_category": "terrain",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.6,
+  "resistance": 2.2,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "side": "textures/swamp/swamp_stone_side.png"
+  },
+  "materials": {
+    "side": {
+      "roughness": 0.94,
+      "reflectance": 0.09,
+      "normal_texture": "textures/swamp/swamp_stone_side_normal.png"
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

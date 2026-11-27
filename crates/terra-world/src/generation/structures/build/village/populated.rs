@@ -75,10 +75,23 @@ pub(super) fn build(builder: &mut Builder<'_>, x: i64, z: i64) -> Option<()> {
         .sort_unstable_by_key(|([u, v], salt)| (u.abs() + v.abs() + i64::from(salt % 17), *salt));
     let farm_offset = rotate([-63, -45], rotation);
     let farm = [x + farm_offset[0] - 6, z + farm_offset[1] - 4];
-    let farm_bounds = [[farm[0] - 1, farm[1] - 3], [farm[0] + 13, farm[1] + 9]];
-    let farm_y = builder.fit(farm[0], farm[1], 12, 8)?;
+    let farm_y = if builder.allows_field(farm[0], farm[1], 12, 8) {
+        let floor = builder.fit(farm[0], farm[1], 12, 8);
+        // An alpine village can occupy a terrace even when its outlying field
+        // falls on a steep or unsupported slope. Every occupied plot must fit.
+        if floor.is_none()
+            && !(builder.terrain.highland_overhaul()
+                && builder.summary.style == VillageStyle::Highland)
+        {
+            return None;
+        }
+        floor
+    } else {
+        None
+    };
+    let farm_bounds = farm_y.map(|_| [[farm[0] - 1, farm[1] - 3], [farm[0] + 13, farm[1] + 9]]);
     let mut plots = Vec::new();
-    let mut occupied = vec![farm_bounds];
+    let mut occupied: Vec<_> = farm_bounds.into_iter().collect();
     let mut foundations = std::collections::HashMap::new();
     for (i, role) in roles(seed).into_iter().enumerate() {
         let mut chosen = None;
@@ -135,17 +148,31 @@ pub(super) fn build(builder: &mut Builder<'_>, x: i64, z: i64) -> Option<()> {
     for plot in &plots {
         roads.connect(builder, plot.portal())?;
     }
-    roads.connect(builder, [farm[0] + 6, farm_y, farm[1] - 2])?;
+    if let Some(farm_y) = farm_y {
+        roads.connect(builder, [farm[0] + 6, farm_y, farm[1] - 2])?;
+    }
     for plot in &plots {
         buildings::build(builder, plot);
     }
-    builder.farm(farm[0], farm[1])?;
-    for dz in -2..=0 {
-        let p = [farm[0] + 6, farm_y - 1, farm[1] + dz];
-        let natural = builder.ground(p[0], p[2]);
-        builder.fill([p[0], natural.min(p[1]) - 1, p[2]], p, 2);
-        builder.set(p, PATH);
-        builder.fill([p[0], farm_y, p[2]], [p[0], farm_y + 2, p[2]], 0);
+    if farm_y.is_some() {
+        builder.farm(farm[0], farm[1])?;
+    }
+    let old_layout = builder.terrain.config().ecology_revision < 14;
+    let [wx, wz] = if old_layout { farm } else { [x, z] };
+    if super::super::plains::active(builder, wx, wz) {
+        let reserved = |bounds: [[i64; 2]; 2]| {
+            occupied.iter().any(|&plot| overlaps(bounds, plot))
+                || roads.walk.iter().any(|p| {
+                    (0..2).all(|axis| (bounds[0][axis]..=bounds[1][axis]).contains(&p[axis]))
+                })
+        };
+        if old_layout {
+            super::super::plains::mill_by_field(builder, farm, reserved);
+        }
+        super::super::plains::well(builder, [x, z], reserved);
+    }
+    if let Some(y) = farm_y {
+        super::farm_entrance(builder, farm, y);
     }
     // The reserved central clearing stays low and navigable instead of adding
     // another set of torch-lit structures over residential plots.

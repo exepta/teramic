@@ -51,7 +51,7 @@ fn local_worlds_sample_atmosphere_without_a_client_session_and_pending_replicas_
 
 #[test]
 fn one_volume_covers_the_whole_loaded_grove_with_bounded_field_cost() {
-    let field = Field::sample(Vec3::new(-1., 6., -1.), |_, _| Some((1.045, 1.)));
+    let field = Field::sample(Vec3::new(-1., 6., -1.), |_, _| Some((1.045, 1., 0.)));
     assert_eq!(field.occupied(), 121);
     assert_eq!(field.origin, [-88, -88]);
     let (center, extent) = field.bounds();
@@ -65,7 +65,7 @@ fn one_volume_covers_the_whole_loaded_grove_with_bounded_field_cost() {
 #[test]
 fn height_encoding_preserves_slopes_and_missing_cells_do_not_pull_ground_down() {
     let field = Field::sample(Vec3::ZERO, |x, z| {
-        (x < 30).then_some((40. + x as f32 * 0.13 + z as f32 * 0.04, 0.9))
+        (x < 30).then_some((40. + x as f32 * 0.13 + z as f32 * 0.04, 0.9, 0.))
     });
     let (pixels, base, span) = field.pixels();
     for (i, pixel) in pixels.chunks_exact(4).enumerate() {
@@ -76,22 +76,22 @@ fn height_encoding_preserves_slopes_and_missing_cells_do_not_pull_ground_down() 
     let empty = Field::sample(Vec3::ZERO, |_, _| None);
     assert_eq!(empty.occupied(), 0);
     assert_eq!(
-        Field::sample(Vec3::NAN, |_, _| Some((1., 1.))).occupied(),
+        Field::sample(Vec3::NAN, |_, _| Some((1., 1., 0.))).occupied(),
         0
     );
 }
 #[test]
 fn world_fixed_field_and_density_are_continuous_without_lamp_sources() {
-    let sample = |x, z| Some(((x + z) as f32 * 0.02, 0.4));
+    let sample = |x, z| Some(((x + z) as f32 * 0.02, 0.4, 0.));
     assert_eq!(
         Field::sample(Vec3::new(-1., 2., -1.), sample),
         Field::sample(Vec3::new(-0.99, 2., -0.99), sample)
     );
-    let a = Field::sample(Vec3::ZERO, |_, _| Some((1., 0.3)));
-    let b = Field::sample(Vec3::ZERO, |_, _| Some((1., 0.301)));
+    let a = Field::sample(Vec3::ZERO, |_, _| Some((1., 0.3, 0.)));
+    let b = Field::sample(Vec3::ZERO, |_, _| Some((1., 0.301, 0.)));
     assert!(b.weights[0] > a.weights[0] && b.weights[0] - a.weights[0] < 0.003);
     assert_eq!(
-        Field::sample(Vec3::ZERO, |_, _| Some((1., 0.))).occupied(),
+        Field::sample(Vec3::ZERO, |_, _| Some((1., 0., 0.))).occupied(),
         0
     );
     let (mut chunks, journal) = super::super::tests::terrain();
@@ -122,4 +122,19 @@ fn single_volume_shader_parses_with_and_without_prepass() {
         assert_eq!(source.contains("prepass_depth(input.position"), depth);
         assert!(source.contains("first_hit"));
     }
+}
+
+#[test]
+fn regional_density_covers_streams_and_forest_but_preserves_spirit_banks() {
+    let field = Field::sample(Vec3::ZERO, |x, z| {
+        let spirit = if x > 0 { 1. } else { 0. };
+        Some((12., spirit, if z > 0 { 0.8 } else { -0.4 }))
+    });
+    let (pixels, _, _) = field.pixels();
+    let cell = |x: usize, z: usize| &pixels[4 * (x + z * SIZE)..][..4];
+    assert_eq!(field.occupied(), SIZE * SIZE);
+    assert!(cell(0, 0)[3] < 128);
+    assert!(cell(0, 10)[3] > 128);
+    assert_eq!(cell(10, 10)[2..], [255, 128]);
+    assert_eq!(Field::sample(Vec3::ZERO, |_, _| None).occupied(), 0);
 }

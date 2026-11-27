@@ -580,7 +580,7 @@ fn complete_old_landscape_snapshots_roundtrip_without_adopting_new_defaults() {
 fn legacy_eight_biome_snapshots_append_spirit_profile_without_retrogen() {
     let original = BiomeDefinitions::default();
     let mut json = serde_json::to_value(&original).unwrap();
-    json["entries"].as_array_mut().unwrap().pop();
+    json["entries"].as_array_mut().unwrap().truncate(8);
     let restored: BiomeDefinitions = serde_json::from_value(json).unwrap();
     assert_eq!(&restored.entries[..8], &original.entries[..8]);
     assert_eq!(

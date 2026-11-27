@@ -4,6 +4,8 @@ pub(crate) mod material;
 pub use environment::UnderwaterState;
 mod contacts;
 mod ink;
+mod surf;
+mod vents;
 pub use ink::InkExposure;
 pub(crate) mod mist;
 mod raymarch;
@@ -31,7 +33,9 @@ pub struct WaterStatus {
 
 pub(super) fn install(app: &mut App) {
     storage::install(app);
+    surf::install(app);
     contacts::install(app);
+    app.add_systems(Update, vents::emit.before(contacts::UpdateContacts));
     raymarch::install(app);
     // The body-aware uploader owns standing water exclusively. Preserve its
     // depth, current, biome and reflection optics without reviving the previous

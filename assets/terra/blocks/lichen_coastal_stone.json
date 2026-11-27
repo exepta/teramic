@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 780,
+  "name": "Lichen-Covered Stone",
+  "description": "Lichen-Covered Stone",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.8,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "textures": {
+    "side": "textures/misty_coast/lichen_coastal_stone.png"
+  },
+  "materials": {
+    "side": {
+      "normal_texture": "textures/misty_coast/lichen_coastal_stone_normal.png",
+      "roughness": 0.84,
+      "reflectance": 0.12
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

@@ -212,13 +212,20 @@ mod profession_tests {
     use super::*;
 
     #[test]
-    fn settlement_beds_generate_every_new_civilian_without_adding_a_garrison() {
+    fn settlement_beds_generate_town_professions_and_leave_swamp_residents_at_their_huts() {
         use terra_core::creatures::{soldiers::SoldierLoadout, villagers};
         for seed in [0, 522, u32::MAX] {
             let roles: std::collections::BTreeSet<_> =
                 (0..34).map(|slot| civilian_role(seed, slot)).collect();
-            for role in villagers::ENGINEER..villagers::ROLE_COUNT {
+            for role in villagers::ENGINEER..=villagers::CRAFTSMAN {
                 assert!(roles.contains(&role));
+            }
+            for role in [
+                villagers::SWAMP_WITCH,
+                villagers::SWAMP_WARLOCK,
+                villagers::SWAMP_HERMIT,
+            ] {
+                assert!(!roles.contains(&role));
             }
             assert!(roles.iter().all(|role| villagers::is_civilian(*role)));
             assert!(

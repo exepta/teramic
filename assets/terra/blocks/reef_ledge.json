@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": 579,
+  "name": "Reef Ledge",
+  "description": "A mossy stone ledge overlooking a reef.",
+  "creative_category": "nature",
+  "hardness": 0.45,
+  "resistance": 0.7,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/reef_ledge.glb",
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.2,
+        0,
+        0.23
+      ],
+      "maximum": [
+        0.8,
+        0.42500000000000004,
+        0.77
+      ]
+    }
+  ],
+  "textures": {}
+}

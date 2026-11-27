@@ -8,6 +8,7 @@ pub(crate) mod sidewalk;
 pub(crate) use loading::test_static_scene;
 pub(crate) mod mipmaps;
 mod sand;
+pub(crate) mod sculpt;
 pub(crate) mod surface;
 mod templates;
 #[cfg(test)]

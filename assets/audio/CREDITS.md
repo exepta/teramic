@@ -439,12 +439,15 @@ underwater filtering; no audio entity per lightning segment.
 
 ## Dragon encounters
 
-The dark dragon's procession is a 34-bar lament in D with a Phrygian inflection,
-low choral octaves answered from across the hall and an exposed solo violin. The earth dragon has a 34-bar
-five-beat brass march with a clipped choral call, a heavy three-accent tread and a quiet cello interlude.
-The water dragon's 36 bars pair a twelve-eight harp current with a solo oboe
-and violin, two answering choirs, glockenspiel and a three-against-four string climax. All three
-scores are original Teramic compositions. String sections, natural soft and
+The dark dragon's 40-bar procession opens with an ascending horn call in D.
+A solo violin breaks the march before low brass, gong and a sustained choir
+return over accelerating bowed strings. The earth dragon's 40-bar march sets
+a five-beat trombone call against a marching snare, with a quiet cello
+interlude and a massed brass response. The water dragon's 42 bars open with a
+violin and harp fanfare. Horns in three answer a rising four-beat cello line
+in the final storm before the oboe returns. The fire dragon's 32-bar F minor
+score grows from cello and ember percussion into a brass, choir and string
+climax over a 3+3+2 ostinato. All four scores are original Teramic compositions. String sections, natural soft and
 forte horns, alternating short string and brass takes, trumpet, tenor trombone,
 flute, oboe, harp, bass drum, snare, gong, suspended cymbal and timpani
 use their recorded articulations. The
@@ -455,16 +458,28 @@ S. Christian Collins. The delivered 44.1 kHz stereo mixes include the release
 of the preceding phrase across the loop boundary.
 [VSCO 2 CE](https://github.com/sgossner/VSCO-2-CE/tree/440300901dfe9275fd84e0b7763af1f8443ae62e) · [GeneralUser GS](https://schristiancollins.com/generaluser.php)
 
-Each dragon has six spatial one-shots. The vocal attacks use original
-irregular reed impulses, air separation and short treble edits from a CC0
-tiger recording. Creaking wood adds a tearing edge to the dark dragon, gravel
-and displaced air give the earth dragon weight, and spray and ice fragments
-break up the water dragon's exhalation. The source recordings for the wider
-Foley layers are credited above.
+Each dragon has fifteen spatial one-shots for its movements, breath,
+injuries and attacks. The voices use continuous recorded growls, with separate
+articulations for full calls and short attacks. Rock and gravel carry the
+earth dragon's impacts, spray and water strokes accompany the water dragon,
+and steam and magma accompany the fire dragon. The dark dragon combines a
+performed roar with wood strain and wind. These vocal sources are CC0.
 
 - “Tiger Roar” by lauramellis. [Freesound](https://freesound.org/people/lauramellis/sounds/263115/)
+- “Lion.wav” by GJ55GB. [Freesound](https://freesound.org/people/GJ55GB/sounds/488348/)
+- “Roar.wav” by waxsocks. [Freesound](https://freesound.org/people/waxsocks/sounds/410343/)
 
 To reproduce the recordings, run `samples.py`, `scores.py` and
-`creature_foley.py` in `tools/assets/dragon_audio`. They use Python, NumPy,
+`creature_foley.py` in `tools/assets/dragon_audio`. The dragon voices alone can
+also be rebuilt with `dragon_voices.py`. These scripts use Python, NumPy,
 ffmpeg and FluidSynth. Pass the local GeneralUser 1.47 soundfont path to
 `scores.py`. Source recordings are verified and cached inside `target`.
+
+The Petrified Forest guardian's footfalls, wake, strikes, hurt and collapse
+are edited from the stone, gravel and wood recordings credited above. Regenerate
+the seven masters with `python3 tools/assets/dragon_audio/stone_guardian.py`.
+
+The elephant contact call and trumpet, zebra bark and bray in `animals/` are
+original Teramic Foley. Each call has its own pitch contour, breath envelope
+and resonances. Regenerate the four mono clips with
+`python3 tools/assets/build_savanna_calls.py`.

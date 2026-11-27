@@ -12,6 +12,7 @@ mod debug;
 mod editor_catalog;
 mod fonts;
 mod frames;
+mod layout_classes;
 pub use frames::MenuLayoutPlugin;
 mod hud_layout;
 mod hud_visibility;

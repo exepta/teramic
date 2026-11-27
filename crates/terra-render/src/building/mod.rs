@@ -118,6 +118,8 @@ impl BuildingWorld<'_> {
                 | ItemKind::Bitumen
                 | ItemKind::GloomEssence
                 | ItemKind::DragonLoot(_)
+                | ItemKind::RuneCore
+                | ItemKind::ForestCrystal
                 | ItemKind::LightSplitter
                 | ItemKind::RoadAggregate
                 | ItemKind::Dust(_) => Some(templates.item_materials.opaque),
@@ -138,7 +140,7 @@ pub struct PlacementOutline;
 
 fn orientation_preview(material: u16) -> bool {
     terra_world::placement::furniture(material)
-        || material == 40
+        || terra_core::block_shapes::is_torch(material)
         || terra_core::lantern::is_part(material)
 }
 

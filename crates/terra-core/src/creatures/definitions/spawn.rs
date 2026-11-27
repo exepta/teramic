@@ -79,6 +79,12 @@ fn biome_valid(name: &str) -> bool {
             | "cherry_forest"
             | "spirit_blossom"
             | "blood_forest"
+            | "ashlands"
+            | "savanna"
+            | "swamp"
+            | "petrified_forest"
+            | "crystal_highlands"
+            | "misty_coast"
     )
 }
 
@@ -92,7 +98,7 @@ fn herd_valid([min, max]: [u8; 2], limit: u8) -> bool {
 
 impl MobSpawnSettings {
     pub fn valid(&self, limit: u8) -> bool {
-        self.biomes.len() <= 10
+        self.biomes.len() <= 12
             && self.biomes.iter().all(|biome| biome_valid(biome))
             && self
                 .biomes
@@ -100,7 +106,7 @@ impl MobSpawnSettings {
                 .enumerate()
                 .all(|(i, biome)| !self.biomes[..i].contains(biome))
             && self.herd_size.is_none_or(|size| herd_valid(size, limit))
-            && self.biome_herds.len() <= 10
+            && self.biome_herds.len() <= 12
             && self.biome_herds.iter().enumerate().all(|(i, herd)| {
                 biome_valid(&herd.biome)
                     && herd_valid(herd.size, limit)

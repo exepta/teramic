@@ -16,12 +16,151 @@ pub enum Command {
     EffectClear(Option<terra_core::EffectKind>),
 }
 
-use terra_world::generation::CaveEcology;
-pub(crate) const CAVE_BIOMES: [(&str, CaveEcology); 4] = [
-    ("lush_cave", CaveEcology::Lush),
-    ("salt_cave", CaveEcology::Salt),
-    ("ice_cave", CaveEcology::Waterfall),
-    ("drip_cave", CaveEcology::Dripstone),
+use terra_core::{BiomeKind, command_ids};
+use terra_world::generation::{
+    CaveEcology, CoastalLandmarkKind, CrystalLandmarkKind, structures::StructureKind,
+};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum LocateTarget {
+    Biome(BiomeKind),
+    Cave(CaveEcology),
+    Structure(StructureKind),
+    CrystalLandmark(CrystalLandmarkKind),
+    CoastalLandmark(CoastalLandmarkKind),
+}
+
+pub(crate) const BIOMES: &[(&str, LocateTarget)] = &[
+    ("teramic::desert", LocateTarget::Biome(BiomeKind::Desert)),
+    ("teramic::forest", LocateTarget::Biome(BiomeKind::Forest)),
+    ("teramic::plains", LocateTarget::Biome(BiomeKind::Plains)),
+    (
+        "teramic::highland",
+        LocateTarget::Biome(BiomeKind::Highland),
+    ),
+    ("teramic::ocean", LocateTarget::Biome(BiomeKind::Ocean)),
+    (
+        "teramic::mushroom_park",
+        LocateTarget::Biome(BiomeKind::MushroomPark),
+    ),
+    (
+        "teramic::cherry_forest",
+        LocateTarget::Biome(BiomeKind::CherryForest),
+    ),
+    (
+        "teramic::spirit_blossom",
+        LocateTarget::Biome(BiomeKind::SpiritBlossom),
+    ),
+    (
+        "teramic::blood_forest",
+        LocateTarget::Biome(BiomeKind::BloodForest),
+    ),
+    (
+        "teramic::cliffted_desert",
+        LocateTarget::Biome(BiomeKind::ClifftedDesert),
+    ),
+    (
+        "teramic::ashlands",
+        LocateTarget::Biome(BiomeKind::Ashlands),
+    ),
+    ("teramic::savanna", LocateTarget::Biome(BiomeKind::Savanna)),
+    ("teramic::swamp", LocateTarget::Biome(BiomeKind::Swamp)),
+    (
+        "teramic::misty_coast",
+        LocateTarget::Biome(BiomeKind::MistyCoast),
+    ),
+    (
+        "teramic::crystal_highlands",
+        LocateTarget::Biome(BiomeKind::CrystalHighlands),
+    ),
+    (
+        "teramic::petrified_forest",
+        LocateTarget::Biome(BiomeKind::PetrifiedForest),
+    ),
+    ("teramic::lush_cave", LocateTarget::Cave(CaveEcology::Lush)),
+    ("teramic::salt_cave", LocateTarget::Cave(CaveEcology::Salt)),
+    (
+        "teramic::ice_cave",
+        LocateTarget::Cave(CaveEcology::Waterfall),
+    ),
+    (
+        "teramic::drip_cave",
+        LocateTarget::Cave(CaveEcology::Dripstone),
+    ),
+];
+pub(crate) const STRUCTURES: &[(&str, LocateTarget)] = &[
+    (
+        "teramic::village",
+        LocateTarget::Structure(StructureKind::Village),
+    ),
+    (
+        "teramic::ruin",
+        LocateTarget::Structure(StructureKind::Ruin),
+    ),
+    (
+        "teramic::mine",
+        LocateTarget::Structure(StructureKind::Mine),
+    ),
+    (
+        "teramic::kingdom",
+        LocateTarget::Structure(StructureKind::Kingdom),
+    ),
+    (
+        "teramic::outpost",
+        LocateTarget::Structure(StructureKind::Outpost),
+    ),
+    (
+        "teramic::cemetery",
+        LocateTarget::Structure(StructureKind::Cemetery),
+    ),
+    (
+        "teramic::grave_dungeon",
+        LocateTarget::Structure(StructureKind::GraveDungeon),
+    ),
+    (
+        "teramic::dark_dragon_lair",
+        LocateTarget::Structure(StructureKind::DarkDragonLair),
+    ),
+    (
+        "teramic::earth_dragon_lair",
+        LocateTarget::Structure(StructureKind::EarthDragonLair),
+    ),
+    (
+        "teramic::water_dragon_lair",
+        LocateTarget::Structure(StructureKind::WaterDragonLair),
+    ),
+    (
+        "teramic::fire_dragon_lair",
+        LocateTarget::Structure(StructureKind::FireDragonLair),
+    ),
+    (
+        "teramic::shipwreck",
+        LocateTarget::CoastalLandmark(CoastalLandmarkKind::Shipwreck),
+    ),
+    (
+        "teramic::fishing_village",
+        LocateTarget::CoastalLandmark(CoastalLandmarkKind::FishingVillage),
+    ),
+    (
+        "teramic::lighthouse",
+        LocateTarget::CoastalLandmark(CoastalLandmarkKind::Lighthouse),
+    ),
+    (
+        "teramic::tidal_cave",
+        LocateTarget::CoastalLandmark(CoastalLandmarkKind::TidalCave),
+    ),
+    (
+        "teramic::crystal_mine",
+        LocateTarget::CrystalLandmark(CrystalLandmarkKind::CrystalMine),
+    ),
+    (
+        "teramic::mage_tower",
+        LocateTarget::CrystalLandmark(CrystalLandmarkKind::MageTower),
+    ),
+    (
+        "teramic::crystal_vault",
+        LocateTarget::CrystalLandmark(CrystalLandmarkKind::CrystalVault),
+    ),
 ];
 
 pub const HELP_PAGE_SIZE: usize = 5;
@@ -57,7 +196,7 @@ pub const CATALOGUE: &[CommandDescription] = &[
         description: "Find a surface biome or lush_cave, salt_cave, ice_cave or drip_cave.",
     },
     CommandDescription {
-        usage: "/locate struct <teramic::village|teramic::ruin|teramic::mine|teramic::kingdom|teramic::outpost|teramic::cemetery|teramic::grave_dungeon|teramic::dark_dragon_lair|teramic::earth_dragon_lair|teramic::water_dragon_lair>",
+        usage: "/locate struct <name>",
         description: "Find a generated structure; Creative also supports air and water landings.",
     },
     CommandDescription {
@@ -114,18 +253,35 @@ mod locate_tests {
         );
         assert_eq!(
             console_suggestions("locate struct teramic::m", &[]),
-            ["locate struct teramic::mine"]
+            [
+                "locate struct teramic::mine",
+                "locate struct teramic::mage_tower"
+            ]
         );
         assert_eq!(
             console_suggestions("as Alice locate struct teramic::r", &[]),
             ["as Alice locate struct teramic::ruin"]
         );
-        for (slug, _) in CAVE_BIOMES {
+        for kind in BiomeKind::ALL {
+            assert!(
+                BIOMES
+                    .iter()
+                    .any(|(_, target)| *target == LocateTarget::Biome(kind))
+            );
+        }
+        for &(slug, _) in BIOMES {
             let input = format!("/locate biome {slug}");
             assert_eq!(suggestions(&input, &[]), [input.as_str()]);
             assert_eq!(console_suggestions(&input[1..], &[]), [&input[1..]]);
         }
-        for species in ["dark", "earth", "water"] {
+        for slug in ["crystal_mine", "mage_tower", "crystal_vault"] {
+            for id in [slug.to_owned(), format!("teramic::{slug}")] {
+                let input = format!("/locate struct {id}");
+                assert_eq!(suggestions(&input, &[]), [input.as_str()]);
+                assert_eq!(console_suggestions(&input[1..], &[]), [&input[1..]]);
+            }
+        }
+        for species in ["dark", "earth", "water", "fire"] {
             assert_eq!(
                 suggestions(&format!("/locate struct teramic::{species}"), &[]),
                 [format!("/locate struct teramic::{species}_dragon_lair")],
@@ -353,10 +509,10 @@ pub fn parse(text: &str) -> Result<Option<Command>, &'static str> {
                 [_, "clear"] => Ok(Some(Command::EffectClear(None))),
                 [_, "clear", name] => effect_kind(name)
                     .map(|kind| Some(Command::EffectClear(Some(kind))))
-                    .ok_or("Unknown effect. Tab lists available effects."),
+                    .map_err(|e| e.message("Unknown effect. Tab lists available effects.")),
                 [_, "give", name, rest @ ..] if rest.len() <= 2 => {
-                    let kind =
-                        effect_kind(name).ok_or("Unknown effect. Tab lists available effects.")?;
+                    let kind = effect_kind(name)
+                        .map_err(|e| e.message("Unknown effect. Tab lists available effects."))?;
                     let seconds = rest.first().map_or(Ok(30.0), |seconds| {
                         seconds.parse::<f32>().map_err(|_| usage)
                     })?;
@@ -453,9 +609,11 @@ pub fn parse(text: &str) -> Result<Option<Command>, &'static str> {
             _ => Err("Usage: /gamemode <survival|0|creative|1|spectator|2>"),
         },
         Some("/spawn") => match parts.as_slice() {
-            [_, id] => terra_core::creatures::spawning::lookup(id)
-                .map(|mob| Some(Command::Spawn(mob)))
-                .ok_or("Unknown mob. Use /spawn teramic::<mob>; Tab lists available mobs."),
+            [_, id] => {
+                command_ids::resolve(id, terra_core::creatures::spawning::MOBS.iter().copied())
+                    .map(|mob| Some(Command::Spawn(mob)))
+                    .map_err(|e| e.message("Unknown mob. Tab lists available mobs."))
+            }
             _ => Err("Usage: /spawn <mob>, for example /spawn teramic::clown_fish"),
         },
         Some("/time") => match parts.as_slice() {
@@ -497,7 +655,8 @@ fn parse_effect_values(
     level: &str,
     seconds: &str,
 ) -> Result<(terra_core::EffectKind, f32, u8), &'static str> {
-    let kind = effect_kind(name).ok_or("Unknown effect. Tab lists available effects.")?;
+    let kind =
+        effect_kind(name).map_err(|e| e.message("Unknown effect. Tab lists available effects."))?;
     let definition = terra_core::effects::effect_definition(kind);
     let level = level
         .parse::<u8>()
@@ -514,10 +673,24 @@ fn parse_effect_values(
     Ok((kind, seconds, level))
 }
 
-fn effect_kind(name: &str) -> Option<terra_core::EffectKind> {
-    terra_core::EffectKind::ALL.into_iter().find(|kind| {
-        kind.identifier() == name || kind.identifier().strip_prefix("teramic::") == Some(name)
-    })
+fn effect_kind(name: &str) -> Result<terra_core::EffectKind, command_ids::LookupError> {
+    command_ids::resolve(
+        name,
+        terra_core::EffectKind::ALL
+            .into_iter()
+            .map(|k| (k.identifier(), k)),
+    )
+}
+
+fn id_choices<'a>(
+    command: &str,
+    typed: &str,
+    ids: impl IntoIterator<Item = &'a str>,
+) -> Vec<String> {
+    command_ids::completions(typed, ids)
+        .into_iter()
+        .map(|id| format!("{command}{id}"))
+        .collect()
 }
 
 fn hour(value: &str) -> Result<f64, &'static str> {
@@ -618,11 +791,14 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
                 )
                 .collect()
         }
-    } else if prefix.starts_with("/spawn ") {
-        terra_core::creatures::spawning::MOBS
-            .iter()
-            .map(|(id, _)| format!("/spawn {id}"))
-            .collect()
+    } else if let Some(typed) = prefix.strip_prefix("/spawn ") {
+        id_choices(
+            "/spawn ",
+            typed,
+            terra_core::creatures::spawning::MOBS
+                .iter()
+                .map(|(id, _)| *id),
+        )
     } else if prefix.starts_with("/gamemode ") {
         ["survival", "creative", "spectator", "0", "1", "2"]
             .iter()
@@ -684,39 +860,14 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
         vec!["/season set ".into()]
     } else if prefix.starts_with("/time ") {
         vec!["/time set ".into()]
-    } else if prefix.starts_with("/locate biome ") {
-        [
-            "desert",
-            "forest",
-            "plains",
-            "highland",
-            "ocean",
-            "mushroom_park",
-            "cliffted_desert",
-            "cherry_forest",
-            "spirit_blossom",
-            "blood_forest",
-        ]
-        .into_iter()
-        .chain(CAVE_BIOMES.iter().map(|(slug, _)| *slug))
-        .map(|v| format!("/locate biome {v}"))
-        .collect()
-    } else if prefix.starts_with("/locate struct ") {
-        [
-            "teramic::village",
-            "teramic::ruin",
-            "teramic::mine",
-            "teramic::kingdom",
-            "teramic::outpost",
-            "teramic::cemetery",
-            "teramic::grave_dungeon",
-            "teramic::dark_dragon_lair",
-            "teramic::earth_dragon_lair",
-            "teramic::water_dragon_lair",
-        ]
-        .iter()
-        .map(|v| format!("/locate struct {v}"))
-        .collect()
+    } else if let Some(typed) = prefix.strip_prefix("/locate biome ") {
+        id_choices("/locate biome ", typed, BIOMES.iter().map(|(id, _)| *id))
+    } else if let Some(typed) = prefix.strip_prefix("/locate struct ") {
+        id_choices(
+            "/locate struct ",
+            typed,
+            STRUCTURES.iter().map(|(id, _)| *id),
+        )
     } else if prefix.starts_with("/locate ") {
         vec!["/locate biome ".into(), "/locate struct ".into()]
     } else {
@@ -741,7 +892,15 @@ pub fn suggestions(prefix: &str, players: &[String]) -> Vec<String> {
     choices
         .into_iter()
         .filter(|v| {
-            v.to_ascii_lowercase().starts_with(&prefix) || effect_player_completion(v, &prefix)
+            v.to_ascii_lowercase().starts_with(&prefix)
+                || effect_player_completion(v, &prefix)
+                || v.rsplit_once(' ').is_some_and(|(command, id)| {
+                    id.split_once("::").is_some_and(|(_, local)| {
+                        format!("{command} {local}")
+                            .to_ascii_lowercase()
+                            .starts_with(&prefix)
+                    })
+                })
         })
         .take(64)
         .collect()
@@ -788,7 +947,7 @@ fn direct_effect_suggestions(prefix: &str, players: &[String]) -> Vec<String> {
         ("/effect ".to_owned(), rest)
     };
     let parts: Vec<_> = rest.split_whitespace().collect();
-    if let Some(kind) = parts.first().and_then(|name| effect_kind(name))
+    if let Some(kind) = parts.first().and_then(|name| effect_kind(name).ok())
         && (parts.len() > 1 || rest.ends_with(' '))
     {
         let name = parts[0];
@@ -801,18 +960,11 @@ fn direct_effect_suggestions(prefix: &str, players: &[String]) -> Vec<String> {
             .map(|level| format!("{command}{name} {level}"))
             .collect();
     }
-    let qualified = rest.starts_with("teramic:");
-    let mut result: Vec<_> = terra_core::EffectKind::ALL
-        .into_iter()
-        .map(|kind| {
-            let name = if qualified {
-                kind.identifier()
-            } else {
-                kind.identifier().trim_start_matches("teramic::")
-            };
-            format!("{command}{name}")
-        })
-        .collect();
+    let mut result = id_choices(
+        &command,
+        rest,
+        terra_core::EffectKind::ALL.map(|k| k.identifier()),
+    );
     if command == "/effect " {
         result.extend(["/effect give ".into(), "/effect clear".into()]);
         result.extend(
@@ -828,7 +980,7 @@ fn effect_suggestions(prefix: &str, command: &str, clear: bool) -> Vec<String> {
     let rest = prefix.strip_prefix(command).unwrap_or_default();
     let parts: Vec<_> = rest.split_whitespace().collect();
     if !clear
-        && let Some(kind) = parts.first().and_then(|name| effect_kind(name))
+        && let Some(kind) = parts.first().and_then(|name| effect_kind(name).ok())
         && (parts.len() > 1 || rest.ends_with(' '))
     {
         let name = parts[0];
@@ -842,20 +994,11 @@ fn effect_suggestions(prefix: &str, command: &str, clear: bool) -> Vec<String> {
             .map(|seconds| format!("{command}{name} {seconds}"))
             .into();
     }
-    let qualified = rest.starts_with("teramic:");
-    terra_core::EffectKind::ALL
-        .into_iter()
-        .map(|kind| {
-            let name = if qualified {
-                kind.identifier()
-            } else {
-                kind.identifier()
-                    .strip_prefix("teramic::")
-                    .unwrap_or(kind.identifier())
-            };
-            format!("{command}{name}")
-        })
-        .collect()
+    id_choices(
+        command,
+        rest,
+        terra_core::EffectKind::ALL.map(|k| k.identifier()),
+    )
 }
 
 /// Console completion uses the same vocabulary, with no slash and explicit actors.
@@ -1075,6 +1218,11 @@ mod tests {
             ["as Alice spawn teramic::clown_fish"]
         );
         assert_eq!(suggestions("/sp", &[]), ["/spawn "]);
+        assert_eq!(suggestions("/spawn clown_f", &[]), ["/spawn clown_fish"]);
+        assert_eq!(
+            parse("/spawn clown_fish"),
+            Ok(Some(Command::Spawn(clownfish)))
+        );
         assert!(
             help_page(2)
                 .iter()

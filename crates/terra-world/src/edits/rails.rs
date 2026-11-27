@@ -184,9 +184,10 @@ impl EditJournal {
                     chunks
                         .surface_column_at(edit.position[0], edit.position[2])
                         .map_or_else(FluidCell::default, |surface| {
-                            crate::water::fluid::from_columns(
+                            crate::water::falls::sampled(
                                 surface.water_columns(),
-                                edit.position[1],
+                                edit.position,
+                                self,
                             )
                         })
                 }))

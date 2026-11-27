@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 756,
+  "name": "Frosted Moss",
+  "description": "A cushion of silver-tipped moss clings to the scree.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.65,
+  "resistance": 1.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/frosted_moss.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

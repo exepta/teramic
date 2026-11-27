@@ -115,7 +115,9 @@ fn hand_pose(item: ItemKind, palm: Vec3) -> Transform {
     }
     let handle = matches!(
         item.preview_item(),
-        ItemKind::Tool(_) | ItemKind::Stick | ItemKind::Block(40)
+        ItemKind::Tool(_)
+            | ItemKind::Stick
+            | ItemKind::Block(40 | terra_core::block_shapes::VIOLET_TORCH)
     );
     let grip = Vec3::new(
         if handle { 0.0 } else { 0.035 },

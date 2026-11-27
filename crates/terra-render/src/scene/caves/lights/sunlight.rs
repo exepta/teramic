@@ -102,7 +102,7 @@ pub(super) fn update(
                 && world
                     .cave
                     .as_ref()
-                    .is_none_or(|cave| cave.blend <= 0.001 && cave.target <= 0.001)
+                    .is_none_or(|cave| cave.blend <= 0.001 && cave.roof_coverage <= 0.001)
                 && world
                     .underwater
                     .as_ref()
@@ -159,7 +159,7 @@ pub(super) fn update(
                     .chunks
                     .block_at(lamp.0)
                     .map(|raw| world.journal.block(lamp.0).unwrap_or(raw))
-                    == Some(40)
+                    .is_some_and(terra_core::block_shapes::is_torch)
         })
         .map(|lamp| (lamp.0, lamp.2))
         .collect();

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 658,
+  "name": "Flowering Savanna Cactus",
+  "description": "A tall cactus crowned with pink flowers.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/flowering_savanna_cactus.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

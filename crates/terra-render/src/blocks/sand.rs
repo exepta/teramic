@@ -1,4 +1,4 @@
-//! Fine cohesive beige grains and subtle wind ripples; no stones or per-cell assets.
+//! Fine cohesive beige grains shared by the top and exposed banks.
 pub(super) const SIZE: u32 = 512;
 
 fn hash(x: u32, y: u32) -> u32 {
@@ -24,24 +24,16 @@ fn clusters(x: u32, y: u32) -> f32 {
 }
 
 pub(super) fn color(px: u32, py: u32) -> [f32; 3] {
-    use std::f32::consts::TAU;
-
     let [x, y] = [px % SIZE, py % SIZE];
-    let p = [px % SIZE, py % SIZE].map(|v| (v as f32 + 0.5) / SIZE as f32);
     let seed = hash(x / 2, y / 2);
     let grain = ((seed >> 8) & 255) as f32 / 255.0 - 0.5;
     let packed = (hash(x / 8, y / 8) & 255) as f32 / 255.0 - 0.5;
     let cluster = clusters(x, y);
     let facet = (hash(x, y) & 255) as f32 / 255.0 - 0.5;
     let warmth = ((seed >> 20) & 31) as f32 / 31.0 - 0.5;
-    // Integer-frequency waves meet across the repeat boundary. Their subdued
-    // lighting leaves fine individual grains visible without rock-sized cells.
-    let phase =
-        TAU * (p[1] * 5.0 + (p[0] * TAU).sin() * 0.10 + ((p[0] * 3.0 - p[1]) * TAU).sin() * 0.035);
-    let dune = phase.sin() * 0.006 + (phase * 2.0).cos() * 0.0015;
     let base = [236.0, 217.0, 184.0];
     std::array::from_fn(|axis| {
-        (base[axis] * (1.0 + dune)
+        (base[axis]
             + [4.0, 3.0, 2.0][axis] * grain
             + [3.0, 2.5, 2.0][axis] * packed
             + [5.0, 4.0, 3.0][axis] * cluster
@@ -127,6 +119,7 @@ mod tests {
             .unwrap();
         assert!(sand.contains("wet_noise(p * 64.0"));
         assert!(sand.contains("wet_hash(floor(p * 24.0)"));
+        assert!(sand.contains("let ripple = upward * sin("));
         assert!(sand.contains("height = ripple * 0.0018 + grains * 0.0012 + grain * 0.00035"));
         assert!(sand.contains("contact = 0.965 + grains * 0.035"));
         assert!(shader.contains("let detail_fade = 1.0 - smoothstep(0.012,0.11,footprint)"));

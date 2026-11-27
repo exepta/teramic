@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": 526,
+  "name": "Buttressed Stump",
+  "description": "Old roots flare from a mossy, splintered stump.",
+  "creative_category": "nature",
+  "hardness": 0.42,
+  "resistance": 0.9,
+  "required_tool": null,
+  "mining_level": 0,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/buttress_stump.glb",
+  "textures": {},
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.27,
+        0,
+        0.28
+      ],
+      "maximum": [
+        0.7,
+        0.58,
+        0.72
+      ]
+    }
+  ]
+}

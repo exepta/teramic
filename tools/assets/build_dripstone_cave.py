@@ -5,7 +5,7 @@ import random
 
 from build_castle import BLOCKS, Mesh
 from build_salt_cave import column, sample_swatches, save_json, stone
-from build_spirit_blossom import export
+from voxel_props.surface import export_voxels
 
 SWATCHES = {
     'dripstone': [(83,234),(161,199),(273,235),(186,276),(186,390),(273,345)],
@@ -53,7 +53,7 @@ def outcrop(number, slug, name, description, luminous):
             column(mesh, .5+math.cos(angle)*r, .5+math.sin(angle)*r, .11, .084,
                    .91-r*2.1, angle, (.35*r*math.cos(angle), .35*r*math.sin(angle)),
                    ('Calcite core', 'Pale edge'))
-    textures = export(mesh, slug, ('Calcite core',) if luminous else ())
+    textures = export_voxels(mesh, slug, ('Calcite core',) if luminous else (), resolution=16)
     definition = dict(schema_version=1, id=number, name=name, description=description,
                       creative_category='decoration', hardness=.65, resistance=2, mining_level=0,
                       struct_block=True, render_kind='custom_mesh', model_layout='scene',

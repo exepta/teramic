@@ -18,7 +18,7 @@ fn terrain(seed: u64, scale: f64, revision: u8) -> TerraGenerator {
 
 #[test]
 fn dry_interiors_span_at_least_twenty_four_chunks_across_multiple_seeds() {
-    let mut kinds = [0; 10];
+    let mut kinds = [0; terra_core::BiomeKind::ALL.len()];
     for seed in [42042, 7, 99173] {
         for scale in [256.0_f64, 2048.0] {
             let world = terrain(seed, scale, 9);

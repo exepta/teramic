@@ -130,10 +130,17 @@ fn corner(columns: &[SurfaceColumn], x: usize, z: usize, reference: f64) -> Corn
     };
     // A dry low neighbor is a drainage edge. Meet its solid top instead of
     // leaving a suspended horizontal rim. Raised banks retain the shared level.
-    let height = if adjacent
-        .iter()
-        .any(|c| c.cave.dynamic_water && reference < c.cave.ceiling)
-    {
+    let crest_cell = reference.ceil() as i64 - 1;
+    let height = if dry_bed >= mean
+        || adjacent.iter().any(|c| {
+            (c.cave.dynamic_water && reference < c.cave.ceiling)
+                || c.falls
+                    .iter()
+                    .flatten()
+                    .any(|f| i64::from(f.top) == crest_cell && f.source != [0; 2])
+        }) {
+        // At an open spill the next column's bed is the landing far below.
+        // The reservoir joins the top of the falling water at this edge.
         mean
     } else {
         mean.min(dry_bed)
@@ -154,7 +161,6 @@ fn corner(columns: &[SurfaceColumn], x: usize, z: usize, reference: f64) -> Corn
     }
 }
 
-#[cfg(any(feature = "bevy", test))]
 pub(super) fn shared_corner_height(
     columns: &[SurfaceColumn],
     x: usize,

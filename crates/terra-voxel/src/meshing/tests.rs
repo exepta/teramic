@@ -55,6 +55,27 @@ fn fully_surrounded_sections_have_no_geometry() {
 }
 
 #[test]
+fn occlusion_lookup_matches_the_catalog_and_keeps_unknown_ids_out_of_ambient_occlusion() {
+    use crate::MaterialId;
+    for id in 0..=u16::MAX {
+        let expected = !matches!(id, 0 | 27)
+            && id != MaterialId::Lava as u16
+            && MaterialId::from_raw(id).is_none_or(MaterialId::is_opaque);
+        assert_eq!(occludes_face(id), expected, "material {id}");
+    }
+    let mut blocks = vec![0; PADDED_VOLUME];
+    let stone = index([1, 1, 1]);
+    let unknown = index([2, 1, 1]);
+    blocks[stone] = MaterialId::Stone as u16;
+    blocks[unknown] = u16::MAX;
+    let mesh = mesh_section_faces(&blocks).unwrap();
+    assert_eq!(mesh.faces.len(), 10);
+    let occupied = |i: usize| mesh.occluders[i / 64] & (1 << (i % 64)) != 0;
+    assert!(occupied(stone));
+    assert!(!occupied(unknown));
+}
+
+#[test]
 fn fluid_source_has_no_cube_faces_and_does_not_hide_adjacent_terrain() {
     let mut voxels = vec![0; PADDED_VOLUME];
     voxels[index([1, 1, 1])] = crate::MaterialId::FluidWater as u16;
@@ -70,50 +91,60 @@ fn fluid_source_has_no_cube_faces_and_does_not_hide_adjacent_terrain() {
 }
 
 #[test]
-fn masked_leaves_preserve_solid_faces_without_internal_leaf_faces() {
-    for leaf in 7..=9 {
+fn foliage_keeps_trunks_visible_and_merges_touching_crowns_across_sections() {
+    for leaf in crate::MaterialId::FOLIAGE {
         let mut voxels = vec![0; PADDED_VOLUME];
-        voxels[index([1, 1, 1])] = 6;
-        voxels[index([2, 1, 1])] = leaf;
-        let mesh = mesh_section(&voxels).unwrap();
-        assert!(
-            mesh.faces
-                .iter()
-                .any(|f| f.material == 6 && f.side == 1 && f.occupied_neighbor)
-        );
-        assert!(!mesh.faces.iter().any(|f| f.material == leaf && f.side == 0));
-        assert_eq!(mesh.faces.len(), 11);
-
         voxels[index([1, 1, 1])] = leaf;
-        let joined = mesh_section(&voxels).unwrap();
-        assert_eq!(joined.faces.len(), 6);
-        assert!(
-            !joined
-                .faces
-                .iter()
-                .any(|f| f.side == 1 && f.minimum[0] == 0)
-        );
+        for neighbor in [6, leaf, 9] {
+            voxels[index([2, 1, 1])] = neighbor;
+            let mesh = mesh_section_faces(&voxels).unwrap();
+            assert!(
+                !mesh
+                    .faces
+                    .iter()
+                    .any(|f| f.material == leaf && f.side == 1 && f.minimum[0] == 0)
+            );
+            assert_eq!(
+                mesh.faces.iter().any(|f| f.material == neighbor
+                    && f.side == 0
+                    && f.minimum[0] == 1
+                    && f.occupied_neighbor),
+                neighbor == 6,
+            );
+        }
+        voxels[index([2, 1, 1])] = 0;
+        voxels[index([0, 1, 1])] = leaf;
+        for (id, visible) in [(6, true), (leaf, false)] {
+            voxels[index([1, 1, 1])] = id;
+            let mesh = mesh_section_faces(&voxels).unwrap();
+            assert_eq!(
+                mesh.faces
+                    .iter()
+                    .any(|f| f.side == 0 && f.occupied_neighbor),
+                visible
+            );
+        }
     }
-}
-
-#[test]
-fn padded_foliage_does_not_hide_a_section_boundary_trunk() {
     let mut voxels = vec![0; PADDED_VOLUME];
-    voxels[index([1, 1, 1])] = 10;
-    voxels[index([0, 1, 1])] = 9;
-    let mesh = mesh_section(&voxels).unwrap();
-    assert!(mesh.faces.iter().any(|f| f.material == 10 && f.side == 0));
-    assert!(mesh.faces.iter().all(|f| f.material == 10));
-    assert!(
-        mesh.faces
-            .iter()
-            .any(|f| f.side == 0 && f.occupied_neighbor)
-    );
+    voxels[index([1, 1, 1])] = 7;
+    for p in [[2, 1, 1], [0, 1, 1]] {
+        voxels[index(p)] = crate::MaterialId::Glass as u16;
+        let mesh = mesh_section_faces(&voxels).unwrap();
+        let leaves: Vec<_> = mesh.faces.iter().filter(|f| f.material == 7).collect();
+        assert_eq!(leaves.len(), 6);
+        assert_eq!(leaves.iter().filter(|f| f.occupied_neighbor).count(), 1);
+        assert!(
+            leaves
+                .iter()
+                .any(|f| f.side == usize::from(p[0] == 2) && f.occupied_neighbor)
+        );
+        voxels[index(p)] = 0;
+    }
     assert!(mesh_section(&vec![7; PADDED_VOLUME]).unwrap().is_empty());
 }
 
 #[test]
-fn only_mixed_air_leaf_contacts_split_greedy_faces_and_do_not_grow_the_face_cache_record() {
+fn only_mixed_air_glass_contacts_split_greedy_faces_and_do_not_grow_the_face_cache_record() {
     assert_eq!(
         std::mem::size_of::<BlockFace>(),
         if usize::BITS == 64 { 48 } else { 32 }
@@ -124,7 +155,7 @@ fn only_mixed_air_leaf_contacts_split_greedy_faces_and_do_not_grow_the_face_cach
     let plain = mesh_section(&voxels).unwrap();
     assert_eq!(plain.faces.len(), 6);
     assert!(plain.faces.iter().all(|f| !f.occupied_neighbor));
-    voxels[index([1, 2, 1])] = 7;
+    voxels[index([1, 2, 1])] = crate::MaterialId::Glass as u16;
     let mixed = mesh_section(&voxels).unwrap();
     assert_eq!(mixed.faces.iter().filter(|f| f.material == 3).count(), 7);
     let top: Vec<_> = mixed
@@ -138,7 +169,7 @@ fn only_mixed_air_leaf_contacts_split_greedy_faces_and_do_not_grow_the_face_cach
         top.iter()
             .all(|f| f.occupied_neighbor == (f.minimum[0] == 0))
     );
-    voxels[index([2, 2, 1])] = 7;
+    voxels[index([2, 2, 1])] = crate::MaterialId::Glass as u16;
     let covered = mesh_section(&voxels).unwrap();
     assert_eq!(covered.faces.iter().filter(|f| f.material == 3).count(), 6);
     let top: Vec<_> = covered
@@ -152,20 +183,22 @@ fn only_mixed_air_leaf_contacts_split_greedy_faces_and_do_not_grow_the_face_cach
 }
 
 #[test]
-fn glass_and_solid_water_keep_opaque_neighbors_visible_and_cull_their_shared_faces() {
-    for material in [
-        crate::MaterialId::Glass,
-        crate::MaterialId::SolidWater,
-        crate::MaterialId::Ice,
+fn glass_and_solid_water_show_the_neighboring_stone_face_while_frosted_ice_occludes_it() {
+    for (material, shows_stone) in [
+        (crate::MaterialId::Glass, true),
+        (crate::MaterialId::SolidWater, true),
+        (crate::MaterialId::Ice, false),
+        (crate::MaterialId::ClearCaveIce, false),
     ] {
         let mut voxels = vec![0; PADDED_VOLUME];
         voxels[index([1, 1, 1])] = 3;
         voxels[index([2, 1, 1])] = material as u16;
         let mesh = mesh_section(&voxels).unwrap();
-        assert!(
-            mesh.faces
-                .iter()
-                .any(|f| f.material == 3 && f.side == 1 && f.occupied_neighbor)
+        let stone_face = mesh.faces.iter().find(|f| f.material == 3 && f.side == 1);
+        assert_eq!(
+            stone_face.map(|f| f.occupied_neighbor),
+            shows_stone.then_some(true),
+            "{material:?}"
         );
         assert!(
             !mesh
@@ -236,4 +269,41 @@ fn connected_glass_panel_has_no_interior_frame_edges() {
         top.iter().map(|f| f.edge_mask.count_ones()).sum::<u32>(),
         12
     );
+}
+
+#[test]
+fn partial_lava_keeps_the_bank_visible_and_culls_the_join_between_liquid_cells() {
+    let lava = crate::MaterialId::Lava as u16;
+    let mut voxels = vec![0; PADDED_VOLUME];
+    voxels[index([2, 1, 1])] = 3;
+    voxels[index([1, 1, 1])] = lava;
+    voxels[index([1, 1, 2])] = lava;
+    let mesh = mesh_section(&voxels).unwrap();
+    assert!(
+        mesh.faces
+            .iter()
+            .any(|f| f.material == 3 && f.side == 0 && f.occupied_neighbor)
+    );
+    assert!(
+        !mesh
+            .faces
+            .iter()
+            .any(|f| f.material == lava && f.minimum == [0, 0, 0] && f.side == 5)
+    );
+}
+
+#[test]
+fn streamed_faces_match_full_geometry_without_allocating_vertex_arrays() {
+    let mut voxels = vec![0; PADDED_VOLUME];
+    for (x, raw) in [3, 3, 7, 15, 27, 613].into_iter().enumerate() {
+        voxels[index([x + 1, 1, 1])] = raw;
+    }
+    let full = mesh_section(&voxels).unwrap();
+    let streamed = mesh_section_faces(&voxels).unwrap();
+    assert_eq!(streamed.faces, full.faces);
+    assert_eq!(streamed.occluders, full.occluders);
+    assert!(!streamed.is_empty());
+    assert!(streamed.positions.capacity() == 0 && streamed.normals.capacity() == 0);
+    assert!(streamed.materials.capacity() == 0 && streamed.uvs.capacity() == 0);
+    assert_eq!(streamed.indices.capacity(), 0);
 }

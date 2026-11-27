@@ -59,6 +59,8 @@ pub(crate) fn item_category(item: ItemKind, declared: Option<&str>) -> String {
         | ItemKind::Bitumen
         | ItemKind::GloomEssence
         | ItemKind::DragonLoot(_)
+        | ItemKind::RuneCore
+        | ItemKind::ForestCrystal
         | ItemKind::LightSplitter
         | ItemKind::RoadAggregate
         | ItemKind::Stick
@@ -168,6 +170,8 @@ pub(crate) fn load_creative_categories(
             | ItemKind::Bitumen
             | ItemKind::GloomEssence
             | ItemKind::DragonLoot(_)
+            | ItemKind::RuneCore
+            | ItemKind::ForestCrystal
             | ItemKind::LightSplitter
             | ItemKind::RoadAggregate => item_categories.contains_key(&definition.icon),
         };

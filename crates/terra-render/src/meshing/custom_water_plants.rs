@@ -1,29 +1,9 @@
-//! Visual-only waterline attachment for lily pads and lotus models. Logical cells,
-//! inventories and saved block coordinates remain untouched.
+//! Snapshot floating plant poses for rendering with the world’s picking geometry.
 use super::*;
 use terra_world::{edits::EditJournal, streaming::ChunkStore};
 
-#[derive(Clone, Copy)]
-pub(super) struct Attachment {
-    natural_level: Option<f64>,
-    pub offset: f32,
-}
-
-impl Attachment {
-    pub(super) fn offset(&self, cell: [i64; 3], journal: &EditJournal) -> f32 {
-        let below = [cell[0], cell[1] - 1, cell[2]];
-        let level = journal.fluid(below).map_or(self.natural_level, |fluid| {
-            (fluid.amount > 0).then_some(below[1] as f64 + fluid.height())
-        });
-        waterline_offset(cell[1], level)
-    }
-}
-
-fn waterline_offset(y: i64, level: Option<f64>) -> f32 {
-    level
-        .filter(|level| level.is_finite() && level.ceil() == y as f64)
-        .map_or(0.0, |level| (level - y as f64) as f32)
-}
+pub(super) use terra_world::water::floating_plants::Attachment;
+use terra_world::water::floating_plants::is_floating_plant;
 
 impl ModelSnapshot {
     pub(crate) fn refresh_water_plants(
@@ -40,37 +20,13 @@ impl ModelSnapshot {
             return;
         };
         for model in &self.models {
-            if !matches!(model.material, 319 | 320) {
+            if !is_floating_plant(model.material) {
                 continue;
             }
             let cell = std::array::from_fn(|i| origin[i] + i64::from(model.cell[i]));
-            let below = [cell[0], cell[1] - 1, cell[2]];
-            // A player-authored model on stone, earth or furniture stays there.
-            // Unknown neighboring sections are not guessed to contain water.
-            if !matches!(
-                chunks
-                    .block_at(below)
-                    .map(|id| journal.block(below).unwrap_or(id)),
-                Some(0 | 14 | 27)
-            ) {
-                continue;
+            if let Some(attachment) = Attachment::at(chunks, journal, cell) {
+                self.water_plants.insert(model.cell, attachment);
             }
-            let natural_level = chunks
-                .surface_column_at(cell[0], cell[2])
-                .and_then(|column| column.water_columns().at(below[1]))
-                .filter(|column| below[1] as f64 >= column.bed && (below[1] as f64) < column.level)
-                .map(|column| {
-                    // The shared fluid mesh quantizes natural reservoirs to eighths.
-                    let capacity = f64::from(terra_world::water::FLUID_CAPACITY);
-                    below[1] as f64
-                        + ((column.level - below[1] as f64).min(1.0) * capacity).ceil() / capacity
-                });
-            let mut attachment = Attachment {
-                natural_level,
-                offset: 0.0,
-            };
-            attachment.offset = attachment.offset(cell, journal);
-            self.water_plants.insert(model.cell, attachment);
         }
     }
 }
@@ -82,16 +38,6 @@ mod tests {
     use terra_world::{streaming::LoadedSection, water::FluidCell};
 
     #[test]
-    fn waterline_offsets_handle_negative_levels_without_moving_dry_or_submerged_models() {
-        assert_eq!(waterline_offset(16, Some(15.375)), -0.625);
-        assert_eq!(waterline_offset(-16, Some(-16.625)), -0.625);
-        assert_eq!(waterline_offset(16, Some(16.0)), 0.0);
-        for level in [None, Some(14.9), Some(16.1), Some(f64::NAN)] {
-            assert_eq!(waterline_offset(16, level), 0.0);
-        }
-    }
-
-    #[test]
     fn actual_lotus_and_lily_glbs_follow_water_across_negative_section_seams_but_keep_their_cells()
     {
         let owner = [-16, 0, -16];
@@ -100,6 +46,7 @@ mod tests {
         for (material, path) in [
             (319, "terra/blocks/models/lotus_flower.glb"),
             (320, "terra/blocks/models/lily_pad.glb"),
+            (490, "terra/blocks/models/pond_blossoms.glb"),
         ] {
             let mut templates = TemplateSet::default();
             templates.blocks.insert(
@@ -115,7 +62,7 @@ mod tests {
                     model: crate::blocks::test_static_scene(path, material),
                 },
             );
-            for ground in [0, 3] {
+            for ground in [0, 3, 50, 553] {
                 let mut chunks = ChunkStore::default();
                 let mut data = BlockSection::empty(section).unwrap();
                 data.set_block([0; 3], material).unwrap();
@@ -164,7 +111,7 @@ mod tests {
                     &options,
                 )
                 .unwrap();
-                let expected_offset = if ground == 0 { -0.625 } else { 0.0 };
+                let expected_offset = if ground == 3 { 0.0 } else { -0.625 };
                 let source_min = templates.blocks[&material]
                     .model
                     .iter()
@@ -177,9 +124,25 @@ mod tests {
                     .map(|p| p[1])
                     .fold(f32::INFINITY, f32::min);
                 assert!((rendered_min - source_min - expected_offset).abs() < 0.00001);
+                let bounds = terra_world::water::floating_plants::PlantSurface::at(
+                    &chunks, &journal, owner, material,
+                )
+                .unwrap()
+                .bounds();
+                for axis in 0..3 {
+                    let values = || {
+                        dry.iter()
+                            .flat_map(|batch| &batch.positions)
+                            .map(|v| f64::from(v[axis]) + owner[axis] as f64)
+                    };
+                    let low = values().fold(f64::INFINITY, f64::min);
+                    let high = values().fold(f64::NEG_INFINITY, f64::max);
+                    assert!((low - bounds.minimum[axis]).abs() < 1e-5);
+                    assert!((high - bounds.maximum[axis]).abs() < 1e-5);
+                }
                 assert_eq!(data.block([0; 3]).unwrap(), material);
                 journal.set_fluid(below, FluidCell::default()).unwrap();
-                if ground == 0 {
+                if ground != 3 {
                     assert!(snapshot.water_contacts_changed(section, &journal));
                     snapshot.refresh_water_contacts(section, &journal);
                     assert_eq!(snapshot.water_plants[&[0; 3]].offset, 0.0);

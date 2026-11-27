@@ -399,29 +399,35 @@ fn authored_grass_culls_shared_faces_closes_joins_and_keeps_far_greedy_rectangle
         .unwrap()
     };
     let near = compose(DetailLevel::Near, terra_voxel::SectionPos::default());
+    let palette = templates.cube_lods[&1].face_materials;
     assert_eq!(
-        near.len(),
-        1,
-        "one material batch, no mesh/entity per block"
+        near.iter()
+            .map(|b| b.material)
+            .collect::<std::collections::BTreeSet<_>>(),
+        palette.into_iter().collect(),
+        "all cells share the tiled core and relief materials"
     );
-    assert_eq!(near[0].positions.len(), near[0].tangents.len());
+    let indices = near.iter().map(|b| b.indices.len()).sum::<usize>();
+    assert!(indices > 36 && indices <= 10 * (128 + 16 * 28) * 3);
+    assert!(near.iter().all(
+        |b| b.positions.len() == b.tangents.len() && b.positions.len() == b.surface_water.len()
+    ));
     assert!(
-        !near[0].surface_water.is_empty(),
-        "authored seasonal/snow shader payload retained"
+        near.iter()
+            .flat_map(|b| &b.positions)
+            .any(|p| p[0] == 1.0 && p[1] == 1.0)
     );
-    assert!(near[0].indices.len() > 36 && near[0].indices.len() <= 10 * (128 + 16 * 28) * 3);
-    assert!(near[0].positions.iter().any(|p| p[0] == 1.0 && p[1] == 1.0));
-    assert!(
-        !near[0].indices.chunks_exact(3).any(|triangle| {
-            triangle
-                .iter()
-                .all(|&i| near[0].positions[i as usize][0] == 1.0)
-                && triangle
-                    .iter()
-                    .all(|&i| near[0].normals[i as usize][0].abs() > 0.99)
-        }),
-        "no hidden interface between the two cubes"
-    );
+    for batch in &near {
+        assert!(
+            !batch.indices.chunks_exact(3).any(|triangle| {
+                triangle.iter().all(|&i| {
+                    batch.positions[i as usize][0] == 1.0
+                        && batch.normals[i as usize][0].abs() > 0.99
+                })
+            }),
+            "no hidden interface between the two cubes"
+        );
+    }
     for level in [DetailLevel::Middle, DetailLevel::Far] {
         let batches = compose(level, terra_voxel::SectionPos::default());
         assert_eq!(batches.len(), 6);
@@ -466,7 +472,13 @@ fn authored_near_without_micro_detail_keeps_pbr_but_reuses_greedy_coarse_faces()
     };
     let position = terra_voxel::SectionPos::new(-2, -1, -3);
     let detailed = compose(&templates, DetailLevel::Near, position);
-    assert!(detailed[0].indices.len() >= 10 * 128 * 3);
+    assert!(
+        detailed
+            .iter()
+            .map(|batch| batch.indices.len())
+            .sum::<usize>()
+            >= 10 * 128 * 3
+    );
     let near = compose(&coarse, DetailLevel::Near, position);
     assert_eq!(near, compose(&coarse, DetailLevel::Middle, position));
     assert_eq!(

@@ -45,6 +45,7 @@ fn dragon_encounter_replication_tracks_only_participants_and_death_drops_once() 
         CreatureKind::EarthDragon,
         CreatureKind::DarkDragon,
         CreatureKind::WaterDragon,
+        CreatureKind::FireDragon,
     ] {
         verify_encounter(kind);
     }

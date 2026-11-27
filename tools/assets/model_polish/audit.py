@@ -74,7 +74,9 @@ def inspect_model(path):
             errors.append(f'{count} {label}')
     if reversed_faces:
         warnings.append(f'{reversed_faces} triangles oppose vertex normals; inspect authored double-sided sheets separately')
+    names = sorted({m['name'] for m in document.doc.get('materials', []) if m.get('name')})
     return dict(path=str(path.relative_to(ROOT)), vertices=vertices, triangles=triangles,
+                named_materials=names,
                 errors=sorted(set(errors)), warnings=sorted(set(warnings)))
 
 
@@ -98,7 +100,11 @@ def audit(maximum_id=399):
                     models[model] = inspect_model(model)
                 except (OSError, ValueError, KeyError, AssertionError) as error:
                     models[model] = dict(path=str(model.relative_to(ROOT)), errors=[str(error)], warnings=[])
-            errors.extend(models[model]['errors'])
+            report = models[model]
+            errors.extend(report['errors'])
+            if block.get('render_kind') == 'custom_mesh' and 'named_materials' in report:
+                for name in sorted(block.get('textures', {}).keys() - set(report['named_materials'])):
+                    errors.append(f'texture binding references missing material {name}')
         records.append(dict(id=block['id'], definition=str(path.relative_to(ROOT)), errors=errors))
     return dict(maximum_block_id=maximum_id, blocks=len(records), models=len(models),
         failing_blocks=sum(bool(row['errors']) for row in records),

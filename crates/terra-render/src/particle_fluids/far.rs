@@ -265,7 +265,7 @@ fn published_water_mesh(
     prepared: Option<&terra_world::PreparedColumn>,
 ) -> Mesh {
     use crate::water::{
-        biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_BLOOD_WEIGHT, WaterTint},
+        biome::{ATTRIBUTE_BIOME_TINT, ATTRIBUTE_MEDIUM_WEIGHTS, WaterTint},
         material::ATTRIBUTE_WAVE_WEIGHT,
     };
     let count = patch.positions.len();
@@ -289,24 +289,27 @@ fn published_water_mesh(
     } else {
         vec![[0.; 4]; count]
     };
-    if let Some(terrain) = terrain {
+    let tint = terrain.map(|t| WaterTint::new(t, origin));
+    if let (Some(terrain), Some(tint)) = (terrain, tint.as_ref()) {
         for ((effect, p), normal) in effects.iter_mut().zip(&patch.positions).zip(&normals) {
             if effect[3] < 0.5
                 && normal[1] > 0.95
                 && (origin[1] as f32 + p[1] - terrain.config().sea_level as f32).abs() < 0.05
             {
-                effect[2] = 1.;
+                // Marsh basins share the sea's elevation. Use the marine habitat
+                // field to distinguish them from the open ocean before shading.
+                effect[2] = tint.ocean_at(*p);
             }
         }
     }
-    let tint = terrain.map(|t| WaterTint::new(t, origin));
-    let (colors, blood): (Vec<_>, Vec<_>) = patch
+    let (colors, medium_weights): (Vec<_>, Vec<_>) = patch
         .positions
         .iter()
         .map(|&p| {
-            tint.as_ref().map_or(([0.025, 0.20, 0.16, 0.0], 0.0), |t| {
-                t.optics(origin, p, prepared)
-            })
+            tint.as_ref()
+                .map_or(([0.025, 0.20, 0.16, 0.0], [0.; 2]), |t| {
+                    t.optics(origin, p, prepared)
+                })
         })
         .unzip();
     let waves = if patch.wave_weights.len() == count {
@@ -324,7 +327,7 @@ fn published_water_mesh(
     .with_inserted_attribute(Mesh::ATTRIBUTE_UV_1, flow)
     .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, effects)
     .with_inserted_attribute(ATTRIBUTE_BIOME_TINT, colors)
-    .with_inserted_attribute(ATTRIBUTE_BLOOD_WEIGHT, blood)
+    .with_inserted_attribute(ATTRIBUTE_MEDIUM_WEIGHTS, medium_weights)
     .with_inserted_attribute(ATTRIBUTE_WAVE_WEIGHT, waves)
     .with_inserted_indices(Indices::U32(patch.indices.clone()))
 }

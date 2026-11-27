@@ -136,7 +136,21 @@ impl ShapeBox {
 }
 
 pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
-    if crate::biome_flora::is_prop(material) {
+    if (793..=796).contains(&material) {
+        const GEMS: [&str; 4] = [
+            include_str!("../../../assets/terra/blocks/altar_crystal_foot.json"),
+            include_str!("../../../assets/terra/blocks/altar_crystal_heart.json"),
+            include_str!("../../../assets/terra/blocks/altar_crystal_crown.json"),
+            include_str!("../../../assets/terra/blocks/temple_crystal_cluster.json"),
+        ];
+        static BOXES: [OnceLock<Vec<ShapeBox>>; 4] = [const { OnceLock::new() }; 4];
+        let i = usize::from(material - 793);
+        return BOXES[i].get_or_init(|| read(GEMS[i], material));
+    }
+    if material == 613
+        || crate::biome_flora::is_prop(material)
+            && !matches!(material, 602 | 603 | 626 | 659..=669 | 694..=701 | 717 | 785..=787 | 790)
+    {
         return &[];
     }
     if crate::blood_blocks::is_prop(material) {
@@ -191,6 +205,89 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
             .filter(|boxes| boxes.len() <= 128 && boxes.iter().all(|b| b.valid_for(material)))
             .unwrap_or_default()
     }
+    // The same shipped reef shapes define both collision and the water around them.
+    const REEF_SHAPES: [&str; 9] = [
+        include_str!("../../../assets/terra/blocks/brain_coral.json"),
+        include_str!("../../../assets/terra/blocks/table_coral.json"),
+        include_str!("../../../assets/terra/blocks/staghorn_coral.json"),
+        include_str!("../../../assets/terra/blocks/organ_pipe_coral.json"),
+        include_str!("../../../assets/terra/blocks/tidal_boulders.json"),
+        include_str!("../../../assets/terra/blocks/barnacled_boulder.json"),
+        include_str!("../../../assets/terra/blocks/reef_pillar.json"),
+        include_str!("../../../assets/terra/blocks/reef_arch.json"),
+        include_str!("../../../assets/terra/blocks/reef_ledge.json"),
+    ];
+    static REEF_BOXES: [OnceLock<Vec<ShapeBox>>; 9] = [const { OnceLock::new() }; 9];
+    let reef_index = match material {
+        545..=548 => Some(usize::from(material - 545)),
+        575..=579 => Some(4 + usize::from(material - 575)),
+        _ => None,
+    };
+    if let Some(index) = reef_index {
+        return REEF_BOXES[index].get_or_init(|| read(REEF_SHAPES[index], material));
+    }
+    const HARBOR_SHAPES: [&str; 4] = [
+        include_str!("../../../assets/terra/blocks/mooring_post.json"),
+        include_str!("../../../assets/terra/blocks/harbor_sign.json"),
+        include_str!("../../../assets/terra/blocks/beacon_lens.json"),
+        include_str!("../../../assets/terra/blocks/salt_crate.json"),
+    ];
+    static HARBOR_BOXES: [OnceLock<Vec<ShapeBox>>; 4] = [const { OnceLock::new() }; 4];
+    if matches!(material, 785..=787 | 790) {
+        let index = if material == 790 {
+            3
+        } else {
+            usize::from(material - 785)
+        };
+        return HARBOR_BOXES[index].get_or_init(|| read(HARBOR_SHAPES[index], material));
+    }
+    const SAVANNA_SHAPES: [&str; 11] = [
+        include_str!("../../../assets/terra/blocks/small_savanna_boulder.json"),
+        include_str!("../../../assets/terra/blocks/large_savanna_boulder.json"),
+        include_str!("../../../assets/terra/blocks/savanna_rock_pile.json"),
+        include_str!("../../../assets/terra/blocks/savanna_ribs.json"),
+        include_str!("../../../assets/terra/blocks/small_termite_mound.json"),
+        include_str!("../../../assets/terra/blocks/tall_termite_mound.json"),
+        include_str!("../../../assets/terra/blocks/dry_acacia_snag.json"),
+        include_str!("../../../assets/terra/blocks/weathered_acacia_stump.json"),
+        include_str!("../../../assets/terra/blocks/savanna_stone_arch.json"),
+        include_str!("../../../assets/terra/blocks/savanna_plateau_stone.json"),
+        include_str!("../../../assets/terra/blocks/horned_skull.json"),
+    ];
+    static SAVANNA_BOXES: [OnceLock<Vec<ShapeBox>>; 11] = [const { OnceLock::new() }; 11];
+    if (659..=669).contains(&material) {
+        let index = usize::from(material - 659);
+        return SAVANNA_BOXES[index].get_or_init(|| read(SAVANNA_SHAPES[index], material));
+    }
+    const SWAMP_SHAPES: [&str; 8] = [
+        include_str!("../../../assets/terra/blocks/mossy_stump.json"),
+        include_str!("../../../assets/terra/blocks/fallen_willow.json"),
+        include_str!("../../../assets/terra/blocks/swamp_boulder.json"),
+        include_str!("../../../assets/terra/blocks/willow_roots.json"),
+        include_str!("../../../assets/terra/blocks/root_arch.json"),
+        include_str!("../../../assets/terra/blocks/willow_boat.json"),
+        include_str!("../../../assets/terra/blocks/swamp_lantern_post.json"),
+        include_str!("../../../assets/terra/blocks/swamp_banner.json"),
+    ];
+    static SWAMP_BOXES: [OnceLock<Vec<ShapeBox>>; 8] = [const { OnceLock::new() }; 8];
+    if (694..=701).contains(&material) {
+        let index = usize::from(material - 694);
+        return SWAMP_BOXES[index].get_or_init(|| read(SWAMP_SHAPES[index], material));
+    }
+    if material == 717 {
+        static CRATE: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+        return CRATE.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/excavation_crate.json"),
+                material,
+            )
+        });
+    }
+    static BLACKENED_STUMP: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static FOX_STATUE: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static GARDEN_LANTERN: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static NURSE_LOG: OnceLock<Vec<ShapeBox>> = OnceLock::new();
+    static SHELF_STUMP: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static BENCH: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static CHEST: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static TORCH: OnceLock<Vec<ShapeBox>> = OnceLock::new();
@@ -226,9 +323,46 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
     static GLASS_PIPE: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static PLUMBING: [OnceLock<Vec<ShapeBox>>; 7] = [const { OnceLock::new() }; 7];
     static GEARBOXES: [OnceLock<Vec<ShapeBox>>; 2] = [const { OnceLock::new() }; 2];
+    static RUNE_PILLAR: OnceLock<Vec<ShapeBox>> = OnceLock::new();
     static KINETICS: [OnceLock<Vec<ShapeBox>>; 11] = [const { OnceLock::new() }; 11];
     match material {
         210..=294 | crate::train_parts::RAIL_BUILDER => crate::train_parts::base_boxes(material),
+        626 => BLACKENED_STUMP.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/blackened_stump.json"),
+                material,
+            )
+        }),
+        612 => RUNE_PILLAR.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/rune_pillar.json"),
+                material,
+            )
+        }),
+        602 => FOX_STATUE.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/sakura_fox_statue.json"),
+                material,
+            )
+        }),
+        603 => GARDEN_LANTERN.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/sakura_garden_lantern.json"),
+                material,
+            )
+        }),
+        491 => NURSE_LOG.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/mossy_nurse_log.json"),
+                material,
+            )
+        }),
+        509 => SHELF_STUMP.get_or_init(|| {
+            read(
+                include_str!("../../../assets/terra/blocks/amber_shelf_stump.json"),
+                material,
+            )
+        }),
         209 => SWITCH_STAND.get_or_init(|| {
             read(
                 include_str!("../../../assets/terra/blocks/rail_switch_stand.json"),
@@ -372,7 +506,7 @@ pub fn builtin_boxes(material: u16) -> &'static [ShapeBox] {
         29 => {
             CHEST.get_or_init(|| read(include_str!("../../../assets/terra/blocks/chest.json"), 29))
         }
-        40 => {
+        40 | VIOLET_TORCH => {
             TORCH.get_or_init(|| read(include_str!("../../../assets/terra/blocks/torch.json"), 40))
         }
         crate::lantern::LANTERN => LANTERN.get_or_init(|| crate::lantern::boxes(material, 0)),
@@ -480,6 +614,12 @@ pub fn torch_point(facing: u8, point: [f64; 3]) -> [f64; 3] {
         v[2] + 0.5 - n[2] * offset,
     ]
 }
+pub const VIOLET_TORCH: u16 = 791;
+
+pub const fn is_torch(material: u16) -> bool {
+    matches!(material, 40 | VIOLET_TORCH)
+}
+
 pub fn torch_normal(facing: u8) -> [f64; 3] {
     match facing {
         4 => [1.0, 0.0, 0.0],

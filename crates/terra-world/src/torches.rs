@@ -14,7 +14,7 @@ pub fn wet_placement(
             chunks
                 .surface_column_at(p[0], p[2])
                 .map_or_else(Default::default, |column| {
-                    crate::water::fluid::from_columns(column.water_columns(), p[1])
+                    crate::water::falls::sampled(column.water_columns(), p, journal)
                 })
         })
         .amount
@@ -83,10 +83,12 @@ pub(crate) fn wash_away(
     positions: &[[i64; 3]],
 ) -> Result<(), String> {
     for &position in positions {
-        let Some(material) = chunks
-            .block_at(position)
-            .filter(|m| matches!(*m, 40 | terra_core::lantern::LANTERN))
-        else {
+        let Some(material) = chunks.block_at(position).filter(|m| {
+            matches!(
+                *m,
+                40 | terra_core::block_shapes::VIOLET_TORCH | terra_core::lantern::LANTERN
+            )
+        }) else {
             continue;
         };
         if !journal.gameplay().can_drop() {

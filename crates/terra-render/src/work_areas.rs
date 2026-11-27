@@ -71,7 +71,7 @@ struct Cache {
 pub(crate) fn install(app: &mut App) {
     ambient::install(app);
     fog_blocks::install(app);
-    app.add_plugins(MaterialPlugin::<MistMaterial>::default())
+    crate::material_work::add::<MistMaterial>(app)
         .init_resource::<WorkAreaDisplay>()
         .init_resource::<ConstructionAreaDisplay>()
         .init_resource::<WorkAreaOverlayStatus>()

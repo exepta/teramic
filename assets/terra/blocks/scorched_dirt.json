@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 616,
+  "name": "Scorched Dirt",
+  "description": "Rust-coloured soil split by the heat.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 1.25,
+  "resistance": 2.0,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "materials": {
+    "side": {
+      "roughness": 0.84,
+      "normal_texture": "textures/ashlands/scorched_dirt_side_normal.png"
+    }
+  },
+  "textures": {
+    "side": "textures/ashlands/scorched_dirt_side.png"
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

@@ -52,7 +52,7 @@ fn nested_shipped_assets_equal_the_embedded_catalog_in_every_recipe_field() {
         assert_eq!(embedded.get(recipe.key()), Some(recipe), "{}", recipe.id);
     }
     assert_eq!(book.iter().count(), embedded.iter().count());
-    assert_eq!(book.iter().count(), 515);
+    assert_eq!(book.iter().count(), 524);
 }
 
 #[test]

@@ -72,6 +72,23 @@ class VoxelPropTests(unittest.TestCase):
         small.blob([.5, .55, .268], [.01, .01, .01], 'gold')
         self.assertGreater(len(small.cells), 0)
 
+    def test_savanna_leaf_tips_remain_attached_to_the_rosette(self):
+        from savanna.scenery import succulent
+        for slug in ("savanna_aloe", "savanna_agave", "savanna_succulent"):
+            with self.subTest(slug=slug):
+                plant = VoxelSculpt(24)
+                succulent(plant, slug)
+                remaining = set(plant.cells)
+                edge = [remaining.pop()]
+                while edge:
+                    x, y, z = edge.pop()
+                    neighbors = {(x-1, y, z), (x+1, y, z), (x, y-1, z),
+                                 (x, y+1, z), (x, y, z-1), (x, y, z+1)}
+                    adjacent = remaining.intersection(neighbors)
+                    edge.extend(adjacent)
+                    remaining.difference_update(adjacent)
+                self.assertFalse(remaining)
+
     def test_arch_opening_is_preserved_and_mushroom_light_is_exposed(self):
         arch = VoxelSculpt()
         sculpt_prop(arch, 20)
@@ -81,6 +98,95 @@ class VoxelPropTests(unittest.TestCase):
             mushrooms = VoxelSculpt()
             sculpt_prop(mushrooms, index)
             self.assertIn('glow', mushrooms.emit(Mesh('test')).parts)
+
+    def test_surface_biome_models_ship_stepped_silhouettes_and_keep_their_palette(self):
+        for slug in ['ember_crystals', 'fossil_bones', 'blackened_stump', 'ash_mushrooms',
+                     'desert_agave', 'pine_cones', 'wisteria_tassel', 'reef_arch',
+                     'alpine_conifer', 'sakura_fox_statue', 'spirit_geode',
+                     'root_arch', 'swamp_glowcaps', 'swamp_lantern_post', 'willow_boat',
+                     'swamp_cattails', 'swamp_fern', 'fallen_willow']:
+            with self.subTest(slug=slug):
+                document = Document(MODELS / (slug+'.glb'))
+                primitives = [p for mesh in document.doc['meshes'] for p in mesh['primitives']]
+                self.assertGreaterEqual(len({p['material'] for p in primitives}), 2)
+                for p in primitives:
+                    for normal in document.values(p['attributes']['NORMAL']):
+                        self.assertEqual(sum(abs(v) for v in normal), 1.)
+                    for point in document.values(p['attributes']['POSITION']):
+                        self.assertTrue(all(abs(v*24 - round(v*24)) < 0.0001 for v in point))
+
+    def test_fossil_wood_minerals_and_fungal_colonies_ship_the_authored_voxel_surfaces(self):
+        from collections import Counter
+        for slug, grid in [
+            ('petrified_dead_root', 24), ('shattered_stone_root', 24), ('cinder_root', 16),
+            ('dark_mushrooms', 24), ('glowing_purple_mushrooms', 24), ('mineral_strata', 16),
+            ('petrified_rubble', 16), ('petrified_mineral_deposit', 16),
+        ]:
+            with self.subTest(slug=slug):
+                model = Document(MODELS / (slug + '.glb'))
+                materials = model.doc['materials']
+                counts = Counter()
+                for mesh in model.doc['meshes']:
+                    for p in mesh['primitives']:
+                        name = materials[p['material']]['name']
+                        counts[name] += model.doc['accessors'][p['indices']]['count'] // 3
+                        for normal in model.values(p['attributes']['NORMAL']):
+                            self.assertEqual(sorted(map(abs, normal)), [0., 0., 1.])
+                        for point in model.values(p['attributes']['POSITION']):
+                            self.assertTrue(all(abs(v*grid - round(v*grid)) < .0001 for v in point))
+                self.assertLess(sum(counts.values()), 1200)
+                if slug == 'mineral_strata':
+                    self.assertEqual(set(counts), {'stone','gold','turquoise','glass','ochre','sand'})
+                if slug == 'glowing_purple_mushrooms':
+                    glow = next(m for m in materials if m['name'] == 'soul')
+                    self.assertGreater(max(glow['emissiveFactor']), 0)
+                    self.assertGreater(counts['soul'], 0)
+                    self.assertGreater(counts['cloth'] + counts['flower'], counts['soul'])
+
+    def test_raw_highland_quartz_keeps_voxel_faces_and_its_growth_mask(self):
+        for slug in ('massive_amethyst', 'amethyst_lance', 'massive_aquamarine',
+                     'aquamarine_lance', 'crystal_crown', 'crystal_shard_cluster'):
+            with self.subTest(slug=slug):
+                model = Document(MODELS / (slug + '.glb'))
+                gem_materials = set()
+                for mesh in model.doc['meshes']:
+                    for primitive in mesh['primitives']:
+                        attrs = primitive['attributes']
+                        for normal in model.values(attrs['NORMAL']):
+                            self.assertEqual(sorted(abs(v) for v in normal), [0., 0., 1.])
+                        for point in model.values(attrs['POSITION']):
+                            self.assertTrue(all(abs(v*16 - round(v*16)) < 1.e-5 for v in point))
+                        material = model.doc['materials'][primitive['material']]
+                        name = material['name'].removeprefix('aqua_')
+                        if name in ('body', 'cleavage', 'inclusion'):
+                            tex = model.doc['textures'][material['emissiveTexture']['index']]
+                            self.assertTrue(model.doc['images'][tex['source']]['uri'].endswith('raw_growth_glow.png'))
+                            gem_materials.add(name)
+                self.assertEqual(gem_materials, {'body', 'cleavage', 'inclusion'})
+
+    def test_salt_and_soul_crystals_keep_their_light_and_placement_orientation(self):
+        for slug in ('salt_crystal_cluster', 'salt_stalagmite', 'salt_stalactite',
+                     'salt_rubble', 'salt_pillar_fragment', 'soul_crystal_small', 'soul_crystal_large'):
+            with self.subTest(model=slug):
+                doc = Document(MODELS / (slug + '.glb'))
+                ys = []
+                lit = set()
+                for mesh in doc.doc['meshes']:
+                    for primitive in mesh['primitives']:
+                        material = doc.doc['materials'][primitive['material']]
+                        if any(material.get('emissiveFactor', [])):
+                            lit.add(material['name'])
+                        for n in doc.values(primitive['attributes']['NORMAL']):
+                            self.assertEqual(sorted(map(abs, n)), [0., 0., 1.])
+                        ys.extend(p[1] for p in doc.values(primitive['attributes']['POSITION']))
+                if slug.startswith('soul'):
+                    self.assertEqual(lit, {'crystal'})
+                if slug == 'salt_crystal_cluster':
+                    self.assertIn('Warm core', lit)
+                if slug == 'salt_stalactite':
+                    self.assertEqual(max(ys), 1.)
+                else:
+                    self.assertEqual(min(ys), 0.)
 
     def test_all_eighteen_shipped_models_are_bounded_axis_aligned_voxel_surfaces(self):
         total_vertices = total_triangles = 0

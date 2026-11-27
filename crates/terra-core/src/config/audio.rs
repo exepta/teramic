@@ -1,4 +1,4 @@
-use super::{Config, ConfigError, ensure};
+use super::{Config, ConfigError};
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
@@ -41,10 +41,11 @@ impl Config for AudioConfig {
             (self.river_volume, "River volume"),
             (self.waterfall_volume, "Waterfall volume"),
         ] {
-            ensure(
-                volume.is_finite() && (0.0..=1.0).contains(&volume),
-                &format!("{name} must be between 0 and 1"),
-            )?;
+            if !(0.0..=1.0).contains(&volume) {
+                return Err(ConfigError::Validation(format!(
+                    "{name} must be between 0 and 1"
+                )));
+            }
         }
         Ok(())
     }

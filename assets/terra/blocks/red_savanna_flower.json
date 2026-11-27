@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": 655,
+  "name": "Red Savanna Flowers",
+  "description": "Scarlet flowers above the grass.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.5,
+  "resistance": 0.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/red_savanna_flower.glb",
+  "struct_block": true,
+  "textures": {},
+  "collision_boxes": []
+}

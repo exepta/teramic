@@ -43,7 +43,10 @@ impl Encounter {
             let head = y + a.size()[1].ceil() as i64;
             a.needs.dragon.as_mut().unwrap().sheltered = from.distance(nest) <= 4.
                 && life.nest.is_some_and(|[nx, ny, nz]| {
-                    h.block([nx, ny - 1, nz]) == Some(terra_voxel::MaterialId::StrawBlock as u16)
+                    terra_core::creatures::dragon_eggs::supports_nest(
+                        a.kind,
+                        h.block([nx, ny - 1, nz]),
+                    )
                 })
                 || (head..=head + 12).any(|roof| {
                     h.block([x, roof, z])
@@ -90,7 +93,7 @@ impl Encounter {
                 || leader.is_none()
                 || leader.is_some_and(|p| from.distance(p) < 8.)
             {
-                set_pose(a, B::Land);
+                self.approach_pad(a, h, leader.unwrap_or(nest), DVec3::NEG_Z, dt.into());
             } else if let Some(p) = leader {
                 self.travel(
                     a,

@@ -422,6 +422,14 @@ fn relative_asset(path: &str, extension: &str) -> bool {
 }
 
 impl BlockLibrary {
+    pub(super) fn by_id(&self, id: u16) -> Option<&BlockDefinition> {
+        let index = self
+            .blocks
+            .binary_search_by_key(&id, |block| block.id)
+            .ok()?;
+        Some(&self.blocks[index])
+    }
+
     pub fn load(directory: &Path) -> Result<Self, String> {
         let entries =
             std::fs::read_dir(directory).map_err(|e| format!("{}: {e}", directory.display()))?;

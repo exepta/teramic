@@ -101,7 +101,10 @@ pub(crate) fn apply(
         Without<crate::previews::PreviewScene>,
     >,
     mut shadow_map: ResMut<DirectionalLightShadowMap>,
-    daylight: Option<Res<crate::scene::daylight::Daylight>>,
+    (daylight, cave): (
+        Option<Res<crate::scene::daylight::Daylight>>,
+        Option<Res<crate::scene::caves::CaveState>>,
+    ),
 ) {
     let Some(graphics) = graphics else {
         return;
@@ -110,10 +113,12 @@ pub(crate) fn apply(
         return;
     }
     for (entity, mut exposure, taa) in &mut cameras {
-        exposure.ev100 = daylight
-            .as_ref()
-            .map_or(crate::scene::SURFACE_EXPOSURE, |d| d.exposure)
-            - graphics.brightness.log2();
+        if cave.is_none() {
+            exposure.ev100 = daylight
+                .as_ref()
+                .map_or(crate::scene::SURFACE_EXPOSURE, |d| d.exposure)
+                - graphics.brightness.log2();
+        }
         let temporal = matches!(
             graphics.shadow_quality,
             ShadowQuality::Medium | ShadowQuality::High
@@ -122,7 +127,9 @@ pub(crate) fn apply(
             commands.entity(entity).insert((
                 TemporalAntiAliasing::default(),
                 Msaa::Off,
-                bevy::light::ShadowFilteringMethod::Temporal,
+                // A stable spatial kernel also works on disoccluded pixels under
+                // moving canopies, where TAA has no usable shadow history.
+                bevy::light::ShadowFilteringMethod::Gaussian,
             ));
         } else if !temporal && taa.is_some() {
             commands
@@ -284,7 +291,7 @@ mod tests {
                 assert_eq!(
                     app.world()
                         .get::<bevy::light::ShadowFilteringMethod>(camera),
-                    Some(&bevy::light::ShadowFilteringMethod::Temporal)
+                    Some(&bevy::light::ShadowFilteringMethod::Gaussian)
                 );
             } else {
                 assert_eq!(app.world().get::<Msaa>(camera), Some(&Msaa::Sample4));

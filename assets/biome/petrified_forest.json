@@ -1,0 +1,14 @@
+{
+  "biome": "petrified_forest",
+  "selection_weight": 1.0,
+  "terrain": {
+    "min_height": 35.0,
+    "max_height": 112.0,
+    "horizontal_scale": 660.0,
+    "detail_strength": 0.32,
+    "relief_strength": 0.78,
+    "soil_depth": 2.3,
+    "tree_density": 0.0,
+    "terrace_strength": 0.68
+  }
+}

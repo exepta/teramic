@@ -9,6 +9,7 @@ enum Leg {
     Outbound,
     Crosswind,
     Approach,
+    EnterMouth,
     WalkIn,
 }
 
@@ -26,22 +27,24 @@ pub(super) struct Patrol {
     stalled: f64,
     cruise_level: f64,
     survey_after: f64,
-    landing_pad: Option<[f64; 3]>,
-    inspect_pad_in: f64,
+    detour: Option<DVec3>,
+    detour_after: f64,
 }
 
 impl Patrol {
-    pub(super) fn new(direction: [i64; 2], id: u64, home: DVec3, position: [f64; 3]) -> Self {
+    pub(super) fn new(direction: [i64; 2], a: &Creature, home: DVec3) -> Self {
         let forward = DVec3::new(direction[0] as f64, 0., direction[1] as f64);
         Self {
             forward,
             runway: 54.,
-            leg: if (DVec3::from_array(position) - home).with_y(0.).length() > 9. {
-                Leg::WalkIn
+            leg: if matches!(a.behavior, B::Fly | B::Land | B::Leap) {
+                Leg::Approach
+            } else if DVec3::from_array(a.position).distance(home) > 9. {
+                Leg::EnterMouth
             } else {
                 Leg::Rest
             },
-            seconds: 9. + (id % 13) as f64,
+            seconds: 9. + (a.id % 13) as f64,
             pad: home + forward * 54.,
             first: home,
             second: home,
@@ -50,13 +53,13 @@ impl Patrol {
             stalled: 0.,
             cruise_level: home.y + 12.,
             survey_after: 0.,
-            landing_pad: None,
-            inspect_pad_in: 0.,
+            detour: None,
+            detour_after: 0.,
         }
     }
 
     pub(super) fn open_country(a: &Creature, home: DVec3) -> Self {
-        let mut patrol = Self::new([0, -1], a.id, home, a.position);
+        let mut patrol = Self::new([0, -1], a, home);
         let (s, c) = f64::from(a.yaw).sin_cos();
         patrol.forward = DVec3::new(-s, 0., -c);
         patrol.runway = 0.;
@@ -74,8 +77,7 @@ impl Patrol {
         self.first = waypoint(angle, distance);
         self.second = waypoint(angle + cross, distance * 0.84);
         self.leg = Leg::Outbound;
-        self.landing_pad = None;
-        self.inspect_pad_in = 0.;
+        self.detour = None;
         self.previous_distance = f64::INFINITY;
         self.stalled = 0.;
         self.survey_after = 0.;
@@ -117,7 +119,13 @@ impl Patrol {
         (inside && outside).then_some(home + self.forward * 35.)
     }
     pub(super) fn recall(&mut self, airborne: bool) {
-        self.leg = if airborne { Leg::Approach } else { Leg::WalkIn };
+        self.leg = if airborne {
+            Leg::Approach
+        } else {
+            Leg::EnterMouth
+        };
+        self.detour = None;
+        self.detour_after = 0.;
         self.survey_after = 0.;
     }
 }
@@ -190,71 +198,76 @@ impl Encounter {
             }
             Leg::Approach => {
                 if !self.airborne {
-                    patrol.leg = Leg::WalkIn;
-                } else if pad_distance > 32. {
+                    patrol.recall(false);
+                } else if pad_distance > 32. && !self.landing.active_at(patrol.pad) {
                     let pad = patrol.pad;
                     let approach_height = (13. + (pad_distance - 32.) * 0.45).min(height);
                     let goal = patrol.cruise(h, from, pad, dt, approach_height);
                     self.travel(a, h, goal, dt, 14.);
                 } else {
-                    // A tree can grow or players may build on the old runway
-                    // during a sortie. Survey nearby strips before committing.
-                    patrol.inspect_pad_in -= dt;
-                    if patrol.inspect_pad_in <= 0. {
-                        let nominal = self.home + patrol.forward * patrol.runway;
-                        let side = DVec3::new(-patrol.forward.z, 0., patrol.forward.x);
-                        let candidates = [
-                            patrol.pad,
-                            nominal,
-                            nominal + side * 8.,
-                            nominal - side * 8.,
-                            nominal + patrol.forward * 10.,
-                            nominal + side * 13.,
-                            nominal - side * 13.,
-                        ];
-                        patrol.landing_pad = candidates.into_iter().find_map(|site| {
-                            let surface = h.terrain.surface_height(site.x, site.z);
-                            [patrol.pad.y, surface, surface - 2., surface + 2.]
-                                .into_iter()
-                                .find_map(|y| {
-                                    h.supported_sized(
-                                        site.with_y(y + 0.5).to_array(),
-                                        a.size(),
-                                        f64::from(a.yaw),
-                                    )
-                                    .filter(|p| flight::clean_landing(a, h, *p))
-                                })
-                        });
-                        if let Some(p) = patrol.landing_pad {
-                            patrol.pad = DVec3::from_array(p);
-                        }
-                        patrol.inspect_pad_in = 0.8;
-                    }
-                    let pad_ground = patrol.landing_pad;
-                    let pad_distance = (from - patrol.pad).with_y(0.).length();
-                    if pad_ground.is_none() {
-                        let hold = patrol.pad + patrol.forward * 12. + DVec3::Y * 14.;
-                        self.travel(a, h, hold, dt, 7.);
-                    } else if pad_distance < 3.
-                        && from.y - patrol.pad.y < 9.
-                        && pad_ground.is_some_and(|p| flight::clean_landing(a, h, p))
-                    {
-                        set_pose(a, B::Land);
-                    } else {
-                        let height = (pad_distance * 0.43 + 2.2).min(16.);
-                        let goal = patrol.pad + DVec3::Y * height;
-                        self.travel(a, h, goal, dt, 8.);
-                    }
+                    self.approach_pad(a, h, patrol.pad, patrol.forward, dt);
                 }
             }
-            Leg::WalkIn => {
+            Leg::EnterMouth | Leg::WalkIn => {
+                let delta = from - self.home;
+                let depth = delta.dot(patrol.forward);
+                let lateral = (delta - patrol.forward * depth).with_y(0.);
+                let mouth = self.home + patrol.forward * 38.;
+                // A restored creature can be directly above the nest on its
+                // roof. Horizontal proximity alone does not put it inside.
+                let runway_height = self.home.y
+                    + (patrol.pad.y - self.home.y) * (depth / patrol.runway.max(1.)).clamp(0., 1.);
+                let corridor = (-5.0..=40.).contains(&depth)
+                    && lateral.length() < 5.
+                    && (from.y - runway_height).abs() < 5.;
                 if self.airborne {
                     patrol.recall(true);
-                } else if (from - self.home).with_y(0.).length() < 2.4 {
+                } else if delta.with_y(0.).length() < 2.4 && delta.y.abs() < 2.5 {
                     patrol.leg = Leg::Rest;
                     patrol.seconds = 44. + (a.id % 23) as f64;
+                    patrol.detour = None;
                 } else {
-                    self.travel(a, h, self.home, dt, 4.6);
+                    if patrol.leg == Leg::EnterMouth && (corridor || patrol.runway == 0.) {
+                        patrol.leg = Leg::WalkIn;
+                        patrol.detour = None;
+                    }
+                    let goal = if patrol.leg == Leg::WalkIn {
+                        self.home
+                    } else {
+                        mouth
+                    };
+                    if patrol
+                        .detour
+                        .is_some_and(|p| (from - p).with_y(0.).length() < 0.60)
+                    {
+                        patrol.detour = None;
+                    }
+                    // Retain a usable waypoint until reached. Expiring it mid-pivot
+                    // used to alternate the head between the obstruction and the route.
+                    let advancing = self.walk(a, h, patrol.detour.unwrap_or(goal), dt, 4.6, false);
+                    if !advancing && a.age >= patrol.detour_after {
+                        // Only a blocked walker pays for a bounded local route.
+                        // The ground graph uses this variant's collision volume.
+                        patrol.detour_after = a.age + 1.5;
+                        patrol.detour = crate::creatures::navigation::ground_waypoint(
+                            a,
+                            h,
+                            goal.to_array(),
+                            true,
+                            None,
+                        )
+                        .map(DVec3::from_array);
+                        // If the nest is below a sealed roof or a cliff, take
+                        // the outside approach and enter with folded wings.
+                        if patrol.detour.is_none()
+                            && patrol.leg == Leg::EnterMouth
+                            && !corridor
+                            && flight::can_launch(a, h)
+                        {
+                            patrol.recall(true);
+                            set_pose(a, B::Leap);
+                        }
+                    }
                 }
             }
         }

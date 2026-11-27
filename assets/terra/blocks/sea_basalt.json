@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": 544,
+  "name": "Submarine Basalt",
+  "description": "Dark volcanic rock fractured beneath the waves.",
+  "creative_category": "nature",
+  "hardness": 1.6,
+  "resistance": 2.5,
+  "mining_level": 0,
+  "required_tool": null,
+  "render_kind": "cube",
+  "bevel_width": 0,
+  "textures": {
+    "sea_basalt": "textures/ocean/sea_basalt.png"
+  },
+  "face_materials": [
+    "sea_basalt",
+    "sea_basalt",
+    "sea_basalt",
+    "sea_basalt",
+    "sea_basalt",
+    "sea_basalt"
+  ],
+  "materials": {
+    "sea_basalt": {
+      "roughness": 0.72,
+      "normal_texture": "textures/ocean/sea_basalt_normal.png"
+    }
+  },
+  "surface": "rock"
+}

@@ -13,11 +13,20 @@ pub(crate) struct HudLayout {
     pub error: String,
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, PartialEq)]
 pub(crate) struct HudWidgetStyles {
     pub chat: String,
     pub target: String,
     pub minimap: String,
+}
+
+#[derive(PartialEq)]
+struct WidgetPlacements {
+    canvas: Vec2,
+    chat: Option<[f32; 2]>,
+    target: Option<[f32; 2]>,
+    minimap: Option<[f32; 2]>,
+    minimap_size: Vec2,
 }
 
 pub(crate) fn install(app: &mut App) {
@@ -144,12 +153,14 @@ struct Canvas<'w, 's> {
     graphics: Option<Res<'w, GraphicsConfig>>,
     gameplay: Option<Res<'w, terra_core::GameplayConfig>>,
 }
+#[allow(clippy::too_many_arguments)]
 fn drag(
     menu: Option<Res<MenuState>>,
     canvas: Canvas,
     mouse: Res<ButtonInput<MouseButton>>,
     mut layout: ResMut<HudLayout>,
-    mut styles: Option<ResMut<HudWidgetStyles>>,
+    styles: Option<ResMut<HudWidgetStyles>>,
+    mut last_placements: Local<Option<WidgetPlacements>>,
     view: Res<crate::SurvivalView>,
     tools: Query<(
         &tilt_ui::ElementId,
@@ -185,29 +196,30 @@ fn drag(
         graphics.as_ref().and_then(|g| g.minimap_position)
     };
     let map_size = minimap_extent(canvas, gameplay.as_ref().map_or(260, |g| g.minimap.size));
-    if let Some(styles) = styles.as_mut() {
-        styles.chat = if editing || chat.is_some() {
-            widget_style(canvas, chat.unwrap_or([0.0, 0.8]), Vec2::new(650.0, 300.0))
-        } else {
-            String::new()
+    let placements = WidgetPlacements {
+        canvas,
+        chat: chat.or(editing.then_some([0.0, 0.8])),
+        target: target.or(editing.then_some([0.5, 0.0])),
+        minimap: minimap.or(editing.then_some([1.0, 0.0])),
+        minimap_size: map_size,
+    };
+    if let Some(mut styles) = styles
+        && (styles.is_changed() || last_placements.as_ref() != Some(&placements))
+    {
+        let style = |position: Option<[f32; 2]>, size| {
+            position.map_or_else(String::new, |position| widget_style(canvas, position, size))
         };
-        styles.target = if editing || target.is_some() {
-            widget_style(
-                canvas,
-                target.unwrap_or([0.5, 0.0]),
-                Vec2::new(320.0, 300.0),
-            )
-        } else {
-            String::new()
-        };
-        styles.minimap = if editing || minimap.is_some() {
-            widget_style(canvas, minimap.unwrap_or([1.0, 0.0]), map_size)
-        } else {
-            String::new()
-        };
+        styles.set_if_neq(HudWidgetStyles {
+            chat: style(placements.chat, Vec2::new(650.0, 300.0)),
+            target: style(placements.target, Vec2::new(320.0, 300.0)),
+            minimap: style(placements.minimap, map_size),
+        });
+        *last_placements = Some(placements);
     }
-    if menu.as_ref().is_none_or(|m| m.page != MenuPage::HudLayout) {
-        layout.drag = None;
+    if !editing {
+        if layout.drag.is_some() {
+            layout.drag = None;
+        }
         return;
     }
     let Ok(window) = window.single() else {
@@ -215,7 +227,9 @@ fn drag(
     };
     let scale = scale.map_or(1.0, |s| s.0).max(0.1);
     if !window.focused || !mouse.pressed(MouseButton::Left) {
-        layout.drag = None;
+        if layout.drag.is_some() {
+            layout.drag = None;
+        }
         return;
     }
     let Some(cursor) = window.cursor_position().map(|p| p / scale) else {
@@ -316,6 +330,56 @@ fn widget_style(canvas: Vec2, position: [f32; 2], size: Vec2) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stationary_widgets_keep_their_change_tick_and_follow_scale_and_editor_transitions() {
+        let mut app = fixture();
+        app.init_resource::<HudWidgetStyles>();
+        app.world_mut()
+            .resource_mut::<GraphicsConfig>()
+            .chat_position = Some([1.0, 0.5]);
+        app.update();
+        let styles = |app: &App| app.world().resource::<HudWidgetStyles>().chat.clone();
+        let tick = |app: &App| {
+            app.world()
+                .get_resource_ref::<HudWidgetStyles>()
+                .unwrap()
+                .last_changed()
+        };
+        let original = styles(&app);
+        let initial = tick(&app);
+        assert!(!original.is_empty());
+        for _ in 0..4 {
+            app.update();
+        }
+        assert_eq!(initial, tick(&app));
+        app.world_mut()
+            .resource_mut::<HudWidgetStyles>()
+            .chat
+            .clear();
+        app.update();
+        assert_eq!(original, styles(&app));
+        app.world_mut().resource_mut::<UiScale>().0 = 1.0;
+        app.update();
+        assert_ne!(original, styles(&app));
+        assert_ne!(initial, tick(&app));
+        let scaled = styles(&app);
+        let world = app.world_mut();
+        world
+            .query::<&mut Window>()
+            .single_mut(world)
+            .unwrap()
+            .resolution
+            .set(1024.0, 768.0);
+        app.update();
+        assert_ne!(scaled, styles(&app));
+        open(app.world_mut()).unwrap();
+        app.update();
+        assert!(!app.world().resource::<HudWidgetStyles>().target.is_empty());
+        cancel(app.world_mut());
+        app.update();
+        assert!(app.world().resource::<HudWidgetStyles>().target.is_empty());
+    }
 
     #[test]
     fn minimap_drag_save_reload_and_cancel_are_independent() {

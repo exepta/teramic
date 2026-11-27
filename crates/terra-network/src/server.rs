@@ -251,6 +251,7 @@ pub(crate) fn install(app: &mut App) {
                     villager_defense::tick,
                     creatures::tick,
                     cactus::tick,
+                    volcanoes::tick,
                     bile_hazards::tick,
                 )
                     .chain(),
@@ -1523,7 +1524,10 @@ fn send_players(
                     .is_some_and(|stack| {
                         matches!(
                             stack.item,
-                            terra_core::ItemKind::Block(40 | terra_core::lantern::LANTERN)
+                            terra_core::ItemKind::Block(
+                                40 | terra_core::block_shapes::VIOLET_TORCH
+                                    | terra_core::lantern::LANTERN
+                            )
                         )
                     }),
             });
@@ -1648,6 +1652,8 @@ mod trains;
 mod validation;
 #[path = "server_villager_defense.rs"]
 mod villager_defense;
+#[path = "server_volcanoes.rs"]
+mod volcanoes;
 
 #[cfg(test)]
 #[path = "server_rgb_filter_tests.rs"]

@@ -1,6 +1,6 @@
 //! Scenery photographs use smooth sampling independently of pixel-art UI atlases.
 use bevy::{image::ImageSampler, prelude::*};
-pub(crate) const SOURCES: [&str; 10] = [
+pub(crate) const SOURCES: [&str; 16] = [
     "tilt-ui://assets/biome-choice-ocean.png",
     "tilt-ui://assets/biome-choice-plains.png",
     "tilt-ui://assets/biome-choice-forest.png",
@@ -11,6 +11,12 @@ pub(crate) const SOURCES: [&str; 10] = [
     "tilt-ui://assets/biome-choice-cherry-forest.png",
     "tilt-ui://assets/biome-choice-spirit-blossom.png",
     "tilt-ui://assets/biome-choice-blood-forest.png",
+    "tilt-ui://assets/biome-choice-ashlands.png",
+    "tilt-ui://assets/biome-choice-savanna.png",
+    "tilt-ui://assets/biome-choice-swamp.png",
+    "tilt-ui://assets/biome-choice-petrified-forest.png",
+    "tilt-ui://assets/biome-choice-crystal-highlands.png",
+    "tilt-ui://assets/biome-choice-misty-coast.png",
 ];
 pub(crate) fn install(app: &mut App) {
     app.add_systems(Update, synchronize);

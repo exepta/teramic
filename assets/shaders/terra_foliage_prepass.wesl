@@ -16,26 +16,91 @@ import bevy_pbr::render::pbr_bindings::material_indices;
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> wind: vec4<f32>;
 
+@if(LEAF_SHADOW_PROFILE) {
+const THREE_LOBES: array<vec2<f32>, 15> = array(
+    vec2<f32>(0.00, 0.10),
+    vec2<f32>(0.15, 0.10),
+    vec2<f32>(0.19, 0.40),
+    vec2<f32>(0.21, 0.90),
+    vec2<f32>(0.27, 1.00),
+    vec2<f32>(0.48, 1.00),
+    vec2<f32>(0.52, 0.77),
+    vec2<f32>(0.53, 0.37),
+    vec2<f32>(0.68, 0.37),
+    vec2<f32>(0.70, 0.55),
+    vec2<f32>(0.92, 0.55),
+    vec2<f32>(1.00, 0.39),
+    vec2<f32>(1.0, 0.0),
+    vec2<f32>(1.0, 0.0),
+    vec2<f32>(1.0, 0.0)
+);
+const FIVE_LOBES: array<vec2<f32>, 15> = array(
+    vec2<f32>(0.00, 0.10),
+    vec2<f32>(0.14, 0.10),
+    vec2<f32>(0.18, 0.43),
+    vec2<f32>(0.20, 0.92),
+    vec2<f32>(0.25, 1.00),
+    vec2<f32>(0.37, 1.00),
+    vec2<f32>(0.39, 0.43),
+    vec2<f32>(0.49, 0.43),
+    vec2<f32>(0.51, 0.83),
+    vec2<f32>(0.69, 0.83),
+    vec2<f32>(0.72, 0.35),
+    vec2<f32>(0.80, 0.35),
+    vec2<f32>(0.82, 0.48),
+    vec2<f32>(0.95, 0.48),
+    vec2<f32>(1.00, 0.32)
+);
+
+// Each half of a blade carries its original, piecewise-linear lobe outline.
+// Alpha bytes select exactly the authored stations retained by this mesh LOD.
+fn blade_covers(uv: vec2<f32>, encoded: vec2<f32>) -> bool {
+    let bytes = vec2<u32>(round(encoded * 255.0));
+    let mask = bytes.x | (bytes.y << 8u);
+    let five = (mask & 32768u) != 0u;
+    var previous = select(THREE_LOBES[0], FIVE_LOBES[0], five);
+    for (var i = 1u; i < 15u; i++) {
+        if (mask & (1u << i)) != 0u {
+            let next = select(THREE_LOBES[i], FIVE_LOBES[i], five);
+            if uv.x <= next.x {
+                let t = (uv.x - previous.x) / (next.x - previous.x);
+                return uv.y <= mix(previous.y, next.y, t);
+            }
+            previous = next;
+        }
+    }
+    return uv.y <= previous.y;
+}
+}
+
 fn leaf_alpha_discard(in: prepass_io::VertexOutput) {
+@if(LEAF_SHADOW_PROFILE) {
+    if !blade_covers(in.uv, in.color.rg) { discard; }
+}
+@if(!OPAQUE_LEAF_PAINT) {
     // Rooted fibres and flames retain the engine's original alpha semantics.
     if wind.w >= 0.5 {
         pbr_prepass_functions::prepass_sample_color_and_alpha_discard(in);
         return;
     }
+}
 @if(MAY_DISCARD) {
 @if(BINDLESS) {
     let slot = mesh[in.instance_index].material_and_lightmap_bind_group_slot & 0xffffu;
     var output_color = pbr_bindings::material_array[material_indices[slot].material].base_color;
-    let flags = pbr_bindings::material_array[material_indices[slot].material].flags;
-    let uv_transform = pbr_bindings::material_array[material_indices[slot].material].uv_transform;
     let alpha_cutoff = pbr_bindings::material_array[material_indices[slot].material].alpha_cutoff;
 } @else {
     var output_color = pbr_bindings::material.base_color;
-    let flags = pbr_bindings::material.flags;
-    let uv_transform = pbr_bindings::material.uv_transform;
     let alpha_cutoff = pbr_bindings::material.alpha_cutoff;
 }
-@if(VERTEX_UVS) {
+@if(VERTEX_UVS && !OPAQUE_LEAF_PAINT) {
+@if(BINDLESS) {
+    let flags = pbr_bindings::material_array[material_indices[slot].material].flags;
+    let uv_transform = pbr_bindings::material_array[material_indices[slot].material].uv_transform;
+} @else {
+    let flags = pbr_bindings::material.flags;
+    let uv_transform = pbr_bindings::material.uv_transform;
+}
 @if(STANDARD_MATERIAL_BASE_COLOR_UV_B) {
     var uv = in.uv_b;
 } @else {
@@ -93,7 +158,8 @@ fn fragment(
 @if(NORMAL_PREPASS) {
     if (flags & pbr_types::STANDARD_MATERIAL_FLAGS_UNLIT_BIT) == 0u {
         let double_sided = (flags & pbr_types::STANDARD_MATERIAL_FLAGS_DOUBLE_SIDED_BIT) != 0u;
-        let world_normal = pbr_functions::prepare_world_normal(in.world_normal, double_sided, is_front);
+        let logical_front = pbr_functions::winding_corrected_front_facing(mesh[in.instance_index].flags, is_front);
+        let world_normal = pbr_functions::prepare_world_normal(in.world_normal, double_sided, logical_front);
         var normal = world_normal;
 @if(VERTEX_UVS) {
 @if(VERTEX_TANGENTS) {
@@ -119,7 +185,7 @@ fn fragment(
             bias.mip_bias,
         ).rgb;
         let TBN = pbr_functions::calculate_tbn_mikktspace(normal, in.world_tangent);
-        normal = pbr_functions::apply_normal_mapping(flags, TBN, double_sided, is_front, Nt);
+        normal = pbr_functions::apply_normal_mapping(flags, TBN, double_sided, logical_front, Nt);
 }
 }
 }

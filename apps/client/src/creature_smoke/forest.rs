@@ -126,6 +126,10 @@ pub(super) fn run(world: &mut World) {
             Transform::from_xyz(16.0, 34.35, 21.7).looking_at(Vec3::new(13.0, 33.65, 19.0), Vec3::Y)
         }
     };
+    capture(world, stage, eye, 8, "forest-creatures");
+}
+
+pub(super) fn capture(world: &mut World, stage: usize, eye: Transform, count: usize, prefix: &str) {
     for mut body in world
         .query_filtered::<&mut Transform, With<terra_player::PlayerBody>>()
         .iter_mut(world)
@@ -152,7 +156,7 @@ pub(super) fn run(world: &mut World) {
         .count();
     let state = world.resource::<Inspection>();
     if !ready
-        || avatars != 8
+        || avatars != count
         || state.start.elapsed() < Duration::from_secs(8)
         || state.requested != state.captured
         || state.last.elapsed() < Duration::from_secs(3)
@@ -160,19 +164,17 @@ pub(super) fn run(world: &mut World) {
         return;
     }
     let folder = PathBuf::from(
-        std::env::var("TERRA_CAPTURE_DIR").unwrap_or_else(|_| "/tmp/terra-forest-creatures".into()),
+        std::env::var("TERRA_CAPTURE_DIR").unwrap_or_else(|_| format!("/tmp/terra-{prefix}")),
     );
     if let Err(error) = std::fs::create_dir_all(&folder) {
-        error!(%error, "Cannot create Spirit gallery capture directory");
+        error!(%error, "Cannot create creature capture directory");
         world.write_message(AppExit::error());
         return;
     }
     world.resource_mut::<Inspection>().requested += 1;
     world
         .spawn(Screenshot::primary_window())
-        .observe(save_to_disk(
-            folder.join(format!("forest-creatures-{stage}.png")),
-        ))
+        .observe(save_to_disk(folder.join(format!("{prefix}-{stage}.png"))))
         .observe(
             |event: On<ScreenshotCaptured>, mut state: ResMut<Inspection>| {
                 let nonblank = event.image.data.as_ref().is_some_and(|data| {

@@ -52,16 +52,26 @@ fn near_water(habitat: &mut Habitat<'_>, point: Tile, ground: i64) -> bool {
 
 fn supports(material: MaterialId, plant: MaterialId) -> bool {
     match plant {
-        MaterialId::DesertShrub => material == MaterialId::Sand,
+        MaterialId::DesertShrub => matches!(
+            material,
+            MaterialId::Sand | MaterialId::DuneSand | MaterialId::RedDuneSand
+        ),
         MaterialId::AlpineHeather => matches!(
             material,
             MaterialId::Grass | MaterialId::Dirt | MaterialId::Snow
         ),
         MaterialId::ShoreReeds => matches!(
             material,
-            MaterialId::Grass | MaterialId::Dirt | MaterialId::Sand | MaterialId::Mud
+            MaterialId::Grass
+                | MaterialId::Dirt
+                | MaterialId::Sand
+                | MaterialId::DuneSand
+                | MaterialId::Mud
         ),
         MaterialId::GlowingSpiritFlowers
+        | MaterialId::WispMushrooms
+        | MaterialId::SpiritGeode
+        | MaterialId::RunePillar
         | MaterialId::BlossomBush
         | MaterialId::PetalGroundCover
         | MaterialId::SpiritLanternPost
@@ -134,6 +144,26 @@ pub(super) fn build(habitat: &mut Habitat<'_>, tile: Tile, cells: &mut BTreeMap<
                     },
                     Palette::Alpine => MaterialId::AlpineHeather,
                     Palette::Desert => MaterialId::DesertShrub,
+                    Palette::Spirit
+                        if habitat.terrain.config().ecology_revision >= 15
+                            && habitat.terrain.config().spirit_blossom_revision >= 2 =>
+                    {
+                        if water || habitat.root_distance_squared(point) < 100 {
+                            match seed % 9 {
+                                0..=3 => MaterialId::WispMushrooms,
+                                4..=5 => MaterialId::SpiritGeode,
+                                _ => MaterialId::GlowingSpiritFlowers,
+                            }
+                        } else {
+                            match seed % 9 {
+                                0 => MaterialId::SpiritGeode,
+                                1 => MaterialId::WispMushrooms,
+                                2..=3 => MaterialId::BlossomBush,
+                                4..=5 => MaterialId::PetalGroundCover,
+                                _ => MaterialId::GlowingSpiritFlowers,
+                            }
+                        }
+                    }
                     Palette::Spirit => match seed % 5 {
                         0 => MaterialId::BlossomBush,
                         1 => MaterialId::PetalGroundCover,
@@ -142,6 +172,9 @@ pub(super) fn build(habitat: &mut Habitat<'_>, tile: Tile, cells: &mut BTreeMap<
                     Palette::Blood => continue,
                 }
             };
+            if !habitat.terrain.in_prop_patch(point, plant as u16) {
+                continue;
+            }
             if !supports(column.surface_material, plant) {
                 continue;
             }
@@ -269,7 +302,14 @@ fn spirit_landmark(habitat: &mut Habitat<'_>, tile: Tile, cells: &mut BTreeMap<C
     {
         return;
     }
-    let plant = if seed & 1 == 0 {
+    let moonlit = habitat.terrain.config().ecology_revision >= 15
+        && habitat.terrain.config().spirit_blossom_revision >= 2;
+    if moonlit && (seed >> 16).is_multiple_of(3) && rune_arch(habitat, p, y, seed, cells) {
+        return;
+    }
+    let plant = if moonlit && seed % 4 == 1 {
+        MaterialId::RunePillar
+    } else if seed & 1 == 0 {
         MaterialId::SpiritShrineStone
     } else {
         MaterialId::SpiritLanternPost
@@ -277,4 +317,60 @@ fn spirit_landmark(habitat: &mut Habitat<'_>, tile: Tile, cells: &mut BTreeMap<C
     if supports(c.surface_material, plant) {
         insert(habitat, [p[0], y + 1, p[1]], c, plant, cells);
     }
+}
+
+/// A weathered gateway spans a walkable lane. Only commit a complete arch after
+/// checking its two foundations, columns, overhead clearance and nearby trees.
+pub(super) fn rune_arch(
+    habitat: &mut Habitat<'_>,
+    center: Tile,
+    base: i64,
+    seed: u32,
+    cells: &mut BTreeMap<Cell, u16>,
+) -> bool {
+    let [dx, dz] = if seed & 1 == 0 { [1, 0] } else { [0, 1] };
+    let mut masonry = Vec::new();
+    for offset in -3i64..=3 {
+        let p = [center[0] + dx * offset, center[1] + dz * offset];
+        let Some((ground, column)) = habitat.ground(p) else {
+            return false;
+        };
+        if (ground - base).abs() > 1
+            || !supports(column.surface_material, MaterialId::RunePillar)
+            || habitat.reserved(p, 2)
+            || habitat.root_distance_squared(p) < 16
+        {
+            return false;
+        }
+        let arch_height = match offset.abs() {
+            3 => 4,
+            2 => 5,
+            _ => 6,
+        };
+        for h in ground + 1..=base + arch_height {
+            let cell = [p[0], h, p[1]];
+            if habitat.tree_occupied(cell) || cells.contains_key(&cell) {
+                return false;
+            }
+            let stone = if offset.abs() == 3
+                || h == base + arch_height
+                || ((1..=2).contains(&offset.abs()) && h >= base + 6 - offset.abs())
+            {
+                Some(if offset.abs() == 3 && h == base + 2 {
+                    MaterialId::GlowingLanternStone
+                } else if h == base + arch_height && (offset + 3) % 3 != 1 {
+                    MaterialId::MossyStone
+                } else {
+                    MaterialId::SpiritStone
+                })
+            } else {
+                None
+            };
+            if let Some(material) = stone {
+                masonry.push((cell, material as u16));
+            }
+        }
+    }
+    cells.extend(masonry);
+    true
 }

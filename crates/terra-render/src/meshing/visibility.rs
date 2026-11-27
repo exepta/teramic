@@ -53,7 +53,6 @@ pub(super) fn invalidate(world: &mut World, positions: &[SectionPos]) {
             cache.faces.remove(p);
             cache.pending.insert(*p);
         }
-        cache.graph_epoch = cache.graph_epoch.wrapping_add(1);
         cache.invalidate();
     }
     if let Some(mut visibility) = world.get_resource_mut::<TerrainVisibility>() {
@@ -69,11 +68,9 @@ struct PortalCache {
     focus: Option<SectionPos>,
     // Closing portals preserves older conservative results; opening one does not.
     opening_epoch: u64,
-    graph_epoch: u64,
-    reached_epoch: Option<u64>,
     reached: HashMap<SectionPos, u8>,
     dirty: bool,
-    task: Option<(u64, u64, SectionPos, Task<PortalAnalysis>)>,
+    task: Option<(u64, SectionPos, Task<PortalAnalysis>)>,
     last_analysis: Option<Instant>,
 }
 
@@ -82,16 +79,12 @@ impl PortalCache {
         self.task = None;
         self.opening_epoch = self.opening_epoch.wrapping_add(1);
         self.reached.clear();
-        self.reached_epoch = None;
         self.dirty = true;
     }
 
     fn queue(&mut self, position: SectionPos) -> bool {
-        let removed = self.faces.remove(&position).is_some();
-        if self.pending.insert(position) || removed {
-            self.graph_epoch = self.graph_epoch.wrapping_add(1);
-        }
-        removed
+        self.pending.insert(position);
+        self.faces.remove(&position).is_some()
     }
 
     fn move_focus(&mut self, eye: SectionPos, legacy: bool) -> bool {
@@ -99,20 +92,20 @@ impl PortalCache {
             return false;
         }
         self.focus = Some(eye);
-        legacy
-            || self.reached_epoch != Some(self.graph_epoch)
-            || !focus_reached(&self.faces, &self.reached, eye)
+        legacy || !focus_reached(&self.faces, &self.reached, eye)
     }
 
     fn accepts_analysis(
         &self,
         opening_epoch: u64,
-        graph_epoch: u64,
         task_eye: SectionPos,
         analysis: &PortalAnalysis,
     ) -> bool {
+        // Missing neighbors already seed every reachable port on that boundary.
+        // Filling unknown sections can only make the snapshot *more* visible
+        // than the live graph. Changing or removing a known summary can open
+        // a path and must invalidate the snapshot immediately.
         opening_epoch == self.opening_epoch
-            && graph_epoch == self.graph_epoch
             && self.focus.is_some_and(|eye| {
                 eye == task_eye || focus_reached(&self.faces, &analysis.reached, eye)
             })
@@ -150,6 +143,7 @@ fn opaque_materials(templates: &crate::blocks::TemplateSet, legacy: bool) -> Vec
                 coarse.render_kind == BlockRenderKind::Cube && coarse.model.is_empty()
             });
         opaque[id as usize] = (block.render_kind == BlockRenderKind::Cube || authored_cube)
+            && id != terra_world::lava::LAVA
             && block.model.is_empty()
             && terra_voxel::MaterialId::from_raw(id)
                 .is_some_and(terra_voxel::MaterialId::is_opaque);
@@ -209,10 +203,8 @@ fn update(
         invalidate = true;
     }
     for event in removals.read() {
-        cache.faces.remove(&event.position);
+        invalidate |= cache.faces.remove(&event.position).is_some();
         cache.pending.remove(&event.position);
-        cache.graph_epoch = cache.graph_epoch.wrapping_add(1);
-        invalidate = true;
     }
     for event in publications.read() {
         let Some(section) = chunks.loaded.get(&event.position) else {
@@ -276,17 +268,15 @@ fn update(
             section_portals(section.data.blocks(), &cache.opaque)
         };
         cache.faces.insert(p, (section.mesh_epoch, portals));
-        cache.graph_epoch = cache.graph_epoch.wrapping_add(1);
         cache.dirty = true;
     }
-    if let Some((epoch, graph_epoch, task_eye, task)) = &mut cache.task
+    if let Some((epoch, task_eye, task)) = &mut cache.task
         && let Some(analysis) = future::block_on(future::poll_once(task))
     {
-        let (epoch, graph_epoch, task_eye) = (*epoch, *graph_epoch, *task_eye);
+        let (epoch, task_eye) = (*epoch, *task_eye);
         cache.task = None;
-        if cache.accepts_analysis(epoch, graph_epoch, task_eye, &analysis) {
+        if cache.accepts_analysis(epoch, task_eye, &analysis) {
             cache.reached = analysis.reached;
-            cache.reached_epoch = Some(graph_epoch);
             visible.replace(analysis.hidden);
         } else {
             cache.dirty = true;
@@ -296,10 +286,14 @@ fn update(
     // immediately; only the optional removal of hidden geometry is coalesced.
     if cache.task.is_none()
         && cache.dirty
-        && cache.pending.is_empty()
-        && cache
-            .last_analysis
-            .is_none_or(|t| t.elapsed() >= Duration::from_millis(250))
+        && !cache.faces.is_empty()
+        && cache.last_analysis.is_none_or(|t| {
+            // While streaming, unknown cells remain visible and can already
+            // bound an enclosed pocket. Coalesce those partial snapshots
+            // more aggressively than the final complete graph.
+            let interval_ms = if cache.pending.is_empty() { 250 } else { 1000 };
+            t.elapsed() >= Duration::from_millis(interval_ms)
+        })
     {
         cache.last_analysis = Some(Instant::now());
         let faces = cache
@@ -309,7 +303,6 @@ fn update(
             .collect();
         cache.task = Some((
             cache.opening_epoch,
-            cache.graph_epoch,
             eye,
             AsyncComputeTaskPool::get().spawn(async move {
                 let _scope = terra_core::profiling::ScopeTimer::new("terrain.visibility.worker");
@@ -589,6 +582,43 @@ mod tests {
     }
 
     #[test]
+    fn first_presentation_requires_uploaded_current_geometry_or_an_intentional_omission() {
+        use super::super::{DetailLevel, RenderedSection, RenderedSections};
+
+        let pos = SectionPos::new(-3, -2, 5);
+        let mut section = pending_section(pos);
+        let mut rendered = RenderedSections::default();
+        let mut visibility = TerrainVisibility::default();
+        visibility.replace(HashSet::from([pos]));
+        assert!(!rendered.section_presented(pos, None, Some(&visibility)));
+        assert!(rendered.section_presented(pos, Some(&section), Some(&visibility)));
+        visibility.replace(HashSet::new());
+        section.mesh = None; // The worker took its input but has not uploaded it.
+        assert!(!rendered.section_presented(pos, Some(&section), Some(&visibility)));
+        rendered.record_presentation(pos, 0, Some(0));
+        assert!(rendered.section_presented(pos, Some(&section), None));
+        section.mesh_epoch = 1;
+        assert!(!rendered.section_presented(pos, Some(&section), None));
+
+        rendered.record_presentation(pos, 0, None);
+        rendered.sections.insert(
+            pos,
+            RenderedSection {
+                folded_leaves: None,
+                micro_detail: false,
+                appearance_epoch: 0,
+                entity: Entity::PLACEHOLDER,
+                meshes: Vec::new(),
+                mesh_epoch: 1,
+                detail_level: DetailLevel::Near,
+            },
+        );
+        assert!(rendered.section_presented(pos, Some(&section), None));
+        rendered.sections.remove(&pos);
+        assert!(!rendered.section_presented(pos, Some(&section), None));
+    }
+
+    #[test]
     fn section_readiness_requires_loaded_data_even_when_hidden() {
         let position = SectionPos::new(-3, -2, 5);
         let mut visibility = TerrainVisibility::default();
@@ -692,8 +722,6 @@ mod tests {
             PortalCache {
                 faces: faces.iter().map(|(&p, &v)| (p, (0, v))).collect(),
                 focus: Some(eye),
-                graph_epoch: 7,
-                reached_epoch: Some(7),
                 reached: analysis.reached,
                 ..default()
             },
@@ -996,7 +1024,7 @@ mod tests {
         let epoch = cache.opening_epoch;
         let task = AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new)
             .spawn(std::future::pending());
-        cache.task = Some((epoch, cache.graph_epoch, eye, task));
+        cache.task = Some((epoch, eye, task));
         if cache.move_focus(SectionPos::new(1, 0, 0), false) {
             cache.invalidate();
             visible.replace(HashSet::new());
@@ -1036,25 +1064,64 @@ mod tests {
     }
 
     #[test]
+    fn streaming_unknown_neighbors_preserves_only_proven_hidden_sections() {
+        let eye = SectionPos::new(0, 0, 0);
+        let moved = SectionPos::new(1, 0, 0);
+        let mut faces = connected_focus_graph();
+        let additions = [
+            (SectionPos::new(-3, 0, -2), Portals::legacy(63)),
+            (SectionPos::new(-3, 0, -1), Portals::legacy(3)),
+            (SectionPos::new(-4, 0, -1), Portals::default()),
+            (SectionPos::new(6, 0, 0), Portals::legacy(63)),
+        ];
+        for (position, _) in additions {
+            faces.remove(&position);
+        }
+        let (mut cache, visible) = cached_graph(&faces, eye);
+        let snapshot = analyze_portals(&faces, eye);
+        assert!(!visible.hidden.is_empty());
+        for (p, portals) in additions {
+            assert!(
+                !cache.queue(p),
+                "previously unknown space cannot open a path"
+            );
+            assert!(cache.pending.remove(&p));
+            cache.faces.insert(p, (0, portals));
+            faces.insert(p, portals);
+            assert!(!cache.move_focus(moved, false));
+            assert!(cache.accepts_analysis(cache.opening_epoch, eye, &snapshot));
+            assert!(!snapshot.hidden.contains(&p));
+            assert!(
+                snapshot
+                    .hidden
+                    .is_subset(&analyze_portals(&faces, moved).hidden)
+            );
+        }
+        // A new camera neighborhood reaching outside the proof must be seeded afresh.
+        assert!(cache.move_focus(SectionPos::new(6, 0, 0), false));
+        assert!(!cache.accepts_analysis(cache.opening_epoch, eye, &snapshot));
+    }
+
+    #[test]
     fn warps_graph_changes_and_stale_workers_cannot_publish_hidden_geometry() {
         let faces = connected_focus_graph();
         let eye = SectionPos::new(0, 0, 0);
         let analysis = analyze_portals(&faces, eye);
         let (mut cache, _) = cached_graph(&faces, eye);
-        assert!(cache.accepts_analysis(0, 7, eye, &analysis));
+        assert!(cache.accepts_analysis(0, eye, &analysis));
         assert!(!cache.move_focus(SectionPos::new(1, 0, 0), false));
-        assert!(cache.accepts_analysis(0, 7, eye, &analysis));
+        assert!(cache.accepts_analysis(0, eye, &analysis));
         assert!(cache.move_focus(SectionPos::new(4, 4, 4), false));
-        assert!(!cache.accepts_analysis(0, 7, eye, &analysis));
+        assert!(!cache.accepts_analysis(0, eye, &analysis));
         cache.invalidate();
         assert!(cache.reached.is_empty());
-        assert_eq!(cache.reached_epoch, None);
-        assert!(!cache.accepts_analysis(0, 7, eye, &analysis));
+        assert!(!cache.accepts_analysis(0, eye, &analysis));
 
         let (mut cache, _) = cached_graph(&faces, eye);
-        cache.queue(SectionPos::new(0, 0, 0));
+        assert!(cache.queue(SectionPos::new(0, 0, 0)));
+        cache.invalidate();
         assert!(cache.move_focus(SectionPos::new(1, 0, 0), false));
-        assert!(!cache.accepts_analysis(0, 7, eye, &analysis));
+        assert!(!cache.accepts_analysis(0, eye, &analysis));
         assert!(cache.faces.len() < faces.len());
         assert_eq!(cache.pending.len(), 1);
         let changed = analyze_portals(
@@ -1276,6 +1343,7 @@ mod tests {
                     meshes: vec![mesh],
                     mesh_epoch: 0,
                     appearance_epoch: 0,
+                    folded_leaves: None,
                     micro_detail: false,
                     detail_level: super::super::DetailLevel::Near,
                 },
@@ -1285,6 +1353,7 @@ mod tests {
             RenderJob {
                 epoch: 0,
                 appearance_epoch: 0,
+                folded_leaves: None,
                 micro_detail: false,
                 level: super::super::DetailLevel::Near,
                 ready: None,

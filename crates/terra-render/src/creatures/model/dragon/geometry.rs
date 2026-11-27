@@ -169,5 +169,5 @@ pub(super) fn block(
     angle: Quat,
     color: Rgb,
 ) -> Result<(), String> {
-    mesh.bevel_box(pos.to_array(), size.to_array(), color, angle)
+    mesh.rotated(pos.to_array(), size.to_array(), color, angle)
 }

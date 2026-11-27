@@ -654,11 +654,14 @@ fn update(
         .and_then(|chunks| chunks.prepared_column(center.map(|v| v.div_euclid(16))))
         .and_then(|column| {
             column.surface_at(center[0], center[1]).map(|surface| {
-                super::biome_name(surface.biome_kind(context.config.as_ref().map_or_else(
-                    || terra_core::WorldConfig::default().sea_level,
-                    |config| config.world.sea_level,
-                )))
-                .into()
+                context
+                    .config
+                    .as_ref()
+                    .map_or_else(
+                        || super::biome_name(surface, &terra_core::WorldConfig::default()),
+                        |config| super::biome_name(surface, &config.world),
+                    )
+                    .into()
             })
         })
         .unwrap_or_else(|| "Unexplored".into());

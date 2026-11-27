@@ -954,7 +954,7 @@ fn update(
             .and_then(|column| {
                 column
                     .surface_at(player_center[0], player_center[1])
-                    .map(|s| biome_name(s.biome_kind(config.world.sea_level)))
+                    .map(|s| biome_name(s, &config.world))
             })
             .unwrap_or("Unknown");
         let hour = clock.as_ref().map_or(0.0, |c| c.hour());
@@ -1552,10 +1552,22 @@ fn beneath_roof(
                 .any(|y| opaque([position[0], y, position[2]]))
     })
 }
-fn biome_name(kind: terra_world::generation::biomes::BiomeKind) -> &'static str {
+fn biome_name(
+    surface: &terra_world::SurfaceColumn,
+    config: &terra_core::WorldConfig,
+) -> &'static str {
     use terra_world::generation::biomes::BiomeKind;
-    match kind {
-        BiomeKind::Ocean => "Ocean · Warm",
+    match surface.biome_kind(config.sea_level) {
+        BiomeKind::Ocean => {
+            let ocean = config.ocean_biome_config();
+            if surface.biome.temperature <= ocean.cold_temperature {
+                "Ocean · Cold"
+            } else if surface.biome.temperature >= ocean.warm_temperature {
+                "Ocean · Warm"
+            } else {
+                "Ocean · Temperate"
+            }
+        }
         BiomeKind::Plains => "Plains · Warm",
         BiomeKind::Forest => "Forest · Warm",
         BiomeKind::Desert => "Desert · Hot",
@@ -1565,6 +1577,12 @@ fn biome_name(kind: terra_world::generation::biomes::BiomeKind) -> &'static str 
         BiomeKind::CherryForest => "Cherry Forest · Warm",
         BiomeKind::SpiritBlossom => "Spirit Blossom · Warm",
         BiomeKind::BloodForest => "Blood Forest · Warm",
+        BiomeKind::Ashlands => "Ashlands · Hot",
+        BiomeKind::Savanna => "Savanna · Warm",
+        BiomeKind::PetrifiedForest => "Petrified Forest · Warm",
+        BiomeKind::CrystalHighlands => "Crystal Highlands · Cold",
+        BiomeKind::MistyCoast => "Misty Coast · Temperate",
+        BiomeKind::Swamp => "Swamp · Warm",
     }
 }
 fn layer_root(root: &std::path::Path, layer: MapLayer) -> PathBuf {
@@ -1757,7 +1775,7 @@ mod tests {
     fn cache_palette() -> MapPalette {
         MapPalette {
             colors: vec![[0.2, 0.3, 0.1]; 8],
-            biome_colors: [[0.2, 0.5, 0.1]; 10],
+            biome_colors: [[0.2, 0.5, 0.1]; 16],
             ..default()
         }
     }
@@ -1769,7 +1787,9 @@ mod tests {
             material: 1,
             height: -42,
             known: true,
-            biome_weights: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            biome_weights: [
+                0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ],
             ..default()
         };
         DetailTile {
@@ -1778,6 +1798,24 @@ mod tests {
             revision: 17,
             cells,
         }
+    }
+
+    #[test]
+    fn ocean_label_uses_the_saved_climate_at_the_players_position() {
+        use terra_core::{WorldConfig, WorldSeed};
+        let terrain = terra_world::TerraGenerator::new(WorldConfig {
+            seed: WorldSeed(7863640744109448198),
+            rivers: true,
+            ..Default::default()
+        })
+        .unwrap();
+        let mut surface = terrain.surface_column(-4450.5, 6107.5);
+        assert_eq!(biome_name(&surface, terrain.config()), "Ocean · Cold");
+        let palette = terrain.config().ocean_biome_config();
+        surface.biome.temperature = (palette.cold_temperature + palette.warm_temperature) * 0.5;
+        assert_eq!(biome_name(&surface, terrain.config()), "Ocean · Temperate");
+        surface.biome.temperature = 0.95;
+        assert_eq!(biome_name(&surface, terrain.config()), "Ocean · Warm");
     }
 
     #[test]

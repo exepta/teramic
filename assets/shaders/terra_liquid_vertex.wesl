@@ -47,13 +47,14 @@ fn vertex(vertex_input: Vertex,
 ) -> VertexOutput {
     var out: VertexOutput;
     let input = decompress_vertex(vertex_input, vertex_input.instance_index);
-    let model = mesh_functions::get_world_from_local(input.instance_index);
+    // Read the instance builtin directly at the entry point on DX12, as in Bevy PBR.
+    let model = mesh_functions::get_world_from_local(vertex_input.instance_index);
     var local = input.position;
     var seconds = 0.0;
     var delta_seconds = 0.0;
 @if(LIQUID_MOTION) {
 @if(BINDLESS) {
-    let slot = mesh[input.instance_index].material_and_lightmap_bind_group_slot & 0xffffu;
+    let slot = mesh[vertex_input.instance_index].material_and_lightmap_bind_group_slot & 0xffffu;
     seconds = wet_weather[wet_indices[slot].weather].liquid.x;
     delta_seconds = wet_weather[wet_indices[slot].weather].liquid.y;
 } @else {
@@ -79,14 +80,14 @@ fn vertex(vertex_input: Vertex,
 @if(PREPASS_PIPELINE) {
 @if(NORMAL_PREPASS_OR_DEFERRED_PREPASS) {
 @if(VERTEX_NORMALS) {
-    out.world_normal = mesh_functions::mesh_normal_local_to_world(input.normal, input.instance_index);
+    out.world_normal = mesh_functions::mesh_normal_local_to_world(input.normal, vertex_input.instance_index);
 }
 @if(VERTEX_TANGENTS) {
-    out.world_tangent = mesh_functions::mesh_tangent_local_to_world(model, input.tangent, input.instance_index);
+    out.world_tangent = mesh_functions::mesh_tangent_local_to_world(model, input.tangent, vertex_input.instance_index);
 }
 }
 @if(MOTION_VECTOR_PREPASS) {
-    let previous_model = mesh_functions::get_previous_world_from_local(input.instance_index);
+    let previous_model = mesh_functions::get_previous_world_from_local(vertex_input.instance_index);
     var previous_local = input.position;
 @if(LIQUID_MOTION) {
     let previous_phase = clamp((seconds - delta_seconds - liquid_from.w) / max(liquid_data.x, 0.001), 0.0, 1.0);
@@ -103,10 +104,10 @@ fn vertex(vertex_input: Vertex,
 }
 } @else {
 @if(VERTEX_NORMALS) {
-    out.world_normal = mesh_functions::mesh_normal_local_to_world(input.normal, input.instance_index);
+    out.world_normal = mesh_functions::mesh_normal_local_to_world(input.normal, vertex_input.instance_index);
 }
 @if(VERTEX_TANGENTS) {
-    out.world_tangent = mesh_functions::mesh_tangent_local_to_world(model, input.tangent, input.instance_index);
+    out.world_tangent = mesh_functions::mesh_tangent_local_to_world(model, input.tangent, vertex_input.instance_index);
 }
 }
 @if(VERTEX_UVS_A) {
@@ -127,10 +128,10 @@ fn vertex(vertex_input: Vertex,
     out.color = input.color;
 }
 @if(VERTEX_OUTPUT_INSTANCE_INDEX) {
-    out.instance_index = input.instance_index;
+    out.instance_index = vertex_input.instance_index;
 }
 @if(VISIBILITY_RANGE_DITHER) {
-    out.visibility_range_dither = mesh_functions::get_visibility_range_dither_level(input.instance_index, model[3]);
+    out.visibility_range_dither = mesh_functions::get_visibility_range_dither_level(vertex_input.instance_index, model[3]);
 }
     return out;
 }

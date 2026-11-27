@@ -1,5 +1,5 @@
-use super::DetailLevel;
 use super::connectivity::{connected_position, connected_turf_top};
+use super::{DetailLevel, lod::FoldedLeaves};
 use crate::blocks::definitions::{BlockRenderKind, DetailDensity};
 use crate::blocks::{PrimitiveTemplate, TemplateSet, projected_tangent};
 use bevy::prelude::*;
@@ -25,7 +25,18 @@ pub(crate) struct RenderOptions {
 #[derive(Default, Debug, PartialEq)]
 pub(crate) struct MeshBatch {
     pub staged: Option<super::staging::StagedMesh>,
+    /// A staged resident stays owned by this published section until commit.
+    pub(crate) borrowed_from: Option<Entity>,
+    pub(crate) source: Option<super::resident::MeshSource>,
     pub shadow_only: bool,
+    /// Either half of a color piece and its welded, wind-aware shadow twin.
+    pub paired_leaf_shadow: bool,
+    /// Coarse directional cascades can select the analytic blade profile.
+    pub profile_leaf_shadow: bool,
+    /// Exact welded shadow mesh paired with a coarse directional profile.
+    pub fine_leaf_shadow: bool,
+    /// Provenance for constructing shared silhouette cards before spatial splitting.
+    pub leaf_shadow_sides: Vec<u8>,
     pub shadow_sources: Vec<usize>,
     pub material: usize,
     pub positions: Vec<[f32; 3]>,
@@ -33,10 +44,13 @@ pub(crate) struct MeshBatch {
     /// Empty or aligned to positions; retained for authored normal-mapped meshes.
     pub tangents: Vec<[f32; 4]>,
     pub uvs: Vec<[f32; 2]>,
+    pub packed_uvs: Vec<[u16; 2]>,
+    pub tiled_uv_range: bool,
     /// Optional UV1 weights: rooted terrain wind, or prop growth timing/ratio.
     pub rooted_wind: Vec<[f32; 2]>,
     pub surface_water: Vec<[f32; 2]>,
     pub bile_motion: Vec<[f32; 4]>,
+    pub flowing_lava: bool,
     pub growth_anchors: Vec<[f32; 3]>,
     /// CPU-only prop ranges for refreshing growth timing after worker completion.
     pub growth_ranges: Vec<(terra_world::props::PropId, std::ops::Range<usize>)>,
@@ -53,6 +67,32 @@ pub(crate) struct MeshBatch {
 }
 
 impl MeshBatch {
+    pub(super) fn borrow_resident(&mut self, owner: Entity, mesh: super::staging::StagedMesh) {
+        // Keep only publication metadata. Dropping the worker's vectors here
+        // also returns their capacity when another batch holds up the section.
+        *self = Self {
+            material: self.material,
+            shadow_only: self.shadow_only,
+            paired_leaf_shadow: self.paired_leaf_shadow,
+            profile_leaf_shadow: self.profile_leaf_shadow,
+            fine_leaf_shadow: self.fine_leaf_shadow,
+            shadow_sources: std::mem::take(&mut self.shadow_sources),
+            flowing_lava: self.flowing_lava,
+            source: self.source.take(),
+            staged: Some(mesh),
+            borrowed_from: Some(owner),
+            ..default()
+        };
+    }
+
+    pub(super) fn profile_caster(&self) -> Option<bool> {
+        if self.fine_leaf_shadow {
+            Some(false)
+        } else {
+            self.profile_leaf_shadow.then_some(self.shadow_only)
+        }
+    }
+
     /// Worker-only, after geometry/AO edits. PBR and rooted-fibre shaders read
     /// normalized frames directly, including exact tangent handedness at +/-1.
     pub(crate) fn pack_static_frame(&mut self) {
@@ -73,7 +113,12 @@ impl MeshBatch {
                 .collect();
             self.packed_normals.shrink_to_fit();
         }
-        if self.packed_tangents.is_empty()
+        self.pack_unit_tangents();
+    }
+
+    pub(crate) fn pack_unit_tangents(&mut self) {
+        if !self.tangents.is_empty()
+            && self.packed_tangents.is_empty()
             && self.tangents.len() == self.positions.len()
             && self.tangents.iter().all(|tangent| {
                 unit_direction([tangent[0], tangent[1], tangent[2]])
@@ -205,7 +250,7 @@ pub(crate) struct FoliageOwner {
 #[derive(Default)]
 struct AuthoredFaceCache(BTreeMap<(u16, usize, u8), Vec<PrimitiveTemplate>>);
 
-fn coarse_authored(templates: &TemplateSet, material: u16) -> bool {
+pub(super) fn coarse_authored(templates: &TemplateSet, material: u16) -> bool {
     // Dispatch replaces only authored terrain with its validated cube fallback
     // after micro-detail hysteresis. A nearby original remains CustomMesh.
     templates.opaque_cube_lods.contains(&material)
@@ -353,6 +398,29 @@ pub(crate) fn compose_section_with_segments(
     growth: &[([u8; 3], u8, f32)],
     segments: &[terra_voxel::meshing::BlockSegment],
 ) -> Result<Vec<MeshBatch>, String> {
+    compose_section_with_leaf_detail(
+        faces,
+        templates,
+        section,
+        options,
+        growth,
+        segments,
+        FoldedLeaves::FULL,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn compose_section_with_leaf_detail(
+    faces: &[BlockFace],
+    templates: &TemplateSet,
+    section: SectionPos,
+    options: &RenderOptions,
+    growth: &[([u8; 3], u8, f32)],
+    segments: &[terra_voxel::meshing::BlockSegment],
+    folded_leaves: FoldedLeaves,
+    prepared: Option<&terra_world::generation::PreparedColumn>,
+) -> Result<Vec<MeshBatch>, String> {
     let origin = section.origin().map_err(|e| e.to_string())?;
     let growth: BTreeMap<_, _> = growth
         .iter()
@@ -402,7 +470,7 @@ pub(crate) fn compose_section_with_segments(
         .filter(|_| {
             faces
                 .iter()
-                .any(|face| matches!(face.material, 1 | 4 | 5 | 306 | 400))
+                .any(|face| crate::appearance::tinted_ground(face.material))
         })
         .map(|t| crate::appearance::GroundTint::new(t, origin));
     let tint = super::tree_appearance::SurfaceTint {
@@ -416,19 +484,7 @@ pub(crate) fn compose_section_with_segments(
                             || t.config().cave_structure_revision >= 3 && f.material == 3
                     })
             })
-            .map(|terrain| {
-                Box::new(std::array::from_fn(|i| {
-                    let x = (origin[0] + (i % 16) as i64) as f64 + 0.5;
-                    let z = (origin[2] + (i / 16) as i64) as f64 + 0.5;
-                    (
-                        terrain.cave_structure_at(
-                            (origin[0] + (i % 16) as i64) as f64 + 0.5,
-                            (origin[2] + (i / 16) as i64) as f64 + 0.5,
-                        ),
-                        terrain.cave_biome_column(x, z),
-                    )
-                }))
-            }),
+            .map(|terrain| super::tree_appearance::cave_samples(terrain, origin, prepared)),
         ground,
         trees: options
             .terrain
@@ -459,7 +515,7 @@ pub(crate) fn compose_section_with_segments(
     let mut tree_faces = Vec::with_capacity(faces.len());
     for &face in faces {
         if face.side != 2
-            && matches!(face.material, 1 | 4 | 5 | 306 | 400)
+            && crate::appearance::tinted_ground(face.material)
             && (options.detail_level != DetailLevel::Near
                 || coarse_authored(templates, face.material))
             && let Some(ground) = &tint.ground
@@ -479,6 +535,16 @@ pub(crate) fn compose_section_with_segments(
         } else {
             tree_faces.push(face);
         }
+    }
+    if options.detail_level == DetailLevel::Near && templates.block_details.micro_geometry {
+        spatially_order_relief(&mut tree_faces, |id| {
+            (matches!(id, 1..=3 | 42)
+                || terra_voxel::MaterialId::FOLIAGE.contains(&id)
+                    && templates.block_details.leaf_geometry_quality
+                        != terra_core::BlockDetailQuality::Low)
+                && templates.sculpted_blocks.contains_key(&id)
+                && !coarse_authored(templates, id)
+        });
     }
     for face in &tree_faces {
         let base_block = templates
@@ -512,7 +578,13 @@ pub(crate) fn compose_section_with_segments(
             )?;
             continue;
         }
-        let block = if options.detail_level == DetailLevel::Near {
+        let shape = templates.sculpted_blocks.get(&face.material);
+        let sculpture = shape.filter(|_| {
+            options.detail_level == DetailLevel::Near && templates.block_details.micro_geometry
+        });
+        let block = if let Some(shape) = shape {
+            shape.core.as_ref()
+        } else if options.detail_level == DetailLevel::Near {
             base_block
         } else {
             templates
@@ -525,8 +597,73 @@ pub(crate) fn compose_section_with_segments(
             && options.detail_level != DetailLevel::Far
             && templates.block_details.leaf_geometry_quality != terra_core::BlockDetailQuality::Low
         {
+            // World chunks use LeafMaterial; item previews keep each
+            // authored StandardMaterial, including its own roughness.
+            let shape = if options.terrain.is_some() && shape.is_some() {
+                templates.batched_wind_leaves.get(&face.material).or(shape)
+            } else {
+                shape
+            };
             for cell in cells(*face) {
-                let mask = visibility[cell_index(cell)];
+                let index = cell_index(cell);
+                let mask = if shape.is_some() {
+                    open_neighbors[index]
+                } else {
+                    visibility[index]
+                };
+                if let Some(shape) = shape {
+                    let species = tint.tree(cell, face.material);
+                    let conifer = matches!(
+                        species,
+                        Some(
+                            terra_world::generation::TreeAppearance::Spruce
+                                | terra_world::generation::TreeAppearance::Fir
+                        )
+                    );
+                    if !conifer || face.occupied_neighbor {
+                        let global =
+                            std::array::from_fn(|axis| origin[axis] + i64::from(cell[axis]));
+                        let starts = tint_starts(&batches, block, face.side, Some(shape));
+
+                        append_sculpture(
+                            &mut batches,
+                            shape,
+                            *face,
+                            cell,
+                            shape.relief(
+                                face.side,
+                                crate::blocks::sculpt::variant(global, face.material),
+                                if sculpture.is_some() { mask } else { 0 },
+                                folded_leaves.at(cell)
+                                    || templates.block_details.leaf_geometry_quality
+                                        != terra_core::BlockDetailQuality::High,
+                            ),
+                            templates,
+                        )?;
+                        tint_surface(
+                            &mut batches,
+                            starts,
+                            *face,
+                            cell,
+                            templates,
+                            &tint,
+                            options,
+                            snow_climate.as_ref(),
+                        );
+                    }
+                    // Preserve the authored needle sprays, fruit and blossom clusters of their tree species.
+                    if !conifer
+                        && !matches!(
+                            species,
+                            Some(
+                                terra_world::generation::TreeAppearance::Apple
+                                    | terra_world::generation::TreeAppearance::Cherry
+                            )
+                        )
+                    {
+                        continue;
+                    }
+                }
                 if face.side == mask.trailing_zeros() as usize {
                     let global = std::array::from_fn(|axis| origin[axis] + i64::from(cell[axis]));
                     let condition = options
@@ -534,11 +671,15 @@ pub(crate) fn compose_section_with_segments(
                         .get(&cell.map(|v| v as usize))
                         .copied()
                         .unwrap_or_default();
-                    let crown = base_block;
+                    let crown = block;
                     let cluster = templates.foliage_clusters.get(&face.material).copied();
                     let mut starts = BTreeMap::new();
                     let tree_tint = tint.tree_tint(cell, face.material);
-                    if condition != Default::default() || tree_tint != [1.0; 3] {
+                    let atlas = cluster.map(|c| tint.crown_atlas(cell, face.material, c));
+                    if condition != Default::default()
+                        || tree_tint != [1.0; 3]
+                        || atlas.is_some_and(|slot| Some(slot) == cluster.and_then(|c| c.needles))
+                    {
                         for slot in crown
                             .face_materials
                             .into_iter()
@@ -555,8 +696,9 @@ pub(crate) fn compose_section_with_segments(
                         global,
                         cell,
                         mask,
-                        if templates.block_details.leaf_geometry_quality
-                            == terra_core::BlockDetailQuality::High
+                        if folded_leaves.nearby
+                            && templates.block_details.leaf_geometry_quality
+                                == terra_core::BlockDetailQuality::High
                         {
                             options.detail_level
                         } else {
@@ -572,9 +714,13 @@ pub(crate) fn compose_section_with_segments(
                         if let Some(batch) = batches.get_mut(&slot) {
                             batch.colors.resize(batch.positions.len(), [1.0; 4]);
                             let tint = crate::appearance::condition_tint(condition);
+                            let proxy = atlas
+                                .and_then(|atlas| templates.foliage_proxy_tints.get(&(atlas, slot)))
+                                .copied()
+                                .unwrap_or([1.; 3]);
                             for color in &mut batch.colors[start..] {
                                 for axis in 0..3 {
-                                    color[axis] *= tint[axis] * tree_tint[axis];
+                                    color[axis] *= tint[axis] * tree_tint[axis] * proxy[axis];
                                 }
                             }
                         }
@@ -585,6 +731,7 @@ pub(crate) fn compose_section_with_segments(
         }
         if block.render_kind == BlockRenderKind::Cube
             && (options.detail_level != DetailLevel::Near
+                || shape.is_some() && sculpture.is_none()
                 || coarse_authored(templates, face.material)
                 || terra_voxel::MaterialId::FOLIAGE.contains(&face.material)
                     && templates.block_details.leaf_geometry_quality
@@ -597,8 +744,8 @@ pub(crate) fn compose_section_with_segments(
                 origin[1],
             );
             for part in split.as_deref().unwrap_or(std::slice::from_ref(face)) {
-                let starts = tint_starts(&batches, block, face.side);
-                append_greedy(&mut batches, *part, block)?;
+                let starts = tint_starts(&batches, block, face.side, sculpture);
+                append_core(&mut batches, *part, block, shape)?;
                 tint_surface(
                     &mut batches,
                     starts,
@@ -666,11 +813,27 @@ pub(crate) fn compose_section_with_segments(
             continue;
         }
         for cell in cells(*face) {
-            let starts = tint_starts(&batches, block, face.side);
+            let starts = tint_starts(&batches, block, face.side, sculpture);
             let translation = Vec3::from_array(cell.map(|i| i as f32));
             let connection = (block.bevel_width > 0.0)
                 .then_some((open_neighbors[cell_index(cell)], block.bevel_width));
-            if let Some(surface) = &block.surface {
+            // The relief floor and its shader cutout share the collision plane.
+            // Keep granular side detail, with a level contact face under each track.
+            if let Some(shape) = sculpture {
+                let global = std::array::from_fn(|axis| origin[axis] + i64::from(cell[axis]));
+                let variant = crate::blocks::sculpt::variant(global, face.material);
+                append_sculpture(
+                    &mut batches,
+                    shape,
+                    *face,
+                    cell,
+                    shape.relief(face.side, variant, open_neighbors[cell_index(cell)], true),
+                    templates,
+                )?;
+            } else if let Some(surface) = &block.surface
+                && !(face.side == 3
+                    && terra_core::footsteps::TrackSurface::from_block(face.material).is_some())
+            {
                 let mask = open_neighbors[cell_index(cell)];
                 let global = std::array::from_fn(|i| origin[i] + i64::from(cell[i]));
                 for patch in surface.face(
@@ -811,7 +974,7 @@ pub(crate) fn compose_section_with_segments(
             }
             if face.side == 3 && options.detail_level != DetailLevel::Far {
                 let global = std::array::from_fn(|i| origin[i] + i64::from(cell[i]));
-                let cover = (!block.details.is_empty())
+                let cover = (!base_block.details.is_empty())
                     .then(|| {
                         options
                             .terrain
@@ -819,7 +982,7 @@ pub(crate) fn compose_section_with_segments(
                             .map(|t| t.ground_cover(global[0] as f64 + 0.5, global[2] as f64 + 0.5))
                     })
                     .flatten();
-                for (index, detail) in block.details.iter().enumerate() {
+                for (index, detail) in base_block.details.iter().enumerate() {
                     if options.detail_level == DetailLevel::Middle && detail.density_field.is_some()
                     {
                         continue;
@@ -944,15 +1107,129 @@ fn append_coastal_wash(
     Ok(())
 }
 
+pub(crate) fn append_sculpture(
+    batches: &mut BTreeMap<usize, MeshBatch>,
+    shape: &crate::blocks::sculpt::SculptedBlock,
+    face: BlockFace,
+    cell: [u32; 3],
+    relief: Option<&[crate::blocks::PrimitiveTemplate]>,
+    templates: &TemplateSet,
+) -> Result<(), String> {
+    let unit = BlockFace {
+        minimum: cell,
+        width: 1,
+        height: 1,
+        ..face
+    };
+    if relief.is_some()
+        && let Some([mut u, v, span]) = shape.leaf_openings[face.side]
+    {
+        // Preserve exactly the same UVs as the greedy distant cutout. The
+        // large opening is also absent from the silhouette and shadow mesh.
+        if shape.wraps_u(face.side) {
+            u = 1.0 - u - span;
+        }
+        let material = shape.core.face_materials[face.side];
+        let tangent = shape.core.faces[face.side]
+            .iter()
+            .find_map(|p| p.tangents.first())
+            .copied();
+        let (u_axis, v_axis) = match face.side / 2 {
+            0 => (2, 1),
+            1 => (0, 2),
+            _ => (0, 1),
+        };
+        for [left, bottom, width, height] in [
+            [0.0, 0.0, 1.0, v],
+            [0.0, v + span, 1.0, 1.0 - v - span],
+            [0.0, v, u, span],
+            [u + span, v, 1.0 - u - span, span],
+        ] {
+            if width <= 0.0 || height <= 0.0 {
+                continue;
+            }
+            let mut minimum = cell.map(|n| n as f32);
+            minimum[u_axis] += left;
+            minimum[v_axis] += bottom;
+            let (w, h) = if u_axis == unit.u_axis {
+                (width, height)
+            } else {
+                (height, width)
+            };
+            append_rectangle(batches, unit, material, minimum, w, h, tangent, Some(shape))?;
+        }
+    } else {
+        append_core(batches, unit, &shape.core, Some(shape))?;
+    }
+    let Some(relief) = relief else { return Ok(()) };
+    let offset = Vec3::from_array(cell.map(|p| p as f32));
+    for primitive in relief {
+        let slot = shape.slots[primitive.material];
+        let batch = batches.entry(slot).or_insert_with(|| MeshBatch {
+            material: slot,
+            ..default()
+        });
+        let start = batch.positions.len();
+        let end = start
+            .checked_add(primitive.positions.len())
+            .and_then(|end| u32::try_from(end).ok())
+            .ok_or("Sculpted section exceeds u32 mesh index limit")?;
+        let base = end - primitive.positions.len() as u32;
+        batch.positions.extend(
+            primitive
+                .positions
+                .iter()
+                .map(|p| (Vec3::from_array(*p) + offset).to_array()),
+        );
+        batch.normals.extend_from_slice(&primitive.normals);
+        let (u, v) = match face.side / 2 {
+            0 => (2, 1),
+            1 => (0, 2),
+            _ => (0, 1),
+        };
+        batch.uvs.extend(
+            primitive
+                .uvs
+                .iter()
+                .map(|uv| [uv[0] + offset[u], uv[1] + offset[v]]),
+        );
+        let tangents = templates.normal_mapped_materials.contains(&slot)
+            || templates.cube_lods.contains_key(&face.material);
+        if tangents {
+            batch.append_tangents(start, primitive.tangents.iter().copied());
+        }
+        batch
+            .indices
+            .extend(primitive.indices.iter().map(|&i| base + i));
+        if terra_voxel::MaterialId::FOLIAGE.contains(&face.material) {
+            if shape.reference_leaves() {
+                batch.leaf_shadow_sides.push(face.side as u8);
+            }
+            batch.foliage_owners.push(FoliageOwner {
+                vertices: start..end as usize,
+                cell,
+                material: face.material,
+            });
+        }
+    }
+    Ok(())
+}
+
 fn tint_starts(
     batches: &BTreeMap<usize, MeshBatch>,
     block: &crate::blocks::BlockTemplate,
     side: usize,
-) -> [(usize, usize); 2] {
+    shape: Option<&crate::blocks::sculpt::SculptedBlock>,
+) -> [(usize, usize); 4] {
     let material = block.face_materials[side];
     [
         material,
-        block.side_cap.map_or(material, |cap| cap.material),
+        shape.map_or(material, |shape| shape.slots[side]),
+        shape.map_or_else(
+            || block.side_cap.map_or(material, |cap| cap.material),
+            |shape| shape.slots[6],
+        ),
+        shape.map_or(material, |shape| shape.slots[7]),
     ]
     .map(|slot| {
         (
@@ -965,7 +1242,7 @@ fn tint_starts(
 #[allow(clippy::too_many_arguments)]
 fn tint_surface(
     batches: &mut BTreeMap<usize, MeshBatch>,
-    starts: [(usize, usize); 2],
+    starts: [(usize, usize); 4],
     face: BlockFace,
     cell: [u32; 3],
     templates: &TemplateSet,
@@ -1025,7 +1302,7 @@ fn tint_surface(
     let snow_sky_override = snow_sky && exposure == 0.0;
     // Imprints cut the real surface even when the material is perfectly dry
     // beneath a roof; UV1 selects the shared wet/imprint material, not wetness.
-    let imprint_surface = matches!(face.material, 4 | 5);
+    let imprint_surface = terra_core::footsteps::TrackSurface::from_block(face.material).is_some();
     let grass = templates
         .blocks
         .get(&1)
@@ -1052,16 +1329,34 @@ fn tint_surface(
         [1.0; 3]
     };
     for (index, &(slot, start)) in starts.iter().enumerate() {
-        if index == 1 && slot == starts[0].0 {
+        if starts[..index].iter().any(|&(seen, _)| seen == slot) {
             continue;
         }
-        let is_grass = matches!(face.material, 1 | 306 | 400)
+        let proxy = templates
+            .foliage_clusters
+            .get(&face.material)
+            .and_then(|&cluster| {
+                templates
+                    .foliage_proxy_tints
+                    .get(&(tint.crown_atlas(cell, face.material, cluster), slot))
+            })
+            .copied()
+            .unwrap_or([1.; 3]);
+        let sculpted_soil = face.material == 1
+            && templates
+                .sculpted_blocks
+                .get(&1)
+                .is_some_and(|shape| shape.slots[2] == slot || shape.slots[7] == slot);
+        let is_grass = !sculpted_soil
+            && matches!(face.material, 1 | 306 | 400)
             && face.side != 2
             && (face.material != 1 || templates.cube_lods.contains_key(&1) || Some(slot) == grass);
-        let is_ground = is_grass || (face.side == 3 && matches!(face.material, 4 | 5));
+        let is_ground =
+            is_grass || (face.side == 3 && crate::appearance::tinted_ground(face.material));
         if (!is_ground || tint.ground.is_none())
             && condition == Default::default()
             && tree_tint == [1.0; 3]
+            && proxy == [1.; 3]
             && placed_tint == [1.0; 3]
             && exposure == 0.0
             && !snow_sky_override
@@ -1114,7 +1409,8 @@ fn tint_surface(
                 [1.0; 3]
             };
             for axis in 0..3 {
-                color[axis] *= biome[axis] * factor[axis] * tree_tint[axis] * placed_tint[axis];
+                color[axis] *=
+                    biome[axis] * factor[axis] * tree_tint[axis] * placed_tint[axis] * proxy[axis];
             }
             if let Some(climate) = snow_climate {
                 color[3] = if snow_sky || options.exposure.is_none() && condition.snow > 0.0 {
@@ -1133,6 +1429,15 @@ pub(crate) fn append_greedy(
     batches: &mut BTreeMap<usize, MeshBatch>,
     face: BlockFace,
     block: &crate::blocks::BlockTemplate,
+) -> Result<(), String> {
+    append_core(batches, face, block, None)
+}
+
+fn append_core(
+    batches: &mut BTreeMap<usize, MeshBatch>,
+    face: BlockFace,
+    block: &crate::blocks::BlockTemplate,
+    shape: Option<&crate::blocks::sculpt::SculptedBlock>,
 ) -> Result<(), String> {
     let material = block.face_materials[face.side];
     let tangent = block.faces[face.side]
@@ -1165,6 +1470,7 @@ pub(crate) fn append_greedy(
                         height
                     },
                     tangent,
+                    shape,
                 )?;
             }
         }
@@ -1178,6 +1484,7 @@ pub(crate) fn append_greedy(
         face.width as f32,
         face.height as f32,
         tangent,
+        shape,
     )
 }
 
@@ -1189,6 +1496,7 @@ fn append_rectangle(
     width: f32,
     height: f32,
     tangent: Option<[f32; 4]>,
+    shape: Option<&crate::blocks::sculpt::SculptedBlock>,
 ) -> Result<(), String> {
     let batch = batches.entry(material).or_insert_with(|| MeshBatch {
         material,
@@ -1227,7 +1535,14 @@ fn append_rectangle(
         1 => (0, 2),
         _ => (0, 1),
     };
-    batch.uvs.extend([a, b, c, d].map(|p| [p[u], p[v]]));
+    let direction = if shape.is_some_and(|shape| shape.wraps_u(face.side)) {
+        -1.0
+    } else {
+        1.0
+    };
+    batch
+        .uvs
+        .extend([a, b, c, d].map(|p| [direction * p[u], p[v]]));
     batch.append_tangents(start as usize, tangent.into_iter().flat_map(|t| [t; 4]));
     let indices = if cross.dot(Vec3::from_array(normal)) > 0.0 {
         [0, 1, 2, 0, 2, 3]
@@ -1240,6 +1555,56 @@ fn append_rectangle(
 
 fn cell_index(cell: [u32; 3]) -> usize {
     cell[0] as usize + SECTION_SIZE * (cell[1] as usize + SECTION_SIZE * cell[2] as usize)
+}
+
+/// Greedy faces arrive in six axis sweeps. Slicing a dense sweep into GPU
+/// uploads gives nearly every draw the bounds of the entire section. Emit
+/// already per-cell relief in spatial order so invisible groups can be culled.
+fn spatially_order_relief(faces: &mut Vec<BlockFace>, detailed: impl Fn(u16) -> bool) {
+    if faces
+        .iter()
+        .filter(|f| detailed(f.material))
+        .map(|f| f.width * f.height)
+        .sum::<u32>()
+        < 48
+    {
+        return;
+    }
+    let mut tiles: [Vec<BlockFace>; 64] = std::array::from_fn(|_| Vec::new());
+    faces.retain(|face| {
+        if !detailed(face.material) {
+            return true;
+        }
+        let mut u = 0;
+        while u < face.width {
+            let width = (4 - (face.minimum[face.u_axis] + u) % 4).min(face.width - u);
+            let mut v = 0;
+            while v < face.height {
+                let height = (4 - (face.minimum[face.v_axis] + v) % 4).min(face.height - v);
+                let mut minimum = face.minimum;
+                minimum[face.u_axis] += u;
+                minimum[face.v_axis] += v;
+                let [x, y, z] = minimum.map(|n| (n / 4) as usize);
+                // Visit adjacent tiles in an octant before moving across the section.
+                let tile = (x & 1)
+                    | ((y & 1) << 1)
+                    | ((z & 1) << 2)
+                    | ((x & 2) << 2)
+                    | ((y & 2) << 3)
+                    | ((z & 2) << 4);
+                tiles[tile].push(BlockFace {
+                    minimum,
+                    width,
+                    height,
+                    ..*face
+                });
+                v += height;
+            }
+            u += width;
+        }
+        false
+    });
+    faces.extend(tiles.into_iter().flatten());
 }
 
 fn cells(face: BlockFace) -> impl Iterator<Item = [u32; 3]> {
@@ -1273,7 +1638,7 @@ fn validate_face(face: BlockFace) -> Result<(), String> {
     Ok(())
 }
 
-pub(super) fn variation(position: [i64; 3], salt: u64) -> u64 {
+pub(crate) fn variation(position: [i64; 3], salt: u64) -> u64 {
     let mut h = salt.wrapping_add(0x9e3779b97f4a7c15);
     for coordinate in position {
         h ^= (coordinate as u64).wrapping_mul(0xbf58476d1ce4e5b9);
@@ -1455,6 +1820,64 @@ fn triangle_tangent(points: [Vec3; 3], uvs: [[f32; 2]; 3], normal: Vec3) -> [f32
 #[cfg(test)]
 mod indexing_tests {
     use super::*;
+    #[test]
+    fn spatial_relief_retains_every_oriented_cell_and_occupied_neighbor() {
+        let face = BlockFace {
+            minimum: [1, 3, 2],
+            width: 13,
+            height: 11,
+            u_axis: 0,
+            v_axis: 2,
+            side: 3,
+            material: 1,
+            occupied_neighbor: false,
+            edge_mask: 15,
+        };
+        let untouched = BlockFace {
+            material: 27,
+            ..face
+        };
+        let mut faces = vec![
+            face,
+            untouched,
+            BlockFace {
+                material: 3,
+                width: 12,
+                side: 0,
+                u_axis: 2,
+                v_axis: 1,
+                occupied_neighbor: true,
+                edge_mask: 3,
+                ..face
+            },
+        ];
+        let oriented_cells = |faces: &[BlockFace]| {
+            let mut result: Vec<_> = faces
+                .iter()
+                .flat_map(|&face| {
+                    cells(face).map(move |cell| {
+                        (
+                            cell,
+                            face.side,
+                            face.material,
+                            face.edge_mask,
+                            face.occupied_neighbor,
+                        )
+                    })
+                })
+                .collect();
+            result.sort_unstable();
+            result
+        };
+        let original = oriented_cells(&faces);
+        spatially_order_relief(&mut faces, |id| id != 27);
+        assert_eq!(oriented_cells(&faces), original);
+        assert_eq!(faces[0], untouched);
+        for &face in &faces[1..] {
+            assert!(cells(face).all(|cell| cell.map(|n| n / 4) == face.minimum.map(|n| n / 4)));
+        }
+    }
+
     #[test]
     fn connected_quads_share_vertices_without_changing_triangles_or_hard_edges() {
         let mut primitive = PrimitiveTemplate {

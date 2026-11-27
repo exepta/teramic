@@ -373,6 +373,7 @@ pub struct ClientSession {
     pub consumption_completed: u64,
     pub furnaces: Vec<FurnaceVisual>,
     pub cauldrons: Vec<CauldronVisual>,
+    pub eruption: Option<(terra_world::volcano::Eruption, Instant)>,
     pub campfires: Vec<CampfireVisual>,
     pub plumbing: Vec<PlumbingVisual>,
     /// Local receipt counter for accepted plumbing snapshots; not a wire clock.
@@ -457,6 +458,7 @@ impl Default for ClientSession {
             consumption_completed: 0,
             furnaces: Vec::new(),
             cauldrons: Vec::new(),
+            eruption: None,
             campfires: Vec::new(),
             plumbing: Vec::new(),
             plumbing_sequence: 0,
@@ -502,6 +504,16 @@ impl Default for ClientSession {
     }
 }
 impl ClientSession {
+    /// Advance the last authoritative eruption on the presentation clock between packets.
+    pub fn current_eruption(&self) -> Option<terra_world::volcano::Eruption> {
+        if !self.ready || self.teleporting {
+            return None;
+        }
+        let (mut event, received) = self.eruption?;
+        event.age += received.elapsed().as_secs_f32();
+        (event.age < terra_world::volcano::DURATION).then_some(event)
+    }
+
     fn observe_acknowledgment(&mut self, acknowledged: u64) {
         if acknowledged > self.acknowledged && acknowledged <= self.sequence {
             self.acknowledged = acknowledged;
@@ -1368,6 +1380,15 @@ fn receive_controls(
                     world.clock_replica.0 = Some(clock);
                     Ok(())
                 }
+            }
+            ServerControl::Eruption(event) => {
+                if event.age.is_finite()
+                    && (0. ..terra_world::volcano::DURATION).contains(&event.age)
+                    && event.vent.origin.iter().all(|v| v.is_finite())
+                {
+                    session.eruption = Some((event, Instant::now()));
+                }
+                Ok(())
             }
             ServerControl::Weather(weather) => {
                 if session.player.is_none() || !weather.valid() {
@@ -2406,6 +2427,8 @@ pub(crate) fn farming_revision(
         | FarmingAction::MakePath
         | FarmingAction::PourTar
         | FarmingAction::FillBileBucket
+        | FarmingAction::FillLavaBucket
+        | FarmingAction::EmptyLavaBucket
         | FarmingAction::EmptyBileBucket
         | FarmingAction::Refill => journal.revision(section),
         _ => journal.prop_epoch(section),

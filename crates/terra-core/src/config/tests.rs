@@ -114,7 +114,7 @@ fn cherry_ecology_is_saved_and_never_retroactively_enabled_in_old_worlds() {
     let legacy = WorldConfig::from_toml("seed=42042").unwrap();
     assert_eq!(legacy.ecology_revision, 0);
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.ecology_revision, 11);
+    assert_eq!(fresh.ecology_revision, 22);
     let serialized = toml::to_string(&fresh).unwrap();
     assert_eq!(WorldConfig::from_toml(&serialized).unwrap(), fresh);
     assert!(!fresh.same_terrain(&WorldConfig {
@@ -175,7 +175,30 @@ fn cherry_ecology_is_saved_and_never_retroactively_enabled_in_old_worlds() {
             .ecology_revision,
         11
     );
-    assert!(WorldConfig::from_toml("ecology_revision=12").is_err());
+    assert_eq!(
+        WorldConfig::from_toml("ecology_revision=12")
+            .unwrap()
+            .ecology_revision,
+        12
+    );
+    assert_eq!(
+        WorldConfig::from_toml("ecology_revision=13")
+            .unwrap()
+            .ecology_revision,
+        13
+    );
+    assert!(WorldConfig::from_toml("ecology_revision=14").is_ok());
+    assert!(WorldConfig::from_toml("ecology_revision=17").is_ok());
+    assert!(WorldConfig::from_toml("ecology_revision=19").is_ok());
+    assert!(WorldConfig::from_toml("ecology_revision=20").is_ok());
+    assert!(WorldConfig::from_toml("ecology_revision=21").is_ok());
+    assert!(
+        WorldConfig::from_toml(&format!(
+            "ecology_revision={}",
+            WorldConfig::CURRENT_ECOLOGY_REVISION + 1
+        ))
+        .is_err()
+    );
 }
 
 #[test]
@@ -216,6 +239,8 @@ fn ocean_contract_is_saved_without_retroactively_freezing_old_worlds() {
     assert_eq!(legacy.cave_structure_revision, 0);
     let fresh = crate::WorldConfig::default();
     assert_eq!(fresh.ocean_revision, 1);
+    let shipped = WorldConfig::from_toml(include_str!("../../../../configs/world.toml")).unwrap();
+    assert_eq!(shipped.ocean_revision, fresh.ocean_revision);
     assert_eq!(fresh.cave_structure_revision, 13);
     assert_eq!(
         crate::WorldConfig::from_toml(&toml::to_string(&fresh).unwrap()).unwrap(),
@@ -238,7 +263,7 @@ fn structures_contract_is_explicit_for_fresh_worlds_and_absent_in_legacy_manifes
     let legacy = WorldConfig::from_toml("seed=42042").unwrap();
     assert_eq!(legacy.structures_revision, 0);
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.structures_revision, 15);
+    assert_eq!(fresh.structures_revision, 16);
     assert_eq!(
         WorldConfig::from_toml(&toml::to_string(&fresh).unwrap()).unwrap(),
         fresh
@@ -262,12 +287,13 @@ fn structures_contract_is_explicit_for_fresh_worlds_and_absent_in_legacy_manifes
     assert!(WorldConfig::from_toml("structures_revision=13").is_ok());
     assert!(WorldConfig::from_toml("structures_revision=14").is_ok());
     assert!(WorldConfig::from_toml("structures_revision=15").is_ok());
-    assert!(WorldConfig::from_toml("structures_revision=16").is_err());
+    assert!(WorldConfig::from_toml("structures_revision=16").is_ok());
+    assert!(WorldConfig::from_toml("structures_revision=17").is_err());
     assert_eq!(
         WorldConfig::from_toml(include_str!("../../../../configs/world.toml"))
             .unwrap()
             .structures_revision,
-        15
+        16
     );
 }
 

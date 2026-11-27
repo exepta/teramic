@@ -98,5 +98,30 @@
     "source": "Speit Elementaratem",
     "de": "Speit Elementaratem",
     "en": "Breathing elemental energy"
+  },
+  {
+    "source": "Fire Dragon",
+    "en": "Fire Dragon",
+    "de": "Feuerdrache"
+  },
+  {
+    "source": "Cinder Dragon",
+    "en": "Cinder Dragon",
+    "de": "Glutdrache"
+  },
+  {
+    "source": "Obsidian Fire Dragon",
+    "en": "Obsidian Fire Dragon",
+    "de": "Obsidianfeuerdrache"
+  },
+  {
+    "source": "Sulfur Dragon",
+    "en": "Sulfur Dragon",
+    "de": "Schwefeldrache"
+  },
+  {
+    "source": "Fire Dragon Lair",
+    "en": "Fire Dragon Lair",
+    "de": "Feuerdrachenhort"
   }
 ]

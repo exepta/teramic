@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": 778,
+  "name": "Coarse Shore Sand",
+  "description": "Coarse Shore Sand",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.7,
+  "resistance": 3.0,
+  "render_kind": "cube",
+  "textures": {
+    "side": "textures/misty_coast/coarse_shore_sand.png"
+  },
+  "materials": {
+    "side": {
+      "normal_texture": "textures/misty_coast/coarse_shore_sand_normal.png",
+      "roughness": 0.84,
+      "reflectance": 0.12
+    }
+  },
+  "face_materials": [
+    "side",
+    "side",
+    "side",
+    "side",
+    "side",
+    "side"
+  ]
+}

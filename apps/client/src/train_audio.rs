@@ -167,7 +167,7 @@ fn levels(speed: f32, powered: bool, engine: bool) -> [f32; 3] {
 fn update(
     mut commands: Commands,
     session: Option<Res<ClientSession>>,
-    config: Option<Res<terra_core::AudioConfig>>,
+    preferences: crate::audio_preferences::AudioPreferences,
     cameras: Query<&Transform, With<terra_player::TerraCamera>>,
     mut sounds: ResMut<Sounds>,
     mut sources: ResMut<Assets<TrainSource>>,
@@ -182,13 +182,12 @@ fn update(
         }
     }
     let listener = cameras.iter().next();
-    let master = config.as_ref().map_or(1.0, |c| {
-        if c.muted {
-            0.0
-        } else {
-            c.master_volume * c.ambience_volume
-        }
-    });
+    let config = preferences.current();
+    let master = if config.muted {
+        0.0
+    } else {
+        config.master_volume * config.ambience_volume
+    };
     let mut nearest = Vec::new();
     if let Some(session) = session.as_ref().filter(|session| session.ready)
         && let Some(listener) = listener

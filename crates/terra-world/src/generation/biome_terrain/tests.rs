@@ -15,35 +15,12 @@ fn generator(seed: u64) -> TerraGenerator {
 }
 
 fn pure(kind: BiomeKind) -> BiomeSample {
-    let mut weights = [0.0; 10];
+    let mut weights = [0.0; 16];
     weights[kind as usize] = 1.0;
-    let [
-        ocean,
-        plains,
-        forest,
-        desert,
-        highland,
-        mushroom_park,
-        cliffted_desert,
-        cherry_forest,
-        spirit_blossom,
-        blood_forest,
-    ] = weights;
     BiomeSample {
         temperature: 0.5,
         humidity: 0.65,
-        weights: BiomeWeights {
-            ocean,
-            plains,
-            forest,
-            desert,
-            highland,
-            mushroom_park,
-            cliffted_desert,
-            cherry_forest,
-            spirit_blossom,
-            blood_forest,
-        },
+        weights: BiomeWeights::from_values(weights),
     }
 }
 

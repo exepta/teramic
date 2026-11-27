@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": 750,
+  "name": "Crystal Shards",
+  "description": "Small quartz points sprout from a common matrix.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.65,
+  "resistance": 1.6,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/crystal_shard_cluster.glb",
+  "struct_block": true,
+  "textures": {
+    "inclusion": "textures/crystal_highlands/raw_amethyst.png",
+    "cleavage": "textures/crystal_highlands/raw_amethyst.png",
+    "aqua_inclusion": "textures/crystal_highlands/raw_aquamarine.png",
+    "aqua_cleavage": "textures/crystal_highlands/raw_aquamarine.png",
+    "aqua_body": "textures/crystal_highlands/raw_aquamarine.png"
+  },
+  "collision_boxes": []
+}

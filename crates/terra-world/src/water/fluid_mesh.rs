@@ -153,6 +153,13 @@ pub(crate) fn append_fluid_patch<'a>(
                 options
                     .precise_levels
                     .and_then(|levels| levels.get(&p).copied())
+                    .or_else(|| {
+                        if cell.flow == [0; 2] {
+                            return None;
+                        }
+                        super::falls::crest_depth(columns.get(x + 18 * z)?, p[1], *cell)
+                            .map(|depth| p[1] as f64 + depth)
+                    })
                     .unwrap_or(p[1] as f64 + cell.height()),
             )
         } else {
@@ -465,7 +472,19 @@ pub(crate) fn append_fluid_patch<'a>(
             [x + 1.0, tops[2], z + 1.0],
             [x + 1.0, tops[3], z],
         ];
-        let mut top_normal = [0.0, 1.0, 0.0];
+        // The normal of a height field points horizontally downhill. Flat
+        // normals make every ramp reflect the sky like a separate shelf.
+        let gradient = [
+            (tops[0] + tops[1] - tops[2] - tops[3]) * 0.5,
+            1.,
+            (tops[0] + tops[3] - tops[1] - tops[2]) * 0.5,
+        ];
+        let mut top_normal = if gradient[0] == 0. && gradient[2] == 0. {
+            [0., 1., 0.]
+        } else {
+            let length = gradient.iter().map(|v| v * v).sum::<f32>().sqrt();
+            gradient.map(|v| v / length)
+        };
         if !natural_surface && !covered && cell.flow != [0; 2] {
             let axis = usize::from(cell.flow[0] == 0);
             let component = cell.flow[axis];
@@ -484,7 +503,7 @@ pub(crate) fn append_fluid_patch<'a>(
                 && !super::tongue::wet_flank(p, axis, |q| sample(q).is_some())
                 && let Some(head) = sample(back)
                 && let Some(front) = terra_core::fluid_surface::Front::new(
-                    local_height,
+                    (height - p[1] as f64) as f32,
                     (head - p[1] as f64) as f32,
                     axis,
                     component > 0,
@@ -516,7 +535,7 @@ pub(crate) fn append_fluid_patch<'a>(
         let below_pos = [p[0], p[1] - 1, p[2]];
         let wet = |q| sample(q).is_some();
         if !natural_surface && covered && cell.amount < 8 {
-            let width = super::front::inlet_width(p, cell, wet) as f32;
+            let width = super::fluid::inlet_width(p, cell, wet) as f32;
             for point in &mut points {
                 point[0] = x + 0.5 + (point[0] - x - 0.5) * width;
                 point[2] = z + 0.5 + (point[2] - z - 0.5) * width;
@@ -534,7 +553,7 @@ pub(crate) fn append_fluid_patch<'a>(
             && matches!(padded[below], 0 | 27)
             && let Some(&receiving) = fluids.get(&below_pos).filter(|f| f.amount > 0)
         {
-            let width = super::front::inlet_width(below_pos, receiving, wet) as f32;
+            let width = super::fluid::inlet_width(below_pos, receiving, wet) as f32;
             for (base, corner) in bottom.iter_mut().zip(corners) {
                 base[0] = x + 0.5 + (corner[0] as f32 - 0.5) * width;
                 base[2] = z + 0.5 + (corner[1] as f32 - 0.5) * width;

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": 698,
+  "name": "Exposed Root Arch",
+  "description": "A hollow beneath these exposed roots leaves a small arch.",
+  "creative_category": "nature",
+  "mining_level": 0,
+  "required_tool": null,
+  "hardness": 0.46,
+  "resistance": 0.62,
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/root_arch.glb",
+  "struct_block": true,
+  "collision_boxes": [
+    {
+      "minimum": [
+        0.1,
+        0,
+        0.37
+      ],
+      "maximum": [
+        0.25,
+        0.42,
+        0.63
+      ]
+    },
+    {
+      "minimum": [
+        0.75,
+        0,
+        0.37
+      ],
+      "maximum": [
+        0.9,
+        0.42,
+        0.63
+      ]
+    },
+    {
+      "minimum": [
+        0.21,
+        0.43,
+        0.36
+      ],
+      "maximum": [
+        0.79,
+        0.62,
+        0.64
+      ]
+    }
+  ],
+  "textures": {}
+}

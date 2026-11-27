@@ -1,0 +1,22 @@
+{
+  "id": "teramic::acacia_planks",
+  "name": "Acacia Planks",
+  "station": "hand",
+  "output": {
+    "item": {
+      "block": 645
+    },
+    "count": 4
+  },
+  "pattern": {
+    "kind": "shapeless",
+    "ingredients": [
+      {
+        "item": {
+          "block": 643
+        },
+        "count": 1
+      }
+    ]
+  }
+}

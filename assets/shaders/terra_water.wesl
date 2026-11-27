@@ -127,7 +127,7 @@ struct WaterVertexOutput {
 @if(VISIBILITY_RANGE_DITHER)
     @location(7) @interpolate(flat) visibility_range_dither: i32,
     @location(8) biome_tint: vec4<f32>,
-    @location(9) blood_weight: f32,
+    @location(9) medium_weights: vec2<f32>,
 }
 
 @vertex
@@ -136,8 +136,8 @@ fn vertex(input: Vertex,
     @location(8) biome_tint: vec4<f32>,
 @if(WATER_WAVE_WEIGHT)
     @location(9) wave_weight: f32,
-@if(WATER_BLOOD_WEIGHT)
-    @location(10) blood_weight: f32,
+@if(WATER_MEDIUM_WEIGHTS)
+    @location(10) medium_weights: vec2<f32>,
 @if(LIQUID_MOTION)
     @location(11) liquid_from: vec4<f32>,
 @if(LIQUID_MOTION)
@@ -152,17 +152,18 @@ fn vertex(input: Vertex,
     let previous = mesh_functions::mesh_position_local_to_world(model, vec4<f32>(liquid_from.xyz, 1.0));
     out.world_position = mix(previous, out.world_position, amount);
 }
-    var blood = 0.0;
-@if(WATER_BLOOD_WEIGHT) {
-    blood = clamp(blood_weight, 0.0, 1.0);
+    var medium = vec2<f32>(0.0);
+@if(WATER_MEDIUM_WEIGHTS) {
+    medium = clamp(medium_weights, vec2<f32>(0.0), vec2<f32>(1.0));
 }
 @if(VERTEX_COLORS) {
     // The sea is a connected marine body. Nearby red land must not turn the
     // entire ocean into brown liquid; inland Blood rivers keep their palette.
     let marine_body = select(0.0, smoothstep(0.35, 0.85, input.color.z), input.color.w < 0.5);
-    blood *= 1.0 - marine_body;
+    medium.x *= 1.0 - marine_body;
 }
-    out.blood_weight = blood;
+    let blood = medium.x;
+    out.medium_weights = medium;
 @if(WATER_WAVE_WEIGHT) {
     // The async mesher supplies corner-shared weights. Lip/impact quads taper
     // into anchored sheets; per-cell flow/mask values never split shared edges.
@@ -370,7 +371,8 @@ fn fragment(input: WaterVertexOutput, @builtin(front_facing) front: bool) -> Fra
     let footprint = max(length(dpdx(input.world_position.xyz)), length(dpdy(input.world_position.xyz)));
     var pbr = pbr_input_from_standard_material(standard_input(input), front);
     let screen = (input.position.xy - view.viewport.xy) / view.viewport.zw;
-    let blood = clamp(input.blood_weight, 0.0, 1.0);
+    let blood = input.medium_weights.x;
+    let sediment = input.medium_weights.y;
     let time = environment.w * settings.x;
     var surface_effect = vec4<f32>(0.0);
 @if(VERTEX_COLORS) {
@@ -438,7 +440,9 @@ fn fragment(input: WaterVertexOutput, @builtin(front_facing) front: bool) -> Fra
         let tangent = select(vec3<f32>(1.0, 0.0, 0.0), across / max(length(across), 0.001), length(across) > 0.001);
         let across_position = waterfall_across(input.world_position.xyz, input.world_normal);
         let fall_position = vec2<f32>(across_position, input.world_position.y + time * 4.0);
-        let ripples = wave_slope(fall_position, time, footprint);
+        // The sheet already advects down in world space. Advancing the ocean
+        // wave clock as well sent some reflected crests back up the fall.
+        let ripples = wave_slope(fall_position, 0.0, footprint);
         let breakup = noise(fall_position * vec2<f32>(2.4, 0.8)) - 0.5;
         let fade = (1.0 - smoothstep(0.25, 1.0, footprint)) * effects.x;
         normal_offset = (tangent * (ripples.x + breakup * 0.10)
@@ -571,7 +575,11 @@ fn fragment(input: WaterVertexOutput, @builtin(front_facing) front: bool) -> Fra
     // Absorption vanishes at the shore, preserving the exposed sandy bottom.
     let optical_thickness = thickness + 0.12 * smoothstep(0.0, 0.6, depth);
     let marine_body = select(0.0, smoothstep(0.35, 0.85, surface_effect.z), surface_effect.w < 0.5);
-    let water_color = mix(input.biome_tint.rgb, vec3<f32>(0.015, 0.16, 0.235), marine_body);
+    var water_color = input.biome_tint.rgb;
+@if(!WATER_REGIONAL_SEAS) {
+    water_color = mix(water_color, vec3<f32>(0.015, 0.16, 0.235), marine_body * (1.0 - sediment));
+}
+    water_color = mix(water_color, vec3<f32>(0.15, 0.117, 0.045), sediment);
     let spirit = clamp(input.biome_tint.a, 0.0, 1.0);
     // Scattering is weighted by lost transmission below. Suppressing extinction
     // in a blue channel would therefore suppress blue scattering as well and
@@ -580,7 +588,9 @@ fn fragment(input: WaterVertexOutput, @builtin(front_facing) front: bool) -> Fra
     let tint_shift = smoothstep(0.0, 0.10, length(water_color - tint.rgb));
     let absorption = mix(mix(vec3<f32>(0.72, 0.22, 0.14), vec3<f32>(0.65), tint_shift),
         vec3<f32>(2.2, 5.5, 5.0), blood);
-    let transmitted = exp(-absorption * optical_thickness * settings.y);
+    // Suspended silt obscures the bed exponentially with the actual view path.
+    let extinction = mix(absorption, vec3<f32>(3.4, 4.3, 6.2), sediment);
+    let transmitted = exp(-extinction * optical_thickness * settings.y);
     var caustics = 0.0;
     if effects.z > 0.0 && !free_jet {
         let ribbons = abs(sin(bed.x * 1.7 + sin(bed.z * 1.3 + time * 0.8))
@@ -588,7 +598,7 @@ fn fragment(input: WaterVertexOutput, @builtin(front_facing) front: bool) -> Fra
         caustics = (1.0 - smoothstep(0.03, max(0.08, footprint), ribbons))
             * exp(-depth * 0.5) * (1.0 - smoothstep(0.1, 0.8, footprint)) * effects.z * environment.x;
     }
-    caustics *= 1.0 - blood;
+    caustics *= (1.0 - blood) * (1.0 - sediment);
     foam *= mix(1.0, 0.22, blood);
     let fresnel = 0.02 + 0.98 * pow(1.0 - clamp(dot(pbr.N, pbr.V), 0.0, 1.0), 5.0);
     let transmission = transmitted * (1.0 - fresnel) * (1.0 - foam) * scene.a;

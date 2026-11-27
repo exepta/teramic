@@ -4,7 +4,7 @@ use terra_core::creatures::dragons::Lineage;
 
 // A curved, ridged leaf of membrane or crystal. Both faces are closed around
 // a medial rib, so the crest reads from the back as well as from the side.
-fn blade(
+pub(super) fn blade(
     m: &mut Builder,
     a: Vec3,
     b: Vec3,
@@ -61,18 +61,6 @@ pub(super) fn sculpt(m: &mut Builder, c: Coat, form: Lineage, j: Joint) -> Resul
                     0.18,
                     c.ridge,
                 )?;
-            }
-        }
-        (Lineage::Tidal, Joint::Skull) => {
-            for s in [-1., 1.] {
-                let gill = v(s * 1.18, 8.67, -6.60);
-                for i in 0..4 {
-                    let level = i as f32 * 0.32;
-                    let root = gill + v(0., level - 0.56, 0.);
-                    let tip = root + v(s * (1.92 - level * 0.4), level * 2.2 - 0.52, 2.8);
-                    blade(m, root, root + v(0., 0.60, 0.42), tip, 0.10, c.wing)?;
-                    beam(m, root, tip, 0.115, 0.018, c.growth)?;
-                }
             }
         }
         (Lineage::Tidal, Joint::Tail(i)) => {
@@ -170,6 +158,7 @@ pub(super) fn sculpt(m: &mut Builder, c: Coat, form: Lineage, j: Joint) -> Resul
 pub(super) fn marks(m: &mut Builder, c: Coat, form: Lineage, j: Joint) -> Result<(), String> {
     let (center, width, height, length) = match j {
         Joint::Skull => (v(0., 8.7, -7.45), 1.10, 0.72, 1.4),
+        Joint::Trunk if form == Lineage::Tidal => (v(0., 4.28, -1.5), 1.42, 0.80, 3.5),
         Joint::Trunk => (v(0., 4.70, -1.5), 2.57, 1.43, 3.5),
         Joint::Tail(i) => (tail_node(i), 1.21 - f32::from(i) * 0.16, 0.48, 1.8),
         _ => unreachable!(),

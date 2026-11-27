@@ -19,7 +19,6 @@ use crate::players::{AvatarAssets, AvatarEyelidPose, spawn_parts};
 
 const LAYER: usize = 30;
 const GRACE: Duration = Duration::from_secs(12);
-const CAPTURE_TIMEOUT: Duration = Duration::from_secs(3);
 
 #[derive(Resource, Default)]
 pub struct PlayerPreviewImage {
@@ -36,7 +35,7 @@ struct PortraitScene;
 struct PortraitCapture {
     started: Option<Instant>,
     frames: u16,
-    capture: Option<(Entity, Instant)>,
+    capture: Option<Entity>,
     retry_at: Option<Instant>,
     received: Option<bool>,
     finished: bool,
@@ -93,7 +92,7 @@ fn prepare(
         for entity in &scene {
             commands.entity(entity).try_despawn();
         }
-        if let Some((entity, _)) = pending.capture.take() {
+        if let Some(entity) = pending.capture.take() {
             commands.entity(entity).try_despawn();
         }
         *pending = PortraitCapture::default();
@@ -204,12 +203,11 @@ fn capture(
     }
     let now = Instant::now();
     let rendered = pending.received.take();
-    let timed_out = rendered.is_none()
-        && pending
-            .capture
-            .is_some_and(|(_, since)| now.duration_since(since) >= CAPTURE_TIMEOUT);
+    // A queued GPU copy can span several seconds during initial geometry uploads.
+    // Give the outstanding readback the same bounded grace as shader readiness.
+    let awaiting_readback = rendered.is_none() && pending.capture.is_some();
     if rendered == Some(true) && !pending.closed {
-        if let Some((entity, _)) = pending.capture.take() {
+        if let Some(entity) = pending.capture.take() {
             commands.entity(entity).try_despawn();
         }
         pending.closed = true;
@@ -226,14 +224,14 @@ fn capture(
         }
         return;
     }
-    if rendered == Some(true) || now.duration_since(started) >= GRACE || timed_out {
-        if let Some((entity, _)) = pending.capture.take() {
+    if rendered == Some(true) || now.duration_since(started) >= GRACE {
+        if let Some(entity) = pending.capture.take() {
             commands.entity(entity).try_despawn();
         }
         pending.finished = true;
         preview.ready = rendered == Some(true);
         if !preview.ready {
-            let error = if timed_out {
+            let error = if awaiting_readback {
                 "Player preview GPU readback timed out"
             } else {
                 "Player preview remained blank after shader readiness grace"
@@ -265,11 +263,13 @@ fn capture(
         }))
         .observe(
             |capture: On<ScreenshotCaptured>, mut pending: ResMut<PortraitCapture>| {
-                pending.received = Some(crate::previews::preview_has_pixels(&capture.image));
+                if pending.capture == Some(capture.entity) {
+                    pending.received = Some(crate::previews::preview_has_pixels(&capture.image));
+                }
             },
         )
         .id();
-    pending.capture = Some((entity, now));
+    pending.capture = Some(entity);
 }
 
 #[cfg(test)]
@@ -307,6 +307,21 @@ mod tests {
                 .iter(app.world())
                 .count(),
             0
+        );
+    }
+
+    #[test]
+    fn a_queued_gpu_readback_uses_the_full_portrait_readiness_window() {
+        let mut app = fixture();
+        let in_flight = app.world_mut().spawn_empty().id();
+        let mut pending = app.world_mut().resource_mut::<PortraitCapture>();
+        pending.started = Some(Instant::now() - Duration::from_secs(5));
+        pending.capture = Some(in_flight);
+        app.update();
+        assert!(app.world().resource::<PlayerPreviewImage>().error.is_none());
+        assert_eq!(
+            app.world().resource::<PortraitCapture>().capture,
+            Some(in_flight)
         );
     }
 

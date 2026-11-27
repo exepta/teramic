@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": 792,
+  "name": "Highland Crystal Shards",
+  "description": "Gathered mineral shards can be bound to a stick to make a violet torch.",
+  "creative_category": "nature",
+  "render_kind": "custom_mesh",
+  "model_layout": "scene",
+  "model": "models/highland_crystal_shards.glb",
+  "struct_block": true,
+  "hardness": 0.85,
+  "resistance": 2.0,
+  "mining_level": 0,
+  "required_tool": null,
+  "textures": {
+    "inclusion": "textures/crystal_highlands/amethyst_growth.png",
+    "cleavage": "textures/crystal_highlands/amethyst_growth.png",
+    "body": "textures/crystal_highlands/amethyst_growth.png",
+    "aqua_cleavage": "textures/crystal_highlands/aquamarine_growth.png",
+    "aqua_inclusion": "textures/crystal_highlands/aquamarine_growth.png",
+    "aqua_body": "textures/crystal_highlands/aquamarine_growth.png"
+  },
+  "collision_boxes": []
+}
