@@ -149,15 +149,19 @@ pub(super) fn face(form: NaturalForm, side: usize, variant: usize) -> Vec<Primit
 
 type Point = [f32; 3];
 
+fn face_noise(side: usize, variant: usize, key: usize) -> f32 {
+    let mut h = (variant as u32 + 1).wrapping_mul(0x9e3779b9)
+        ^ (side as u32 + 1).wrapping_mul(0x85ebca77)
+        ^ (key as u32).wrapping_mul(0xc2b2ae3d);
+    h ^= h >> 16;
+    h = h.wrapping_mul(0x7feb352d);
+    h ^= h >> 15;
+    (h & 0xffff) as f32 / 65535.0
+}
+
 impl FacePatch {
     fn noise(&self, key: usize) -> f32 {
-        let mut h = (self.variant as u32 + 1).wrapping_mul(0x9e3779b9)
-            ^ (self.side as u32 + 1).wrapping_mul(0x85ebca77)
-            ^ (key as u32).wrapping_mul(0xc2b2ae3d);
-        h ^= h >> 16;
-        h = h.wrapping_mul(0x7feb352d);
-        h ^= h >> 15;
-        (h & 0xffff) as f32 / 65535.0
+        face_noise(self.side, self.variant, key)
     }
 
     fn surface_vertex_count(&self) -> usize {
@@ -458,29 +462,37 @@ fn crust<const NX: usize, const NY: usize>(mesh: &mut FacePatch, form: NaturalFo
     let fringe_height = [
         0.672, 0.698, 0.661, 0.760, 0.818, 0.737, 0.688, 0.625, 0.659, 0.745, 0.740, 0.750,
     ];
+    // Each boundary bisects a platelet. The two halves use the same outline
+    // and height for any pair of variants, including across section seams.
     let tiled = |i: usize, count: usize, noise: f32| {
-        let jitter = if i == 0 || i == count {
+        if i == 0 {
             0.0
+        } else if i == count {
+            1.0
         } else {
-            0.43 * (noise - 0.5)
-        };
-        0.005 + (i as f32 + jitter) * 0.99 / count as f32
+            (i as f32 - 0.5 + 0.43 * (noise - 0.5)) / (count - 1) as f32
+        }
     };
     let xs: Vec<_> = (0..=NX)
-        .map(|i| tiled(i, NX, mesh.noise(100 + i)))
+        .map(|i| tiled(i, NX, face_noise(side, 0, 100 + i)))
         .collect();
     let ys: Vec<_> = (0..=NY)
-        .map(|j| tiled(j, NY, mesh.noise(120 + j)))
+        .map(|j| tiled(j, NY, face_noise(side, 0, 120 + j)))
         .collect();
     let layers: [[(usize, f32); NX]; NY] = std::array::from_fn(|j| {
         std::array::from_fn(|i| {
+            let column = i % (NX - 1);
+            let row = j % (NY - 1);
+            let boundary = i == 0 || j == 0 || i + 1 == NX || j + 1 == NY;
+            let variant = if boundary { 0 } else { mesh.variant };
+            let grain = |key| face_noise(side, variant, key);
             let high_sod = if form == NaturalForm::ReferenceTurf {
-                (j as f32 + 0.5) / NY as f32 >= fringe_height[i]
+                (ys[j] + ys[j + 1]) * 0.5 >= fringe_height[column]
             } else {
-                j >= 3 + (mesh.noise(48 + i) * 2.9) as usize
+                j >= 3 + (grain(48 + column) * 2.9) as usize
             };
             let green = turf && (side == 3 || fringe && high_sod);
-            let roughness = (mesh.noise(150 + j * NX + i) * 3.99).floor();
+            let roughness = (grain(150 + row * NX + column) * 3.99).floor();
             let height = if green && side == 3 {
                 // Closely cropped sod grows across the walk plane. Its thin
                 // steps catch grazing light; the thick roots hang on the bank.
@@ -508,11 +520,12 @@ fn crust<const NX: usize, const NY: usize>(mesh: &mut FacePatch, form: NaturalFo
                 layers.get(j + 1).map_or(0.0, |r| r[i].1),
                 i.checked_sub(1).map_or(0.0, |x| layers[j][x].1),
             ];
-            let bevel = neighbours.map(|n| {
-                if h > n {
-                    (h - n).min(0.007) * 0.72
-                } else {
+            let perimeter = [j == 0, i + 1 == NX, j + 1 == NY, i == 0];
+            let bevel: [f32; 4] = std::array::from_fn(|edge| {
+                if perimeter[edge] {
                     0.0
+                } else {
+                    (h - neighbours[edge]).clamp(0.0, 0.007) * 0.72
                 }
             });
             let (l, r, b, t) = (xs[i], xs[i + 1], ys[j], ys[j + 1]);
@@ -524,13 +537,20 @@ fn crust<const NX: usize, const NY: usize>(mesh: &mut FacePatch, form: NaturalFo
                 [l + bevel[3], t - bevel[2], -h],
             ];
             mesh.surface_polygon(slot, top);
+            // Straight skirts close exposed ledges and transitions to shorter
+            // materials. On a joined surface the skirts meet below the caps.
             for (edge, base) in neighbours.into_iter().enumerate() {
                 if h <= base {
                     continue;
                 }
                 let k = (edge + 1) % 4;
                 let [a, b] = [corners[edge], corners[k]].map(|[u, v]| [u, v, -base]);
-                mesh.wound_polygon(slot, [a, b, top[k], top[edge]]);
+                let role = if perimeter[edge] {
+                    super::skirt_role(slot, edge)
+                } else {
+                    slot
+                };
+                mesh.wound_polygon(role, [a, b, top[k], top[edge]]);
             }
         }
     }
@@ -767,8 +787,6 @@ fn ridges(mesh: &mut FacePatch, kind: Ridge) {
             0.15,
         ),
     };
-    // The strips connect directly. Their closed perimeter ramps back to the
-    // grid boundary, even at a world chunk seam.
     // Sand/snow footprint cut-outs in both shader passes accept six
     // millimetres of height difference at the logical walk plane.
     let depth = if mesh.side == 3 && matches!(kind, Ridge::Dunes | Ridge::Drifts) {
@@ -783,9 +801,11 @@ fn ridges(mesh: &mut FacePatch, kind: Ridge) {
         } else {
             0.18
         };
-    let rotate =
-        matches!(kind, Ridge::Ribs) || (mesh.variant % 2 != 0 && !matches!(kind, Ridge::Furrows));
-    let make = |u: f32, v: f32, d: f32| if rotate { [v, u, d] } else { [u, v, d] };
+    if !matches!(kind, Ridge::Ribs) {
+        ground_ridges(mesh, profile, depth, bend);
+        return;
+    }
+    let make = |u: f32, v: f32, d: f32| [v, u, d];
     let mut last = None;
     for (index, &(v, d)) in profile.iter().enumerate() {
         let y = margin + v * (1.0 - 2.0 * margin);
@@ -822,6 +842,58 @@ fn ridges(mesh: &mut FacePatch, kind: Ridge) {
             }
         }
         last = Some(line);
+    }
+}
+
+fn ground_ridges(mesh: &mut FacePatch, profile: &[(f32, f32)], depth: f32, bend: f32) {
+    // Put the tile cut halfway down a flank. Its height and slope continue
+    // through the cut, while individual ridges bend inside each variant.
+    let phase = profile[1].0 * 0.5;
+    let seam_height = (profile[0].1 + profile[1].1) * 0.5;
+    let samples = std::iter::once((0.0, seam_height))
+        .chain(
+            profile[1..]
+                .iter()
+                .map(|&(v, d)| (v - phase, if v == 1.0 { profile[0].1 } else { d })),
+        )
+        .chain(std::iter::once((1.0, seam_height)));
+    let mut previous: Option<[Point; 5]> = None;
+    let side = mesh.side;
+    for (i, (v, height)) in samples.enumerate() {
+        let h = -depth * height;
+        let mut line = [0.0, 0.20, 0.53, 0.80, 1.0].map(|u| [u, v, h]);
+        if i > 1 && i < profile.len() - 1 {
+            line[2][1] += bend * (1.0 - (2.0 * v - 1.0).abs());
+            line[2][2] *= 0.78 + 0.22 * mesh.noise(i);
+        }
+        if let Some(prev) = previous {
+            if i == 1 || i == profile.len() {
+                // Straight end strips need just two triangles.
+                mesh.surface_polygon(side, [prev[0], prev[4], line[4], line[0]]);
+            } else {
+                for col in 0..4 {
+                    mesh.surface_polygon(
+                        side,
+                        [prev[col], prev[col + 1], line[col + 1], line[col]],
+                    );
+                }
+            }
+            for (edge, a, b) in [(3, line[0], prev[0]), (1, prev[4], line[4])] {
+                mesh.wound_polygon(
+                    super::skirt_role(side, edge),
+                    [[a[0], a[1], 0.0], [b[0], b[1], 0.0], b, a],
+                );
+            }
+        }
+        if v == 0.0 || v == 1.0 {
+            let (l, r) = if v == 0.0 { (0.0, 1.0) } else { (1.0, 0.0) };
+            let edge = if v == 0.0 { 0 } else { 2 };
+            mesh.wound_polygon(
+                super::skirt_role(side, edge),
+                [[l, v, 0.0], [r, v, 0.0], [r, v, h], [l, v, h]],
+            );
+        }
+        previous = Some(line);
     }
 }
 
@@ -1257,7 +1329,64 @@ mod tests {
                         .flat_map(|p| &p.positions)
                         .all(|p| p[1] - 1.0 < 0.006)
                 );
-                assert!(lid.iter().flat_map(|p| &p.normals).all(|n| n[1] > 0.98));
+                for piece in &lid {
+                    for (n, &[x, _, z]) in piece.normals.iter().zip(&piece.positions) {
+                        let outer_wall =
+                            n[1] == 0.0 && (x == 0.0 || x == 1.0 || z == 0.0 || z == 1.0);
+                        assert!(n[1] > 0.98 || outer_wall);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn ground_relief_meets_at_the_same_height_and_slope_across_all_variant_edges() {
+        fn sample_edge(
+            parts: &[PrimitiveTemplate],
+            axis: usize,
+            edge: f32,
+            at: f32,
+        ) -> (f32, Vec3) {
+            let along = 2 - axis;
+            for piece in parts {
+                for tri in piece.indices.chunks_exact(3) {
+                    let normal = Vec3::from_array(piece.normals[tri[0] as usize]);
+                    if normal.y <= 0.0 {
+                        continue;
+                    }
+                    let p = [tri[0], tri[1], tri[2]].map(|i| piece.positions[i as usize]);
+                    for (a, b) in [(p[0], p[1]), (p[1], p[2]), (p[2], p[0])] {
+                        if a[axis] == edge
+                            && b[axis] == edge
+                            && (a[along] - at) * (b[along] - at) < 0.0
+                        {
+                            let u = (at - a[along]) / (b[along] - a[along]);
+                            return (a[1] + u * (b[1] - a[1]), normal);
+                        }
+                    }
+                }
+            }
+            panic!("relief stops before the block edge at axis {axis}, {edge}, {at}")
+        }
+        use NaturalForm::*;
+        for form in [ReferenceTurf, Turf, Earth, Farmland, Sand, Snow] {
+            let variants = (0..4).map(|v| face(form, 3, v)).collect::<Vec<_>>();
+            for axis in [0, 2] {
+                for i in 0..67 {
+                    let at = (i as f32 + 0.37) / 67.0;
+                    let (height, normal) = sample_edge(&variants[0], axis, 0.0, at);
+                    assert!(height > 1.0001, "relief collapsed at {form:?} edge");
+                    for variant in &variants {
+                        for edge in [0.0, 1.0] {
+                            let (h, n) = sample_edge(variant, axis, edge, at);
+                            assert!(
+                                (height - h).abs() < 1e-5 && normal.dot(n) > 0.9999,
+                                "edge mismatch on {form:?}, axis {axis} at {edge}, {at}"
+                            );
+                        }
+                    }
+                }
             }
         }
     }

@@ -268,6 +268,7 @@ fn forgotten_neighbor_and_vertical_profile_bases_block_collision_publication() {
         ready.sections.insert(
             owner,
             ReadySection {
+                catalog_stale: false,
                 entity: None,
                 epoch: replica.mesh_epoch(owner),
                 profile: None,
@@ -559,4 +560,55 @@ fn rapid_remote_cube_placements_keep_local_movement_ready_until_rebuild() {
         world.resource::<ChunkStore>(),
         world.resource::<EditJournal>()
     ));
+}
+
+#[test]
+fn shape_catalog_changes_rebuild_current_colliders_without_voxel_edits() {
+    let mut app = app();
+    let position = SectionPos::default();
+    settle_colliders(&mut app, 0);
+    let state = app.world().resource::<TerrainCollisionState>();
+    let original = state.materials.as_ref().unwrap().clone();
+    let original_entity = state.sections[&position].entity.unwrap();
+    assert!(original.cube(3));
+    app.world_mut()
+        .resource_mut::<BlockPropertiesCatalog>()
+        .0
+        .get_mut(&3)
+        .unwrap()
+        .hardness += 1.0;
+    app.update();
+    let state = app.world().resource::<TerrainCollisionState>();
+    assert!(Arc::ptr_eq(state.materials.as_ref().unwrap(), &original));
+    assert_eq!(state.sections[&position].entity, Some(original_entity));
+
+    // Even an explicitly empty model masks the solid cube. There is no voxel edit.
+    app.world_mut()
+        .resource_mut::<BlockPropertiesCatalog>()
+        .1
+        .insert(3, Arc::from([]));
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        app.update();
+        let world = app.world();
+        let state = world.resource::<TerrainCollisionState>();
+        let new = state.materials.as_ref().unwrap();
+        assert!(!Arc::ptr_eq(new, &original));
+        assert!(!new.cube(3) && original.cube(3));
+        let ready = &state.sections[&position];
+        assert_eq!(ready.epoch, 0);
+        if !ready.catalog_stale {
+            assert_eq!(ready.entity, None);
+            assert!(world.get_entity(original_entity).is_err());
+            break;
+        }
+        assert!(!state.ready_for_aabb(
+            Vec3::new(2.1, 0.1, 2.1),
+            Vec3::new(2.9, 0.9, 2.9),
+            world.resource::<ChunkStore>(),
+            world.resource::<EditJournal>(),
+        ));
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(1));
+    }
 }

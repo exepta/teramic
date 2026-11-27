@@ -52,24 +52,45 @@ const FIVE_LOBES: array<vec2<f32>, 15> = array(
     vec2<f32>(1.00, 0.32)
 );
 
-// Each half of a blade carries its original, piecewise-linear lobe outline.
-// Alpha bytes select exactly the authored stations retained by this mesh LOD.
+// Each nibble is the last station at or before (bin + 1) / 128 for the
+// three- and five-lobed profiles. A bin can contain at most one station.
+const BLADE_STATIONS: array<vec2<u32>, 16> = array(
+    vec2<u32>(0x00000000u, 0x00000000u),
+    vec2<u32>(0x00000000u, 0x00000000u),
+    vec2<u32>(0x11111000u, 0x21111110u),
+    vec2<u32>(0x33333322u, 0x43333332u),
+    vec2<u32>(0x44444433u, 0x44444444u),
+    vec2<u32>(0x44444444u, 0x54444444u),
+    vec2<u32>(0x44444444u, 0x66666665u),
+    vec2<u32>(0x55544444u, 0x77666666u),
+    vec2<u32>(0x77777655u, 0x88888887u),
+    vec2<u32>(0x77777777u, 0x88888888u),
+    vec2<u32>(0x87777777u, 0x88888888u),
+    vec2<u32>(0x99999998u, 0xaaaa9999u),
+    vec2<u32>(0x99999999u, 0xbbaaaaaau),
+    vec2<u32>(0x99999999u, 0xccccccccu),
+    vec2<u32>(0xaaa99999u, 0xccccccccu),
+    vec2<u32>(0xbaaaaaaau, 0xeddddddcu)
+);
+
 fn blade_covers(uv: vec2<f32>, encoded: vec2<f32>) -> bool {
     let bytes = vec2<u32>(round(encoded * 255.0));
     let mask = bytes.x | (bytes.y << 8u);
     let five = (mask & 32768u) != 0u;
-    var previous = select(THREE_LOBES[0], FIVE_LOBES[0], five);
-    for (var i = 1u; i < 15u; i++) {
-        if (mask & (1u << i)) != 0u {
-            let next = select(THREE_LOBES[i], FIVE_LOBES[i], five);
-            if uv.x <= next.x {
-                let t = (uv.x - previous.x) / (next.x - previous.x);
-                return uv.y <= mix(previous.y, next.y, t);
-            }
-            previous = next;
-        }
-    }
-    return uv.y <= previous.y;
+    let bin = min(u32(clamp(uv.x, 0.0, 1.0) * 128.0), 127u);
+    let packed = BLADE_STATIONS[bin >> 3u];
+    let candidate = (select(packed.x, packed.y, five) >> ((bin & 7u) * 4u)) & 15u;
+    let station = select(THREE_LOBES[candidate].x, FIVE_LOBES[candidate].x, five);
+    let upper = clamp(candidate + u32(uv.x > station), 1u, select(11u, 14u, five));
+    // Select the nearest retained stations on either side of this sample.
+    // The mesher always retains both endpoints, at every detail level.
+    let lower_bits = (1u << upper) - 1u;
+    let lo = firstLeadingBit(mask & lower_bits);
+    let hi = firstTrailingBit(mask & ~lower_bits);
+    let a = select(THREE_LOBES[lo], FIVE_LOBES[lo], five);
+    let b = select(THREE_LOBES[hi], FIVE_LOBES[hi], five);
+    let t = (min(uv.x, 1.0) - a.x) / (b.x - a.x);
+    return uv.y <= mix(a.y, b.y, t);
 }
 }
 

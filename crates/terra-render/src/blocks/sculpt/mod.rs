@@ -17,6 +17,13 @@ use std::sync::{Arc, OnceLock};
 
 const VARIANTS: usize = 4;
 
+// Surface roles 0..8 map to the shape's shared material slots. Collect each
+// skirt in its own primitive so joining a face skips its entire vertex buffer.
+const SURFACE_ROLES: usize = 8;
+fn skirt_role(surface: usize, edge: usize) -> usize {
+    surface + (edge + 1) * SURFACE_ROLES
+}
+
 pub(crate) fn variant(position: [i64; 3], id: u16) -> usize {
     (crate::meshing::builder::variation(position, u64::from(id)) % VARIANTS as u64) as usize
 }
@@ -266,6 +273,38 @@ pub(crate) struct SculptedBlock {
 }
 
 impl SculptedBlock {
+    pub(crate) fn continuous_ground(&self, side: usize) -> bool {
+        use NaturalForm::*;
+        match self.geometry.form {
+            Form::Natural(Turf | ReferenceTurf | Earth | Snow | Farmland) => true,
+            Form::Natural(Sand) => side == 3,
+            _ => false,
+        }
+    }
+
+    pub(crate) fn relief_material(&self, role: usize, side: usize, joined: u8) -> Option<usize> {
+        if role >= SURFACE_ROLES && joined != 0 {
+            let edge = role / SURFACE_ROLES - 1;
+            let along_u = edge == 1 || edge == 3;
+            let (u, v) = match side / 2 {
+                0 => (2, 1),
+                1 => (0, 2),
+                _ => (0, 1),
+            };
+            let axis = if along_u { u } else { v };
+            let positive = (edge == 1 || edge == 2) ^ (along_u && self.wraps_u(side));
+            let turf_lip = axis == 1
+                && matches!(
+                    self.geometry.form,
+                    Form::Natural(NaturalForm::Turf | NaturalForm::ReferenceTurf)
+                );
+            if !turf_lip && joined & (1 << (2 * axis + usize::from(positive))) != 0 {
+                return None;
+            }
+        }
+        Some(self.slots[role % SURFACE_ROLES])
+    }
+
     pub(crate) fn reference_leaves(&self) -> bool {
         self.geometry.form == Form::ReferenceLeaves
     }

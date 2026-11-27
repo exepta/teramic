@@ -344,6 +344,22 @@ fn mixed_lod_boundaries_close_flat_and_stepped_negative_section_edges() {
                     assert!(distance <= 3.0001);
                 }
             }
+            if material == 1 && !stepped {
+                // Look horizontally through the space between the coarse
+                // walk plane and the raised cap on the neighboring section.
+                for z in [-0.93, -0.53, -0.21] {
+                    let hit = first_hit(&batches, Vec3::new(0.02, 1.001, z), -Vec3::X);
+                    assert!(
+                        hit.is_some_and(|d| (d - 0.02).abs() < 0.0001),
+                        "open edge between raised grass and coarse ground at {z}: {hit:?}"
+                    );
+                    let interior = first_hit(&batches, Vec3::new(-0.98, 1.001, z), -Vec3::X);
+                    assert!(
+                        interior.is_none_or(|d| d > 0.1),
+                        "hidden internal skirt at {z}"
+                    );
+                }
+            }
         }
     }
 }
@@ -387,7 +403,24 @@ fn solid_surfaces_close_flat_seams_and_four_section_corners() {
         if terra_voxel::MaterialId::from_raw(material).is_some_and(|id| !id.is_solid()) {
             continue;
         }
-        let batches = terrain(&templates, material, false);
+        let mut batches = terrain(&templates, material, false);
+        if templates
+            .sculpted_blocks
+            .get(&material)
+            .is_some_and(|shape| shape.continuous_ground(3))
+        {
+            // The joined relief now spans those corners several millimetres
+            // above ground. Ray-test its underlying unit-square support itself.
+            for batch in &mut batches {
+                batch.indices = batch
+                    .indices
+                    .chunks_exact(3)
+                    .filter(|tri| tri.iter().all(|&i| batch.positions[i as usize][1] == 1.0))
+                    .flatten()
+                    .copied()
+                    .collect();
+            }
+        }
         for x in [-1.001, -1.0, -0.999, -0.001, 0.0, 0.001, 0.999, 1.0, 1.001] {
             for z in [-1.001, -1.0, -0.001, 0.0, 0.001, 1.0, 1.001] {
                 let hit = first_hit(&batches, Vec3::new(x, 3.0, z), -Vec3::Y)

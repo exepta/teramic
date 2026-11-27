@@ -508,32 +508,36 @@ fn fragment(input: VertexOutput, @builtin(front_facing) front: bool) -> Fragment
         * climate.y * film * upward * (1.0 - smoothstep(0.08, 0.45, footprint));
     pbr.N = normalize(pbr.N + vec3<f32>(ripple * 0.018, 0.0, ripple * 0.012));
     }
-    var frost = select(0.0, 1.0, saved_snow > 0.0);
+    // Stored snow is decoded after UV interpolation. In ordinary dry terrain
+    // the mask is exactly zero, including on grass fringes and under trees.
+    if saved_snow > 0.0 || (terra_weather.vegetation.y > 0.0 && terra_weather.grass.w > 0.0) {
+        var frost = select(0.0, 1.0, saved_snow > 0.0);
 @if(VERTEX_COLORS) {
-    // Opaque terrain alpha carries local climate, including through Unorm8 packing.
-    if input.color.a > 0.0 && input.color.a < 1.0 {
-        let temperature = ((input.color.a * 255.0 - 2.0) / 251.0) * 128.0 - 64.0
-            + terra_weather.tint.w;
-        frost = 1.0 - smoothstep(-1.0, 3.0, temperature);
-    }
+        // Opaque terrain alpha carries local climate, including through Unorm8 packing.
+        if input.color.a > 0.0 && input.color.a < 1.0 {
+            let temperature = ((input.color.a * 255.0 - 2.0) / 251.0) * 128.0 - 64.0
+                + terra_weather.tint.w;
+            frost = 1.0 - smoothstep(-1.0, 3.0, temperature);
+        }
 }
-    // Natural deciduous crowns can shed while the original rain roof remains intact.
-    let snow_sky = max(exposed, snow_sky_override);
-    // Real worlds use local authority only. Global frost is an explicit isolated-gallery preview.
-    let preview_snow = terra_weather.grass.w * frost * snow_sky * clamp(terra_weather.vegetation.y, 0.0, 1.0);
-    let snow_amount = max(saved_snow, preview_snow) * (1.0 - sheds_snow);
-    let grass_fringe = select(0.0, 1.0, (abs(terra_detail.x) == 3.0 || terra_detail.x == -6.0)
-        && pbr.material.base_color.g > pbr.material.base_color.r * 1.12);
-    let snow_cover = max(smoothstep(0.0, 0.95, snow_amount) * smoothstep(0.15, 0.65, pbr.N.y),
-        grass_fringe * smoothstep(0.0, 0.10, snow_amount));
-    if snow_cover > 0.0 {
-        // Texture changes albedo only: complete cover never contains grass-shaped holes.
-        let grain = 0.96 + wet_noise(p * 7.0) * 0.04;
-        pbr.material.base_color = vec4<f32>(
-            mix(pbr.material.base_color.rgb, vec3<f32>(0.88, 0.91, 0.95) * grain, snow_cover),
-            pbr.material.base_color.a);
-        pbr.material.perceptual_roughness = mix(pbr.material.perceptual_roughness, 0.92, snow_cover);
-        pbr.material.reflectance = mix(pbr.material.reflectance, vec3<f32>(0.45), snow_cover);
+        // Natural deciduous crowns can shed while the original rain roof remains intact.
+        let snow_sky = max(exposed, snow_sky_override);
+        // Real worlds use local authority only. Global frost is an explicit isolated-gallery preview.
+        let preview_snow = terra_weather.grass.w * frost * snow_sky * clamp(terra_weather.vegetation.y, 0.0, 1.0);
+        let snow_amount = max(saved_snow, preview_snow) * (1.0 - sheds_snow);
+        let grass_fringe = select(0.0, 1.0, (abs(terra_detail.x) == 3.0 || terra_detail.x == -6.0)
+            && pbr.material.base_color.g > pbr.material.base_color.r * 1.12);
+        let snow_cover = max(smoothstep(0.0, 0.95, snow_amount) * smoothstep(0.15, 0.65, pbr.N.y),
+            grass_fringe * smoothstep(0.0, 0.10, snow_amount));
+        if snow_cover > 0.0 {
+            // Texture changes albedo only: complete cover never contains grass-shaped holes.
+            let grain = 0.96 + wet_noise(p * 7.0) * 0.04;
+            pbr.material.base_color = vec4<f32>(
+                mix(pbr.material.base_color.rgb, vec3<f32>(0.88, 0.91, 0.95) * grain, snow_cover),
+                pbr.material.base_color.a);
+            pbr.material.perceptual_roughness = mix(pbr.material.perceptual_roughness, 0.92, snow_cover);
+            pbr.material.reflectance = mix(pbr.material.reflectance, vec3<f32>(0.45), snow_cover);
+        }
     }
     }
 }

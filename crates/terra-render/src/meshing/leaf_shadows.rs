@@ -45,7 +45,10 @@ pub(crate) fn append_profiles(
             let variant = crate::blocks::sculpt::variant(global, 7);
             let alpha = batch.packed_colors[owner.vertices.start][3];
             let depth = proxies
-                .entry((batch.material, cell.map(|v| v / 4)))
+                // Cascades select the profile for the entire section translation.
+                // Keep one stream per material; the upload splitter still bounds
+                // large crowns. Wind and coverage are evaluated per card.
+                .entry(batch.material)
                 .or_insert_with(|| MeshBatch {
                     material: batch.material,
                     paired_leaf_shadow: true,
@@ -227,6 +230,7 @@ mod tests {
                 face,
                 cell,
                 shape.relief(3, variant, 63, true),
+                0,
                 &templates,
             )
             .unwrap();
@@ -260,7 +264,7 @@ mod tests {
             .iter()
             .filter(|b| b.profile_caster() == Some(true))
             .collect();
-        assert_eq!(coarse.len(), 2);
+        assert_eq!(coarse.len(), 1);
         assert!(
             coarse
                 .iter()

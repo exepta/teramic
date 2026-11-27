@@ -222,6 +222,7 @@ fn geometry(cells: &[Cell], templates: &TemplateSet) -> Result<MeshBatch, String
                             },
                             true,
                         ),
+                        0,
                         templates,
                     )?;
                 }

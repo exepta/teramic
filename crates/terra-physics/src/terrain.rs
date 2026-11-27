@@ -4,8 +4,11 @@ use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task, futures_lite::future},
 };
+use materials::CollisionMaterials;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use terra_core::block_properties::BlockPropertiesCatalog;
+mod materials;
 use terra_voxel::{
     BlockSection, SectionPos, global_to_section,
     meshing::{PADDED_VOLUME, mesh_section},
@@ -31,6 +34,7 @@ struct ModelGeometry {
 pub struct TerrainCollider(pub SectionPos);
 
 struct ReadySection {
+    catalog_stale: bool,
     entity: Option<Entity>,
     epoch: u64,
     profile: Option<[u64; 4]>,
@@ -39,8 +43,8 @@ struct ReadySection {
 
 struct PlainCollision {
     revision: u64,
-    blocks: Vec<u16>,
-    properties: terra_core::block_properties::BlockPropertiesCatalog,
+    data: Arc<BlockSection>,
+    materials: Arc<CollisionMaterials>,
 }
 
 fn plain_current(
@@ -54,8 +58,7 @@ fn plain_current(
     };
     if plain.revision != journal.revision(position)
         || chunks.loaded.get(&position).is_none_or(|s| {
-            s.mesh_epoch > journal.mesh_epoch(position)
-                || s.data.blocks() != plain.blocks.as_slice()
+            s.mesh_epoch > journal.mesh_epoch(position) || s.data.blocks() != plain.data.blocks()
         })
     {
         return false;
@@ -87,7 +90,7 @@ fn plain_halo_current(
                 if journal
                     .block(p)
                     .or_else(|| chunks.block_at(p))
-                    .is_some_and(|m| !plain.properties.shape(m).is_empty())
+                    .is_some_and(|m| plain.materials.has_shape(m))
                 {
                     return false;
                 }
@@ -125,7 +128,13 @@ fn plain_region_current(
     if section.mesh_epoch > journal.mesh_epoch(position) {
         return false;
     }
-    for (index, (&old, &loaded)) in plain.blocks.iter().zip(section.data.blocks()).enumerate() {
+    for (index, (&old, &loaded)) in plain
+        .data
+        .blocks()
+        .iter()
+        .zip(section.data.blocks())
+        .enumerate()
+    {
         let cell = [
             origin[0] + (index % 16) as i64,
             origin[1] + (index / 16 % 16) as i64,
@@ -135,7 +144,7 @@ fn plain_region_current(
         if old == current {
             continue;
         }
-        if !plain.properties.shape(old).is_empty() || !plain.properties.shape(current).is_empty() {
+        if plain.materials.has_shape(old) || plain.materials.has_shape(current) {
             return false;
         }
         if (0..3).all(|axis| {
@@ -171,6 +180,8 @@ fn profile_current(
 #[derive(Resource, Default)]
 pub struct TerrainCollisionState {
     sections: HashMap<SectionPos, ReadySection>,
+    materials: Option<Arc<CollisionMaterials>>,
+    catalog_tick: Option<bevy::ecs::change_detection::Tick>,
     interest: HashSet<SectionPos>,
     interest_centers: Vec<SectionPos>,
     pub active_colliders: usize,
@@ -224,10 +235,11 @@ impl TerrainCollisionState {
                     let Some(ready) = self.sections.get(&position) else {
                         return false;
                     };
-                    if chunks
-                        .loaded
-                        .get(&position)
-                        .is_none_or(|section| section.mesh_epoch > epoch)
+                    if ready.catalog_stale
+                        || chunks
+                            .loaded
+                            .get(&position)
+                            .is_none_or(|section| section.mesh_epoch > epoch)
                         || !collision_inputs_known(position, chunks)
                     {
                         return false;
@@ -328,6 +340,31 @@ fn collision_snapshot(
 #[derive(Resource, Default)]
 struct ColliderJobs(HashMap<SectionPos, ColliderJob>);
 
+fn refresh_materials(
+    properties: Res<BlockPropertiesCatalog>,
+    mut state: ResMut<TerrainCollisionState>,
+    mut jobs: ResMut<ColliderJobs>,
+) {
+    let tick = properties.last_changed();
+    if state.catalog_tick == Some(tick) {
+        return;
+    }
+    state.catalog_tick = Some(tick);
+    if let Some(previous) = &state.materials {
+        // Mechanics such as mining hardness do not change collision geometry.
+        if previous.catalog.1 == properties.1 {
+            return;
+        }
+        jobs.0.clear();
+        for ready in state.sections.values_mut() {
+            // Keep the previous physical body until its replacement commits.
+            ready.catalog_stale = true;
+            ready.plain = None;
+        }
+    }
+    state.materials = Some(Arc::new(CollisionMaterials::new(&properties)));
+}
+
 pub(super) fn install(app: &mut App) {
     app.init_resource::<TerrainCollisionState>()
         .init_resource::<ColliderJobs>()
@@ -339,13 +376,15 @@ pub(super) fn install(app: &mut App) {
             // A slow frame can contain several fixed steps. Activate completed,
             // validated jobs before that loop, rather than blocking every step
             // on a collider that would otherwise arrive in the later Update.
-            (receive, ApplyDeferred)
+            (refresh_materials, receive, ApplyDeferred)
                 .chain()
                 .in_set(bevy::app::RunFixedMainLoopSystems::BeforeFixedMainLoop),
         )
         .add_systems(
             Update,
-            (receive, dispatch).chain().after(StreamingSet::Receive),
+            (refresh_materials, receive, dispatch)
+                .chain()
+                .after(StreamingSet::Receive),
         );
 }
 
@@ -385,7 +424,6 @@ impl CollisionFocus<'_> {
 fn dispatch(
     chunks: Res<ChunkStore>,
     journal: Res<EditJournal>,
-    properties: Res<terra_core::block_properties::BlockPropertiesCatalog>,
     focus: CollisionFocus,
     state: ResMut<TerrainCollisionState>,
     mut jobs: ResMut<ColliderJobs>,
@@ -412,7 +450,9 @@ fn dispatch(
             let epoch = journal.mesh_epoch(position);
             let ready = state.sections.get_mut(&position);
             if ready.as_ref().is_some_and(|ready| {
-                ready.epoch == epoch && profile_current(ready.profile, position, &chunks, &journal)
+                !ready.catalog_stale
+                    && ready.epoch == epoch
+                    && profile_current(ready.profile, position, &chunks, &journal)
             }) {
                 return None;
             }
@@ -474,48 +514,37 @@ fn dispatch(
                 continue;
             }
         };
-        let masked: Vec<_> = properties
-            .1
-            .keys()
-            .copied()
-            .chain([
-                28, 29, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 99, 100, 141, 142, 143,
-                144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159,
-                160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 210, 211, 212, 213, 214, 215,
-                216, 217,
-            ])
-            .chain(terra_core::locomotive_parts::FIRST..=terra_core::locomotive_parts::LAST)
-            .collect();
-        let worker_properties = (*properties).clone();
+        let materials = state
+            .materials
+            .as_ref()
+            .expect("collision materials prepared")
+            .clone();
+        let (has_shapes, has_crystals) = materials.section_flags(&data);
         jobs.0.insert(
             position,
             ColliderJob {
                 data: data.clone(),
-                plain: data
-                    .blocks()
-                    .iter()
-                    .all(|&m| properties.shape(m).is_empty())
-                    .then(|| PlainCollision {
-                        revision: journal.revision(position),
-                        blocks: data.blocks().to_vec(),
-                        properties: properties.clone(),
-                    }),
+                plain: (!has_shapes).then(|| PlainCollision {
+                    revision: journal.revision(position),
+                    data: data.clone(),
+                    materials: materials.clone(),
+                }),
                 epoch: journal.mesh_epoch(position),
-                profile: data
-                    .blocks()
-                    .iter()
-                    .any(|m| terra_world::segments::is_crystal(*m))
-                    .then(|| profile_snapshot(position, &chunks, &journal)),
+                profile: has_crystals.then(|| profile_snapshot(position, &chunks, &journal)),
                 task: AsyncComputeTaskPool::get().spawn(async move {
                     let _scope = terra_core::profiling::ScopeTimer::new("collision.build_geometry");
-                    let shapes = model_geometry(&data, &voxels, &metadata, &worker_properties)?;
-                    let modeled = !shapes.boxes.is_empty() || !shapes.triangles.is_empty();
-                    let collider = build_collider_with_geometry(
+                    let shapes = section_geometry(
                         &data,
-                        &shapes.boxes,
-                        &shapes.triangles,
-                        &masked,
+                        &voxels,
+                        &metadata,
+                        &materials.catalog,
+                        has_shapes,
+                        |id| materials.has_shape(id),
                     )?;
+                    let modeled = !shapes.boxes.is_empty() || !shapes.triangles.is_empty();
+                    let collider = cook_collider(&data, &shapes.boxes, &shapes.triangles, |id| {
+                        materials.cube(id)
+                    })?;
                     Ok(ColliderOutput { collider, modeled })
                 }),
             },
@@ -548,11 +577,25 @@ fn model_shapes(
     Ok(original.boxes)
 }
 
+#[cfg(test)]
 fn model_geometry(
     data: &BlockSection,
     chunks: &ChunkStore,
     journal: &EditJournal,
     properties: &terra_core::block_properties::BlockPropertiesCatalog,
+) -> Result<ModelGeometry, String> {
+    section_geometry(data, chunks, journal, properties, true, |id| {
+        !properties.shape(id).is_empty()
+    })
+}
+
+fn section_geometry(
+    data: &BlockSection,
+    chunks: &ChunkStore,
+    journal: &EditJournal,
+    properties: &terra_core::block_properties::BlockPropertiesCatalog,
+    has_shapes: bool,
+    has_shape: impl Fn(u16) -> bool,
 ) -> Result<ModelGeometry, String> {
     let block_at = |position| {
         journal
@@ -569,7 +612,7 @@ fn model_geometry(
     let mut owners = HashSet::new();
     let mut unique = HashSet::new();
     let mut append = |global, material| {
-        if properties.shape(material).is_empty()
+        if !has_shape(material)
             || terra_voxel::MaterialId::from_raw(material)
                 .is_some_and(|material| !material.is_solid())
         {
@@ -629,10 +672,12 @@ fn model_geometry(
             );
         }
     };
-    for (index, &material) in data.blocks().iter().enumerate() {
-        let cell = [index % 16, index / 16 % 16, index / 256];
-        let global = std::array::from_fn(|axis| origin[axis] + cell[axis] as i64);
-        append(global, material);
+    if has_shapes {
+        for (index, &material) in data.blocks().iter().enumerate() {
+            let cell = [index % 16, index / 16 % 16, index / 256];
+            let global = std::array::from_fn(|axis| origin[axis] + cell[axis] as i64);
+            append(global, material);
+        }
     }
     if journal.has_extended_kinetics() {
         for dx in -1..=1 {
@@ -779,6 +824,7 @@ fn receive(
         if let Some(old) = state.sections.insert(
             position,
             ReadySection {
+                catalog_stale: false,
                 entity,
                 epoch,
                 profile,
@@ -832,11 +878,25 @@ fn build_collider_with_models(
     build_collider_with_geometry(section, shapes, &[], masked)
 }
 
+#[cfg(test)]
 fn build_collider_with_geometry(
     section: &BlockSection,
     shapes: &[terra_core::block_shapes::ShapeBox],
     triangles: &[[[f32; 3]; 3]],
     masked: &[u16],
+) -> Result<Option<Collider>, String> {
+    cook_collider(section, shapes, triangles, |material| {
+        !masked.contains(&material)
+            && terra_voxel::MaterialId::from_raw(material)
+                .is_none_or(terra_voxel::MaterialId::is_solid)
+    })
+}
+
+fn cook_collider(
+    section: &BlockSection,
+    shapes: &[terra_core::block_shapes::ShapeBox],
+    triangles: &[[[f32; 3]; 3]],
+    is_cube: impl Fn(u16) -> bool,
 ) -> Result<Option<Collider>, String> {
     if section.is_empty() && shapes.is_empty() && triangles.is_empty() {
         return Ok(None);
@@ -847,11 +907,7 @@ fn build_collider_with_geometry(
             for x in 0..16 {
                 // Collision only needs solid/air, not the visual material or render LOD.
                 let material = section.blocks()[x + 16 * (y + 16 * z)];
-                padded[x + 1 + 18 * (y + 1 + 18 * (z + 1))] = u16::from(
-                    !masked.contains(&material)
-                        && terra_voxel::MaterialId::from_raw(material)
-                            .is_none_or(terra_voxel::MaterialId::is_solid),
-                );
+                padded[x + 1 + 18 * (y + 1 + 18 * (z + 1))] = u16::from(is_cube(material));
             }
         }
     }
@@ -903,6 +959,8 @@ fn build_collider_with_geometry(
         .map_err(|error| format!("Terrain collider {:?}: {error:?}", section.position()))
 }
 
+#[cfg(test)]
+mod catalog_benchmark;
 #[cfg(test)]
 mod confirmed_rail_tests;
 #[cfg(test)]

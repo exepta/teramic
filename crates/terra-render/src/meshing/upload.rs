@@ -3,10 +3,10 @@ use super::{
     jobs::{RenderJobs, poll_job},
 };
 use crate::blocks::BlockAssets;
-use bevy::ecs::system::SystemParam;
+use bevy::ecs::{message::MessageCursor, system::SystemParam};
 use bevy::{camera::primitives::MeshAabb, math::Vec3A, prelude::*};
 use terra_world::edits::EditJournal;
-use terra_world::streaming::ChunkStore;
+use terra_world::streaming::{ChunkStore, SectionRemoved};
 
 #[derive(SystemParam)]
 pub(crate) struct RenderWorld<'w, 's> {
@@ -17,6 +17,8 @@ pub(crate) struct RenderWorld<'w, 's> {
     shadow_material: Option<Res<'w, super::shadows::OpaqueShadowMaterial>>,
     budget: Option<ResMut<'w, crate::MeshUploadStatus>>,
     chunks: Res<'w, ChunkStore>,
+    removals: Option<Res<'w, Messages<SectionRemoved>>>,
+    removal_cursor: Local<'s, MessageCursor<SectionRemoved>>,
     journal: Res<'w, EditJournal>,
     focus: Option<Res<'w, terra_world::streaming::ChunkFocus>>,
     config: Option<Res<'w, terra_core::GameConfig>>,
@@ -58,21 +60,17 @@ pub(crate) fn upload_sections(
     ),
 ) {
     let _scope = terra_core::profiling::ScopeTimer::new("terrain.upload");
-    let visibility_changed = world.visibility.as_ref().is_some_and(|v| v.is_changed());
-    if jobs.0.is_empty()
-        && !world.chunks.is_changed()
-        && !rendered.is_changed()
-        && !visibility_changed
-    {
-        return;
-    }
     let chunks = &world.chunks;
-    if visibility_changed {
+    if let Some(visibility) = world
+        .visibility
+        .as_ref()
+        .filter(|v| v.is_changed() && v.len() > 0)
+    {
         let hidden: Vec<_> = rendered
             .sections
             .keys()
             .copied()
-            .filter(|p| world.visibility.as_ref().is_some_and(|v| v.hidden(*p)))
+            .filter(|p| visibility.hidden(*p))
             .collect();
         for p in hidden {
             if let Some(old) = rendered.sections.remove(&p) {
@@ -91,21 +89,51 @@ pub(crate) fn upload_sections(
         .map_or(terra_core::ChunkAnimation::None, |c| {
             c.client.chunk_animation
         });
-    if world.chunks.is_changed() {
+    // Ordinary section publications, water patches and edits also dirty ChunkStore.
+    // Eviction notices let those frames leave both resident tables untouched.
+    let rescan = world.chunks.is_added()
+        || world
+            .terrain
+            .as_ref()
+            .is_some_and(|terrain| terrain.is_changed())
+        || (world.chunks.is_changed() && (world.removals.is_none() || chunks.loaded.is_empty()))
+        || world
+            .removals
+            .as_ref()
+            .is_some_and(|messages| world.removal_cursor.missed_messages(messages) != 0);
+    let mut evicted = Vec::new();
+    if rescan {
+        if let Some(messages) = &world.removals {
+            world.removal_cursor.clear(messages);
+        }
         rendered
             .presentations
             .retain(|p, _| chunks.loaded.contains_key(p));
-        let removed: Vec<_> = rendered
-            .sections
-            .keys()
-            .copied()
-            .filter(|p| !chunks.loaded.contains_key(p))
-            .collect();
-        for position in removed {
-            if let Some(old) = rendered.sections.remove(&position) {
-                crate::transitions::retire(&mut commands, old.entity, old.meshes, animation);
-            }
+        evicted.extend(
+            rendered
+                .sections
+                .keys()
+                .copied()
+                .filter(|p| !chunks.loaded.contains_key(p)),
+        );
+    } else if let Some(messages) = &world.removals {
+        // A section can leave and re-enter before the renderer runs.
+        evicted.extend(
+            world
+                .removal_cursor
+                .read(messages)
+                .map(|n| n.position)
+                .filter(|p| !chunks.loaded.contains_key(p)),
+        );
+    }
+    for position in evicted {
+        rendered.presentations.remove(&position);
+        if let Some(old) = rendered.sections.remove(&position) {
+            crate::transitions::retire(&mut commands, old.entity, old.meshes, animation);
         }
+    }
+    if jobs.0.is_empty() {
+        return;
     }
     let mut completed = Vec::new();
     let focus = world.focus.as_ref().map_or([0.0; 3], |f| f.0);
@@ -1813,6 +1841,70 @@ mod tests {
                 },
             );
         (app, position, root)
+    }
+
+    #[test]
+    fn eviction_notifications_retire_only_absent_sections_and_preserve_empty_presentations() {
+        let (mut app, position, root) = entering_upload_fixture();
+        app.add_message::<SectionRemoved>();
+        let empty = terra_voxel::SectionPos::new(1, 0, 0);
+        app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+            empty,
+            terra_world::streaming::LoadedSection {
+                data: terra_voxel::BlockSection::empty(empty).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        {
+            let mut rendered = app.world_mut().resource_mut::<RenderedSections>();
+            rendered.record_presentation(position, 2, None);
+            rendered.record_presentation(empty, 7, Some(0));
+        }
+        app.update();
+        let initial_tick = app
+            .world()
+            .resource_ref::<RenderedSections>()
+            .last_changed();
+        // The same position is present again when an old eviction is received.
+        app.world_mut().write_message(SectionRemoved { position });
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .get_mut(&position)
+            .unwrap()
+            .water_epoch += 1;
+        app.update();
+        let rendered = app.world().resource_ref::<RenderedSections>();
+        assert_eq!(
+            rendered.last_changed(),
+            initial_tick,
+            "uploads and stale notices leave resident maps untouched"
+        );
+        assert_eq!(rendered.sections[&position].entity, root);
+        app.world_mut()
+            .resource_mut::<ChunkStore>()
+            .loaded
+            .remove(&position);
+        app.world_mut().write_message(SectionRemoved { position });
+        app.update();
+        let rendered = app.world().resource::<RenderedSections>();
+        assert!(!rendered.sections.contains_key(&position));
+        assert_eq!(rendered.block_revision(position), None);
+        assert_eq!(rendered.block_revision(empty), Some(7));
+        assert!(app.world().get_entity(root).is_err());
+        // Replica reset replaces the store and clears pending notifications.
+        terra_world::streaming::reset_replica(app.world_mut());
+        app.update();
+        assert!(
+            app.world()
+                .resource::<RenderedSections>()
+                .presentations
+                .is_empty()
+        );
     }
 
     fn completed_upload_job(

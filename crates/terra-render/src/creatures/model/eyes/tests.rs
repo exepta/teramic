@@ -12,24 +12,36 @@ fn points(mesh: &Mesh) -> &[[f32; 3]] {
 }
 
 fn ray_hits_before(mesh: &Mesh, origin: Vec3, direction: Vec3, distance: f32) -> bool {
+    ray_hits_before_filter(mesh, origin, direction, distance, |_| true)
+}
+
+fn ray_hits_before_filter(
+    mesh: &Mesh,
+    origin: Vec3,
+    direction: Vec3,
+    distance: f32,
+    include_vertex: impl Fn(usize) -> bool,
+) -> bool {
     let p = points(mesh);
     let ids: Vec<_> = mesh.indices().unwrap().iter().collect();
-    ids.chunks_exact(3).any(|i| {
-        let [a, b, c] = [i[0], i[1], i[2]].map(|n| Vec3::from_array(p[n]));
-        let e1 = b - a;
-        let e2 = c - a;
-        let cross = direction.cross(e2);
-        let determinant = e1.dot(cross);
-        if determinant.abs() < 1e-10 {
-            return false;
-        }
-        let delta = origin - a;
-        let u = delta.dot(cross) / determinant;
-        let q = delta.cross(e1);
-        let v = direction.dot(q) / determinant;
-        let t = e2.dot(q) / determinant;
-        u >= -1e-5 && v >= -1e-5 && u + v <= 1.00001 && t > 0.0 && t < distance - 1e-5
-    })
+    ids.chunks_exact(3)
+        .filter(|i| include_vertex(i[0]))
+        .any(|i| {
+            let [a, b, c] = [i[0], i[1], i[2]].map(|n| Vec3::from_array(p[n]));
+            let e1 = b - a;
+            let e2 = c - a;
+            let cross = direction.cross(e2);
+            let determinant = e1.dot(cross);
+            if determinant.abs() < 1e-10 {
+                return false;
+            }
+            let delta = origin - a;
+            let u = delta.dot(cross) / determinant;
+            let q = delta.cross(e1);
+            let v = direction.dot(q) / determinant;
+            let t = e2.dot(q) / determinant;
+            u >= -1e-5 && v >= -1e-5 && u + v <= 1.00001 && t > 0.0 && t < distance - 1e-5
+        })
 }
 
 #[test]
@@ -72,7 +84,7 @@ fn pupils_survive_head_meshing_and_closed_lids_occlude_their_entire_front() {
                 if colors[start] != pupil {
                     continue;
                 }
-                let outward = if kind == Kind::Horse {
+                let outward = if matches!(kind, Kind::Horse | Kind::Sheep | Kind::Cow | Kind::Pig) {
                     Vec3::X * p[start][0].signum()
                 } else {
                     Vec3::NEG_Z
@@ -91,6 +103,15 @@ fn pupils_survive_head_meshing_and_closed_lids_occlude_their_entire_front() {
                     ray_hits_before(lids, origin, -outward, 0.5),
                     "{kind:?}/{variant}: lid fails to cover pupil at {target:?}"
                 );
+                if matches!(kind, Kind::Sheep | Kind::Cow | Kind::Pig) {
+                    // The skull must lie directly behind the pupil. A nearby
+                    // ear can otherwise lift the eye clean off the sloping face.
+                    assert!(
+                        ray_hits_before_filter(head, target, -outward, 0.015, |i| colors[i]
+                            != pupil),
+                        "{kind:?}: eye lacks a socket behind {target:?}"
+                    );
+                }
                 area[usize::from(target.x > 0.0)] += (Vec3::from_array(quad[1])
                     - Vec3::from_array(quad[0]))
                 .cross(Vec3::from_array(quad[2]) - Vec3::from_array(quad[0]))

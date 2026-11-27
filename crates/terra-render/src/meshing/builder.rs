@@ -464,6 +464,16 @@ pub(crate) fn compose_section_with_leaf_detail(
     }
     let mut visibility = [0_u8; SECTION_VOLUME];
     let mut open_neighbors = [0_u8; SECTION_VOLUME];
+    let mut ground_materials = (options.detail_level == DetailLevel::Near
+        && templates.block_details.micro_geometry
+        && faces.iter().any(|f| {
+            templates
+                .sculpted_blocks
+                .get(&f.material)
+                .is_some_and(|s| s.continuous_ground(f.side))
+                && !coarse_authored(templates, f.material)
+        }))
+    .then(|| vec![0u16; SECTION_VOLUME]);
     let ground = options
         .terrain
         .as_ref()
@@ -506,9 +516,13 @@ pub(crate) fn compose_section_with_leaf_detail(
     for &face in faces {
         validate_face(face)?;
         for cell in cells(face) {
-            visibility[cell_index(cell)] |= 1 << face.side;
+            let index = cell_index(cell);
+            visibility[index] |= 1 << face.side;
             if !face.occupied_neighbor {
-                open_neighbors[cell_index(cell)] |= 1 << face.side;
+                open_neighbors[index] |= 1 << face.side;
+            }
+            if let Some(materials) = &mut ground_materials {
+                materials[index] = face.material;
             }
         }
     }
@@ -638,6 +652,7 @@ pub(crate) fn compose_section_with_leaf_detail(
                                     || templates.block_details.leaf_geometry_quality
                                         != terra_core::BlockDetailQuality::High,
                             ),
+                            0,
                             templates,
                         )?;
                         tint_surface(
@@ -828,6 +843,13 @@ pub(crate) fn compose_section_with_leaf_detail(
                     *face,
                     cell,
                     shape.relief(face.side, variant, open_neighbors[cell_index(cell)], true),
+                    if shape.continuous_ground(face.side) {
+                        ground_materials.as_deref().map_or(0, |materials| {
+                            joined_ground_sides(cell, *face, materials, &open_neighbors)
+                        })
+                    } else {
+                        0
+                    },
                     templates,
                 )?;
             } else if let Some(surface) = &block.surface
@@ -1113,6 +1135,7 @@ pub(crate) fn append_sculpture(
     face: BlockFace,
     cell: [u32; 3],
     relief: Option<&[crate::blocks::PrimitiveTemplate]>,
+    joined: u8,
     templates: &TemplateSet,
 ) -> Result<(), String> {
     let unit = BlockFace {
@@ -1164,7 +1187,9 @@ pub(crate) fn append_sculpture(
     let Some(relief) = relief else { return Ok(()) };
     let offset = Vec3::from_array(cell.map(|p| p as f32));
     for primitive in relief {
-        let slot = shape.slots[primitive.material];
+        let Some(slot) = shape.relief_material(primitive.material, face.side, joined) else {
+            continue;
+        };
         let batch = batches.entry(slot).or_insert_with(|| MeshBatch {
             material: slot,
             ..default()
@@ -1551,6 +1576,26 @@ fn append_rectangle(
     };
     batch.indices.extend(indices.map(|i| start + i));
     Ok(())
+}
+
+fn joined_ground_sides(cell: [u32; 3], face: BlockFace, materials: &[u16], open: &[u8]) -> u8 {
+    let mut joined = 0;
+    for axis in [face.u_axis, face.v_axis] {
+        for (positive, step) in [(false, -1), (true, 1)] {
+            let mut neighbor = cell;
+            let coord = cell[axis] as i32 + step;
+            // Adjacent sections can have a different LOD or still be absent.
+            if !(0..SECTION_SIZE as i32).contains(&coord) {
+                continue;
+            }
+            neighbor[axis] = coord as u32;
+            let index = cell_index(neighbor);
+            if materials[index] == face.material && open[index] & (1 << face.side) != 0 {
+                joined |= 1 << (axis * 2 + usize::from(positive));
+            }
+        }
+    }
+    joined
 }
 
 fn cell_index(cell: [u32; 3]) -> usize {

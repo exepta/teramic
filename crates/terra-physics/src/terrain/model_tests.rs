@@ -717,6 +717,7 @@ fn secondary_sections_own_clipped_furniture_even_before_primary_chunk_arrives() 
             collision_state.sections.insert(
                 secondary_section,
                 ReadySection {
+                    catalog_stale: false,
                     plain: None,
                     profile: None,
                     entity: None,

@@ -267,6 +267,14 @@ cargo run --locked -p terra-server
 cargo run --locked -p terra-building-editor
 ```
 
+Für die begehbare **Blockgalerie** das [Weltarchiv](apps/client/examples/Blockgalerie.zip)
+in den Ordner `worlds` entpacken und im Einzelspielermenü **Blockgalerie → Play World**
+öffnen. Wer die Welt aus dem aktuellen Blockkatalog neu erzeugen möchte, kann dafür
+`cargo run --locked -p terra-client --example block_gallery` verwenden. Vom Einstieg führen
+nummerierte Reihen nach Norden zu den nach Kategorie sortierten
+Exponaten und zum Gleishof. Südlich liegen zusammenhängende Materialproben über Chunkgrenzen.
+Im Weltordner nennt `Blockverzeichnis.tsv` für jede Block-ID Namen, Reihe, Platz und Koordinaten.
+
 RustRover bietet die geteilte Startkonfiguration **Terra Client** aus
 [.run/TerraClient.run.xml](.run/TerraClient.run.xml). Sie startet das aktuelle
 Paket und Binary `terra-client`. Alte Profile mit `--package teramic --bin teramic`

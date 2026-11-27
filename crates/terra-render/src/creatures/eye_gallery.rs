@@ -57,9 +57,9 @@ fn setup(mut commands: Commands, models: Res<Models>, mut images: ResMut<Assets<
     target.texture_descriptor.usage |= TextureUsages::COPY_SRC;
     let image = images.add(target);
     for (index, (kind, yaw)) in [
-        (Kind::Sheep, 0.0),
-        (Kind::Cow, 0.0),
-        (Kind::Pig, 0.0),
+        (Kind::Sheep, 0.85),
+        (Kind::Cow, -0.85),
+        (Kind::Pig, 0.85),
         (Kind::Bear, 0.0),
         (Kind::Horse, std::f32::consts::FRAC_PI_2),
         (Kind::Horse, -std::f32::consts::FRAC_PI_2),

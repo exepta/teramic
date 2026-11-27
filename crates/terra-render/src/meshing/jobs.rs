@@ -24,6 +24,8 @@ use terra_world::{
     },
 };
 
+const MAX_DISPATCH_CANDIDATES: usize = 128;
+
 pub(crate) type MeshResult = (Result<Vec<MeshBatch>, String>, f64);
 
 pub(crate) fn refresh_growth(
@@ -113,6 +115,8 @@ pub(crate) struct MeshQueue {
     visibility_revision: u64,
     focus: Option<[f64; 3]>,
     positions: Vec<SectionPos>,
+    rank_scratch: Vec<((MeshPriority, u8), u64, [i64; 3])>,
+    unranked: usize,
     queued: HashSet<SectionPos>,
     priority_dirty: bool,
     motion: FlightMotion,
@@ -243,6 +247,8 @@ impl MeshQueue {
 
     fn retain_loaded(&mut self, mut loaded: impl FnMut(SectionPos) -> bool) {
         self.positions.retain(|&position| loaded(position));
+        // Retention can remove positions from either side of the ranked window.
+        self.priority_dirty = true;
         self.queued.retain(|&position| loaded(position));
         self.arrivals.retain(|&position| loaded(position));
     }
@@ -363,27 +369,44 @@ impl MeshQueue {
         self.priority_dirty = false;
     }
 
-    fn prioritize_cached<K: Ord>(
+    fn prioritize_cached(
         &mut self,
         focus: [f64; 3],
-        mut priority: impl FnMut(SectionPos) -> K,
+        mut priority: impl FnMut(SectionPos) -> (MeshPriority, u8),
     ) {
-        self.positions.sort_by_cached_key(|p| {
-            std::cmp::Reverse((
+        // Keep two frames' worth ranked. Refresh when less than one frame is
+        // left or a camera move or arrival invalidates the order. The rest of
+        // the streaming backlog stays queued without paying for a full sort.
+        self.rank_scratch.clear();
+        self.rank_scratch.extend(self.positions.iter().map(|p| {
+            (
                 priority(*p),
                 distance_squared(*p, focus) as u64,
-                p.y,
-                p.z,
-                p.x,
-            ))
-        });
+                [p.y, p.z, p.x],
+            )
+        }));
+        self.unranked = self
+            .rank_scratch
+            .len()
+            .saturating_sub(2 * MAX_DISPATCH_CANDIDATES);
+        if self.unranked > 0 {
+            self.rank_scratch
+                .select_nth_unstable_by(self.unranked, |a, b| b.cmp(a));
+        }
+        self.rank_scratch[self.unranked..].sort_unstable_by(|a, b| b.cmp(a));
+        self.positions.clear();
+        self.positions.extend(
+            self.rank_scratch
+                .iter()
+                .map(|&(_, _, [y, z, x])| SectionPos::new(x, y, z)),
+        );
     }
 
     fn pop_for_dispatch(&mut self, inspected: usize, elapsed: Duration) -> Option<SectionPos> {
         // Even a candidate that needs no worker can spend time capturing models.
         // Resume the ordered queue next frame once the preparation budget is spent.
         // Bound a loading-screen frame containing thousands of empty snapshots too.
-        if inspected >= 128
+        if inspected >= MAX_DISPATCH_CANDIDATES
             || self.initial_ready && inspected != 0 && elapsed >= Duration::from_millis(2)
         {
             return None;
@@ -1649,7 +1672,10 @@ pub(crate) fn dispatch_meshes(
             }
             queue.dirty = false;
         }
-        if queue.priority_dirty {
+        if queue.priority_dirty
+            || queue.unranked != 0
+                && queue.positions.len().saturating_sub(queue.unranked) < MAX_DISPATCH_CANDIDATES
+        {
             queue.prioritize_work(
                 world.focus.0,
                 &world.journal,
@@ -1856,11 +1882,15 @@ pub(crate) fn dispatch_meshes(
                     .chunks
                     .loaded
                     .get(&position)
-                    .filter(|s| s.data.blocks().iter().any(|id| matches!(id, 1..=5)))
+                    .filter(|s| {
+                        (1..=5).any(|id| s.data.may_contain(id))
+                            && s.data.blocks().iter().any(|id| matches!(id, 1..=5))
+                    })
                     .map(|s| {
-                        super::material_edges::Neighborhood::capture(&s.data, |global| {
-                            world.chunks.block_at(global)
-                        })
+                        super::material_edges::Neighborhood::capture(
+                            &s.data,
+                            world.chunks.block_sampler(),
+                        )
                     })
             } else {
                 None
@@ -2369,15 +2399,34 @@ mod dispatch_tests {
         let mut lookups = 0;
         queue.prioritize_cached(focus, |p| {
             lookups += 1;
-            if edited(p) {
-                MeshPriority::Edit
-            } else {
-                MeshPriority::Resident
-            }
+            (
+                if edited(p) {
+                    MeshPriority::Edit
+                } else {
+                    MeshPriority::Resident
+                },
+                2,
+            )
         });
-        assert_eq!(queue.positions, expected);
+        let split = expected.len() - 128;
+        assert_eq!(&queue.positions[split..], &expected[split..]);
+        queue.positions.truncate(split);
+        queue.prioritize_cached(focus, |p| {
+            (
+                if edited(p) {
+                    MeshPriority::Edit
+                } else {
+                    MeshPriority::Resident
+                },
+                2,
+            )
+        });
+        assert_eq!(
+            &queue.positions[split - 128..],
+            &expected[split - 128..split]
+        );
         assert!(
-            lookups <= queue.positions.len(),
+            lookups <= expected.len(),
             "HashMap-backed edit keys must not be recomputed per comparison: {lookups}"
         );
     }

@@ -399,6 +399,60 @@ mod tests {
     use super::*;
 
     #[test]
+    fn shadow_shader_bins_find_the_original_segments_for_every_blade_lod() {
+        let shader = include_str!("../../../../../assets/shaders/terra_foliage_prepass.wesl");
+        let (_, table) = shader.split_once("const BLADE_STATIONS:").unwrap();
+        let packed: Vec<[u32; 2]> = table
+            .lines()
+            .skip(1)
+            .take(16)
+            .map(|line| {
+                let (_, words) = line.split_once("vec2<u32>(").unwrap();
+                let (a, b) = words.split_once(", ").unwrap();
+                [a, b].map(|word| u32::from_str_radix(&word[2..10], 16).unwrap())
+            })
+            .collect();
+        let masks: std::collections::HashSet<_> = [false, true]
+            .into_iter()
+            .flat_map(|distant| {
+                (0..6).flat_map(move |side| {
+                    (0..4).flat_map(move |variant| {
+                        shadow_cards(side, variant, distant)
+                            .iter()
+                            .map(|card| card.stations)
+                    })
+                })
+            })
+            .collect();
+        for encoded in masks {
+            let five = encoded & 0x8000 != 0;
+            let profile = if five { FIVE_LOBES } else { THREE_LOBES };
+            let mask = u32::from(encoded & 0x7fff);
+            // Test both sides of exact corners as well as the interior of every bin.
+            let corners = profile
+                .iter()
+                .flat_map(|&(x, _)| [x.next_down(), x, x.next_up()]);
+            let samples = (0..=2048).map(|i| i as f32 / 2048.).chain(corners);
+            for x in samples.filter(|x| (0.0..=1.0).contains(x)) {
+                let bin = ((x * 128.0) as usize).min(127);
+                let candidate =
+                    ((packed[bin / 8][usize::from(five)] >> (bin % 8 * 4)) & 15) as usize;
+                let upper =
+                    (candidate + usize::from(x > profile[candidate].0)).clamp(1, profile.len() - 1);
+                let lower_bits = (1 << upper) - 1;
+                let lo = (31 - (mask & lower_bits).leading_zeros()) as usize;
+                let hi = (mask & !lower_bits).trailing_zeros() as usize;
+                let expected = (1..profile.len())
+                    .filter(|i| mask & (1 << i) != 0)
+                    .find(|&i| x <= profile[i].0)
+                    .unwrap();
+                let previous = (0..expected).rev().find(|i| mask & (1 << i) != 0).unwrap();
+                assert_eq!((lo, hi), (previous, expected), "blade {encoded:04x} at {x}");
+            }
+        }
+    }
+
+    #[test]
     fn four_triangle_shadow_profiles_bound_both_sides_of_every_real_windy_blade() {
         let mut original_diameter = 0.0_f32;
         let mut card_diameter = 0.0_f32;

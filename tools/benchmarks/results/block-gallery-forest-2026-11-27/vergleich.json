@@ -1,0 +1,204 @@
+{
+  "date": "2026-11-27",
+  "control": "65d0352",
+  "hardware": "Ryzen 9 5900X, Radeon RX 6950 XT, Linux X11, Vulkan RADV",
+  "hardware_preset": "2560x1440 actual, view 16 chunks, High blocks, High foliage, High shadows, VSync off, uncapped, identical interactive pool and native client dev profile. No diagnostic builds or GPU profiling during the native route runs.",
+  "walk": "Existing world Test seed 9890475192252935834. Start (-219.5, 58, -155.5); real grounded keyboard input, 64 m out and back; frame statistics for the same 36 s of movement after readiness.",
+  "flight": "New world per run, seed 9579473548044979300; (-3949.5,106,-247.5) eastward 3.6 km at about 48 m/s. Same canopy height curve as frontier-flight-2026-11-27/canopy-profile.json. FPS for the five-second outbound intervals, excluding end-of-route hover and startup. The two boundary intervals may have different partial-frame alignment.",
+  "diagnostic_control_flight": {
+    "scope": "Separate instrumented flight on the original version including stationary periods. GPU statistics are per pass, CPU intervals may overlap.",
+    "main_opaque_pass_mean_ms": 4.39290835090106,
+    "main_opaque_pass_p95_ms": 7.27032,
+    "main_opaque_pass_mean_vertex_shader_invocations": 10348354.190751445,
+    "main_opaque_pass_mean_fragment_shader_invocations": 9858207.702482149,
+    "cpu_prepare_mesh_allocator_body_mean_ms": 2.476
+  },
+  "physics_microbenchmark": {
+    "profile": "ci",
+    "scope": "main-thread snapshots and CPU collider preparation and mesh baking; no rendering",
+    "test": "terra-physics::terrain::catalog_benchmark::woodland_collider_cpu_comparison",
+    "repetitions": [
+      {
+        "collision_catalog": {
+          "sections": 9,
+          "plain": 7,
+          "identical_triangles": 6184,
+          "samples_per_mode": 288
+        },
+        "original": {
+          "handoff_mean_us": 113.67,
+          "worker_mean_us": 902.63
+        },
+        "cached": {
+          "handoff_mean_us": 34.56,
+          "worker_mean_us": 542.01
+        }
+      },
+      {
+        "collision_halo": {
+          "plain_scans": 224,
+          "empty": 224,
+          "mean_us": 40.88
+        },
+        "collision_catalog": {
+          "sections": 9,
+          "plain": 7,
+          "identical_triangles": 6184,
+          "samples_per_mode": 288
+        },
+        "original": {
+          "handoff_mean_us": 98.82,
+          "worker_mean_us": 848.88
+        },
+        "cached": {
+          "handoff_mean_us": 28.71,
+          "worker_mean_us": 499.64
+        }
+      }
+    ]
+  },
+  "upload_microbenchmark": {
+    "measurement": "Isolated Bevy App::update with the production terrain upload system; changed ChunkStore, zero mesh jobs or evictions; CPU only",
+    "configuration": {
+      "loaded_sections": 8039,
+      "rendered_sections": 4057,
+      "presentations": 8039,
+      "iterations_per_run": 600,
+      "warmup_per_run": 20,
+      "terra_render_opt_level": 1
+    },
+    "order": "legacy, incremental, incremental, legacy",
+    "runs": [
+      {
+        "notifications": false,
+        "median_ms": 0.212124,
+        "p95_ms": 0.471309,
+        "avg_ms": 0.24206505166666684
+      },
+      {
+        "notifications": true,
+        "median_ms": 0.025109999999999997,
+        "p95_ms": 0.071141,
+        "avg_ms": 0.03712572500000001
+      },
+      {
+        "notifications": true,
+        "median_ms": 0.0257,
+        "p95_ms": 0.087952,
+        "avg_ms": 0.03788426000000004
+      },
+      {
+        "notifications": false,
+        "median_ms": 0.192423,
+        "p95_ms": 0.430639,
+        "avg_ms": 0.22898973666666653
+      }
+    ]
+  },
+  "measurements": {
+    "flight": {
+      "control_65d0352": {
+        "frames_per_second": 65.5354100470958,
+        "slowest_frame_fps": 34.60628875168956,
+        "slowest_five_seconds_fps": 62.681377098484376,
+        "five_second_windows": 14,
+        "local_probes": 25,
+        "min_local": 25,
+        "mean_ahead": 25,
+        "startup_seconds": 31.987080986
+      },
+      "renderer_and_art": {
+        "frames_per_second": 65.67074983724596,
+        "slowest_frame_fps": 32.0750247659285,
+        "slowest_five_seconds_fps": 62.3727626254074,
+        "five_second_windows": 15,
+        "local_probes": 25,
+        "min_local": 25,
+        "mean_ahead": 23.533333333333335,
+        "startup_seconds": 32.408845532
+      },
+      "final_with_collision_cache_and_snow_shader": {
+        "frames_per_second": 64.54376321267279,
+        "slowest_frame_fps": 30.30816432238067,
+        "slowest_five_seconds_fps": 60.085182479743196,
+        "five_second_windows": 14,
+        "local_probes": 25,
+        "min_local": 25,
+        "mean_ahead": 24.857142857142858,
+        "startup_seconds": 32.320616621
+      },
+      "control_repeat": {
+        "frames_per_second": 64.82522123111028,
+        "slowest_frame_fps": 11.264615275088664,
+        "slowest_five_seconds_fps": 61.6585816282811,
+        "five_second_windows": 15,
+        "local_probes": 25,
+        "min_local": 25,
+        "mean_ahead": 23.2,
+        "startup_seconds": 32.947147569
+      },
+      "final_repeat": {
+        "frames_per_second": 67.38306817220248,
+        "slowest_frame_fps": 28.6213933466709,
+        "slowest_five_seconds_fps": 64.96449452604102,
+        "five_second_windows": 15,
+        "local_probes": 25,
+        "min_local": 25,
+        "mean_ahead": 23.333333333333332,
+        "startup_seconds": 33.1957971
+      }
+    },
+    "walk": {
+      "control_65d0352": {
+        "sample_frames": 2149,
+        "average_fps": 59.68060836905187,
+        "minimum_fps": 5.2224762614561095,
+        "p50_frame_ms": 15.904490000000001,
+        "p95_frame_ms": 23.990877,
+        "p99_frame_ms": 28.437352999999998,
+        "worst_frame_ms": 191.48004699999998,
+        "initial_load_seconds": 50.403636278
+      },
+      "renderer_and_art": {
+        "sample_frames": 2248,
+        "average_fps": 62.43276445870247,
+        "minimum_fps": 23.27154660138843,
+        "p50_frame_ms": 15.126562,
+        "p95_frame_ms": 23.594825999999998,
+        "p99_frame_ms": 27.91258,
+        "worst_frame_ms": 42.970929999999996,
+        "initial_load_seconds": 48.808168361
+      },
+      "final_with_collision_cache_and_snow_shader": {
+        "sample_frames": 2193,
+        "average_fps": 60.91132457430344,
+        "minimum_fps": 12.363481051339491,
+        "p50_frame_ms": 15.530159999999999,
+        "p95_frame_ms": 23.681722999999998,
+        "p99_frame_ms": 28.00633,
+        "worst_frame_ms": 80.883369,
+        "initial_load_seconds": 48.283712559
+      },
+      "control_repeat": {
+        "sample_frames": 2096,
+        "average_fps": 58.20496165240356,
+        "minimum_fps": 10.475124627271498,
+        "p50_frame_ms": 16.284906,
+        "p95_frame_ms": 24.455315,
+        "p99_frame_ms": 29.651573,
+        "worst_frame_ms": 95.464258,
+        "initial_load_seconds": 50.471596569
+      },
+      "final_repeat": {
+        "sample_frames": 2198,
+        "average_fps": 61.0439458058956,
+        "minimum_fps": 21.663828849512907,
+        "p50_frame_ms": 15.441468,
+        "p95_frame_ms": 23.869539,
+        "p99_frame_ms": 28.720699999999997,
+        "worst_frame_ms": 46.159892,
+        "initial_load_seconds": 49.972676726
+      }
+    }
+  }
+}
