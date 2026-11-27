@@ -822,6 +822,107 @@
         "p95": 95,
         "share_above_95": 0.063
       }
+    },
+    {
+      "route": "canopy_forest",
+      "build": "section_model_cache",
+      "window_backend": "X11",
+      "physical_resolution": [
+        2560,
+        1440
+      ],
+      "initial_load_s": 32.64,
+      "verified_network_leg": {
+        "outbound_seconds": 75.1,
+        "mean_authoritative_velocity_mps": 47.87,
+        "start_authoritative_xyz_m": [
+          -3949.5,
+          93.76,
+          -247.5
+        ],
+        "last_hover_x_m": -349.35,
+        "highest_observed_body_y_m": 159.48,
+        "sampled_body_y_min_max_m": [
+          73.5,
+          143.7
+        ],
+        "sampled_ground_clearance_min_median_max_m": [
+          12.9,
+          29.2,
+          32.2
+        ]
+      },
+      "outbound": {
+        "windows": 14,
+        "fps": 63.68,
+        "worst_5s_fps": 61.0,
+        "median_5s_p95_ms": 20.07,
+        "worst_5s_p95_ms": 21.44,
+        "worst_frame_ms": 49.56,
+        "presented_local_of_25": {
+          "mean": 25,
+          "min": 25,
+          "max": 25
+        },
+        "presented_ahead_of_25": {
+          "mean": 24.93,
+          "min": 24,
+          "max": 25
+        },
+        "loaded_local_min_of_25": 25,
+        "loaded_ahead_min_of_25": 25,
+        "median_wanted_minus_loaded_sections": 3027.5,
+        "peak_wanted_minus_loaded_sections": 4795
+      },
+      "outbound_samples": [
+        [5.0, -3754.3, 138.5, 12.9, 64.18, 21.44, 25, 25],
+        [10.0, -3522.4, 129.5, 28.7, 61.0, 20.99, 25, 25],
+        [15.01, -3279.3, 143.7, 31.0, 65.11, 20.6, 25, 24],
+        [20.02, -3037.0, 114.1, 23.5, 65.28, 19.18, 25, 25],
+        [25.02, -2781.8, 111.0, 28.0, 62.53, 20.04, 25, 25],
+        [30.02, -2525.4, 73.5, 14.5, 61.8, 20.85, 25, 25],
+        [35.04, -2289.2, 88.6, 28.8, 66.63, 19.36, 25, 25],
+        [40.05, -2043.9, 86.3, 29.6, 61.83, 20.86, 25, 25],
+        [45.06, -1801.8, 98.3, 31.8, 63.46, 19.43, 25, 25],
+        [50.07, -1561.1, 112.5, 32.2, 63.35, 20.2, 25, 25],
+        [55.07, -1319.5, 96.4, 29.9, 62.97, 20.11, 25, 25],
+        [60.08, -1088.4, 92.8, 18.6, 64.5, 19.97, 25, 25],
+        [65.08, -843.5, 107.5, 31.1, 66.28, 19.36, 25, 25],
+        [70.09, -605.1, 103.9, 31.2, 62.56, 19.61, 25, 25]
+      ],
+      "hover_fps": 77.36,
+      "hover_samples": [
+        [5.01, 70.8, 16.65, 25, 25, true, false, 66.0],
+        [10.01, 83.96, 15.2, 25, 25, true, false, 80.7],
+        [15.03, 87.76, 13.95, 25, 25, true, false, 94.8],
+        [20.04, 76.29, 15.72, 25, 25, true, false, 96.2],
+        [25.04, 67.99, 16.4, 25, 25, true, true, 99]
+      ],
+      "process_memory_mib": {
+        "peak_rss": 3669.8,
+        "peak_drm_vram": 8259.3,
+        "highest_swap_sample_at_30s_intervals": 364.3
+      },
+      "target_recovery_s": {
+        "local_all_first_check": 5.014,
+        "ahead_all_first_check": 5.014,
+        "confirmed_generation_and_render_ready_30s_sampler": null,
+        "confirmed_generation_and_render_ready_5s_sampler": 25.04
+      },
+      "full_cruise_and_hover": {
+        "sample_window_seconds": 105.0,
+        "average_fps": 67.02,
+        "p95_frame_ms": 19.63,
+        "p99_frame_ms": 22.42,
+        "worst_frame_ms": 49.47
+      },
+      "outbound_gpu_busy_percent": {
+        "samples": 299,
+        "mean": 64.1,
+        "median": 64,
+        "p95": 95,
+        "share_above_95": 0.054
+      }
     }
   ],
   "wayland_size_check": {
@@ -853,6 +954,54 @@
     "final": {
       "median_prepare_s": 1.0283,
       "median_build_s": 0.2052
+    }
+  },
+  "latest_gameplay_revision": "f67eb37",
+  "model_snapshot_comparison": {
+    "revisions": {
+      "before": "810e7bf",
+      "section_model_cache": "f67eb37"
+    },
+    "native_cpu_scope": {
+      "name": "terrain.model_snapshot",
+      "sample_window_s": 105,
+      "measurement": "Summed wall duration inside the instrumented CPU code during the identical X11 canopy flight and hover. Sampling starts after loading. The 30–60 s interval falls entirely within the outbound flight.",
+      "before": {
+        "calls": 26826,
+        "cumulative_ms": 4183.411,
+        "mean_us_per_call": 155.946,
+        "outbound_window_seconds_30_to_60": {
+          "calls": 10839,
+          "cumulative_ms": 1690.069,
+          "mean_us_per_call": 155.925
+        }
+      },
+      "section_model_cache": {
+        "calls": 27011,
+        "cumulative_ms": 1307.017,
+        "mean_us_per_call": 48.388,
+        "outbound_window_seconds_30_to_60": {
+          "calls": 10751,
+          "cumulative_ms": 514.835,
+          "mean_us_per_call": 47.887
+        }
+      }
+    },
+    "section_microbenchmark": {
+      "rounds_per_fixture": 9,
+      "passes_per_round_and_implementation": 12,
+      "order": "baseline and candidate measured in alternating order across rounds",
+      "equivalence_checks": "Presence of the optional snapshot and all 15 fields matched, including empty bile surfaces and water plants in these fixtures. Equivalence also held for explicit journal air, a missing staged voxel base and an unloaded neighbor.",
+      "forest": {
+        "sections": 30,
+        "median_us_per_section_before": 104.505,
+        "median_us_per_section_with_cache": 55.279
+      },
+      "village": {
+        "sections": 24,
+        "median_us_per_section_before": 131.294,
+        "median_us_per_section_with_cache": 77.435
+      }
     }
   }
 }
