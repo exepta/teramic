@@ -732,7 +732,7 @@ pub(super) fn capture_prepared(
     journal: &terra_world::edits::EditJournal,
     column: Option<&terra_world::PreparedColumn>,
     edits: &terra_world::generation::sections::BlockOverrides,
-    loaded_block: impl Fn([i64; 3]) -> Option<u16>,
+    mut loaded_block: impl FnMut([i64; 3]) -> Option<u16>,
 ) -> Option<ModelSnapshot> {
     if section.is_empty() {
         return None;
@@ -785,12 +785,26 @@ fn capture_with_states(
         return None;
     }
     let origin = section.position().origin().ok()?;
+    // Natural sections repeatedly use the same handful of materials, including
+    // on the halo. A full material ID check handles collisions between slots.
+    let mut model_cache = [None; 32];
+    let mut model_material = |material: u16| {
+        let slot = &mut model_cache[usize::from(material) % 32];
+        if let Some((id, value)) = *slot
+            && id == material
+        {
+            return value;
+        }
+        let value = is_model(templates, material);
+        *slot = Some((material, value));
+        value
+    };
     let models: Vec<_> = section
         .blocks()
         .iter()
         .enumerate()
         .filter_map(|(index, &material)| {
-            if !is_model(templates, material) {
+            if !model_material(material) {
                 return None;
             }
             let position = std::array::from_fn(|i| {
@@ -897,7 +911,7 @@ fn capture_with_states(
                     cell[(axis + 2) % 3] = v;
                     let global = std::array::from_fn(|i| origin[i] + i64::from(cell[i]));
                     let material = sample_neighbor(global);
-                    if material.is_some_and(|material| is_model(templates, material)) {
+                    if material.is_some_and(&mut model_material) {
                         border_models.push(cell);
                     }
                     if material == Some(MaterialId::Glass as u16) {

@@ -25,6 +25,34 @@ fn templates() -> TemplateSet {
 }
 
 #[test]
+fn snapshot_checks_colliding_material_ids_inside_and_across_the_section_border() {
+    let mut templates = templates();
+    let model_id = 82;
+    let plain_id = model_id + 32;
+    templates.blocks.get_mut(&model_id).unwrap().model =
+        crate::blocks::cube::box_model(terra_core::construction::boxes(model_id), 0.0, [0; 6]);
+    let mut section = BlockSection::empty(SectionPos::new(0, 0, 0)).unwrap();
+    for (x, id) in [model_id, plain_id, model_id].into_iter().enumerate() {
+        section.set_block([x, 0, 0], id).unwrap();
+    }
+    let snapshot = capture(&section, &templates, &Default::default(), |p| match p {
+        [-1, 0, 0 | 2] => Some(model_id),
+        [-1, 0, 1] => Some(plain_id),
+        _ => None,
+    })
+    .unwrap();
+    assert_eq!(
+        snapshot
+            .models
+            .iter()
+            .map(|cell| cell.cell)
+            .collect::<Vec<_>>(),
+        [[0, 0, 0], [2, 0, 0]]
+    );
+    assert_eq!(snapshot.border_models, [[-1, 0, 0], [-1, 0, 2]]);
+}
+
+#[test]
 fn grate_construction_profiles_keep_visible_holes_in_all_poses_and_mixed_slab_materials() {
     use terra_core::{construction, locomotive_parts};
     let templates = templates();

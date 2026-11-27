@@ -25,6 +25,32 @@ fn voxel_fixture() -> (ChunkStore, EditJournal, EditJournal) {
 }
 
 #[test]
+fn block_sampler_switches_between_loaded_and_missing_sections() {
+    let (mut chunks, _, _) = voxel_fixture();
+    let other = OWNER.offset([1, 0, 0]).unwrap();
+    let mut data = BlockSection::empty(other).unwrap();
+    data.set_block([0, 0, 0], 5).unwrap();
+    chunks.loaded.insert(
+        other,
+        LoadedSection {
+            data,
+            mesh: None,
+            mesh_epoch: 0,
+            water_epoch: 0,
+            water: None,
+            props: Vec::new(),
+        },
+    );
+    let mut sample = chunks.block_sampler();
+    assert_eq!(sample([-1, 0, -16]), Some(0));
+    assert_eq!(sample([0, 0, -16]), Some(5));
+    assert_eq!(sample([1, 0, -16]), Some(0));
+    assert_eq!(sample([16, 0, -16]), None);
+    assert_eq!(sample([17, 0, -16]), None);
+    assert_eq!(sample([0, 0, -16]), Some(5));
+}
+
+#[test]
 fn confirmed_sparse_voxels_are_visible_before_the_render_mesh_is_published() {
     let (mut chunks, mut replica, mut source) = voxel_fixture();
     let position = OWNER.global_block([15, 2, 15]).unwrap();
@@ -80,6 +106,12 @@ fn forgotten_overrides_stay_unknown_until_restored_without_leaking_the_old_voxel
     assert_eq!(chunks.loaded[&OWNER].data.block([15, 2, 15]), Ok(3));
     assert_eq!(chunks.block_at(position), None);
     assert_eq!(chunks.block_at(other), Some(2));
+    {
+        let mut sample = chunks.block_sampler();
+        assert_eq!(sample(other), Some(2));
+        assert_eq!(sample(position), None);
+        assert_eq!(sample(other), Some(2));
+    }
     assert!(chunks.voxel_base_pending(OWNER));
     assert!(!chunks.voxel_data_known(OWNER));
     assert!(chunks.confirmed_voxels(OWNER, &replica).is_err());

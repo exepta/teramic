@@ -409,6 +409,25 @@ impl ChunkStore {
         }
         self.loaded.get(&p)?.data.block(local).ok()
     }
+    /// Reuses the section lookup for consecutive reads, such as mesh border cells.
+    pub fn block_sampler(&self) -> impl FnMut([i64; 3]) -> Option<u16> + '_ {
+        let check_unknown = self.has_pending_voxel_bases();
+        let mut last_section = None;
+        move |global| {
+            if check_unknown {
+                return self.block_at(global);
+            }
+            let (owner, local) = global_to_section(global);
+            if last_section.as_ref().is_none_or(|(pos, _)| *pos != owner) {
+                last_section = Some((owner, self.loaded.get(&owner)));
+            }
+            last_section
+                .and_then(|(_, section)| section)?
+                .data
+                .block(local)
+                .ok()
+        }
+    }
     /// A render remesh may be pending while confirmed voxel/collision data is ready.
     /// Removing an override instead makes its generated base explicitly unknown.
     pub fn voxel_data_known(&self, position: SectionPos) -> bool {

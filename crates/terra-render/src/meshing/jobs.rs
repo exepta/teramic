@@ -819,7 +819,7 @@ fn capture_models(
         journal,
         column.as_deref(),
         &edits,
-        |global| chunks.block_at(global),
+        chunks.block_sampler(),
     );
     if let Some(models) = &mut models {
         // Joinery can use persisted neighbor metadata; physical support cannot
