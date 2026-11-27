@@ -1,0 +1,858 @@
+{
+  "world": "Test, regenerated in separate empty save and map directories for every run",
+  "seed": "9579473548044979300",
+  "baseline_gameplay_revision": "bd2b00e",
+  "final_gameplay_revision": "810e7bf",
+  "hardware": {
+    "cpu": "AMD Ryzen 9 5900X",
+    "gpu": "AMD Radeon RX 6950 XT",
+    "backend": "Vulkan (RADV)",
+    "os": "Linux",
+    "driver": "Mesa 26.2.6-arch3.1"
+  },
+  "configuration": {
+    "client_profile": "optimized dev",
+    "configured_resolution": [
+      2560,
+      1440
+    ],
+    "render_distance_chunks": 16,
+    "blocks": "high",
+    "leaf_geometry": "high",
+    "shadow_quality": "high",
+    "shadow_map_pixels": 2048,
+    "vsync": false,
+    "fps_limit": 0,
+    "weather": "clear",
+    "bench_mode": "integrated, normal HUD, interactive worker counts",
+    "bounded_world": true
+  },
+  "reproduction": {
+    "world_config": "Copy the repository configs to an isolated directory, replace its world.toml with the supplied world.toml, and start each trial with empty maps and saves. Resolve all environment path values below to absolute paths. For a direct native run, set only the root game_mode key in the isolated server.toml to creative.",
+    "linux_benchmark_options": [
+      "--scenarios",
+      "frontier",
+      "--frontier-camera=-3949.5,106,-247.5",
+      "--frontier-heights",
+      "tools/benchmarks/results/frontier-flight-2026-11-27/canopy-profile.json"
+    ],
+    "native_client_arguments": [
+      "--smoke-test-benchmark"
+    ],
+    "required_canopy_environment": {
+      "TERRA_CONFIG_DIR": "isolated config directory with the included world.toml and game_mode = \"creative\" in server.toml",
+      "TERRA_MENU_CONFIG_DIR": "a second copy of the isolated configs",
+      "TERRA_PROFILE_FILE": "isolated copy of configs/profile.toml",
+      "TERRA_WORLD_DIR": "empty case/worlds",
+      "TERRA_BENCH_SAVE_DIR": "case/worlds/benchmark, initially absent",
+      "TERRA_GAMEPLAY_DIR": "case",
+      "TERRA_KINGDOM_SAVE_DIR": "case/kingdom",
+      "TERRA_BENCH_MODE": "integrated",
+      "TERRA_BENCH_UI": "1",
+      "TERRA_BENCH_GRAPHICS": "1",
+      "TERRA_BENCH_SECONDS": "105",
+      "TERRA_BENCH_LOAD_SECONDS": "180",
+      "TERRA_BENCH_WEATHER": "clear",
+      "TERRA_BENCH_CAMERA": "-3949.5,106,-247.5",
+      "TERRA_SOAK_ROUTE": "frontier",
+      "TERRA_SOAK_ROUTE_SPEED": "20",
+      "TERRA_COMPUTE_THREADS": "interactive",
+      "TERRA_SOAK_REPORT": "1",
+      "TERRA_CPU_SCOPES": "1",
+      "TERRA_FRONTIER_HEIGHTS": "JSON array read from canopy-profile.json for canopy flights. High-altitude flights use the default cruise plane."
+    }
+  },
+  "routes": {
+    "ocean": {
+      "start_xz_m": [
+        -23.5,
+        -7.5
+      ],
+      "target_xz_m": [
+        3576.5,
+        -7.5
+      ],
+      "cruise_y_m": 56.91
+    },
+    "forest": {
+      "start_xz_m": [
+        -3949.5,
+        -247.5
+      ],
+      "target_xz_m": [
+        -349.5,
+        -247.5
+      ],
+      "warmup_camera_xyz_m": [
+        -3949.5,
+        106.0,
+        -247.5
+      ],
+      "biomes_at_one_metre_intervals": {
+        "BloodForest": 1997,
+        "SpiritBlossom": 1322,
+        "Forest": 282
+      },
+      "high_cruise_y_m": 179.13983,
+      "canopy_route": {
+        "minimum_median_maximum_planned_clearance_above_bare_terrain_m": [
+          13.1,
+          27.2,
+          47.2
+        ],
+        "minimum_planned_clearance_above_highest_voxel_in_three_metre_wide_corridor_m": 3.8,
+        "profile_spacing_m": 8,
+        "height_profile": "canopy-profile.json"
+      }
+    }
+  },
+  "measurement": {
+    "nominal_distance_m": 3600,
+    "nominal_boost_mps": 60,
+    "x11_sample_window_s": 105,
+    "wayland_sample_window_s": 180,
+    "height_path_basis": "X displacement from the starting player position, with real networked controller input. Altitudes refer to the body centre.",
+    "flight_frames": "Complete 5-second windows in the outbound phase. FPS is total frames divided by summed elapsed time. Interval p95 values use native wall frames.",
+    "coverage": "25 surface points in a 5x5 grid around the player, then 25 points in a 5x5 grid at +64..128 m. Loaded means voxel data exists. Presented uses the renderer contract (displayed, occluded or confirmed empty), sampled at 5-second intervals.",
+    "hover_comparability": "Compare hover FPS at matched presentation and readiness, since a stopped player can still have pending LOD and mesh work.",
+    "recovery": "Seconds from entering the stop phase until first positive observation. Readiness requires both WorldGeneration Ready and RenderStatus.ready. The 30-second sampler is available in all runs. The canopy-run instrumentation also reports readiness every 5 seconds.",
+    "hover_samples_columns": [
+      "elapsed_since_stop_s",
+      "fps",
+      "p95_ms",
+      "local_presented_of_25",
+      "ahead_presented_of_25",
+      "generation_ready_if_measured",
+      "terrain_ready_if_measured",
+      "mean_gpu_busy_percent_if_measured"
+    ],
+    "outbound_samples_columns": [
+      "elapsed_since_departure_s",
+      "authoritative_x_m",
+      "body_y_m_if_measured",
+      "ground_clearance_m_if_measured",
+      "fps",
+      "p95_ms",
+      "local_presented_of_25",
+      "ahead_presented_of_25"
+    ],
+    "gpu_busy": "Process-external Linux GPU-device utilization at 250 ms intervals over the outbound phase for the forest runs."
+  },
+  "runs": [
+    {
+      "route": "ocean",
+      "build": "baseline",
+      "window_backend": "X11",
+      "physical_resolution": [
+        2560,
+        1440
+      ],
+      "initial_load_s": 26.6,
+      "verified_network_leg": {
+        "outbound_seconds": 60.12,
+        "mean_authoritative_velocity_mps": 59.79,
+        "start_authoritative_xyz_m": [
+          -23.5,
+          54.41,
+          -7.5
+        ],
+        "last_hover_x_m": 3576.74,
+        "highest_observed_body_y_m": 57.16
+      },
+      "outbound": {
+        "windows": 12,
+        "fps": 78.13,
+        "worst_5s_fps": 67.74,
+        "median_5s_p95_ms": 16.77,
+        "worst_5s_p95_ms": 19.35,
+        "worst_frame_ms": 32.03,
+        "presented_local_of_25": {
+          "mean": 25,
+          "min": 25,
+          "max": 25
+        },
+        "presented_ahead_of_25": {
+          "mean": 5.83,
+          "min": 0,
+          "max": 12
+        },
+        "loaded_local_min_of_25": 25,
+        "loaded_ahead_min_of_25": 25,
+        "median_wanted_minus_loaded_sections": 142.5,
+        "peak_wanted_minus_loaded_sections": 1424
+      },
+      "outbound_samples": [
+        [5.01, 262.2, null, null, 67.74, 19.35, 25, 12],
+        [10.02, 563.2, null, null, 74.0, 17.76, 25, 8],
+        [15.02, 864.2, null, null, 77.59, 16.37, 25, 5],
+        [20.03, 1164.2, null, null, 75.69, 17.14, 25, 3],
+        [25.03, 1465.2, null, null, 77.69, 16.75, 25, 7],
+        [30.04, 1765.2, null, null, 77.43, 16.8, 25, 8],
+        [35.05, 2065.2, null, null, 78.87, 16.82, 25, 9],
+        [40.06, 2365.2, null, null, 78.48, 17.0, 25, 4],
+        [45.06, 2665.2, null, null, 81.97, 16.14, 25, 0],
+        [50.07, 2968.2, null, null, 81.28, 16.68, 25, 5],
+        [55.07, 3268.2, null, null, 83.75, 16.12, 25, 4],
+        [60.08, 3568.2, null, null, 83.05, 16.16, 25, 5]
+      ],
+      "hover_fps": 117.28,
+      "hover_samples": [
+        [5.0, 115.17, 10.96, 25, 25, null, null, null],
+        [10.01, 108.78, 11.26, 25, 25, null, null, null],
+        [15.02, 116.88, 10.62, 25, 25, null, null, null],
+        [20.02, 119.83, 10.06, 25, 25, null, null, null],
+        [25.03, 118.89, 10.27, 25, 25, null, null, null],
+        [30.03, 119.64, 9.63, 25, 25, null, null, null],
+        [35.04, 119.01, 9.79, 25, 25, null, null, null],
+        [40.05, 120.05, 9.75, 25, 25, null, null, null]
+      ],
+      "process_memory_mib": {
+        "peak_rss": 3022.9,
+        "peak_drm_vram": 4728.5,
+        "highest_swap_sample_at_30s_intervals": 28.9
+      },
+      "target_recovery_s": {
+        "local_all_first_check": 5.001,
+        "ahead_all_first_check": 5.001,
+        "confirmed_generation_and_render_ready_30s_sampler": 27.4
+      },
+      "full_cruise_and_hover": {
+        "sample_window_seconds": 105.0,
+        "average_fps": 94.21,
+        "p95_frame_ms": 16.02,
+        "p99_frame_ms": 18.46,
+        "worst_frame_ms": 37.6
+      }
+    },
+    {
+      "route": "ocean",
+      "build": "intermediate",
+      "window_backend": "X11",
+      "physical_resolution": [
+        2560,
+        1440
+      ],
+      "initial_load_s": 27.14,
+      "verified_network_leg": {
+        "outbound_seconds": 60.13,
+        "mean_authoritative_velocity_mps": 59.75,
+        "start_authoritative_xyz_m": [
+          -23.5,
+          53.41,
+          -7.5
+        ],
+        "last_hover_x_m": 3576.74,
+        "highest_observed_body_y_m": 57.16
+      },
+      "outbound": {
+        "windows": 12,
+        "fps": 79.79,
+        "worst_5s_fps": 69.79,
+        "median_5s_p95_ms": 16.51,
+        "worst_5s_p95_ms": 18.69,
+        "worst_frame_ms": 23.45,
+        "presented_local_of_25": {
+          "mean": 25,
+          "min": 25,
+          "max": 25
+        },
+        "presented_ahead_of_25": {
+          "mean": 9.33,
+          "min": 2,
+          "max": 25
+        },
+        "loaded_local_min_of_25": 25,
+        "loaded_ahead_min_of_25": 25,
+        "median_wanted_minus_loaded_sections": 141.0,
+        "peak_wanted_minus_loaded_sections": 1318
+      },
+      "outbound_samples": [
+        [5.0, 260.2, null, null, 69.79, 18.69, 25, 25],
+        [10.01, 561.2, null, null, 75.03, 16.77, 25, 15],
+        [15.01, 861.2, null, null, 77.18, 17.02, 25, 9],
+        [20.02, 1162.2, null, null, 77.36, 16.98, 25, 5],
+        [25.02, 1463.2, null, null, 79.87, 16.27, 25, 9],
+        [30.03, 1761.2, null, null, 79.44, 16.51, 25, 10],
+        [35.03, 2061.2, null, null, 80.0, 16.57, 25, 10],
+        [40.05, 2362.2, null, null, 79.81, 16.51, 25, 5],
+        [45.06, 2663.2, null, null, 82.36, 16.29, 25, 2],
+        [50.06, 2963.2, null, null, 82.78, 15.88, 25, 7],
+        [55.07, 3263.2, null, null, 85.66, 15.5, 25, 9],
+        [60.08, 3566.2, null, null, 88.16, 14.96, 25, 6]
+      ],
+      "hover_fps": 117.6,
+      "hover_samples": [
+        [5.0, 117.19, 10.86, 25, 25, null, null, null],
+        [10.01, 108.19, 11.41, 25, 25, null, null, null],
+        [15.01, 118.75, 10.22, 25, 25, null, null, null],
+        [20.02, 119.48, 9.57, 25, 25, null, null, null],
+        [25.02, 118.74, 9.75, 25, 25, null, null, null],
+        [30.03, 119.65, 9.83, 25, 25, null, null, null],
+        [35.03, 120.05, 9.51, 25, 25, null, null, null],
+        [40.03, 118.76, 9.83, 25, 25, null, null, null]
+      ],
+      "process_memory_mib": {
+        "peak_rss": 3059.8,
+        "peak_drm_vram": 4963.8,
+        "highest_swap_sample_at_30s_intervals": 185.7
+      },
+      "target_recovery_s": {
+        "local_all_first_check": 5.0,
+        "ahead_all_first_check": 5.0,
+        "confirmed_generation_and_render_ready_30s_sampler": 27.411
+      },
+      "full_cruise_and_hover": {
+        "sample_window_seconds": 105.0,
+        "average_fps": 95.26,
+        "p95_frame_ms": 15.71,
+        "p99_frame_ms": 18.05,
+        "worst_frame_ms": 26.37
+      }
+    },
+    {
+      "route": "high_forest",
+      "build": "baseline",
+      "window_backend": "X11",
+      "physical_resolution": [
+        2560,
+        1440
+      ],
+      "initial_load_s": 46.57,
+      "verified_network_leg": {
+        "outbound_seconds": 60.13,
+        "mean_authoritative_velocity_mps": 59.75,
+        "start_authoritative_xyz_m": [
+          -3949.5,
+          175.48,
+          -247.5
+        ],
+        "last_hover_x_m": -349.67,
+        "highest_observed_body_y_m": 179.23
+      },
+      "outbound": {
+        "windows": 12,
+        "fps": 72.98,
+        "worst_5s_fps": 62.75,
+        "median_5s_p95_ms": 18.16,
+        "worst_5s_p95_ms": 21.55,
+        "worst_frame_ms": 46.15,
+        "presented_local_of_25": {
+          "mean": 15.67,
+          "min": 1,
+          "max": 25
+        },
+        "presented_ahead_of_25": {
+          "mean": 0.67,
+          "min": 0,
+          "max": 8
+        },
+        "loaded_local_min_of_25": 25,
+        "loaded_ahead_min_of_25": 25,
+        "median_wanted_minus_loaded_sections": 1643.0,
+        "peak_wanted_minus_loaded_sections": 2755
+      },
+      "outbound_samples": [
+        [5.0, -3666.2, null, null, 62.75, 21.55, 5, 0],
+        [10.01, -3366.2, null, null, 71.09, 18.38, 25, 8],
+        [15.02, -3063.2, null, null, 71.51, 18.33, 9, 0],
+        [20.02, -2763.2, null, null, 72.72, 17.76, 24, 0],
+        [25.03, -2465.2, null, null, 71.95, 18.27, 15, 0],
+        [30.03, -2162.2, null, null, 73.93, 18.56, 6, 0],
+        [35.04, -1862.2, null, null, 74.08, 18.17, 21, 0],
+        [40.05, -1564.2, null, null, 76.91, 16.95, 25, 0],
+        [45.05, -1261.2, null, null, 75.52, 17.33, 25, 0],
+        [50.06, -963.2, null, null, 72.71, 18.16, 11, 0],
+        [55.07, -663.2, null, null, 74.68, 18.06, 21, 0],
+        [60.07, -360.2, null, null, 77.93, 17.89, 1, 0]
+      ],
+      "hover_fps": 103.02,
+      "hover_samples": [
+        [5.01, 94.61, 13.27, 25, 25, null, null, 49.3],
+        [10.01, 94.97, 12.38, 25, 25, null, null, 72.5],
+        [15.01, 93.48, 12.96, 25, 25, null, null, 78.7],
+        [20.02, 108.67, 10.9, 25, 25, null, null, 81.2],
+        [25.02, 108.92, 10.92, 25, 25, null, null, 78.3],
+        [30.03, 107.81, 10.97, 25, 25, null, null, 82.2],
+        [35.04, 109.11, 10.72, 25, 25, null, null, 82.5],
+        [40.04, 106.57, 11.19, 25, 25, null, null, 78.2]
+      ],
+      "process_memory_mib": {
+        "peak_rss": 2684.4,
+        "peak_drm_vram": 5502.6,
+        "highest_swap_sample_at_30s_intervals": 792.7
+      },
+      "target_recovery_s": {
+        "local_all_first_check": 5.01,
+        "ahead_all_first_check": 5.01,
+        "confirmed_generation_and_render_ready_30s_sampler": 26.092
+      },
+      "full_cruise_and_hover": {
+        "sample_window_seconds": 105.0,
+        "average_fps": 84.58,
+        "p95_frame_ms": 17.08,
+        "p99_frame_ms": 20.03,
+        "worst_frame_ms": 39.16
+      },
+      "outbound_gpu_busy_percent": {
+        "samples": 240,
+        "mean": 28.8,
+        "median": 27.0,
+        "p95": 49,
+        "share_above_95": 0.0
+      }
+    },
+    {
+      "route": "canopy_forest",
+      "build": "baseline",
+      "window_backend": "X11",
+      "physical_resolution": [
+        2560,
+        1440
+      ],
+      "initial_load_s": 43.27,
+      "verified_network_leg": {
+        "outbound_seconds": 74.07,
+        "mean_authoritative_velocity_mps": 48.57,
+        "start_authoritative_xyz_m": [
+          -3949.5,
+          93.23,
+          -247.5
+        ],
+        "last_hover_x_m": -349.6,
+        "highest_observed_body_y_m": 159.4,
+        "sampled_body_y_min_max_m": [
+          77.9,
+          145.5
+        ],
+        "sampled_ground_clearance_min_median_max_m": [
+          13.9,
+          28.8,
+          31.7
+        ]
+      },
+      "outbound": {
+        "windows": 14,
+        "fps": 81.44,
+        "worst_5s_fps": 65.59,
+        "median_5s_p95_ms": 17.0,
+        "worst_5s_p95_ms": 20.62,
+        "worst_frame_ms": 29.81,
+        "presented_local_of_25": {
+          "mean": 6.57,
+          "min": 0,
+          "max": 25
+        },
+        "presented_ahead_of_25": {
+          "mean": 0.79,
+          "min": 0,
+          "max": 10
+        },
+        "loaded_local_min_of_25": 25,
+        "loaded_ahead_min_of_25": 10,
+        "median_wanted_minus_loaded_sections": 3630.5,
+        "peak_wanted_minus_loaded_sections": 5228
+      },
+      "outbound_samples": [
+        [5.0, -3770.4, 139.0, 13.9, 65.59, 20.62, 25, 10],
+        [10.01, -3528.0, 127.6, 31.7, 70.26, 18.93, 5, 0],
+        [15.02, -3274.1, 145.5, 30.5, 80.27, 17.38, 20, 0],
+        [20.03, -3019.4, 107.8, 19.1, 82.9, 16.79, 0, 0],
+        [25.03, -2770.1, 112.8, 29.7, 80.08, 17.7, 5, 0],
+        [30.04, -2513.0, 77.9, 18.7, 83.57, 16.65, 9, 0],
+        [35.04, -2277.4, 89.7, 30.5, 87.68, 16.06, 0, 0],
+        [40.05, -2014.0, 86.0, 30.6, 81.3, 17.54, 0, 0],
+        [45.05, -1774.6, 89.8, 20.7, 81.94, 17.86, 6, 0],
+        [50.06, -1541.1, 110.7, 31.2, 84.7, 16.6, 4, 0],
+        [55.06, -1288.3, 97.7, 29.6, 85.17, 16.98, 5, 0],
+        [60.06, -1035.7, 99.7, 27.9, 85.75, 16.85, 6, 1],
+        [65.07, -781.7, 103.0, 27.7, 87.43, 16.39, 4, 0],
+        [70.07, -552.6, 93.8, 23.8, 83.55, 17.02, 3, 0]
+      ],
+      "hover_fps": 73.95,
+      "hover_samples": [
+        [5.0, 103.88, 13.41, 10, 0, false, false, 64.2],
+        [10.01, 86.25, 15.06, 25, 3, true, false, 93.5],
+        [15.01, 69.38, 15.89, 25, 25, true, false, 99],
+        [20.02, 63.27, 17.47, 25, 25, true, false, 99],
+        [25.03, 60.73, 18.24, 25, 25, true, true, 99.0],
+        [30.03, 60.18, 17.92, 25, 25, true, true, 99]
+      ],
+      "process_memory_mib": {
+        "peak_rss": 3535.2,
+        "peak_drm_vram": 9285.0,
+        "highest_swap_sample_at_30s_intervals": 456.8
+      },
+      "target_recovery_s": {
+        "local_all_first_check": 10.014,
+        "ahead_all_first_check": 15.016,
+        "confirmed_generation_and_render_ready_30s_sampler": null,
+        "confirmed_generation_and_render_ready_5s_sampler": 25.03
+      },
+      "full_cruise_and_hover": {
+        "sample_window_seconds": 105.0,
+        "average_fps": 79.31,
+        "p95_frame_ms": 17.75,
+        "p99_frame_ms": 20.7,
+        "worst_frame_ms": 31.67
+      },
+      "outbound_gpu_busy_percent": {
+        "samples": 296,
+        "mean": 42.3,
+        "median": 41.0,
+        "p95": 69,
+        "share_above_95": 0.003
+      }
+    },
+    {
+      "route": "canopy_forest",
+      "build": "final",
+      "window_backend": "X11",
+      "physical_resolution": [
+        2560,
+        1440
+      ],
+      "initial_load_s": 32.88,
+      "verified_network_leg": {
+        "outbound_seconds": 74.85,
+        "mean_authoritative_velocity_mps": 48.02,
+        "start_authoritative_xyz_m": [
+          -3949.5,
+          93.36,
+          -247.5
+        ],
+        "last_hover_x_m": -349.63,
+        "highest_observed_body_y_m": 159.39,
+        "sampled_body_y_min_max_m": [
+          78.5,
+          146.4
+        ],
+        "sampled_ground_clearance_min_median_max_m": [
+          16.2,
+          27.7,
+          31.9
+        ]
+      },
+      "outbound": {
+        "windows": 14,
+        "fps": 61.82,
+        "worst_5s_fps": 57.67,
+        "median_5s_p95_ms": 20.32,
+        "worst_5s_p95_ms": 21.51,
+        "worst_frame_ms": 39.47,
+        "presented_local_of_25": {
+          "mean": 25,
+          "min": 25,
+          "max": 25
+        },
+        "presented_ahead_of_25": {
+          "mean": 24.71,
+          "min": 21,
+          "max": 25
+        },
+        "loaded_local_min_of_25": 25,
+        "loaded_ahead_min_of_25": 21,
+        "median_wanted_minus_loaded_sections": 3040.0,
+        "peak_wanted_minus_loaded_sections": 4722
+      },
+      "outbound_samples": [
+        [5.02, -3743.5, 138.6, 16.2, 63.05, 21.1, 25, 25],
+        [10.02, -3495.4, 128.6, 27.5, 60.53, 20.65, 25, 21],
+        [15.03, -3268.6, 146.4, 28.0, 65.27, 19.96, 25, 25],
+        [20.04, -3023.5, 109.8, 20.7, 63.23, 20.67, 25, 25],
+        [25.05, -2762.0, 112.7, 29.3, 60.28, 20.63, 25, 25],
+        [30.06, -2509.9, 78.5, 19.3, 61.66, 19.94, 25, 25],
+        [35.07, -2276.7, 89.2, 30.0, 63.91, 19.3, 25, 25],
+        [40.08, -2019.7, 82.8, 28.6, 60.52, 20.49, 25, 25],
+        [45.08, -1786.6, 96.0, 26.9, 61.18, 19.98, 25, 25],
+        [50.09, -1566.3, 113.3, 31.9, 62.41, 20.15, 25, 25],
+        [55.1, -1318.8, 95.9, 29.6, 60.72, 19.95, 25, 25],
+        [60.11, -1083.8, 92.2, 18.5, 61.31, 20.49, 25, 25],
+        [65.11, -841.7, 107.3, 31.1, 63.74, 19.75, 25, 25],
+        [70.12, -587.2, 97.8, 27.1, 57.67, 21.51, 25, 25]
+      ],
+      "hover_fps": 76.26,
+      "hover_samples": [
+        [5.01, 71.34, 17.03, 25, 25, true, false, 56.6],
+        [10.01, 75.93, 16.21, 25, 25, true, false, 73.0],
+        [15.02, 81.3, 15.72, 25, 25, true, false, 84.2],
+        [20.03, 82.42, 14.77, 25, 25, true, false, 95.7],
+        [25.04, 70.28, 16.15, 25, 25, true, false, 98.2]
+      ],
+      "process_memory_mib": {
+        "peak_rss": 3314.4,
+        "peak_drm_vram": 8133.9,
+        "highest_swap_sample_at_30s_intervals": 133.8
+      },
+      "target_recovery_s": {
+        "local_all_first_check": 5.004,
+        "ahead_all_first_check": 5.004,
+        "confirmed_generation_and_render_ready_30s_sampler": null,
+        "confirmed_generation_and_render_ready_5s_sampler": null
+      },
+      "full_cruise_and_hover": {
+        "sample_window_seconds": 105.0,
+        "average_fps": 65.47,
+        "p95_frame_ms": 20.06,
+        "p99_frame_ms": 22.19,
+        "worst_frame_ms": 38.68
+      },
+      "outbound_gpu_busy_percent": {
+        "samples": 299,
+        "mean": 63.6,
+        "median": 62,
+        "p95": 94,
+        "share_above_95": 0.043
+      }
+    },
+    {
+      "route": "high_forest",
+      "build": "final",
+      "window_backend": "X11",
+      "physical_resolution": [
+        2560,
+        1440
+      ],
+      "initial_load_s": 35.54,
+      "verified_network_leg": {
+        "outbound_seconds": 60.16,
+        "mean_authoritative_velocity_mps": 59.59,
+        "start_authoritative_xyz_m": [
+          -3949.5,
+          173.93,
+          -247.5
+        ],
+        "last_hover_x_m": -349.26,
+        "highest_observed_body_y_m": 179.72,
+        "sampled_body_y_min_max_m": [
+          179.4,
+          179.4
+        ],
+        "sampled_ground_clearance_min_median_max_m": [
+          76.6,
+          105.9,
+          121.8
+        ]
+      },
+      "outbound": {
+        "windows": 12,
+        "fps": 60.24,
+        "worst_5s_fps": 57.53,
+        "median_5s_p95_ms": 20.45,
+        "worst_5s_p95_ms": 22.61,
+        "worst_frame_ms": 31.8,
+        "presented_local_of_25": {
+          "mean": 25,
+          "min": 25,
+          "max": 25
+        },
+        "presented_ahead_of_25": {
+          "mean": 25,
+          "min": 25,
+          "max": 25
+        },
+        "loaded_local_min_of_25": 25,
+        "loaded_ahead_min_of_25": 25,
+        "median_wanted_minus_loaded_sections": 1678.5,
+        "peak_wanted_minus_loaded_sections": 2520
+      },
+      "outbound_samples": [
+        [5.0, -3671.8, 179.4, 83.1, 60.57, 21.16, 25, 25],
+        [10.01, -3371.8, 179.4, 76.6, 57.53, 22.61, 25, 25],
+        [15.01, -3071.8, 179.4, 90.5, 59.77, 20.2, 25, 25],
+        [20.02, -2771.8, 179.4, 95.9, 59.31, 20.48, 25, 25],
+        [25.03, -2471.8, 179.4, 118.5, 61.25, 20.18, 25, 25],
+        [30.03, -2168.8, 179.4, 121.8, 62.18, 19.84, 25, 25],
+        [35.04, -1868.8, 179.4, 108.8, 61.06, 20.28, 25, 25],
+        [40.05, -1568.8, 179.4, 99.1, 61.68, 20.42, 25, 25],
+        [45.06, -1267.8, 179.4, 111.3, 61.94, 20.13, 25, 25],
+        [50.07, -967.8, 179.4, 105.1, 59.52, 21.1, 25, 25],
+        [55.07, -667.8, 179.4, 106.6, 59.35, 20.77, 25, 25],
+        [60.07, -367.8, 179.4, 121.2, 58.77, 21.03, 25, 25]
+      ],
+      "hover_fps": 114.2,
+      "hover_samples": [
+        [5.0, 84.93, 15.18, 25, 25, true, true, 73.5],
+        [10.01, 118.41, 9.99, 25, 25, true, true, 85.2],
+        [15.01, 117.46, 10.29, 25, 25, true, true, 84.7],
+        [20.01, 118.79, 10.17, 25, 25, true, true, 83],
+        [25.02, 119.42, 10.08, 25, 25, true, true, 84.9],
+        [30.03, 118.01, 10.13, 25, 25, true, true, 78.7],
+        [35.04, 117.66, 10.17, 25, 25, true, true, 82.8],
+        [40.04, 118.91, 10.21, 25, 25, true, true, 81.5]
+      ],
+      "process_memory_mib": {
+        "peak_rss": 3080.3,
+        "peak_drm_vram": 6275.8,
+        "highest_swap_sample_at_30s_intervals": 692.8
+      },
+      "target_recovery_s": {
+        "local_all_first_check": 5.004,
+        "ahead_all_first_check": 5.004,
+        "confirmed_generation_and_render_ready_30s_sampler": 26.049,
+        "confirmed_generation_and_render_ready_5s_sampler": 5.0
+      },
+      "full_cruise_and_hover": {
+        "sample_window_seconds": 105.0,
+        "average_fps": 82.08,
+        "p95_frame_ms": 19.47,
+        "p99_frame_ms": 21.64,
+        "worst_frame_ms": 28.82
+      },
+      "outbound_gpu_busy_percent": {
+        "samples": 240,
+        "mean": 64.4,
+        "median": 68.0,
+        "p95": 95,
+        "share_above_95": 0.062
+      }
+    },
+    {
+      "route": "canopy_forest",
+      "build": "final",
+      "window_backend": "Wayland",
+      "physical_resolution": [
+        2562,
+        1440
+      ],
+      "initial_load_s": 33.44,
+      "verified_network_leg": {
+        "outbound_seconds": 75.52,
+        "mean_authoritative_velocity_mps": 47.62,
+        "start_authoritative_xyz_m": [
+          -3949.5,
+          93.6,
+          -247.5
+        ],
+        "last_hover_x_m": -349.25,
+        "highest_observed_body_y_m": 159.67,
+        "sampled_body_y_min_max_m": [
+          71.7,
+          140.1
+        ],
+        "sampled_ground_clearance_min_median_max_m": [
+          14.0,
+          27.1,
+          34.5
+        ]
+      },
+      "outbound": {
+        "windows": 15,
+        "fps": 61.43,
+        "worst_5s_fps": 56.28,
+        "median_5s_p95_ms": 20.65,
+        "worst_5s_p95_ms": 22.63,
+        "worst_frame_ms": 30.59,
+        "presented_local_of_25": {
+          "mean": 25,
+          "min": 25,
+          "max": 25
+        },
+        "presented_ahead_of_25": {
+          "mean": 24,
+          "min": 10,
+          "max": 25
+        },
+        "loaded_local_min_of_25": 25,
+        "loaded_ahead_min_of_25": 16,
+        "median_wanted_minus_loaded_sections": 2934,
+        "peak_wanted_minus_loaded_sections": 4593
+      },
+      "outbound_samples": [
+        [5.01, -3775.0, 140.1, 15.1, 62.06, 20.92, 25, 25],
+        [10.02, -3537.0, 124.2, 34.5, 56.28, 22.63, 25, 25],
+        [15.03, -3305.3, 133.0, 24.7, 63.09, 20.26, 25, 25],
+        [20.05, -3060.7, 115.9, 27.1, 65.02, 20.31, 25, 25],
+        [25.05, -2807.4, 104.7, 22.2, 59.91, 20.66, 25, 25],
+        [30.07, -2547.9, 71.7, 14.0, 62.04, 20.65, 25, 25],
+        [35.08, -2314.2, 87.2, 28.0, 62.46, 20.34, 25, 25],
+        [40.08, -2059.3, 84.7, 27.4, 57.9, 21.55, 25, 25],
+        [45.09, -1819.8, 100.1, 33.7, 59.54, 21.5, 25, 25],
+        [50.1, -1587.8, 107.2, 25.6, 63.26, 19.72, 25, 25],
+        [55.12, -1346.9, 87.3, 23.1, 62.52, 20.23, 25, 25],
+        [60.13, -1109.5, 101.1, 23.7, 61.16, 20.02, 25, 25],
+        [65.14, -866.0, 109.4, 31.8, 64.6, 19.63, 25, 25],
+        [70.15, -625.7, 105.2, 30.7, 59.34, 20.77, 25, 25],
+        [75.16, -372.9, 89.8, 28.1, 62.29, 21.02, 25, 10]
+      ],
+      "hover_fps": 68.71,
+      "hover_samples": [
+        [5.0, 73.59, 15.97, 25, 25, true, false, 73.5],
+        [10.01, 83.28, 15.63, 25, 25, true, false, 82.9],
+        [15.01, 83.8, 14.63, 25, 25, true, false, 90.0],
+        [20.02, 80.43, 15.39, 25, 25, true, false, 97.7],
+        [25.02, 68.79, 16.55, 25, 25, true, false, 99],
+        [30.03, 65.31, 16.66, 25, 25, true, true, 99],
+        [35.03, 65.36, 16.52, 25, 25, true, true, 99],
+        [40.03, 65.39, 16.45, 25, 25, true, true, 99],
+        [45.03, 65.95, 16.49, 25, 25, true, true, 99],
+        [50.04, 65.95, 16.36, 25, 25, true, true, 99.0],
+        [55.05, 65.86, 16.66, 25, 25, true, true, 99],
+        [60.06, 66.04, 16.45, 25, 25, true, true, 99],
+        [65.06, 65.93, 16.52, 25, 25, true, true, 99],
+        [70.07, 65.75, 16.3, 25, 25, true, true, 99],
+        [75.08, 65.44, 16.43, 25, 25, true, true, 99],
+        [80.09, 65.41, 16.73, 25, 25, true, true, 99],
+        [85.1, 65.49, 16.55, 25, 25, true, true, 99],
+        [90.11, 65.48, 16.45, 25, 25, true, true, 99],
+        [95.12, 65.53, 16.31, 25, 25, true, true, 99],
+        [100.13, 65.49, 16.4, 25, 25, true, true, 99]
+      ],
+      "process_memory_mib": {
+        "peak_rss": 3459.7,
+        "peak_drm_vram": 8139.9,
+        "highest_swap_sample_at_30s_intervals": 576.8
+      },
+      "target_recovery_s": {
+        "local_all_first_check": 5.001,
+        "ahead_all_first_check": 5.001,
+        "confirmed_generation_and_render_ready_30s_sampler": 43.743,
+        "confirmed_generation_and_render_ready_5s_sampler": 30.03
+      },
+      "full_cruise_and_hover": {
+        "sample_window_seconds": 180.0,
+        "average_fps": 65.58,
+        "p95_frame_ms": 19.49,
+        "p99_frame_ms": 22.0,
+        "worst_frame_ms": 110.59
+      },
+      "outbound_gpu_busy_percent": {
+        "samples": 301,
+        "mean": 63.0,
+        "median": 64,
+        "p95": 95,
+        "share_above_95": 0.063
+      }
+    }
+  ],
+  "wayland_size_check": {
+    "desktop": "KDE Plasma Wayland, scale factor 1.5",
+    "requested": [
+      2560,
+      1440
+    ],
+    "received": [
+      2561,
+      1440
+    ],
+    "result": "The strict benchmark rejected the compositor-rounded size before recording gameplay FPS. The separate prolonged Wayland run requests a width evenly divisible by 1.5.",
+    "alternate_request": [
+      2562,
+      1440
+    ],
+    "prolonged_run": "On the native 150% desktop, set width = 2562 in both isolated graphics configurations and TERRA_BENCH_SECONDS=180. This control is separate from the identical-size X11 comparisons."
+  },
+  "separate_generation_microbenchmark": {
+    "config": "standard configuration with a separate seed from the forest flight. Both builds used the development profile.",
+    "sections_per_run": 300,
+    "repeats_in_varied_order": 3,
+    "all_section_hashes": "2b11c1948cc528a6",
+    "baseline": {
+      "median_prepare_s": 1.2178,
+      "median_build_s": 0.2403
+    },
+    "final": {
+      "median_prepare_s": 1.0283,
+      "median_build_s": 0.2052
+    }
+  }
+}
