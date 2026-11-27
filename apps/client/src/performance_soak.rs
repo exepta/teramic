@@ -377,7 +377,7 @@ fn report(world: &mut World, state: &mut Soak, now: Instant) {
     }
 }
 
-fn frame_summary(values: &mut [f64]) -> [f64; 4] {
+pub(super) fn frame_summary(values: &mut [f64]) -> [f64; 4] {
     if values.is_empty() {
         return [0.0; 4];
     }

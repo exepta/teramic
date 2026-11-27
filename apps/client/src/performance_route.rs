@@ -14,6 +14,8 @@ use terra_world::{
     streaming::{ChunkStore, WorldTerrain},
 };
 
+#[path = "performance_route/frontier.rs"]
+mod frontier;
 #[path = "performance_route/walk.rs"]
 mod walk;
 
@@ -28,6 +30,7 @@ const APPROACH_TOLERANCE: f32 = 0.075;
 #[derive(Resource, Default)]
 pub(crate) struct Route {
     walking: Option<walk::Walk>,
+    frontier: Option<frontier::Frontier>,
     speed: f32,
     delay: Duration,
     waiting_at: Option<Instant>,
@@ -44,6 +47,10 @@ pub(crate) struct Route {
 }
 
 impl Route {
+    pub(crate) fn is_frontier(&self) -> bool {
+        self.frontier.is_some()
+    }
+
     pub(crate) fn started(&self) -> bool {
         self.ready_at.is_some() || self.walking.as_ref().is_some_and(walk::Walk::started)
     }
@@ -53,8 +60,10 @@ pub(crate) fn install(app: &mut App) -> Result<(), String> {
     let Some(route) = std::env::var_os("TERRA_SOAK_ROUTE") else {
         return Ok(());
     };
-    if route != "explore" && route != "walk" {
-        return Err("TERRA_SOAK_ROUTE supports explore or walk (real networked movement)".into());
+    if route != "explore" && route != "walk" && route != "frontier" {
+        return Err(
+            "TERRA_SOAK_ROUTE supports explore, walk or frontier (real networked movement)".into(),
+        );
     }
     if !std::env::args().any(|arg| arg == "--smoke-test-benchmark")
         || !std::env::var("TERRA_BENCH_MODE").is_ok_and(|mode| mode == "integrated")
@@ -71,8 +80,16 @@ pub(crate) fn install(app: &mut App) -> Result<(), String> {
         })?;
     let delay = parse_delay(configured_delay.as_deref())?;
     let speed = parse_speed(std::env::var("TERRA_SOAK_ROUTE_SPEED").ok().as_deref())?;
+    let frontier = if route == "frontier" {
+        Some(frontier::Frontier::with_heights(
+            std::env::var("TERRA_FRONTIER_HEIGHTS").ok().as_deref(),
+        )?)
+    } else {
+        None
+    };
     app.insert_resource(Route {
         walking: (route == "walk").then(walk::Walk::default),
+        frontier,
         speed,
         delay,
         ..Default::default()
@@ -151,7 +168,12 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
     if let Some(walking) = route.walking.as_mut() {
         return walking.advance(world);
     }
-    let planned_distance = route.speed * LEG_SECONDS as f32;
+    let frontier = route.frontier.is_some();
+    let planned_distance = if frontier {
+        frontier::DISTANCE
+    } else {
+        route.speed * LEG_SECONDS as f32
+    };
     let session = world
         .get_resource::<ClientSession>()
         .ok_or("Performance route requires the real network client")?;
@@ -183,15 +205,24 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
         // A few one-time terrain probes select a safe cruise plane. The real
         // controller ascends there; neither body nor camera is teleported.
         let terrain = &world.resource::<WorldTerrain>().0;
-        let highest = (0..=12)
+        let probes = if frontier {
+            (planned_distance / 32.0).ceil() as u32
+        } else {
+            12
+        };
+        let highest = (0..=probes)
             .map(|probe| {
                 terrain.surface_height(
-                    f64::from(position.x + planned_distance * probe as f32 / 12.0),
+                    f64::from(position.x + planned_distance * probe as f32 / probes as f32),
                     f64::from(position.z),
                 ) as f32
             })
             .fold(position.y, f32::max);
-        route.cruise_y = (highest + 48.0).min(344.0);
+        route.cruise_y = route
+            .frontier
+            .as_ref()
+            .and_then(|f| f.flight_y(0.0))
+            .unwrap_or_else(|| (highest + 48.0).min(344.0));
         route.approach = ascent_approach(position, route.cruise_y, |from, to| {
             loaded_sweep_clear(world, from, to)
         })
@@ -231,6 +262,13 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
         tracing::info!(origin=?position.to_array(), "Real-input route reached its unobstructed ascent column");
     }
     let approaching = !route.approach.is_empty();
+    if let Some(y) = route
+        .frontier
+        .as_ref()
+        .and_then(|f| f.flight_y(position.x - route.origin.x))
+    {
+        route.cruise_y = y;
+    }
     let height_error = route.cruise_y - position.y;
     if !approaching && route.cruising_at.is_none() && height_error.abs() <= 0.5 {
         route.cruising_at = Some(now);
@@ -246,6 +284,12 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
     }
     let (cycle, phase, distance) = if approaching {
         (0, "canopy-exit", 0.0)
+    } else if let Some(flight) = route.frontier.as_mut() {
+        if route.cruising_at.is_some() {
+            flight.target(position.x - route.origin.x)
+        } else {
+            (0, "climb", 0.0)
+        }
     } else {
         route
             .cruising_at
@@ -293,6 +337,9 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
         );
         route.previous_phase = Some((cycle, phase));
     }
+    if let Some(flight) = route.frontier.as_mut() {
+        flight.sample(world, now, phase, position, confirmed.position[0]);
+    }
     route.maximum_outbound = route.maximum_outbound.max(position.x - route.origin.x);
     if world.resource::<terra_player::PlayerInputBlock>().0 {
         return Err("Gameplay input became blocked during the exploration route".into());
@@ -304,7 +351,12 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
         .iter_mut(world)
     {
         // read_walk_input synchronizes this aim before producing network input.
-        camera.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, -0.22, 0.0);
+        let yaw = if frontier {
+            -std::f32::consts::FRAC_PI_2
+        } else {
+            0.0
+        };
+        camera.rotation = Quat::from_euler(EulerRot::YXZ, yaw, -0.22, 0.0);
     }
     let error = target - position;
     // Slow down at corners so flight acceleration cannot cut across an unchecked cell.
@@ -315,11 +367,20 @@ fn advance(world: &mut World, route: &mut Route) -> Result<(), String> {
     };
     set_route_speed(world, speed);
     let deadzone = if approaching { 0.025 } else { 0.35 };
+    let (side, back) = if frontier {
+        (error.z, -error.x)
+    } else {
+        (error.x, error.z)
+    };
     let desired = [
-        (GameAction::Right, error.x > deadzone),
-        (GameAction::Left, error.x < -deadzone),
-        (GameAction::Backward, error.z > deadzone),
-        (GameAction::Forward, error.z < -deadzone),
+        (
+            GameAction::Sprint,
+            frontier && phase == "outbound" && error.x > 6.0,
+        ),
+        (GameAction::Right, side > deadzone),
+        (GameAction::Left, side < -deadzone),
+        (GameAction::Backward, back > deadzone),
+        (GameAction::Forward, back < -deadzone),
         (GameAction::Jump, error.y > deadzone),
         (GameAction::FlyDown, error.y < -deadzone),
     ];

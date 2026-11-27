@@ -61,6 +61,10 @@ opt-level = 3
 [profile.dev.package.terra-voxel]
 opt-level = 3
 
+# New terrain is generated while the player moves in ordinary development runs.
+[profile.dev.package.terra-world]
+opt-level = 3
+
 # Keep simulation tests responsive while avoiding full game optimizations
 # and debug symbols for every dependency on hosted CI runners.
 [profile.ci]
@@ -74,6 +78,9 @@ opt-level = 1
 opt-level = 1
 
 [profile.ci.package.terra-voxel]
+opt-level = 1
+
+[profile.ci.package.terra-world]
 opt-level = 1
 
 [profile.release]

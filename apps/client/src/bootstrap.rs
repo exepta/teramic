@@ -1209,13 +1209,23 @@ struct BenchmarkWorld<'w, 's> {
     cameras: Query<'w, 's, &'static mut Transform, With<terra_player::TerraCamera>>,
 }
 
+// The flight drives to its exact first elevation after the scene is ready. A
+// short fall during the networked teleport can leave the eye below its requested Y.
+fn frontier_start_reached(eye: Vec3, camera: Vec3, authoritative_body: Vec3) -> bool {
+    (camera - eye).with_y(0.0).length_squared() < 1.0
+        && (authoritative_body - eye).with_y(0.0).length_squared() < 1.0
+        && (camera.y - eye.y).abs() <= 4.0
+}
+
 fn benchmark_scenario_update(
     mut scenario: ResMut<BenchmarkScenario>,
     mut world: BenchmarkWorld,
     route: Option<Res<crate::performance_route::Route>>,
     edits: Option<Res<crate::performance_edits::Edits>>,
 ) {
-    if route.is_some_and(|route| route.started()) || edits.is_some_and(|edits| edits.started()) {
+    if route.as_deref().is_some_and(|route| route.started())
+        || edits.is_some_and(|edits| edits.started())
+    {
         return;
     }
     use terra_network::client::ChatCommand;
@@ -1284,6 +1294,25 @@ fn benchmark_scenario_update(
         }
     }
     let position_ready = scenario.eye.is_none_or(|eye| {
+        if route
+            .as_deref()
+            .is_some_and(crate::performance_route::Route::is_frontier)
+        {
+            let Some(session) = world.session.as_deref() else {
+                return false;
+            };
+            let Some(state) = session.confirmed_state() else {
+                return false;
+            };
+            return !session.teleporting
+                && world.cameras.iter().any(|camera| {
+                    frontier_start_reached(
+                        eye,
+                        camera.translation,
+                        Vec3::from_array(state.position),
+                    )
+                });
+        }
         world
             .cameras
             .iter()
@@ -1684,6 +1713,17 @@ mod tests {
                 physical: [3840, 2124]
             })
         );
+    }
+
+    #[test]
+    fn frontier_start_accepts_a_short_vertical_drop_at_the_acknowledged_teleport() {
+        let eye = Vec3::new(-3949.5, 106.0, -247.5);
+        let camera = eye - Vec3::Y * 2.31;
+        let body = camera - Vec3::Y;
+        assert!(frontier_start_reached(eye, camera, body));
+        assert!(!frontier_start_reached(eye, camera, Vec3::ZERO));
+        assert!(!frontier_start_reached(eye, camera + Vec3::X * 2.0, body));
+        assert!(!frontier_start_reached(eye, camera - Vec3::Y * 3.0, body));
     }
 
     #[test]

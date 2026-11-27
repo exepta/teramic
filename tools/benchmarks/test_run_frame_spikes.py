@@ -1,3 +1,4 @@
+import argparse
 import importlib.util
 import json
 from pathlib import Path
@@ -84,7 +85,36 @@ class FrameSpikeRunnerTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 runner.parse_summary(bad, "placement")
 
-    def test_configs_are_frozen_and_only_placement_gameplay_is_derived(self):
+    def test_frontier_requires_streaming_samples_and_authoritative_arrival(self):
+        route = 'INFO Real-input performance route phase phase="outbound" position=[8, 32, 4]\n'
+        movement = 'INFO Frontier flight progress phase="outbound" surface_probes=25\n'
+        arrival = 'INFO Frontier flight progress phase="settle" authoritative_x=3608.0\n'
+        common = CONFIG + wall(105) + route + MEASURE + "\n"
+        result = runner.parse_summary(common + movement + arrival, "frontier")
+        self.assertEqual(len(result["frontier_samples"]), 2)
+        for incomplete in [movement, arrival, movement + arrival.replace("3608", "308")]:
+            with self.assertRaises(ValueError):
+                runner.parse_summary(common + incomplete, "frontier")
+
+    def test_optional_frontier_altitude_profile_is_validated_and_isolated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile = Path(tmp) / "heights.json"
+            for invalid in ["[]", "[0]", "[1, false]", "[15,345]", "[{},2]", "[NaN,20]"]:
+                profile.write_text(invalid)
+                with self.assertRaises(argparse.ArgumentTypeError):
+                    runner.flight_heights(profile)
+            profile.write_text("[75, 82, 76]")
+            heights = runner.flight_heights(profile)
+            self.assertEqual(heights, "[75,82,76]")
+            stale = {"TERRA_FRONTIER_HEIGHTS": "[330,330]"}
+            for scenario in ["clear", "flight", "frontier"]:
+                env, _ = runner.scenario_environment(stale, scenario, Path(tmp), Path(tmp))
+                self.assertNotIn("TERRA_FRONTIER_HEIGHTS", env)
+            env, _ = runner.scenario_environment(stale, "frontier", Path(tmp), Path(tmp),
+                                                  frontier_camera="8,90,32", frontier_heights=heights)
+            self.assertEqual((env["TERRA_BENCH_CAMERA"], env["TERRA_FRONTIER_HEIGHTS"]), ("8,90,32", heights))
+
+    def test_configs_are_frozen_and_frontier_uses_menu_world_generation(self):
         with tempfile.TemporaryDirectory() as root:
             root = Path(root)
             source, frozen = root / "source", root / "frozen"
@@ -98,6 +128,9 @@ class FrameSpikeRunnerTests(unittest.TestCase):
             self.assertEqual(overrides["server.toml.game_mode"]["effective"], "creative")
             for name in ["world.toml", "graphics.toml"]:
                 self.assertEqual((frozen / name).read_bytes(), (root / "placement" / name).read_bytes())
+            overrides = runner.prepare_case_configs(frozen, root / "frontier", "frontier")
+            self.assertEqual(overrides["world.toml.bounded_world"], {"source": False, "effective": True})
+            self.assertIn("bounded_world = true", (root / "frontier/world.toml").read_text())
             self.assertEqual(runner.config_fingerprints(frozen), fingerprints)
             (source / "world.toml").write_text("seed = 43\n")
             with self.assertRaises(ValueError):

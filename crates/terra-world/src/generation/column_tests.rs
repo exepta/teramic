@@ -4,18 +4,49 @@ use terra_core::WorldConfig;
 use terra_voxel::SectionPos;
 
 #[test]
+fn surface_grid_matches_individual_columns_at_every_cell_including_the_mesh_halo() {
+    for config in [
+        WorldConfig::default(),
+        WorldConfig {
+            landscape_revision: 5,
+            ecology_revision: 15,
+            ..Default::default()
+        },
+    ] {
+        let terrain = TerraGenerator::new(config).unwrap();
+        for (start, size) in [([-17, -1], 18), ([113, -161], 16), ([1023, 1023], 18)] {
+            let grid = terrain.surface_column_grid(start, size);
+            for (i, actual) in grid.iter().enumerate() {
+                let x = (start[0] + (i % size) as i64) as f64 + 0.5;
+                let z = (start[1] + (i / size) as i64) as f64 + 0.5;
+                assert_eq!(*actual, terrain.surface_column(x, z), "({x}, {z})");
+            }
+        }
+    }
+}
+
+#[test]
 fn prepared_columns_survive_runtime_rule_changes_for_new_sections_and_edits() {
     let original = TerraGenerator::new(WorldConfig::default()).unwrap();
     let generator = SectionGenerator::new(original.clone());
     for coordinate in [[8, 37], [-9, -38]] {
         let prepared = generator.prepare_column(coordinate, true).unwrap();
         let mut changed = original.clone();
+        assert!(std::ptr::eq(prepared.config.as_ref(), changed.config()));
         let mut rules = terra_core::WorldRuleSettings::from_world(changed.config());
         rules.game_rules.game_time_speed = 2.0;
         rules.game_rules.sleep_percentage = 50.0;
         rules.seasons.spring_days = 2;
         rules.time.start_hour = 21.0;
         changed.set_world_rules(rules);
+        assert_ne!(
+            changed.config().time.start_hour,
+            original.config().time.start_hour
+        );
+        assert_eq!(
+            prepared.config.time.start_hour,
+            original.config().time.start_hour
+        );
         let updated = SectionGenerator::new(changed);
         for y in [-2, 4] {
             let p = SectionPos::new(coordinate[0], y, coordinate[1]);

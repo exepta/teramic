@@ -169,6 +169,9 @@ const STARTUP_VIEW_RADIUS: u8 = 15; // 31 × 31 = 961 chunk columns, independent
 fn reset_streaming_limit(world: &mut World) {
     let requested = world.resource::<GameConfig>().client.view_distance;
     world
+        .resource_mut::<terra_render::RenderStatus>()
+        .scene_revealed = false;
+    world
         .resource_mut::<terra_world::streaming::StreamingRadiusLimit>()
         .0 = Some(requested.min(STARTUP_VIEW_RADIUS));
     world.resource_mut::<ViewWarmup>().next = Instant::now() + Duration::from_millis(750);
@@ -552,6 +555,9 @@ fn update_loading(world: &mut World) {
         if reveal >= 1.0 {
             world.resource_mut::<SessionJobs>().reveal_elapsed = None;
             world.resource_mut::<SessionInfo>().started = Some(now);
+            world
+                .resource_mut::<terra_render::RenderStatus>()
+                .scene_revealed = true;
             let mut menu = world.resource_mut::<MenuState>();
             menu.page = MenuPage::Playing;
             menu.status.clear();
@@ -717,6 +723,42 @@ mod tests {
     use super::{chunk_counts, reveal_fraction};
     use std::time::Duration;
     use terra_voxel::SectionPos;
+
+    #[test]
+    fn entering_play_enables_streaming_budgets_until_the_next_session() {
+        use super::*;
+        let mut world = World::new();
+        world.init_resource::<GameConfig>();
+        world.init_resource::<MenuState>();
+        world.init_resource::<ClientSession>();
+        world.init_resource::<LoadingProgress>();
+        world.init_resource::<SessionInfo>();
+        world.init_resource::<SessionJobs>();
+        world.init_resource::<Time<Real>>();
+        world.init_resource::<Messages<terra_player::CaptureRequest>>();
+        world.init_resource::<terra_render::RenderStatus>();
+        world.init_resource::<terra_world::streaming::StreamingRadiusLimit>();
+        world.insert_resource(ViewWarmup {
+            next: Instant::now(),
+        });
+        world.resource_mut::<ClientSession>().ready = true;
+        world.resource_mut::<MenuState>().page = MenuPage::Loading;
+        world.resource_mut::<MenuState>().session_active = true;
+        world.resource_mut::<SessionJobs>().reveal_elapsed = Some(Duration::from_secs(2));
+        update_loading(&mut world);
+        assert_eq!(world.resource::<MenuState>().page, MenuPage::Playing);
+        assert!(
+            world
+                .resource::<terra_render::RenderStatus>()
+                .scene_revealed
+        );
+        reset_streaming_limit(&mut world);
+        assert!(
+            !world
+                .resource::<terra_render::RenderStatus>()
+                .scene_revealed
+        );
+    }
 
     #[test]
     fn initial_load_stays_below_one_thousand_columns_then_waits_for_finished_background_rings() {

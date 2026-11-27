@@ -17,6 +17,18 @@ and rejects incomplete scenarios. Run `python3 tools/benchmarks/run-frame-spikes
 for options; the [O07 report](results/o07-frame-spikes-2026-11-05/README.md)
 contains measured results, reproduction settings and interpretation limits.
 
+Add `--scenarios frontier` to run a 3.6 km one-way flight through freshly
+generated terrain at normal Creative sprint speed (60 m/s with default
+controls), followed by a stationary recovery at the destination. This scenario
+uses the seed and visuals from the supplied configuration, menu-style bounded
+world generation and interactive worker counts. Its five-second samples report
+frame times and actual surface presentation in 25 columns around the player
+and 25 columns 64–128 m ahead. For a known low-altitude corridor, provide
+`--frontier-camera=x,y,z` and `--frontier-heights path.json`. The JSON array
+contains evenly spaced absolute flight elevations across the full route.
+The networked controller steers to the interpolated elevation at its actual
+horizontal position.
+
 The [O08 inventory report](results/o08-inventory-opening-2026-11-05/README.md)
 documents first-open and repeated player/chest transitions. The inventory
 benchmark accepts optional `TERRA_BENCH_INVENTORY_ROUNDS=2` and

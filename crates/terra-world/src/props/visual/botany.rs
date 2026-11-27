@@ -224,8 +224,7 @@ fn dead_bush(
                 let next = (edge + 1) % a.len();
                 face(
                     &[a[edge], b[edge], b[next], a[next]],
-                    [0.92, 1.08, 0.97, 0.87][edge]
-                        * (0.97 + index as f32 * 0.015),
+                    [0.92, 1.08, 0.97, 0.87][edge] * (0.97 + index as f32 * 0.015),
                 )?;
             }
         }

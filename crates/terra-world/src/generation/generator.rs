@@ -1,5 +1,6 @@
 use super::{SurfaceColumn, TerrainGenerator, biomes::ClimateSampler, seed::layer_seed};
 use noise::{NoiseFn, Perlin};
+use std::sync::Arc;
 use terra_core::{Config, ConfigError, GENERATOR_VERSION, WorldConfig};
 use terra_voxel::VoxelSample;
 
@@ -21,7 +22,7 @@ pub struct TerraGenerator {
     pub(super) tree_appearances: std::sync::Arc<super::vegetation::TreeAppearanceCache>,
     pub(super) structures: std::sync::Arc<super::structures::StructureCache>,
     pub(super) natural_features: std::sync::Arc<super::natural_features::NaturalCache>,
-    config: WorldConfig,
+    pub(super) config: Arc<WorldConfig>,
     pub(super) hills: Perlin,
     pub(super) mountains: Perlin,
     pub(super) valleys: Perlin,
@@ -52,7 +53,7 @@ impl TerraGenerator {
             planted_appearances: Default::default(),
             structures: Default::default(),
             natural_features: Default::default(),
-            config,
+            config: Arc::new(config),
             hills: Perlin::new(layer_seed(seed, 1)),
             mountains: Perlin::new(layer_seed(seed, 2)),
             valleys: Perlin::new(layer_seed(seed, 3)),
@@ -66,7 +67,7 @@ impl TerraGenerator {
     }
     /// Calendar policy changes retain every seed/noise/cache and terrain contract.
     pub fn set_world_rules(&mut self, rules: terra_core::WorldRuleSettings) {
-        rules.apply(&mut self.config);
+        rules.apply(Arc::make_mut(&mut self.config));
     }
     pub(crate) fn sample_with_column(
         &self,

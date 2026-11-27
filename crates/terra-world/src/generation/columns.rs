@@ -10,7 +10,7 @@ use terra_voxel::{SECTION_SIZE, SectionPos};
 /// Immutable per-column data shared by all vertical worker jobs. No edits are cached here.
 pub struct PreparedColumn {
     pub(crate) fall_columns: Vec<usize>,
-    pub(super) config: WorldConfig,
+    pub(super) config: Arc<WorldConfig>,
     pub(super) coordinate: [i64; 2],
     pub(super) padding: usize,
     pub(super) size: usize,
@@ -43,7 +43,7 @@ mod snow_tests {
         for material in [102, 78, 3] {
             let prepared = PreparedColumn {
                 fall_columns: Vec::new(),
-                config: WorldConfig::default(),
+                config: Arc::default(),
                 coordinate: [-1, -2],
                 padding: 0,
                 size: 0,
@@ -88,6 +88,10 @@ mod snow_tests {
 }
 
 impl PreparedColumn {
+    pub(super) fn matches_terrain(&self, terrain: &super::TerraGenerator) -> bool {
+        Arc::ptr_eq(&self.config, &terrain.config) || self.config.same_terrain(terrain.config())
+    }
+
     #[cfg(all(test, feature = "bevy"))]
     pub(crate) fn with_spruce_for_test(mut self, origin: [i64; 3], seed: u64) -> Self {
         self.trees = vec![super::vegetation::spruce_for_test(origin, seed)];
@@ -556,15 +560,9 @@ impl SectionGenerator {
         let padding = usize::from(with_mesh);
         let size = SECTION_SIZE + padding * 2;
         let start = [origin[0] - padding as i64, 0, origin[2] - padding as i64];
-        let mut columns = Vec::with_capacity(size * size);
-        for z in 0..size {
-            for x in 0..size {
-                columns.push(self.terrain().surface_column(
-                    (start[0] + x as i64) as f64 + 0.5,
-                    (start[2] + z as i64) as f64 + 0.5,
-                ));
-            }
-        }
+        let mut columns = self
+            .terrain()
+            .surface_column_grid([start[0], start[2]], size);
         // Long attached props may probe anchors beyond the meshing halo.
         let structures = self
             .terrain()
@@ -699,7 +697,7 @@ impl SectionGenerator {
                 .filter(|(_, c)| c.falls.iter().any(Option::is_some))
                 .map(|(i, _)| i)
                 .collect(),
-            config: self.terrain().config().clone(),
+            config: Arc::clone(&self.terrain().config),
             coordinate,
             padding,
             size,
@@ -785,7 +783,7 @@ mod cave_streaming_tests {
             column.cave_eye_bounds = cave_eye_bounds(&column.columns, column.padding, column.size);
             assert!(column.cave_eye_bounds.is_some());
             for bounded in [false, true] {
-                column.config.bounded_world = bounded;
+                Arc::make_mut(&mut column.config).bounded_world = bounded;
                 for half_y in -1_200..=1_200 {
                     let eye_y = half_y as f64 * 0.5;
                     assert_eq!(column.cave_view_sections(eye_y), reference(&column, eye_y));

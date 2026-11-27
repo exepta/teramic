@@ -16,9 +16,10 @@ import tomllib
 
 from summarize_soak import ANSI, parse_fields
 
-SCENARIOS = ("clear", "rain", "village", "flight", "inventory", "placement")
+DEFAULT_SCENARIOS = ("clear", "rain", "village", "flight", "inventory", "placement")
+SCENARIOS = (*DEFAULT_SCENARIOS, "frontier")
 SECONDS = {"clear": 24, "rain": 24, "village": 24, "flight": 35,
-           "inventory": 90, "placement": 35}
+           "inventory": 90, "placement": 35, "frontier": 105}
 ROOT = Path(__file__).resolve().parents[2]
 MEASURE = Path(__file__).with_name("measure.py")
 WALL_MARKER = "Native smoke benchmark (CPU wall frames;"
@@ -30,7 +31,7 @@ REMOVED_PREFIXES = ("TERRA_BENCH", "TERRA_SOAK", "TERRA_SCREENSHOT", "TERRA_MEAS
 REMOVED_KEYS = {"TERRA_RENDER_DIAGNOSTICS", "TERRA_SCOPE_TIMELINE",
                 "TERRA_CONFIG_DIR", "TERRA_MENU_CONFIG_DIR", "TERRA_PROFILE_FILE",
                 "TERRA_WORLD_DIR", "TERRA_CAPTURE_DIR", "TERRA_CPU_SCOPES",
-                "TERRA_NATIVE_OS_POINTER"}
+                "TERRA_NATIVE_OS_POINTER", "TERRA_FRONTIER_HEIGHTS"}
 GPU_ENVIRONMENT_KEYS = (
     "WGPU_BACKEND", "WGPU_ADAPTER_NAME", "WGPU_POWER_PREF", "WGPU_DX12_COMPILER",
     "WGPU_GLES_MINOR_VERSION", "VK_ICD_FILENAMES", "VK_DRIVER_FILES",
@@ -102,27 +103,36 @@ def freeze_configs(source, destination):
     return fingerprints
 
 
+def set_root_assignment(path, key, value):
+    lines = path.read_text().splitlines(keepends=True)
+    first_table = next((i for i, line in enumerate(lines) if line.lstrip().startswith("[")), len(lines))
+    existing = next((i for i, line in enumerate(lines[:first_table])
+                     if re.match(rf"^\s*{key}\s*=", line)), None)
+    if existing is None:
+        lines.insert(0, f"{key} = {value}\n")
+    else:
+        lines[existing] = f"{key} = {value}\n"
+    path.write_text("".join(lines))
+
+
 def prepare_case_configs(frozen, destination, scenario):
     shutil.copytree(frozen, destination)
     server_path = Path(destination) / "server.toml"
     server = tomllib.loads(server_path.read_text())
     overrides = {}
-    if scenario == "placement":
-        # The rapid edit validator requires Creative. This explicit gameplay
+    if scenario in {"placement", "frontier"}:
+        # Rapid edits and boosted flight require Creative. This explicit gameplay
         # override changes neither visual quality nor immutable world settings.
-        lines = server_path.read_text().splitlines(keepends=True)
-        first_table = next((index for index, line in enumerate(lines)
-                            if line.lstrip().startswith("[")), len(lines))
-        existing = next((index for index, line in enumerate(lines[:first_table])
-                         if re.match(r"^\s*game_mode\s*=", line)), None)
-        assignment = 'game_mode = "creative"\n'
-        if existing is None:
-            lines.insert(0, assignment)
-        else:
-            lines[existing] = assignment
-        server_path.write_text("".join(lines))
+        set_root_assignment(server_path, "game_mode", '"creative"')
         overrides["server.toml.game_mode"] = {"source": server.get("game_mode", "survival"),
                                                "effective": "creative"}
+    if scenario == "frontier":
+        # Creating a world through the in-game menu activates bounded generation.
+        world_path = Path(destination) / "world.toml"
+        world = tomllib.loads(world_path.read_text())
+        set_root_assignment(world_path, "bounded_world", "true")
+        overrides["world.toml.bounded_world"] = {"source": world.get("bounded_world", False),
+                                                 "effective": True}
     return overrides
 
 
@@ -137,8 +147,19 @@ def point(value):
     return ",".join(format(number, ".12g") for number in values)
 
 
+def flight_heights(path):
+    try:
+        heights = json.loads(Path(path).read_text())
+        if not isinstance(heights, list) or not 2 <= len(heights) <= 4097 or not all(
+                type(y) in (int, float) and -100 <= y <= 344 for y in heights):
+            raise ValueError("expected 2 through 4097 finite elevations in [-100, 344]")
+        return json.dumps(heights, separators=(",", ":"), allow_nan=False)
+    except (OSError, ValueError) as error:
+        raise argparse.ArgumentTypeError(f"Invalid frontier height profile {path}: {error}") from error
+
+
 def scenario_environment(base, scenario, frozen, case, village_camera=None, village_look_at=None,
-                         rain_camera=None, rain_look_at=None):
+                         rain_camera=None, rain_look_at=None, frontier_camera=None, frontier_heights=None):
     environment = {key: value for key, value in base.items()
                    if key not in REMOVED_KEYS and not key.startswith(REMOVED_PREFIXES)}
     overrides = {
@@ -170,6 +191,14 @@ def scenario_environment(base, scenario, frozen, case, village_camera=None, vill
             overrides["TERRA_BENCH_CAMERA"] = village_camera
         if village_look_at is not None:
             overrides["TERRA_BENCH_LOOK_AT"] = village_look_at
+    elif scenario == "frontier":
+        overrides.update(TERRA_SOAK_ROUTE="frontier", TERRA_SOAK_ROUTE_SPEED="20",
+                         TERRA_COMPUTE_THREADS="interactive", TERRA_GAMEPLAY_DIR=str(case),
+                         TERRA_KINGDOM_SAVE_DIR=str(case / "kingdom"))
+        if frontier_camera is not None:
+            overrides["TERRA_BENCH_CAMERA"] = frontier_camera
+        if frontier_heights is not None:
+            overrides["TERRA_FRONTIER_HEIGHTS"] = frontier_heights
     elif scenario == "flight":
         overrides.update(TERRA_SOAK_ROUTE="explore", TERRA_SOAK_ROUTE_SPEED="20")
     elif scenario == "inventory":
@@ -193,6 +222,7 @@ def parse_summary(contents, scenario):
     rapid, routes, configuration, scopes, residents = [], [], [], {}, []
     completed_inventory = False
     adapters = []
+    frontier = []
     for raw in contents.splitlines():
         line = ANSI.sub("", raw).strip()
         if line.startswith("{"):
@@ -219,6 +249,8 @@ def parse_summary(contents, scenario):
             completed_inventory = True
         elif COMPLETE_RAPID in line:
             rapid.append(fields)
+        elif "Frontier flight progress" in line:
+            frontier.append(fields)
         elif "Real-input performance route phase" in line:
             routes.append(fields)
         elif "Grounded performance route progress" in line:
@@ -271,6 +303,13 @@ def parse_summary(contents, scenario):
                 raise ValueError("Rapid edits changed unrelated ground")
             if rapid[0].get("natural_grass_conversion") != natural_grass_conversion:
                 raise ValueError("Rapid grass-decay metadata contradicts the observed materials")
+    if scenario == "frontier":
+        start = next((r["position"][0] for r in routes if r.get("phase") == "outbound"), None)
+        if start is None or not any(p.get("phase") == "settle" and
+                                    abs(p["authoritative_x"] - start - 3600) < 4 for p in frontier):
+            raise ValueError("Frontier flight did not reach and hold the authoritative destination")
+        if not any(p.get("phase") == "outbound" and p.get("surface_probes") == 25 for p in frontier):
+            raise ValueError("Frontier flight produced no moving terrain samples")
     if scenario == "flight" and not any(route.get("phase") == "outbound" and route.get("acknowledged_input", 0) > 0 for route in routes):
         raise ValueError("Flight did not demonstrate real acknowledged outbound movement")
     if scenario == "village" and not any(row.get("residents", 0) > 0 and row.get("residents") == row.get("rendered_residents") for row in residents):
@@ -296,6 +335,7 @@ def parse_summary(contents, scenario):
         "inventory_transitions": transitions,
         "rapid_edits": rapid[0] if rapid else None,
         "real_input_route": routes,
+        **({"frontier_samples": frontier} if frontier else {}),
         "village_residents": residents,
         "process": measurement,
         "resource_timeline": resources,
@@ -330,7 +370,10 @@ def options():
     parser.add_argument("--binary", required=True, type=Path)
     parser.add_argument("--configs", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--scenarios", nargs="+", choices=SCENARIOS, default=list(SCENARIOS))
+    parser.add_argument("--scenarios", nargs="+", choices=SCENARIOS, default=list(DEFAULT_SCENARIOS))
+    parser.add_argument("--frontier-camera", type=point, help="Starting eye x,y,z for the 3.6 km +X flight")
+    parser.add_argument("--frontier-heights", type=flight_heights,
+                        help="JSON file of equally spaced absolute flight elevations across the 3.6 km route")
     parser.add_argument("--village-camera", type=point,
                         help="x,y,z from cargo run -p terra-world --example performance_scene -- --configs DIR")
     parser.add_argument("--village-look-at", type=point)
@@ -387,7 +430,7 @@ def main():
         environment, overrides = scenario_environment(
             os.environ, scenario, case_configs, case,
             arguments.village_camera, arguments.village_look_at,
-            arguments.rain_camera, arguments.rain_look_at)
+            arguments.rain_camera, arguments.rain_look_at, arguments.frontier_camera, arguments.frontier_heights)
         argv = [sys.executable, str(MEASURE), str(binary), "--smoke-test-benchmark"]
         record = {
             "scenario": scenario, "status": "running",

@@ -6,6 +6,7 @@ use super::{
 use crate::blocks::BlockAssets;
 use bevy::{
     ecs::{message::MessageCursor, system::SystemParam},
+    math::DVec2,
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task, futures_lite::future},
 };
@@ -113,6 +114,8 @@ pub(crate) struct MeshQueue {
     focus: Option<[f64; 3]>,
     positions: Vec<SectionPos>,
     queued: HashSet<SectionPos>,
+    priority_dirty: bool,
+    motion: FlightMotion,
     dirty: bool,
     selection_dirty: bool,
     initial_ready: bool,
@@ -128,11 +131,66 @@ struct SelectionSweep {
     full_selection: bool,
 }
 
+#[derive(Default)]
+struct FlightMotion {
+    origin: Option<[f64; 3]>,
+    seconds: f64,
+    heading: Option<DVec2>,
+}
+
+impl FlightMotion {
+    fn update(&mut self, focus: [f64; 3], dt: f64) -> bool {
+        let origin = *self.origin.get_or_insert(focus);
+        let delta = DVec2::new(focus[0] - origin[0], focus[2] - origin[2]);
+        self.seconds += dt;
+        // Average over several ticks. A paused frame or a teleport provides
+        // no reliable heading for streaming the intervening terrain.
+        let discontinuity = dt <= 0. || dt > 0.30 || delta.length_squared() > 32.0_f64.powi(2);
+        if !discontinuity && self.seconds < 0.12 {
+            return false;
+        }
+        let speed = delta.length() / self.seconds.max(f64::EPSILON);
+        let next = (!discontinuity && (16.0..=100.0).contains(&speed)).then(|| delta.normalize());
+        self.origin = Some(focus);
+        self.seconds = 0.;
+        if self.heading.zip(next).is_some_and(|(a, b)| a.dot(b) > 0.98) || self.heading == next {
+            return false;
+        }
+        self.heading = next;
+        true
+    }
+}
+
+fn flight_surface_rank(
+    p: SectionPos,
+    focus: [f64; 3],
+    heading: DVec2,
+    surface: impl FnOnce() -> Option<f64>,
+) -> u8 {
+    let delta = DVec2::new(
+        p.x as f64 * 16. + 8. - focus[0],
+        p.z as f64 * 16. + 8. - focus[2],
+    );
+    let local = delta.length_squared() <= 32.0_f64.powi(2);
+    if !local
+        && (!(0.0..=80.0).contains(&delta.dot(heading)) || delta.perp_dot(heading).abs() > 40.)
+    {
+        return 2;
+    }
+    if surface().is_some_and(|y| {
+        ((y - 0.5).floor() as i64).div_euclid(16) == p.y
+            || local && distance_squared(p, focus) <= 16.0_f64.powi(2)
+    }) {
+        return u8::from(!local);
+    }
+    2
+}
+
 impl MeshQueue {
     /// Large woodlands can fill all composition slots with multi-megabyte jobs
     /// while the render thread is still publishing their predecessors. Retain
     /// full throughput on the loading screen and whenever the frame has room.
-    fn play_job_limit(&mut self, configured: usize, frame_seconds: f32, fps_limit: u16) -> usize {
+    fn refinement_limit(&mut self, configured: usize, frame_seconds: f32, fps_limit: u16) -> usize {
         if !self.initial_ready || frame_seconds <= 0.0 {
             self.frame_load = 1.0;
             self.pace_workers = false;
@@ -169,6 +227,7 @@ impl MeshQueue {
     fn enqueue(&mut self, position: SectionPos) -> bool {
         if self.queued.insert(position) {
             self.positions.push(position);
+            self.priority_dirty = true;
             true
         } else {
             false
@@ -251,6 +310,7 @@ impl MeshQueue {
         // belong to the previous world.
         if terrain_changed {
             self.initial_ready = false;
+            self.motion = FlightMotion::default();
             self.sweep = None;
             self.positions.clear();
             self.queued.clear();
@@ -267,20 +327,50 @@ impl MeshQueue {
         });
     }
 
-    fn prioritize_edits(
+    fn prioritize_work(
         &mut self,
         focus: [f64; 3],
         journal: &EditJournal,
         rendered: &RenderedSections,
+        chunks: &ChunkStore,
+        cache: &GeometryCache,
     ) {
         let _scope = terra_core::profiling::ScopeTimer::new("terrain.prioritize_queue");
-        self.prioritize_cached(focus, |p| interactive_edit(p, journal, rendered));
+        let heading = self.motion.heading;
+        self.prioritize_cached(focus, |p| {
+            let priority = MeshPriority::for_section(p, journal, rendered);
+            let mut rank = 2;
+            if priority == MeshPriority::Missing
+                && let Some(heading) = heading
+            {
+                rank = flight_surface_rank(p, focus, heading, || {
+                    let mesh = chunks
+                        .loaded
+                        .get(&p)?
+                        .mesh
+                        .as_ref()
+                        .or_else(|| cache.0.get(&p).map(|c| c.geometry.as_ref()))?;
+                    if mesh.faces.is_empty() && mesh.segments.is_empty() {
+                        return None;
+                    }
+                    chunks
+                        .surface_column_at(p.x * 16 + 8, p.z * 16 + 8)
+                        .map(|c| c.height)
+                });
+            }
+            (priority, rank)
+        });
+        self.priority_dirty = false;
     }
 
-    fn prioritize_cached(&mut self, focus: [f64; 3], mut edited: impl FnMut(SectionPos) -> bool) {
+    fn prioritize_cached<K: Ord>(
+        &mut self,
+        focus: [f64; 3],
+        mut priority: impl FnMut(SectionPos) -> K,
+    ) {
         self.positions.sort_by_cached_key(|p| {
             std::cmp::Reverse((
-                !edited(*p),
+                priority(*p),
                 distance_squared(*p, focus) as u64,
                 p.y,
                 p.z,
@@ -289,15 +379,56 @@ impl MeshQueue {
         });
     }
 
-    fn pop_for_dispatch(&mut self, dispatched: usize, elapsed: Duration) -> Option<SectionPos> {
-        // Initial loading fills every worker. During play, finish one useful
-        // handoff even if selection or its indivisible snapshot exceeds the cap.
-        if self.initial_ready && dispatched != 0 && elapsed >= Duration::from_millis(2) {
+    fn pop_for_dispatch(&mut self, inspected: usize, elapsed: Duration) -> Option<SectionPos> {
+        // Even a candidate that needs no worker can spend time capturing models.
+        // Resume the ordered queue next frame once the preparation budget is spent.
+        // Bound a loading-screen frame containing thousands of empty snapshots too.
+        if inspected >= 128
+            || self.initial_ready && inspected != 0 && elapsed >= Duration::from_millis(2)
+        {
             return None;
         }
         let position = self.positions.pop()?;
         self.queued.remove(&position);
         Some(position)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub(super) enum MeshPriority {
+    Edit,
+    Missing,
+    Resident,
+}
+
+impl MeshPriority {
+    pub(super) fn for_section(
+        position: SectionPos,
+        journal: &EditJournal,
+        rendered: &RenderedSections,
+    ) -> Self {
+        let presentation = rendered.presentations.get(&position);
+        if journal.revision(position) != presentation.map_or(0, |p| p.block_revision) {
+            Self::Edit
+        } else if rendered.sections.contains_key(&position)
+            || presentation.is_some_and(|p| {
+                p.empty_mesh_epoch
+                    .is_some_and(|epoch| epoch == journal.mesh_epoch(position))
+            })
+        {
+            Self::Resident
+        } else {
+            // Includes nonempty terrain becoming visible again after portal culling.
+            Self::Missing
+        }
+    }
+
+    fn job_limit(self, configured: usize, refinement_limit: usize) -> usize {
+        match self {
+            Self::Edit => configured.saturating_add(1),
+            Self::Missing => configured,
+            Self::Resident => refinement_limit,
+        }
     }
 }
 
@@ -1175,23 +1306,27 @@ pub(crate) fn dispatch_meshes(
         || edits_applied;
     // Fixtures and exceptional store mutations still use the conservative path.
     let arrival_scan = (world.chunks.is_changed() && !notified) || world.terrain.is_changed();
-    let initial_ready = !queue.initial_ready
-        && status.ready
-        && !world.rendered.sections.is_empty()
-        && world.generation.as_ref().is_none_or(|generation| {
-            generation.status == terra_world::streaming::GenerationStatus::Ready
-        })
-        && MeshQueue::uploads_consumed(&world.chunks, |position| {
-            world
-                .visibility
-                .as_ref()
-                .is_some_and(|visibility| visibility.hidden(position))
-        });
+    // The menu can reveal a complete first presentation while LOD swaps are
+    // pending. A player flying immediately may never drain the entire queue.
+    let initial_ready = status.scene_revealed
+        || (!queue.initial_ready
+            && status.ready
+            && !world.rendered.sections.is_empty()
+            && world.generation.as_ref().is_none_or(|generation| {
+                generation.status == terra_world::streaming::GenerationStatus::Ready
+            })
+            && MeshQueue::uploads_consumed(&world.chunks, |position| {
+                world
+                    .visibility
+                    .as_ref()
+                    .is_some_and(|visibility| visibility.hidden(position))
+            }));
     // Clear state from the previous world before recording this world's first
     // publications. Otherwise a full worker pool can permanently lose an edit.
     queue.update_initial_ready(world.terrain.is_changed(), initial_ready);
-    let normal_job_limit = queue.play_job_limit(
-        world.config.client.max_mesh_jobs,
+    let configured = world.config.client.max_mesh_jobs;
+    let refinement_limit = queue.refinement_limit(
+        configured,
         world.time.as_ref().map_or(0., |time| time.delta_secs()),
         world
             .graphics
@@ -1203,6 +1338,8 @@ pub(crate) fn dispatch_meshes(
     for &position in &published {
         if interactive_edit(position, &world.journal, &world.rendered) {
             queue.enqueue(position);
+            // A resident replacement may already be queued at its old priority.
+            queue.priority_dirty = true;
         }
     }
     queue.arrivals.extend(published);
@@ -1242,6 +1379,10 @@ pub(crate) fn dispatch_meshes(
     let focus_changed = queue
         .focus
         .is_none_or(|previous| focus_bucket(previous) != focus_bucket(world.focus.0));
+    let heading_changed = queue.motion.update(
+        world.focus.0,
+        world.time.as_ref().map_or(0., |t| t.delta_secs_f64()),
+    );
     let invalidation_flags = [
         world.chunks.is_changed(),
         world.journal.is_changed(),
@@ -1287,13 +1428,13 @@ pub(crate) fn dispatch_meshes(
     {
         return;
     }
-    let dispatch_started = Instant::now();
     queue.selection_dirty |= visibility_changed
         || focus_changed
         || world.config.is_changed()
         || world.terrain.is_changed()
         || assets.is_changed();
     queue.dirty |= queue.selection_dirty || world.chunks.is_changed() || notified;
+    queue.priority_dirty |= focus_changed || heading_changed;
     queue.focus = Some(world.focus.0);
     // Selection skips roots while they fade. Recheck those roots when they
     // finish without rescanning every unrelated loaded section.
@@ -1301,9 +1442,6 @@ pub(crate) fn dispatch_meshes(
         if world.chunks.loaded.contains_key(&position) {
             queue.enqueue(position);
         }
-    }
-    if animation_finished && !queue.dirty {
-        queue.prioritize_edits(world.focus.0, &world.journal, &world.rendered);
     }
     // Retain invalidations while all workers are occupied. Moving the camera
     // alone cannot change column revisions, submerged roofs or coastal halos.
@@ -1362,11 +1500,14 @@ pub(crate) fn dispatch_meshes(
             }
         }
     }
-    let edit_waiting = queue
-        .positions
-        .iter()
-        .any(|&p| interactive_edit(p, &world.journal, &world.rendered));
-    let job_limit = normal_job_limit.saturating_add(usize::from(edit_waiting));
+    // A full set of paced LOD jobs must still let us inspect fresh publications
+    // and use the remaining configured slots for terrain that has no mesh.
+    let edit_reserve = jobs.0.len() == configured
+        && queue
+            .positions
+            .iter()
+            .any(|&p| interactive_edit(p, &world.journal, &world.rendered));
+    let job_limit = configured.saturating_add(usize::from(edit_reserve));
     if let Some(templates) = assets
         .templates
         .as_ref()
@@ -1428,14 +1569,13 @@ pub(crate) fn dispatch_meshes(
             .blocks
             .values()
             .any(|block| !block.model.is_empty());
-        let mut added = false;
         // Failed/revision-stale uploads are local retries, never a reason to
         // reselect every section. Dispatch below validates the current epochs.
         for position in std::mem::take(&mut jobs.1) {
             if cache.5.pending(position) {
                 queue.arrivals.insert(position);
             } else if needs_mesh(position, true, &world, &jobs, &cache) {
-                added |= queue.enqueue(position);
+                queue.enqueue(position);
             }
         }
         if !queue.initial_ready && queue.has_selection_work() {
@@ -1454,7 +1594,7 @@ pub(crate) fn dispatch_meshes(
                 if cache.5.pending(position) {
                     queue.arrivals.insert(position);
                 } else if needs_mesh(position, true, &world, &jobs, &cache) {
-                    added |= queue.enqueue(position);
+                    queue.enqueue(position);
                 }
             }
             queue.dirty = false;
@@ -1477,7 +1617,7 @@ pub(crate) fn dispatch_meshes(
                     }
                     queue.arrivals.remove(&position);
                     if needs_mesh(position, false, &world, &jobs, &cache) {
-                        added |= queue.enqueue(position);
+                        queue.enqueue(position);
                     }
                 }
             }
@@ -1502,31 +1642,40 @@ pub(crate) fn dispatch_meshes(
                     if cache.5.pending(position) {
                         queue.arrivals.insert(position);
                     } else if needs_mesh(position, full_selection, &world, &jobs, &cache) {
-                        added |= queue.enqueue(position);
+                        queue.enqueue(position);
                     }
                 }
                 queue.finish_sweep();
             }
             queue.dirty = false;
         }
-        if added || focus_changed || edit_waiting {
-            queue.prioritize_edits(world.focus.0, &world.journal, &world.rendered);
+        if queue.priority_dirty {
+            queue.prioritize_work(
+                world.focus.0,
+                &world.journal,
+                &world.rendered,
+                &world.chunks,
+                &cache,
+            );
         }
         let _preparation_scope = terra_core::profiling::ScopeTimer::new("terrain.prepare_jobs");
-        let available = job_limit.saturating_sub(jobs.0.len());
-        let mut dispatched = 0;
+        let preparation_started = Instant::now();
+        let mut inspected = 0;
         let mut exact_shadow_materials = None;
-        for _ in 0..available {
-            let Some(position) = queue.pop_for_dispatch(dispatched, dispatch_started.elapsed())
+        while jobs.0.len() < job_limit {
+            let Some(&next) = queue.positions.last() else {
+                break;
+            };
+            let priority = MeshPriority::for_section(next, &world.journal, &world.rendered);
+            if jobs.0.len() >= priority.job_limit(configured, refinement_limit) {
+                // Leave the next candidate in order until it has a slot.
+                break;
+            }
+            let Some(position) = queue.pop_for_dispatch(inspected, preparation_started.elapsed())
             else {
                 break;
             };
-            if jobs.0.len() >= normal_job_limit
-                && !interactive_edit(position, &world.journal, &world.rendered)
-            {
-                queue.enqueue(position);
-                break;
-            }
+            inspected += 1;
             if jobs.0.contains_key(&position) {
                 continue;
             }
@@ -1567,7 +1716,7 @@ pub(crate) fn dispatch_meshes(
             if section.mesh_epoch != world.journal.mesh_epoch(position) {
                 continue;
             }
-            let models = if has_models && section.mesh.is_some() {
+            let models = if has_models && section.mesh.is_some() && !section.data.is_empty() {
                 let _scope = terra_core::profiling::ScopeTimer::new("terrain.custom_snapshot");
                 match capture_models(&section.data, templates, &world.chunks, &world.journal) {
                     Ok(mut models) => {
@@ -1945,7 +2094,6 @@ pub(crate) fn dispatch_meshes(
                     task,
                 },
             );
-            dispatched += 1;
         }
     }
     status.pending_jobs = jobs.0.len();
@@ -1987,24 +2135,127 @@ mod dispatch_tests {
     use super::*;
 
     #[test]
+    fn flight_heading_follows_reversals_and_clears_on_stop_walk_or_teleport() {
+        let mut motion = FlightMotion::default();
+        assert!(!motion.update([-8., 100., -8.], 0.12));
+        assert!(motion.update([-16., 100., -8.], 0.12));
+        assert_eq!(motion.heading, Some(DVec2::NEG_X));
+        assert!(motion.update([-8., 100., -8.], 0.12));
+        assert_eq!(motion.heading, Some(DVec2::X));
+        assert!(motion.update([-8., 100., -8.], 0.12));
+        assert_eq!(motion.heading, None);
+        assert!(!motion.update([-7.5, 100., -8.], 0.12));
+        assert!(motion.update([-15.5, 100., -8.], 0.12));
+        assert!(motion.update([256., 100., -8.], 0.016));
+        assert_eq!(motion.heading, None);
+    }
+
+    #[test]
+    fn flight_corridor_serves_local_ground_and_visible_forward_surfaces_in_both_directions() {
+        let focus = [-8., 100., -8.];
+        let p = |x, y, z| SectionPos::new(x, y, z);
+        let rank = |position, heading| flight_surface_rank(position, focus, heading, || Some(8.5));
+        assert_eq!(rank(p(-1, 0, -1), DVec2::NEG_X), 0);
+        assert_eq!(rank(p(-5, 0, -1), DVec2::NEG_X), 1);
+        assert_eq!(rank(p(-5, 0, -1), DVec2::X), 2);
+        assert_eq!(rank(p(3, 0, -1), DVec2::X), 1);
+        assert_eq!(rank(p(-5, 0, 4), DVec2::NEG_X), 2);
+        assert_eq!(rank(p(-5, 12, -1), DVec2::NEG_X), 2);
+        assert_eq!(rank(p(-5, -4, -1), DVec2::NEG_X), 2);
+        assert_eq!(
+            flight_surface_rank(p(-5, 0, -1), focus, DVec2::NEG_X, || None),
+            2
+        );
+    }
+
+    #[test]
+    fn empty_publications_do_not_spend_the_only_worker_slot() {
+        use terra_voxel::meshing::BlockFace;
+        use terra_world::streaming::LoadedSection;
+        let mut config = terra_core::GameConfig::default();
+        config.client.max_mesh_jobs = 1;
+        let mut app = App::new();
+        let mut assets = BlockAssets::default();
+        assets.templates = Some(Arc::default());
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<ChunkStore>()
+            .init_resource::<RenderedSections>()
+            .init_resource::<GeometryCache>()
+            .init_resource::<RenderJobs>()
+            .init_resource::<RenderStatus>()
+            .init_resource::<EditJournal>()
+            .insert_resource(assets)
+            .insert_resource(ChunkFocus([8.; 3]))
+            .insert_resource(WorldTerrain(
+                terra_world::TerraGenerator::new(Default::default()).unwrap(),
+            ))
+            .insert_resource(config)
+            .add_systems(Update, dispatch_meshes);
+        let visible = SectionPos::new(33, 0, 0);
+        for x in 0..=visible.x {
+            let position = SectionPos::new(x, 0, 0);
+            let mut data = terra_voxel::BlockSection::empty(position).unwrap();
+            let mut geometry = BlockMesh::default();
+            if position == visible {
+                data.set_block([0; 3], 3).unwrap();
+                geometry.faces.push(BlockFace {
+                    minimum: [0; 3],
+                    width: 1,
+                    height: 1,
+                    u_axis: 0,
+                    v_axis: 2,
+                    side: 3,
+                    material: 3,
+                    edge_mask: 15,
+                    occupied_neighbor: false,
+                });
+            }
+            app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+                position,
+                LoadedSection {
+                    data,
+                    mesh: Some(geometry),
+                    mesh_epoch: 0,
+                    water_epoch: 0,
+                    water: None,
+                    props: vec![],
+                },
+            );
+        }
+        app.update();
+        let rendered = app.world().resource::<RenderedSections>();
+        let chunks = app.world().resource::<ChunkStore>();
+        for x in 0..visible.x {
+            let p = SectionPos::new(x, 0, 0);
+            assert!(rendered.section_presented(p, chunks.loaded.get(&p), None));
+        }
+        assert!(
+            app.world()
+                .resource::<RenderJobs>()
+                .0
+                .contains_key(&visible)
+        );
+    }
+
+    #[test]
     fn streaming_concurrency_tracks_frame_pressure_and_respects_lower_player_limits() {
         let mut queue = MeshQueue::default();
-        assert_eq!(queue.play_job_limit(8, 0.10, 0), 8);
+        assert_eq!(queue.refinement_limit(8, 0.10, 0), 8);
         queue.initial_ready = true;
         for _ in 0..16 {
-            queue.play_job_limit(8, 0.025, 0);
+            queue.refinement_limit(8, 0.025, 0);
         }
-        assert_eq!(queue.play_job_limit(8, 1.0 / 60.0, 0), 3);
-        assert_eq!(queue.play_job_limit(2, 1.0 / 60.0, 0), 2);
+        assert_eq!(queue.refinement_limit(8, 1.0 / 60.0, 0), 3);
+        assert_eq!(queue.refinement_limit(2, 1.0 / 60.0, 0), 2);
         for _ in 0..48 {
-            queue.play_job_limit(8, 0.010, 0);
+            queue.refinement_limit(8, 0.010, 0);
         }
-        assert_eq!(queue.play_job_limit(8, 0.010, 0), 8);
+        assert_eq!(queue.refinement_limit(8, 0.010, 0), 8);
         for _ in 0..48 {
-            assert_eq!(queue.play_job_limit(8, 1.0 / 30.0, 30), 8);
+            assert_eq!(queue.refinement_limit(8, 1.0 / 30.0, 30), 8);
         }
         queue.initial_ready = false;
-        assert_eq!(queue.play_job_limit(8, 0.1, 60), 8);
+        assert_eq!(queue.refinement_limit(8, 0.1, 60), 8);
     }
 
     #[test]
@@ -2118,7 +2369,11 @@ mod dispatch_tests {
         let mut lookups = 0;
         queue.prioritize_cached(focus, |p| {
             lookups += 1;
-            edited(p)
+            if edited(p) {
+                MeshPriority::Edit
+            } else {
+                MeshPriority::Resident
+            }
         });
         assert_eq!(queue.positions, expected);
         assert!(
@@ -2261,7 +2516,13 @@ mod dispatch_tests {
         for position in [near, far, halo] {
             queue.enqueue(position);
         }
-        queue.prioritize_edits([-8.0, 168.0, -8.0], &journal, &rendered);
+        queue.prioritize_work(
+            [-8.0, 168.0, -8.0],
+            &journal,
+            &rendered,
+            &ChunkStore::default(),
+            &GeometryCache::default(),
+        );
         assert_eq!(queue.pop_for_dispatch(0, Duration::ZERO), Some(far));
         assert_eq!(queue.pop_for_dispatch(1, Duration::ZERO), Some(near));
         assert_eq!(queue.pop_for_dispatch(2, Duration::ZERO), Some(halo));
@@ -2269,6 +2530,62 @@ mod dispatch_tests {
         assert!(
             !interactive_edit(far, &journal, &rendered),
             "priority ends after the actual revision is visible"
+        );
+    }
+
+    #[test]
+    fn fresh_and_newly_exposed_terrain_can_use_free_slots_under_frame_pressure() {
+        let resident = SectionPos::default();
+        let empty = SectionPos::new(1, 0, 0);
+        let exposed = SectionPos::new(2, 0, 0);
+        let arrival = SectionPos::new(3, 0, 0);
+        let edit = SectionPos::new(4, 0, 0);
+        let mut rendered = RenderedSections::default();
+        let mut journal = EditJournal::default();
+        journal
+            .record(edit.global_block([8; 3]).unwrap(), 3)
+            .unwrap();
+        rendered.sections.insert(
+            resident,
+            super::super::RenderedSection {
+                folded_leaves: None,
+                micro_detail: true,
+                appearance_epoch: 0,
+                entity: Entity::PLACEHOLDER,
+                meshes: Vec::new(),
+                mesh_epoch: 0,
+                detail_level: DetailLevel::Near,
+            },
+        );
+        rendered.record_presentation(empty, 0, Some(0));
+        rendered.record_presentation(exposed, 0, None);
+        let mut queue = MeshQueue::default();
+        for p in [arrival, empty, edit, resident, exposed] {
+            queue.enqueue(p);
+        }
+        queue.prioritize_work(
+            [8.; 3],
+            &journal,
+            &rendered,
+            &ChunkStore::default(),
+            &GeometryCache::default(),
+        );
+        let mut order = Vec::new();
+        while let Some(p) = queue.pop_for_dispatch(0, Duration::ZERO) {
+            order.push((
+                p,
+                MeshPriority::for_section(p, &journal, &rendered).job_limit(8, 3),
+            ));
+        }
+        assert_eq!(
+            order,
+            [
+                (edit, 9),
+                (exposed, 8),
+                (arrival, 8),
+                (resident, 3),
+                (empty, 3)
+            ]
         );
     }
 
@@ -2463,7 +2780,8 @@ mod dispatch_tests {
             positions: vec![far, middle, near],
             ..default()
         };
-        // Selection or rejected candidates cannot prevent the first useful job.
+        // Always inspect one. Even if it proves stale, the work spent on it
+        // counts towards the deadline and the rest of the queue survives.
         assert_eq!(
             queue.pop_for_dispatch(0, Duration::from_millis(9)),
             Some(near)
@@ -2493,6 +2811,22 @@ mod dispatch_tests {
             );
         }
         assert!(queue.positions.is_empty());
+    }
+
+    #[test]
+    fn discarded_startup_candidates_do_not_drain_an_unbounded_backlog_in_one_frame() {
+        let mut queue = MeshQueue::default();
+        for x in (0..140).rev() {
+            queue.enqueue(SectionPos::new(x, 0, 0));
+        }
+        for inspected in 0..128 {
+            assert!(queue.pop_for_dispatch(inspected, Duration::ZERO).is_some());
+        }
+        assert_eq!(queue.pop_for_dispatch(128, Duration::ZERO), None);
+        assert_eq!(
+            queue.pop_for_dispatch(0, Duration::ZERO),
+            Some(SectionPos::new(128, 0, 0))
+        );
     }
 }
 

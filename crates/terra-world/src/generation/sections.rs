@@ -26,6 +26,48 @@ mod loaded_remesh_tests {
     use super::*;
 
     #[test]
+    fn terrain_fill_matches_per_voxel_sampling_across_sky_plant_water_and_bedrock_limits() {
+        const SIZE: usize = 6;
+        for (revision, bounded_world) in [(2, true), (10, true), (10, false)] {
+            let generator = SectionGenerator::new(
+                TerraGenerator::new(terra_core::WorldConfig {
+                    cave_structure_revision: revision,
+                    bounded_world,
+                    ..Default::default()
+                })
+                .unwrap(),
+            );
+            let mut columns = Vec::new();
+            for z in 0..SIZE {
+                for x in 0..SIZE {
+                    let mut column = generator
+                        .terrain
+                        .surface_column(x as f64 - 16.5, z as f64 - 0.5);
+                    column.height = if z == 0 { -142.0 } else { z as f64 - 3.5 };
+                    column.seagrass_height = if x == 1 { 7 } else { 0 };
+                    column.water_level = (x == 2 || x == 3).then_some(8.25);
+                    column.ocean.ice_depth = if x == 3 { 3 } else { 0 };
+                    column.lava_level = (x == 4).then_some(12.75);
+                    columns.push(column);
+                }
+            }
+            for bottom in [-132, -124, -7, -1, 5, 11, 17] {
+                let start = [-17, bottom, -1];
+                let blocks = generator.terrain_voxels(start, SIZE, &columns);
+                for (i, &material) in blocks.iter().enumerate() {
+                    let (x, y, z) = (i % SIZE, i / SIZE % SIZE, i / (SIZE * SIZE));
+                    let p = [start[0] + x as i64, bottom + y as i64, start[2] + z as i64];
+                    assert_eq!(
+                        material,
+                        generator.terrain_block(p, columns[x + SIZE * z]),
+                        "{p:?}, revision {revision}, bounded {bounded_world}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn a_connector_cutting_a_mineral_root_removes_the_entire_generated_spike() {
         use super::super::CaveEcology;
         let terrain = TerraGenerator::new(terra_core::WorldConfig {
@@ -333,7 +375,7 @@ impl SectionGenerator {
     ) -> Result<GeneratedSection, SectionGenerationError> {
         let position = data.position();
         if column.coordinate != [position.x, position.z]
-            || !column.config.same_terrain(self.terrain.config())
+            || !column.matches_terrain(&self.terrain)
             || column.padding != 1
         {
             return Err(SectionGenerationError::ColumnMismatch);
@@ -487,9 +529,7 @@ impl SectionGenerator {
         edits: &BlockOverrides,
         column: &PreparedColumn,
     ) -> Result<GeneratedSection, SectionGenerationError> {
-        if column.coordinate != [position.x, position.z]
-            || !column.config.same_terrain(self.terrain.config())
-        {
+        if column.coordinate != [position.x, position.z] || !column.matches_terrain(&self.terrain) {
             return Err(SectionGenerationError::ColumnMismatch);
         }
         let origin = position.origin()?;
@@ -532,20 +572,7 @@ impl SectionGenerator {
                 surface_sections: column.surface_sections,
             });
         }
-        let mut padded = vec![0; size * size * size];
-        for z in 0..size {
-            for y in 0..size {
-                for x in 0..size {
-                    let global = [
-                        start[0] + x as i64,
-                        start[1] + y as i64,
-                        start[2] + z as i64,
-                    ];
-                    padded[x + size * (y + size * z)] =
-                        self.terrain_block(global, columns[x + z * size]);
-                }
-            }
-        }
+        let mut padded = self.terrain_voxels(start, size, columns);
         self.terrain.stamp_ores(start, size, columns, &mut padded);
         for patch in &column.natural_features {
             patch.stamp(start, size, &mut padded);
@@ -1171,6 +1198,39 @@ impl SectionGenerator {
                 self.segment_terrain_block(p, material, column_at([p[0], p[2]]))
             }))
         })
+    }
+
+    fn terrain_voxels(&self, start: [i64; 3], size: usize, columns: &[SurfaceColumn]) -> Vec<u16> {
+        let mut blocks = vec![0; size * size * size];
+        let config = self.terrain.config();
+        let end_y = start[1] + size as i64;
+        for (index, column) in columns.iter().enumerate() {
+            let x = index % size;
+            let z = index / size;
+            // Trees and structures are stamped later. Modern cave openings reach two
+            // metres above the ground, aquatic plants and lilies can reach higher.
+            // Legacy cave decorations may follow chamber ceilings independently.
+            let until = if config.cave_structure_revision >= 3 {
+                let top = column.height + f64::from(column.seagrass_height.max(2));
+                let top = column.water_level.map_or(top, |level| top.max(level + 1.0));
+                let top = top.max(column.lava_level.unwrap_or(top));
+                let top = if config.bounded_world {
+                    top.max(-120.0)
+                } else {
+                    top
+                };
+                end_y.min(top.ceil() as i64 + 1)
+            } else {
+                end_y
+            };
+            let mut offset = x + size * size * z;
+            for y in start[1]..until {
+                blocks[offset] =
+                    self.terrain_block([start[0] + x as i64, y, start[2] + z as i64], *column);
+                offset += size;
+            }
+        }
+        blocks
     }
 
     fn segment_terrain_block(&self, p: [i64; 3], material: u16, column: SurfaceColumn) -> u16 {

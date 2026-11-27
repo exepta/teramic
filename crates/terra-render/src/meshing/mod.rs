@@ -139,6 +139,8 @@ pub struct RenderedSection {
 pub struct RenderStatus {
     pub occluded_sections: usize,
     pub ready: bool,
+    /// The session has revealed the terrain and enabled player movement.
+    pub scene_revealed: bool,
     pub pending_jobs: usize,
     /// Chunk columns still awaiting terrain composition or upload.
     pub pending_columns: HashSet<[i64; 2]>,

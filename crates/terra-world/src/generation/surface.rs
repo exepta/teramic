@@ -244,6 +244,42 @@ impl TerraGenerator {
 
     /// Cached per horizontal column by section jobs, never per voxel there.
     pub fn surface_column(&self, x: f64, z: f64) -> SurfaceColumn {
+        self.surface_column_with_heights(x, z, |dx, dz| {
+            self.surface_height(x + f64::from(dx), z + f64::from(dz))
+        })
+    }
+
+    pub(super) fn surface_column_grid(&self, start: [i64; 2], size: usize) -> Vec<SurfaceColumn> {
+        // Slope samples the four immediate neighbours. Moss also looks four metres
+        // outward. Each distinct height in this job should only run worldgen once.
+        const HALO: i32 = 4;
+        let stride = size + 2 * HALO as usize;
+        let mut heights = vec![f64::NAN; stride * stride];
+        let mut columns = Vec::with_capacity(size * size);
+        for z in 0..size {
+            for x in 0..size {
+                let wx = (start[0] + x as i64) as f64 + 0.5;
+                let wz = (start[1] + z as i64) as f64 + 0.5;
+                columns.push(self.surface_column_with_heights(wx, wz, |dx, dz| {
+                    let ix = (x as i32 + HALO + dx) as usize;
+                    let iz = (z as i32 + HALO + dz) as usize;
+                    let height = &mut heights[ix + stride * iz];
+                    if height.is_nan() {
+                        *height = self.surface_height(wx + f64::from(dx), wz + f64::from(dz));
+                    }
+                    *height
+                }));
+            }
+        }
+        columns
+    }
+
+    fn surface_column_with_heights(
+        &self,
+        x: f64,
+        z: f64,
+        mut neighbor_height: impl FnMut(i32, i32) -> f64,
+    ) -> SurfaceColumn {
         let climate = self.climate_biome_at(x, z);
         let waters = self.surface_waters(x, z, Some(climate.weights.savanna));
         let height =
@@ -325,10 +361,10 @@ impl TerraGenerator {
             ocean.ice_depth = 1;
         }
         let neighbors = [
-            self.surface_height(x + 1.0, z),
-            self.surface_height(x - 1.0, z),
-            self.surface_height(x, z + 1.0),
-            self.surface_height(x, z - 1.0),
+            neighbor_height(1, 0),
+            neighbor_height(-1, 0),
+            neighbor_height(0, 1),
+            neighbor_height(0, -1),
         ];
         let dx = (neighbors[0] - neighbors[1]) * 0.5;
         let dz = (neighbors[2] - neighbors[3]) * 0.5;
@@ -394,9 +430,9 @@ impl TerraGenerator {
         // Ordinary caves can meet daylight at steep terrain sides. Only these
         // rare damp columns need the wider exterior-height check, never each voxel.
         let moss_daylight_floor = if moss_patch && self.config().caves && slope > 1.0 {
-            [[-4.0, 0.0], [4.0, 0.0], [0.0, -4.0], [0.0, 4.0]]
+            [[-4, 0], [4, 0], [0, -4], [0, 4]]
                 .into_iter()
-                .map(|[dx, dz]| self.surface_height(x + dx, z + dz))
+                .map(|[dx, dz]| neighbor_height(dx, dz))
                 .fold(f64::INFINITY, f64::min)
         } else {
             f64::INFINITY

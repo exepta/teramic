@@ -123,7 +123,7 @@ pub(crate) fn upload_sections(
     let mut positions: Vec<_> = jobs.0.keys().copied().collect();
     positions.sort_by_key(|p| {
         (
-            !super::jobs::interactive_edit(*p, &world.journal, &rendered),
+            super::jobs::MeshPriority::for_section(*p, &world.journal, &rendered),
             super::lod::distance_squared(*p, focus) as u64,
             p.y,
             p.z,
@@ -1835,6 +1835,42 @@ mod tests {
             level,
             task: bevy::tasks::AsyncComputeTaskPool::get().spawn(std::future::pending()),
         }
+    }
+
+    #[test]
+    fn a_first_presentation_precedes_a_closer_lod_swap_with_one_upload_slot() {
+        use super::super::DetailLevel;
+        let (mut app, resident, old) = entering_upload_fixture();
+        let arrival = resident.offset([4, 0, 0]).unwrap();
+        let mut config = terra_core::GameConfig::default();
+        config.client.mesh_uploads_per_frame = 1;
+        config.client.chunk_animation = terra_core::ChunkAnimation::None;
+        app.insert_resource(config);
+        app.world_mut().resource_mut::<ChunkStore>().loaded.insert(
+            arrival,
+            terra_world::streaming::LoadedSection {
+                data: terra_voxel::BlockSection::empty(arrival).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
+        );
+        let mut jobs = app.world_mut().resource_mut::<RenderJobs>();
+        jobs.0
+            .insert(resident, completed_upload_job(DetailLevel::Middle, false));
+        jobs.0
+            .insert(arrival, completed_upload_job(DetailLevel::Near, true));
+        app.update();
+        let sections = &app.world().resource::<RenderedSections>().sections;
+        assert!(sections.contains_key(&arrival));
+        assert_eq!(sections[&resident].entity, old);
+        assert_eq!(app.world().resource::<RenderJobs>().0.len(), 1);
+        app.update();
+        let sections = &app.world().resource::<RenderedSections>().sections;
+        assert_eq!(sections[&resident].detail_level, DetailLevel::Middle);
+        assert!(app.world().resource::<RenderJobs>().0.is_empty());
     }
 
     #[test]
