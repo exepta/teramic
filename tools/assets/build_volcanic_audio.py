@@ -28,6 +28,43 @@ def record(name, duration, voice):
         wav.writeframes(struct.pack('<'+'h'*len(samples), *(round(s*gain) for s in samples)))
 
 
+def record_lava_bed():
+    rng = random.Random(7441)
+    duration = 18
+    overlap = RATE
+    count = duration * RATE
+    releases = []
+    clock = rng.uniform(0.4, 0.9)
+    while clock < duration + 1:
+        releases.append((clock, rng.uniform(0.08, .29), rng.uniform(0.12, 0.30)))
+        clock += rng.uniform(0.16, 1.05)
+    samples = []
+    slow = low = mid = 0.
+    next_release = 0
+    for i in range(count + overlap):
+        t = i / RATE
+        white = rng.uniform(-1, 1)
+        slow += .00065 * (white-slow)
+        low += .018 * (white-low)
+        mid += .071 * (white-mid)
+        while next_release < len(releases) and t - releases[next_release][0] > .55:
+            next_release += 1
+        froth = 0.
+        for onset, length, strength in releases[next_release:next_release+5]:
+            age = t - onset
+            if age < 0.:
+                break
+            froth += strength * (1-math.exp(-age/.027)) * math.exp(-age/length)
+        samples.append(math.tanh(3.8*low + 0.4*mid + 71.*slow*low + froth*(15.*low + 2.*mid)))
+    # Crossfade the tail into the first second so the loop has no silent seam.
+    for i in range(overlap):
+        blend = (1-math.cos(math.pi*i/(overlap-1))) * .5
+        samples[i] = samples[count+i]*(1-blend) + samples[i]*blend
+    with wave.open(str(OUT/'lava-flow.wav'), 'wb') as wav:
+        wav.setparams((1, 2, RATE, 0, 'NONE', 'not compressed'))
+        wav.writeframes(struct.pack('<'+'h'*count, *(round(s*23800) for s in samples[:count])))
+
+
 def thump(t, base, sweep, decay):
     """A heavy pressure release falls in pitch as the cavity opens."""
     if t < 0:
@@ -39,26 +76,20 @@ def thump(t, base, sweep, decay):
 def bubble(t, low, mid, high):
     # A heavy gas pocket opens, pushes a thick fold aside, and falls back.
     # Short, noisy pressure fronts avoid the pure, high sliding tones of a water drop.
-    swell = (1-math.exp(-34*t))*math.exp(-7.5*t)
-    front = thump(t-.036, 57, 39, 15) + .32*thump(t-.23, 73, 21, 16)
-    return .41*front + swell*(3.8*low+.32*mid) + .3*low*math.exp(-4.7*t)
+    swell = (1-math.exp(-29*t))*math.exp(-8*t)
+    front = thump(t-.031, 48, 24, 28) + .24*thump(t-.144, 60, 18, 25)
+    fold = max(t-.12, 0.)
+    collapse = (1-math.exp(-27*fold))*math.exp(-13*fold)
+    return .19*front + swell*(4.8*low+.25*mid) + collapse*(2.45*low+.13*mid)
 
 
 def crust(t, low, mid, high):
     sound = 0.
-    for delay, gain, decay in [(0.,.6,49),(.041,.36,35),(.123,.18,29),(.218,.11,18)]:
+    for delay, gain, decay in [(0.,.6,60),(.036,.24,43),(.111,.13,32),(.186,.08,24)]:
         u = t-delay
         if u >= 0:
-            sound += gain*(1.-math.exp(-260*u))*math.exp(-decay*u)*(1.8*low+.66*(mid-low))
-    return sound + .12*thump(t-.015, 81, 32, 13)
-
-
-def lava_bed(t, low, mid, high):
-    # Broadband stone movement rolls underneath the individual gas breaches.
-    # Low, uneven pulses add weight while remaining audible on small speakers.
-    drift = .68+.16*math.sin(.93*t+.8*math.sin(1.81*t))+.13*math.sin(2.77*t+.61)
-    grit = .5+.5*math.sin(3.16*t+.82*math.sin(1.55*t))
-    return (2.65*low + .13*mid + .08*(mid-low)*grit)*drift
+            sound += gain*(1.-math.exp(-145*u))*math.exp(-decay*u)*(2.3*low+.34*(mid-low))
+    return sound + .07*thump(t-.015, 66, 28, 24)
 
 
 def eruption(t, low, mid, high):
@@ -85,7 +116,7 @@ def steam(t, low, mid, high):
 if __name__ == '__main__':
     record('lava-bubble.wav', .83, bubble)
     record('lava-crust.wav', .54, crust)
-    record('lava-flow.wav', 11.4, lava_bed)
+    record_lava_bed()
     record('eruption-blast.wav', 5.3, eruption)
     record('eruption-rumble.wav', 8.5, deep_rumble)
     record('fumarole-hiss.wav', 2., steam)

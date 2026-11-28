@@ -1,0 +1,6 @@
+{
+  "id": "jaguar", "title": "Jaguar", "health": 27, "food": 25, "water": 23,
+  "size": [0.73, 1.01, 2.30], "speed": 2.9, "group_size": 1, "sleeps": true,
+  "combat": {"damage": 4.4, "aggro_radius": 15.0, "reach": 1.85, "cooldown": 1.3},
+  "spawn": {"biomes": ["swamp"]}
+}

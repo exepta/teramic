@@ -385,3 +385,52 @@ fn dead_bushes_have_grounded_solid_tapered_wood_and_bounded_lod_geometry() {
         assert!(counts[0] > counts[1] && counts[1] > counts[2]);
     }
 }
+
+#[test]
+fn flowering_bush_voxel_faces_do_not_compete_for_the_same_depth() {
+    let palette = PropPalette {
+        foliage: [1, 2, 3],
+        twig: 4,
+        flowers: [5, 6, 7, 8, 9, 10, 11, 12],
+        ..Default::default()
+    };
+    for variant in 0..8 {
+        for level in [PropDetail::Near, PropDetail::Middle, PropDetail::Far] {
+            let meshes = template(PropKind::Bush, variant, level, &palette).unwrap();
+            let mut faces = Vec::new();
+            for mesh in &meshes {
+                for (quad, normals) in mesh
+                    .positions
+                    .chunks_exact(4)
+                    .zip(mesh.normals.chunks_exact(4))
+                {
+                    let min = quad
+                        .iter()
+                        .map(|p| Vec3::from_array(*p))
+                        .reduce(Vec3::min)
+                        .unwrap();
+                    let max = quad
+                        .iter()
+                        .map(|p| Vec3::from_array(*p))
+                        .reduce(Vec3::max)
+                        .unwrap();
+                    let axis = normals[0].iter().position(|n| n.abs() > 0.999).unwrap();
+                    for &(prior_normal, prior_min, prior_max) in &faces {
+                        if prior_normal == normals[0]
+                            && (min[axis] - Vec3::from_array(prior_min)[axis]).abs() < 0.00001
+                        {
+                            let overlap = max.min(Vec3::from_array(prior_max))
+                                - min.max(Vec3::from_array(prior_min));
+                            assert!(
+                                overlap[(axis + 1) % 3] < 0.00001
+                                    || overlap[(axis + 2) % 3] < 0.00001,
+                                "{variant} {level:?} overlapping faces at {min:?}"
+                            );
+                        }
+                    }
+                    faces.push((normals[0], min.to_array(), max.to_array()));
+                }
+            }
+        }
+    }
+}

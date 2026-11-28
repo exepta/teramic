@@ -30,6 +30,14 @@ fn scene(chunks: ChunkStore) -> App {
         .init_resource::<Time>()
         .init_resource::<Time<Real>>()
         .init_resource::<GameConfig>()
+        .init_resource::<EditJournal>()
+        .insert_resource(WorldTerrain(
+            terra_world::TerraGenerator::new(terra_core::WorldConfig {
+                sea_level: -30.0,
+                ..Default::default()
+            })
+            .unwrap(),
+        ))
         .init_resource::<VolcanicSources>()
         .add_systems(Update, discover);
     app.world_mut()
@@ -208,13 +216,16 @@ fn fumarole_hisses_at_plume_onset_once_and_only_while_the_vent_is_exposed() {
     };
     let t = (100..1000)
         .map(|i| f64::from(i) * 0.01)
-        .find(|&t| lava::plume_height(vent, t - 0.05) < 1.7 && lava::plume_height(vent, t) >= 1.7)
+        .find(|&t| {
+            lava::plume_height(vent, t - 0.05) < FUMAROLE_HISS_HEIGHT
+                && lava::plume_height(vent, t) >= FUMAROLE_HISS_HEIGHT
+        })
         .unwrap();
     assert!(matches!(
         frame(&chunks, &mut sources, t - 0.05, t).1.as_slice(),
-        [VolcanicSound::Steam(_)]
+        [VolcanicSound::Steam(origin)] if origin.distance(Vec3::new(2.5, 2.008, 3.5)) < 1e-5
     ));
-    for (a, b) in [(t, t + 0.08), (t, t), (t - 0.80, t)] {
+    for (a, b) in [(t, t + 0.08), (t, t), (t - 0.80, t), (t + 3., t + 3.08)] {
         assert!(frame(&chunks, &mut sources, a, b).1.is_empty());
     }
     let roof = [vent[0], vent[1] + 1, vent[2]];
@@ -226,49 +237,113 @@ fn fumarole_hisses_at_plume_onset_once_and_only_while_the_vent_is_exposed() {
 }
 
 #[test]
-fn geyser_recharges_between_synchronized_bursts_and_a_roof_stops_its_jet() {
+fn fumaroles_are_clear_between_bursts_and_grow_vertically_from_their_mouth() {
+    let vent = [5, 2, 7];
+    let mut chunks = ChunkStore::default();
+    set(&mut chunks, vent, FUMAROLE);
+    let mut sources = VolcanicSources {
+        fumaroles: vec![vent],
+        ..default()
+    };
+    sources.seconds = (0..100)
+        .map(|i| f64::from(i) * 0.1)
+        .find(|&t| lava::plume_height(vent, t) > 3.35)
+        .unwrap();
+    let render = |sources: &VolcanicSources, chunks: &ChunkStore, wind| {
+        let mut mesh = Geometry::default();
+        sources.append_fumaroles(&mut mesh, 2.0, wind, Vec3::X, Vec3::Y, |p| {
+            chunks.block_at(p)
+        });
+        mesh.positions
+    };
+    let calm = render(&sources, &chunks, Vec2::ZERO);
+    let windy = render(&sources, &chunks, Vec2::X * 6.);
+    assert_eq!(calm.len(), 19 * 4);
+    assert_eq!(&calm[..4], &windy[..4]);
+    let stem = calm[..4].iter().map(|&p| Vec3::from_array(p)).sum::<Vec3>() * 0.25;
+    assert!(stem.with_y(3.).distance(Vec3::new(5.5, 3., 7.5)) < 1e-5);
+    assert!((calm[0][1] - 3.008).abs() < 1e-5);
+    assert!(calm.iter().any(|p| p[1] > 7.));
+    let width = |quad: &[[f32; 3]]| (quad[1][0] - quad[0][0]).abs();
+    let (minimum, maximum) = calm
+        .chunks_exact(4)
+        .map(width)
+        .fold((f32::MAX, 0_f32), |(lo, hi), w| (lo.min(w), hi.max(w)));
+    assert!(maximum > minimum * 4.);
+    assert!(windy.iter().zip(&calm).any(|(w, c)| w[0] - c[0] > 0.9));
+
+    let stone = MaterialId::Stone as u16;
+    set(&mut chunks, [5, 3, 7], stone);
+    assert!(render(&sources, &chunks, Vec2::ZERO).is_empty());
+    set(&mut chunks, [4, 2, 7], stone);
+    assert!(render(&sources, &chunks, Vec2::X).is_empty());
+
+    set(&mut chunks, [5, 3, 7], 0);
+    sources.seconds += 3.;
+    assert_eq!(lava::plume_height(vent, sources.seconds), 0.);
+    assert!(render(&sources, &chunks, Vec2::ZERO).is_empty());
+}
+
+#[test]
+fn geysers_are_discovered_and_drawn_only_with_water_above_the_mouth() {
+    use geyser_render::{GeyserWorld, append_vent};
+    use terra_world::water::FluidCell;
     let cell = [5, 2, -2];
+    let mouth = [5, 3, -2];
     let mut chunks = ChunkStore::default();
     set(&mut chunks, cell, GEYSER);
     set(&mut chunks, [5, 33, -2], 0);
     set(&mut chunks, [5, 17, -2], 0);
     let mut app = scene(chunks);
     app.update();
-    let sources = app.world().resource::<VolcanicSources>();
-    assert_eq!(sources.geysers, [cell]);
-    let mut sources = VolcanicSources {
-        geysers: vec![cell],
-        ..default()
-    };
-    let chunks = app.world_mut().resource_mut::<ChunkStore>().into_inner();
-    let t = (10..1800)
-        .map(|i| f64::from(i) * 0.01)
-        .find(|t| geyser_surge(*t - 0.05, cell) < 0.2 && geyser_surge(*t, cell) >= 0.2)
+    assert!(app.world().resource::<VolcanicSources>().geysers.is_empty());
+    app.world_mut()
+        .resource_mut::<EditJournal>()
+        .set_fluid(
+            mouth,
+            FluidCell {
+                amount: 8,
+                source: true,
+                ..default()
+            },
+        )
         .unwrap();
-    let sounds = frame(chunks, &mut sources, t - 0.05, t).1;
-    assert!(matches!(sounds.as_slice(), [VolcanicSound::Steam(_)]));
-    sources.seconds = t + 0.8;
-    let mut spray = Geometry::default();
-    sources.append_geysers(
-        &mut spray,
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(Duration::from_millis(700));
+    app.update();
+    assert_eq!(app.world().resource::<VolcanicSources>().geysers, [cell]);
+    let terrain = &app.world().resource::<WorldTerrain>().0;
+    let chunks = app.world().resource::<ChunkStore>();
+    let journal = app.world().resource::<EditJournal>();
+    let world = GeyserWorld {
         chunks,
-        &EditJournal::default(),
-        Vec3::X,
-        Vec3::Y,
+        journal,
+        terrain,
+    };
+    let t = (10..2200)
+        .map(|i| f64::from(i) * 0.01)
+        .find(|&t| (0.85..0.95).contains(&geyser::phase(t, cell)))
+        .unwrap();
+    let draw = |world: &GeyserWorld, time| {
+        let mut geometry = Geometry::default();
+        append_vent(&mut geometry, world, cell, time, (Vec3::X, Vec3::Y));
+        geometry.positions
+    };
+    let burst = draw(&world, t);
+    assert!(burst.iter().any(|p| p[1] > 23.));
+    assert!(burst.iter().any(|p| p[1] > 3.0 && p[1] < 4.0));
+    let next_frame = draw(&world, t + 1.0 / 120.0);
+    assert_ne!(
+        burst, next_frame,
+        "the same authority tick can draw different render frames"
     );
-    assert!(spray.positions.iter().any(|p| p[1] > 23.));
-    sources.seconds = t + 6.2;
-    let mut idle = Geometry::default();
-    sources.append_geysers(&mut idle, chunks, &EditJournal::default(), Vec3::X, Vec3::Y);
-    assert!(idle.positions.iter().all(|p| p[1] < 4.));
-    set(chunks, [5, 3, -2], MaterialId::Stone as u16);
-    let mut covered = Geometry::default();
-    sources.append_geysers(
-        &mut covered,
-        chunks,
-        &EditJournal::default(),
-        Vec3::X,
-        Vec3::Y,
-    );
-    assert!(covered.positions.is_empty());
+    assert!(draw(&world, t + 6.2).is_empty());
+    let mut dry = journal.clone();
+    dry.set_fluid(mouth, FluidCell::default()).unwrap();
+    let dry_world = GeyserWorld {
+        journal: &dry,
+        ..world
+    };
+    assert!(draw(&dry_world, t).is_empty());
 }

@@ -7,6 +7,8 @@ pub(super) struct InspectionTargets(pub std::collections::HashMap<terra_core::Pl
 #[cfg(test)]
 #[path = "population_tests.rs"]
 mod population_tests;
+#[path = "server_creatures/poultry.rs"]
+pub(super) mod poultry;
 #[path = "server_creatures/worm_encounters.rs"]
 mod worm_encounters;
 #[path = "server_creatures/worm_spit.rs"]
@@ -625,6 +627,7 @@ pub(super) struct SimulationWorld<'w, 's> {
     played: ResMut<'w, crate::world_time::PlayedDays>,
     inspections: ResMut<'w, InspectionTargets>,
     challengers: Option<ResMut<'w, DragonChallengers>>,
+    poultry_alerts: Option<ResMut<'w, poultry::Alerts>>,
     chunks: ResMut<'w, ChunkStore>,
     terrain: Res<'w, terra_world::streaming::WorldTerrain>,
     journal: ResMut<'w, EditJournal>,
@@ -656,6 +659,7 @@ pub(super) fn tick(
         mut played,
         mut inspections,
         mut challengers,
+        mut poultry_alerts,
         mut chunks,
         terrain,
         mut journal,
@@ -694,6 +698,9 @@ pub(super) fn tick(
         chunks.track_dragon_flight([]);
         if let Some(challengers) = challengers.as_deref_mut() {
             challengers.0.clear();
+        }
+        if let Some(alerts) = poultry_alerts.as_deref_mut() {
+            alerts.clear();
         }
         return;
     }
@@ -1111,6 +1118,37 @@ pub(super) fn tick(
         })
         .collect();
     let searches = grant_searches(eligible, &mut schedule.search_cursor);
+    let flocks = poultry_alerts
+        .as_deref_mut()
+        .map(|alerts| alerts.frame(&population, &ids, &vulnerable));
+    let mut rooster_strikes = Vec::new();
+    let mut predator_strikes = Vec::new();
+    let prey_land: Vec<_> = if ids.iter().any(|id| {
+        population
+            .animals
+            .get(id)
+            .is_some_and(|a| a.kind.is_biome_predator())
+    }) {
+        ids.iter()
+            .filter_map(|id| {
+                let a = population.animals.get(id)?;
+                (a.health > 0.0
+                    && !population.owners.contains_key(id)
+                    && matches!(
+                        a.kind,
+                        CreatureKind::Hen
+                            | CreatureKind::Pig
+                            | CreatureKind::Sheep
+                            | CreatureKind::Zebra
+                            | CreatureKind::Cow
+                            | CreatureKind::Fish
+                    ))
+                .then_some((a.id, a.kind, a.position, a.size()[1]))
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
     for (id, elapsed, _) in due.into_iter().take(512) {
         let dt = elapsed.min(0.25);
         // Keep bounded debt when a busy frame delays a creature. Discarding all
@@ -1221,6 +1259,23 @@ pub(super) fn tick(
                     night,
                     owned,
                 ));
+                if let Some(DragonTarget::Mob(target)) = encounter.target
+                    && matches!(
+                        a.behavior,
+                        CreatureBehavior::Hunt
+                            | CreatureBehavior::Attack
+                            | CreatureBehavior::DragonVolley
+                            | CreatureBehavior::DragonSurge
+                            | CreatureBehavior::DragonBurrow
+                            | CreatureBehavior::Leap
+                    )
+                    && flocks
+                        .as_ref()
+                        .is_some_and(|frame| frame.tracks_hen(target))
+                    && let Some(alerts) = poultry_alerts.as_deref_mut()
+                {
+                    alerts.report(target, poultry::Actor::Mob(id));
+                }
                 terra_world::creatures::Forage::None
             } else if a.kind == CreatureKind::Villager {
                 let Schedule {
@@ -1382,6 +1437,14 @@ pub(super) fn tick(
                                     dt,
                                     search,
                                     &mut schedule.navigation,
+                                    |target| {
+                                        if let terra_world::creatures::spider_hunting::Meal::Creature(target) = target
+                                            && flocks.as_ref().is_some_and(|frame| frame.tracks_hen(target))
+                                            && let Some(alerts) = poultry_alerts.as_deref_mut()
+                                        {
+                                            alerts.report(target, poultry::Actor::Mob(id));
+                                        }
+                                    }
                                 )
                             })
                         })
@@ -1515,6 +1578,69 @@ pub(super) fn tick(
                     },
                 );
                 terra_world::creatures::Forage::None
+            } else if a.kind.is_biome_predator() {
+                let habitat = Habitat {
+                    terrain: &terrain.0,
+                    chunks: &chunks,
+                    journal: &journal,
+                };
+                let origin = a.position;
+                let range = terra_core::creatures::definitions::get(a.kind)
+                    .combat
+                    .map_or(0.0, |combat| combat.aggro_radius * 1.25);
+                let mut visible_prey: Vec<_> = prey_land
+                    .iter()
+                    .filter(|&&(_, kind, point, _)| {
+                        distance(origin, point) < range.powi(2)
+                            && (a.kind != CreatureKind::Snake || kind == CreatureKind::Hen)
+                            && (kind != CreatureKind::Fish
+                                || a.kind == CreatureKind::Crocodile
+                                    && (origin[1] - point[1]).abs() < 1.4)
+                    })
+                    .collect();
+                visible_prey.sort_unstable_by(|a, b| {
+                    distance(origin, a.2)
+                        .total_cmp(&distance(origin, b.2))
+                        .then(a.0.cmp(&b.0))
+                });
+                let candidates = &visible_prey[..visible_prey.len().min(12)];
+                use terra_world::creatures::forest::Target;
+                let animal_targets = candidates
+                    .iter()
+                    .map(|&&(_, _, point, height)| Target::creature(point, height));
+                let all_targets = targets
+                    .iter()
+                    .copied()
+                    .map(Target::player)
+                    .chain(animal_targets);
+                let effect = terra_world::creatures::forest::step_observed(
+                    a,
+                    &habitat,
+                    all_targets,
+                    dt,
+                    search,
+                    Some(&mut schedule.navigation),
+                    |index| {
+                        if let Some(heading) = index.checked_sub(targets.len())
+                            && let Some(&&(target, CreatureKind::Hen, ..)) = candidates.get(heading)
+                            && let Some(alerts) = poultry_alerts.as_deref_mut()
+                        {
+                            alerts.report(target, poultry::Actor::Mob(id));
+                        }
+                    },
+                );
+                if let terra_world::creatures::bears::Effect::StrikePlayer { index, damage } =
+                    effect
+                {
+                    if let Some(heading) = index.checked_sub(targets.len()) {
+                        if let Some(animal) = candidates.get(heading) {
+                            predator_strikes.push((id, animal.0, damage));
+                        }
+                    } else {
+                        bear_effects.push((id, effect));
+                    }
+                }
+                terra_world::creatures::Forage::None
             } else if terra_world::creatures::forest::hostile(a.kind) {
                 let effect = terra_world::creatures::forest::step(
                     a,
@@ -1551,6 +1677,79 @@ pub(super) fn tick(
                     bear_effects.push((id, effect));
                 }
                 terra_world::creatures::Forage::None
+            } else if matches!(a.kind, CreatureKind::Hen | CreatureKind::Rooster) {
+                let habitat = Habitat {
+                    terrain: &terrain.0,
+                    chunks: &chunks,
+                    journal: &journal,
+                };
+                let herd = flocks.as_ref();
+                let nav = &mut schedule.navigation;
+                let scare = a.kind == CreatureKind::Hen
+                    && (herd
+                        .and_then(|frame| frame.threat(a))
+                        .is_some_and(|(_, point)| {
+                            terra_world::creatures::poultry::alert_hen(a, &habitat, point)
+                        })
+                        || sleeping
+                            && players.iter().any(|&point| {
+                                distance(a.position, point) <= 3.6_f64.powi(2)
+                                    && terra_world::creatures::poultry::alert_hen(
+                                        a, &habitat, point,
+                                    )
+                            }));
+                let enemy = (a.kind == CreatureKind::Rooster)
+                    .then(|| herd.and_then(|frame| frame.enemy(a, &habitat)))
+                    .flatten();
+                if let Some((enemy, target)) = enemy
+                    && let Some(alerts) = poultry_alerts.as_deref_mut()
+                {
+                    let same = alerts.lock(a.id, enemy);
+                    if let Some(damage) = terra_world::creatures::poultry::defend(
+                        a, &habitat, target, same, dt, search, nav,
+                    ) {
+                        rooster_strikes.push((id, enemy, damage));
+                    }
+                    terra_world::creatures::Forage::None
+                } else if !sleeping
+                    && !scare
+                    && (a.kind == CreatureKind::Rooster
+                        || !players
+                            .iter()
+                            .any(|&p| distance(a.position, p) < 4.0_f64.powi(2)))
+                    && herd
+                        .and_then(|frame| frame.flockmate(a))
+                        .is_some_and(|target| {
+                            terra_world::creatures::poultry::follow(
+                                a, target, &habitat, dt, search, nav,
+                            )
+                        })
+                {
+                    terra_world::creatures::Forage::None
+                } else {
+                    if a.kind == CreatureKind::Rooster {
+                        if let Some(alerts) = poultry_alerts.as_deref_mut() {
+                            alerts.forget(a.id);
+                        }
+                        if matches!(
+                            a.behavior,
+                            CreatureBehavior::Attack | CreatureBehavior::Hunt
+                        ) {
+                            a.behavior = CreatureBehavior::Rest;
+                            a.timer = 0.0;
+                        }
+                    }
+                    terra_world::creatures::ecology::step_with_navigation(
+                        a,
+                        &mut population.ecology,
+                        &habitat,
+                        &players,
+                        dt,
+                        search,
+                        sleeping && !scare,
+                        Some(nav),
+                    )
+                }
             } else {
                 terra_world::creatures::ecology::step_with_navigation(
                     a,
@@ -1723,7 +1922,21 @@ pub(super) fn tick(
                     {
                         molten_worm_hit(&mut peer, damage, mode);
                     } else {
+                        let before = peer.vitals.health;
                         survival::animal_attack(&mut peer, damage, mode);
+                        if peer.vitals.health < before
+                            && !peer.vitals.dead()
+                            && let Some(snake) = population.animals.get(&id)
+                            && snake.kind.venomous(snake.variant)
+                            && let Some(attack) =
+                                terra_core::creatures::definitions::get(snake.kind).combat
+                        {
+                            peer.vitals.effects.apply(
+                                terra_core::EffectKind::Poison,
+                                attack.poison_seconds,
+                                attack.poison_level,
+                            );
+                        }
                     }
                 }
             }
@@ -1918,6 +2131,50 @@ pub(super) fn tick(
         },
     );
     journal.gameplay_mut().creatures = population;
+    for (id, target, damage) in predator_strikes {
+        let animals = &journal.gameplay().creatures.animals;
+        let habitat = Habitat {
+            terrain: &terrain.0,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        if let (Some(predator), Some(prey)) = (animals.get(&id), animals.get(&target))
+            && prey.health > 0.0
+            && terra_world::creatures::forest::ready_to_strike(
+                predator,
+                &habitat,
+                terra_world::creatures::forest::Target::creature(prey.position, prey.size()[1]),
+            )
+        {
+            train_damage::hurt_creature(journal.gameplay_mut(), target, damage);
+        }
+    }
+    for (id, enemy, damage) in rooster_strikes {
+        let population = &journal.gameplay().creatures;
+        let habitat = Habitat {
+            terrain: &terrain.0,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        if !population.animals.get(&id).is_some_and(|bird| {
+            enemy.point(population, &vulnerable).is_some_and(|point| {
+                terra_world::creatures::poultry::ready_to_strike(bird, point, &habitat)
+            })
+        }) {
+            continue;
+        }
+        match enemy {
+            poultry::Actor::Player(uuid) => {
+                if let Some((mut peer, _)) = peers.iter_mut().find(|(peer, _)| peer.uuid == uuid) {
+                    let mode = peer.game_mode(&config);
+                    survival::animal_attack(&mut peer, damage, mode);
+                }
+            }
+            poultry::Actor::Mob(target) => {
+                poultry::hurt_opponent(journal.gameplay_mut(), target, damage);
+            }
+        }
+    }
     for (id, damage) in dragon_mob_damage {
         train_damage::hurt_creature(journal.gameplay_mut(), id, damage);
     }
@@ -2422,6 +2679,12 @@ pub(super) fn interact(
         }
         if !creative {
             peer.vitals.stamina -= 2.0;
+            if kind == CreatureKind::Hen
+                && damage > 0.0
+                && let Some(alerts) = world.poultry_alerts.as_deref_mut()
+            {
+                alerts.report(id, poultry::Actor::Player(peer.uuid));
+            }
         }
         if let Some(bond) = world.journal.gameplay_mut().animal_bonds.get_mut(&id)
             && bond.trust < 100

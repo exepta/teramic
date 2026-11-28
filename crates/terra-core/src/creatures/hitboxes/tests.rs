@@ -60,6 +60,30 @@ fn butterfly_targeting_halves_with_the_visible_wings_and_body() {
 }
 
 #[test]
+fn elephant_and_crocodile_movement_bounds_and_anatomical_targets_grow_together() {
+    for (kind, factor, target_height) in [(Kind::Elephant, 1.55, 3.7), (Kind::Crocodile, 1.2, 0.47)]
+    {
+        let animal = animal(kind);
+        let boxes = for_creature(&animal);
+        for (i, dimension) in animal.size().into_iter().enumerate() {
+            let scale = dimension / model_reference_size(kind)[i];
+            assert!((scale - factor).abs() < 1e-9);
+            assert!((boxes.scale[i] - scale).abs() < 1e-9);
+        }
+        assert!(
+            boxes
+                .ray_distance([0., target_height, -6.], [0., 0., 1.], 10.)
+                .is_some()
+        );
+        assert!(
+            boxes
+                .ray_distance([3., target_height, -6.], [0., 0., 1.], 10.)
+                .is_none()
+        );
+    }
+}
+
+#[test]
 fn horse_picking_hits_barrel_head_and_hooves_but_not_the_empty_square_or_leg_gap() {
     let horse = animal(Kind::Horse);
     let boxes = for_creature(&horse);

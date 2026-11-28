@@ -1,6 +1,7 @@
 //! A breached basalt sill feeds an incandescent cascade beside a mineral
 //! spring. The cold and molten basins have separate stone walls and floors.
 use super::{Cell, Habitat, TILE_SIZE, Tile, relic_trees::TreeForm, ticket};
+use crate::volcano::geyser::{SUBMERGED_ECOLOGY_REVISION, VENT_DEPTH};
 use std::collections::BTreeMap;
 use terra_voxel::MaterialId as M;
 
@@ -81,8 +82,7 @@ pub(super) fn build(
         }
     }
     let has_water = h.terrain.config().water;
-    // Native pond shoreline with a crescent of black glass. The hot outlet
-    // stands on a shallow island just above the waterline so its jet is visible.
+    // Native pond shoreline with a crescent of black glass around the vent.
     for z in -7_i64..=8 {
         for x in -11_i64..=3 {
             let r = ((x + 4) as f64 / 6.4).powi(2) + ((z - 1) as f64 / 5.8).powi(2);
@@ -129,10 +129,17 @@ pub(super) fn build(
         }
     }
     if has_water {
-        for y in -4..=-1 {
-            s.put(b, -5, y, 3, M::VolcanicObsidian);
+        if h.terrain.config().ecology_revision >= SUBMERGED_ECOLOGY_REVISION {
+            s.put(b, -5, -VENT_DEPTH, 3, M::GeyserVent);
+            // The authored water span fills all the way down to the mouth on
+            // first publication. The surface source is removable like the others.
+            s.put(b, -5, -1, 3, M::FluidWater);
+        } else {
+            for y in -4..=-1 {
+                s.put(b, -5, y, 3, M::VolcanicObsidian);
+            }
+            s.put(b, -5, 0, 3, M::GeyserVent);
         }
-        s.put(b, -5, 0, 3, M::GeyserVent);
     }
     // A basalt amphitheatre is stratified into three narrowing terraces.
     // The fall lips overlap the lower liquid by one column, keeping the
@@ -334,9 +341,11 @@ mod tests {
         let g = SectionGenerator::new(t.clone());
         let tile = [74, -146];
         let patch = t.natural_patch(tile);
-        let vent = [2389, 30, -4659];
+        let vent = [2389, 26, -4659];
         assert_eq!(g.block_at(vent).unwrap(), M::GeyserVent as u16);
         assert_eq!(g.block_at([vent[0], vent[1] + 1, vent[2]]).unwrap(), 0);
+        assert_eq!(g.block_at([2389, 29, -4659]).unwrap(), M::FluidWater as u16);
+        assert_eq!(g.block_at([2389, 30, -4659]).unwrap(), 0);
         assert!(patch.objects.len() >= 12);
         for source in &patch.objects {
             assert_eq!(source.material, M::FluidWater as u16);
@@ -368,6 +377,16 @@ mod tests {
             assert!(patch.cells.iter().any(|(_, m)| *m == id as u16), "{id:?}");
         }
         let mut old = t.config().clone();
+        old.ecology_revision = SUBMERGED_ECOLOGY_REVISION - 1;
+        let legacy = SectionGenerator::new(TerraGenerator::new(old.clone()).unwrap());
+        assert_eq!(
+            legacy.block_at([2389, 30, -4659]).unwrap(),
+            M::GeyserVent as u16
+        );
+        assert_eq!(
+            legacy.block_at([2389, 29, -4659]).unwrap(),
+            M::VolcanicObsidian as u16
+        );
         old.ecology_revision = 19;
         assert!(
             !TerraGenerator::new(old)
@@ -391,5 +410,51 @@ mod tests {
                 .iter()
                 .all(|(_, m)| *m != M::GeyserVent as u16)
         );
+    }
+
+    #[cfg(feature = "bevy")]
+    #[test]
+    fn generated_geyser_has_water_over_the_mouth_on_first_publication_and_drains() {
+        use crate::{
+            edits::EditJournal,
+            streaming::{ChunkStore, LoadedSection},
+            volcano::geyser::submerged,
+            water::FLUID_CAPACITY,
+        };
+        let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+        let generator = SectionGenerator::new(terrain.clone());
+        let vent = [2389, 26, -4659];
+        let mouth = [2389, 27, -4659];
+        let surface = [2389, 29, -4659];
+        let owner = terra_voxel::global_to_section(vent).0;
+        let coordinate = [owner.x, owner.z];
+        let prepared = std::sync::Arc::new(generator.prepare_column(coordinate, false).unwrap());
+        let mut chunks = ChunkStore::default();
+        let mut journal = EditJournal::default();
+        chunks.loaded.insert(
+            owner,
+            LoadedSection {
+                data: generator.generate(owner).unwrap(),
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: Vec::new(),
+            },
+        );
+        chunks.set_prepared_column_for_test(coordinate, Some(prepared.clone()));
+        assert!(submerged(&chunks, &journal, &terrain, vent));
+        assert_eq!(
+            chunks.fluid_cell_at(&terrain, &journal, mouth, 0).amount,
+            FLUID_CAPACITY
+        );
+        assert!(prepared.geothermal_water([2389.5, 29.5, -4658.5]));
+        journal
+            .initialize_structures(&prepared.structure_objects(owner))
+            .unwrap();
+        assert!(journal.fluid(surface).is_some_and(|water| water.source));
+        assert!(submerged(&chunks, &journal, &terrain, vent));
+        journal.record(surface, M::Air as u16).unwrap();
+        assert!(!submerged(&chunks, &journal, &terrain, vent));
     }
 }

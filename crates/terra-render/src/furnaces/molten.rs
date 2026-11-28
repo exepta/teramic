@@ -1,13 +1,16 @@
 //! Shared, bounded discovery for visible heat, bubbling and the local soundscape.
 use super::Geometry;
+mod geyser_render;
 use bevy::prelude::*;
+pub(super) use geyser_render::setup as setup_geysers;
 use std::collections::BTreeMap;
 use terra_network::client::ReplicatedPlayers;
 use terra_player::TerraCamera;
 use terra_world::{
     edits::EditJournal,
     lava::{self, FUMAROLE, LAVA},
-    streaming::{ChunkStore, WorldAccess},
+    streaming::{ChunkStore, WorldAccess, WorldTerrain},
+    volcano::geyser,
 };
 
 #[derive(Resource, Default)]
@@ -30,6 +33,7 @@ pub enum VolcanicSound {
 
 const GEYSER: u16 = terra_voxel::MaterialId::GeyserVent as u16;
 const RANGE: f32 = 42.;
+const FUMAROLE_HISS_HEIGHT: f64 = 0.12;
 
 pub(super) fn install(app: &mut App) {
     let inspection_seconds = std::env::args()
@@ -47,7 +51,12 @@ pub(super) fn install(app: &mut App) {
         ..default()
     })
     .add_message::<VolcanicSound>()
-    .add_systems(Update, discover.after(terra_player::PlayerSet::Movement));
+    .add_systems(Update, discover.after(terra_player::PlayerSet::Movement))
+    .add_systems(
+        PostUpdate,
+        geyser_render::update
+            .before(bevy::camera::visibility::VisibilitySystems::VisibilityPropagate),
+    );
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -56,6 +65,8 @@ fn discover(
     real: Res<Time<Real>>,
     access: Res<WorldAccess>,
     chunks: Res<ChunkStore>,
+    journal: Res<EditJournal>,
+    terrain: Option<Res<WorldTerrain>>,
     cameras: Query<&Transform, With<TerraCamera>>,
     mut sources: ResMut<VolcanicSources>,
     snapshot: Option<Res<ReplicatedPlayers>>,
@@ -80,6 +91,11 @@ fn discover(
         return;
     };
     let eye = camera.translation;
+    let geyser_wet = |cell| {
+        terrain
+            .as_deref()
+            .is_some_and(|terrain| geyser::submerged(&chunks, &journal, &terrain.0, cell))
+    };
     if sources
         .scan_eye
         .is_none_or(|last| last.distance_squared(eye) > (RANGE * 0.5).powi(2))
@@ -95,9 +111,7 @@ fn discover(
             sources
                 .fumaroles
                 .retain(|&cell| exposed(&chunks, cell, FUMAROLE));
-            sources
-                .geysers
-                .retain(|&cell| exposed(&chunks, cell, GEYSER));
+            sources.geysers.retain(|&cell| geyser_wet(cell));
         }
         return;
     }
@@ -135,22 +149,26 @@ fn discover(
                         continue;
                     }
                     let y = i / 16 % 16;
-                    if y < 15 && blocks[i + 16] != 0 {
+                    if raw == LAVA && y < 15 && blocks[i + 16] != 0 {
                         continue;
                     }
                     let Ok(p) = owner.global_block([i % 16, y, i / 256]) else {
                         continue;
                     };
-                    if distance(p) > RANGE * RANGE
-                        || ((pending || y == 15) && !exposed(&chunks, p, raw))
-                    {
+                    if distance(p) > RANGE * RANGE {
+                        continue;
+                    }
+                    if raw == FUMAROLE {
+                        if exposed(&chunks, p, FUMAROLE) {
+                            sources.fumaroles.push(p);
+                        }
                         continue;
                     }
                     if raw == GEYSER {
-                        sources.geysers.push(p);
-                    } else if raw == FUMAROLE {
-                        sources.fumaroles.push(p);
-                    } else {
+                        if geyser_wet(p) {
+                            sources.geysers.push(p);
+                        }
+                    } else if (y < 15 && !pending) || exposed(&chunks, p, LAVA) {
                         let entry = patches
                             .entry(p.map(|k| k.div_euclid(6)))
                             .or_insert((u32::MAX, p));
@@ -182,6 +200,11 @@ pub(super) fn exposed(chunks: &ChunkStore, p: [i64; 3], raw: u16) -> bool {
     chunks.block_at(p) == Some(raw) && chunks.block_at([p[0], p[1] + 1, p[2]]) == Some(0)
 }
 
+fn fumarole_origin(cell: [i64; 3], block: impl Fn([i64; 3]) -> Option<u16>) -> Option<Vec3> {
+    (block(cell) == Some(FUMAROLE) && block([cell[0], cell[1] + 1, cell[2]]) == Some(0))
+        .then(|| Vec3::from_array(cell.map(|n| n as f32)) + Vec3::new(0.5, 1.008, 0.5))
+}
+
 fn seed([x, y, z]: [i64; 3]) -> u32 {
     let h = (x as u32).wrapping_mul(0x9e3779b1)
         ^ (y as u32).wrapping_mul(0x85ebca77)
@@ -195,113 +218,93 @@ fn bubble_age(seconds: f64, key: u32) -> f32 {
     ((seconds + f64::from(key >> 16) * 0.011).rem_euclid(period)) as f32
 }
 
-use terra_world::volcano::geyser::{self, surge as geyser_surge};
-
 impl VolcanicSources {
     pub(super) fn visible(&self) -> bool {
-        !self.surfaces.is_empty() || !self.fumaroles.is_empty() || !self.geysers.is_empty()
+        !self.surfaces.is_empty() || !self.fumaroles.is_empty()
     }
 
-    pub(super) fn append_geysers(
+    pub(super) fn append_fumaroles(
         &self,
         vapor: &mut Geometry,
-        chunks: &ChunkStore,
-        journal: &EditJournal,
+        time: f32,
+        wind: Vec2,
         right: Vec3,
         up: Vec3,
+        block: impl Fn([i64; 3]) -> Option<u16>,
     ) {
-        for &cell in &self.geysers {
-            if !exposed(chunks, cell, GEYSER) {
+        const WISPS: usize = 18;
+        const STEPS: usize = 20;
+        const STEM_HEIGHT: f32 = 0.55;
+        let wind = Vec3::new(wind.x, 0., wind.y).clamp_length_max(6.);
+        for &cell in &self.fumaroles {
+            let pressure = lava::plume_height(cell, self.seconds) as f32;
+            if pressure <= 0. {
                 continue;
             }
-            let clearance = (1..=30)
-                .take_while(|dy| geyser::open(chunks, journal, [cell[0], cell[1] + dy, cell[2]]))
-                .count() as f32;
-            let origin = Vec3::from_array(cell.map(|n| n as f32)) + Vec3::new(0.5, 1.02, 0.5);
-            let pressure = geyser_surge(self.seconds, cell);
-            let height = (0.42 + pressure * geyser::HEIGHT)
-                .min(clearance - 0.18)
-                .max(0.);
-            let t = geyser::phase(self.seconds, cell);
-            let time = self.seconds.rem_euclid(3600.) as f32;
-            // Rising water stays coherent from throat to crown. The green
-            // inner strands overlap vertically; detached vapour and droplets
-            // only take over around their expanding outer edge.
-            if pressure > 0.12 {
-                for strand in 0..8 {
-                    let angle = strand as f32 * 2.39996;
-                    for step in 0..12 {
-                        let h = (step as f32 + 0.5) / 12.;
-                        let lift = (h * 14. - time * 5. + angle).sin();
-                        let reach = (0.45 + 0.75 * h * h)
-                            * (0.72 + 0.4 * (strand as f32 * 1.3).sin())
-                            * pressure;
-                        let bend = angle + 0.28 * h + (h * 9. + time * 2. + angle).sin() * 0.16;
-                        let center =
-                            origin + Vec3::new(bend.cos() * reach, h * height, bend.sin() * reach);
-                        let width = (0.44 + h * 0.60 + lift * 0.14) * pressure;
-                        let half_height = (height / 12. * 1.65)
-                            .min((center.y - origin.y + 0.05).max(0.1))
-                            .min((origin.y + clearance - center.y - 0.12).max(0.1));
-                        let crest = (h * h).mul_add(0.43, 0.35) + 0.08 * lift;
-                        vapor.wisp(
-                            center,
-                            width,
-                            right,
-                            Vec3::Y * (half_height / width),
-                            [
-                                0.21 + crest * 0.58,
-                                0.65 + crest * 0.33,
-                                0.75 + crest * 0.22,
-                                (0.77 - h * 0.20) * pressure,
-                            ],
-                        );
-                    }
-                }
-            }
-            let strands = if pressure > 0.04 { 104 } else { 8 };
-            for i in 0..strands {
-                let rise = (i as f32 / strands as f32 + time * 0.73).fract();
-                let angle = i as f32 * 2.39996 + rise * 0.65 + (time + i as f32).sin() * 0.12;
-                let envelope =
-                    geyser::BASE_RADIUS + (geyser::CROWN_RADIUS - geyser::BASE_RADIUS) * rise;
-                let radius =
-                    envelope * (0.22 + 0.78 * ((i * 37 % 103) as f32 / 103.).sqrt()) * pressure;
-                let center =
-                    origin + Vec3::new(angle.cos() * radius, height * rise, angle.sin() * radius);
-                let width = 0.09 + pressure * (0.24 + rise * 0.41);
-                if center.y + width < origin.y + clearance {
-                    vapor.wisp(
-                        center,
-                        width,
-                        right,
-                        up * (1.8 - rise * 0.65),
-                        [
-                            0.49 + rise * 0.33,
-                            0.84 + rise * 0.12,
-                            0.90,
-                            0.65 - rise * 0.26,
-                        ],
-                    );
-                }
-            }
-            if clearance < geyser::HEIGHT - 1. {
+            let Some(origin) = fumarole_origin(cell, &block) else {
+                continue;
+            };
+            let key = seed(cell);
+            let theta = (key % 4096) as f32 * (std::f32::consts::TAU / 4096.);
+            let tilt = Vec3::new(theta.cos(), 0., theta.sin())
+                * [0., 0.2, 0.46, 0.85][(key as usize >> 12) & 3];
+            let lift = pressure * 1.63;
+            let strength = (pressure / 0.95).min(1.);
+            let spread_at = |height: f32| {
+                ((height - STEM_HEIGHT) / (lift - STEM_HEIGHT).max(0.001)).clamp(0., 1.)
+            };
+            let rise = |age: f32| {
+                let height = lift * age;
+                origin
+                    + Vec3::Y * height
+                    + (tilt * pressure + wind * 0.19) * spread_at(height).powf(1.8)
+            };
+            let open = |p: Vec3| block(p.floor().as_i64vec3().to_array()) == Some(0);
+            let clearance = (1..=STEPS)
+                .find(|step| !open(rise(*step as f32 / STEPS as f32)))
+                .map_or(1., |step| (step - 1) as f32 / STEPS as f32);
+            let stem = (lift * clearance).min(STEM_HEIGHT);
+            if stem <= 0. {
                 continue;
             }
-            for i in 0..geyser::DROPS {
-                let Some(offset) = geyser::drop_position(cell, t, i) else {
+            let root_radius = 0.085 + 0.018 * strength;
+            vapor.wisp(
+                origin + Vec3::Y * stem * 0.5,
+                root_radius,
+                right,
+                Vec3::Y * (stem * 0.5 / root_radius),
+                [0.79, 0.78, 0.75, strength * 0.64],
+            );
+            for i in 0..WISPS {
+                let i = i as f32;
+                let age = (time * 0.78 + i / WISPS as f32 + theta).fract();
+                if age > clearance {
                     continue;
-                };
-                let p = origin + Vec3::from_array(offset);
-                if geyser::open(chunks, journal, p.floor().as_i64vec3().to_array()) {
-                    vapor.wisp(
-                        p,
-                        0.075 + (i % 3) as f32 * 0.022,
-                        right,
-                        up * 2.5,
-                        [0.49, 0.85, 0.91, 0.83],
-                    );
                 }
+                let phase = i * 2.39996 + theta + time * 0.59;
+                let expansion = spread_at(lift * age);
+                let spread = 1.05 * expansion.powf(1.55) * (0.7 + pressure * 0.1);
+                let p = rise(age)
+                    + Vec3::new(phase.cos(), 0.12 * (phase * 1.4).sin(), phase.sin()) * spread;
+                if !open(p) {
+                    continue;
+                }
+                let radius = root_radius + expansion * 0.97;
+                let vertical = (p.y - origin.y).clamp(0., radius) / radius;
+                let fade =
+                    (age * 19.).min(1.) * ((clearance - age) * 5.).min(1.) * (1. - age).powf(0.85);
+                vapor.wisp(
+                    p,
+                    radius,
+                    right,
+                    up * vertical,
+                    [
+                        0.79,
+                        0.78,
+                        0.75,
+                        fade * strength * (0.39 + pressure * 0.055),
+                    ],
+                );
             }
         }
     }
@@ -323,26 +326,17 @@ impl VolcanicSources {
         // Suppress transients on teleports, reconnects and after suspended frames.
         let elapsed = self.seconds - previous;
         let continuous = previous >= self.continuous_from && elapsed > 0. && elapsed < 0.55;
-        for &cell in &self.geysers {
-            if continuous
-                && exposed(chunks, cell, GEYSER)
-                && geyser_surge(previous, cell) < 0.20
-                && geyser_surge(self.seconds, cell) >= 0.20
-            {
-                sounds.write(VolcanicSound::Steam(
-                    Vec3::from_array(cell.map(|n| n as f32)) + Vec3::new(0.5, 1., 0.5),
-                ));
-            }
-        }
         for &cell in &self.fumaroles {
             if continuous
-                && exposed(chunks, cell, FUMAROLE)
-                && lava::plume_height(cell, previous) < 1.7
-                && lava::plume_height(cell, self.seconds) >= 1.7
+                && lava::plume_height(cell, previous) < FUMAROLE_HISS_HEIGHT
+                && lava::plume_height(cell, self.seconds) >= FUMAROLE_HISS_HEIGHT
+                && let Some(origin) = fumarole_origin(cell, |p| {
+                    chunks
+                        .block_at(p)
+                        .map(|raw| journal.block(p).unwrap_or(raw))
+                })
             {
-                sounds.write(VolcanicSound::Steam(
-                    Vec3::from_array(cell.map(|v| v as f32)) + Vec3::new(0.5, 1., 0.5),
-                ));
+                sounds.write(VolcanicSound::Steam(origin));
             }
         }
         for &cell in &self.surfaces {

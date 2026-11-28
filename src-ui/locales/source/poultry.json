@@ -1,0 +1,13 @@
+[
+  {"source": "Hen", "de": "Henne", "en": "Hen"},
+  {"source": "Light Sussex Hen", "de": "Helle Sussex-Henne", "en": "Light Sussex Hen"},
+  {"source": "Partridge Hen", "de": "Rebhuhnfarbige Henne", "en": "Partridge Hen"},
+  {"source": "Buff Hen", "de": "Goldgelbe Henne", "en": "Buff Hen"},
+  {"source": "Barred Hen", "de": "Gesperberte Henne", "en": "Barred Hen"},
+  {"source": "Gold-Laced Hen", "de": "Goldgesäumte Henne", "en": "Gold-Laced Hen"},
+  {"source": "Blue-Laced Hen", "de": "Blaugesäumte Henne", "en": "Blue-Laced Hen"},
+  {"source": "Black-Breasted Red Rooster", "de": "Schwarzroter Hahn", "en": "Black-Breasted Red Rooster"},
+  {"source": "Silver Duckwing Rooster", "de": "Silberhalsiger Hahn", "en": "Silver Duckwing Rooster"},
+  {"source": "Barred Rooster", "de": "Gesperberter Hahn", "en": "Barred Rooster"},
+  {"source": "Blue-Red Rooster", "de": "Blauroter Hahn", "en": "Blue-Red Rooster"}
+]

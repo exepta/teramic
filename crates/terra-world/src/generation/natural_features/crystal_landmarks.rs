@@ -169,6 +169,21 @@ pub(super) fn build(
         }
     };
     site.center[1] = base;
+    if kind == CrystalLandmarkKind::CrystalMine && h.terrain.config().ecology_revision >= 23 {
+        let mut occupied = BTreeMap::new();
+        let mut fixtures = Vec::new();
+        let mut frame = Frame {
+            site,
+            ground,
+            blocks: &mut occupied,
+            objects: &mut fixtures,
+        };
+        mine::build(&mut frame, true);
+        objects.retain(|o| !occupied.contains_key(&o.position));
+        blocks.extend(occupied);
+        objects.extend(fixtures);
+        return Some(site);
+    }
     // Whole approach, roof silhouette and both shoulders belong to this
     // site. Another formation can never leave an unsupported tip over it.
     blocks.retain(|&[x, _, z], _| (x - cx).abs() > 15 || (z - cz).abs() > 15);
@@ -180,7 +195,7 @@ pub(super) fn build(
         objects,
     };
     match kind {
-        CrystalLandmarkKind::CrystalMine => mine::build(&mut frame),
+        CrystalLandmarkKind::CrystalMine => mine::build(&mut frame, false),
         CrystalLandmarkKind::MageTower => tower::build(&mut frame),
         CrystalLandmarkKind::CrystalVault => vault::build(&mut frame),
     }
@@ -301,6 +316,53 @@ mod tests {
     use std::collections::BTreeSet;
     use terra_core::WorldConfig;
     use terra_voxel::global_to_section;
+
+    #[test]
+    fn new_crystal_mines_keep_the_hillside_outside_the_rail_and_fixture_footprints() {
+        let tile = [-36, 1];
+        let terrain = TerraGenerator::new(WorldConfig::default()).unwrap();
+        let legacy = TerraGenerator::new(WorldConfig {
+            ecology_revision: 22,
+            ..WorldConfig::default()
+        })
+        .unwrap();
+        let site = terrain.crystal_landmark_at(tile).unwrap();
+        assert_eq!(Some(site), legacy.crystal_landmark_at(tile));
+        let modern = terrain.natural_patch(tile);
+        let previous = legacy.natural_patch(tile);
+        let removed = |patch: &super::super::NaturalPatch| {
+            patch
+                .cells
+                .iter()
+                .filter(|(p, material)| {
+                    if *material != M::Air as u16 {
+                        return false;
+                    }
+                    let dx = p[0] - site.center[0];
+                    let dz = p[2] - site.center[2];
+                    let [_, approach] = match site.turn {
+                        1 => [dz, -dx],
+                        2 => [-dx, -dz],
+                        3 => [-dz, dx],
+                        _ => [dx, dz],
+                    };
+                    approach < 0
+                        && (p[1] as f64 + 0.5)
+                            < terrain.surface_height(p[0] as f64 + 0.5, p[2] as f64 + 0.5)
+                })
+                .count()
+        };
+        assert!(removed(&modern) * 2 < removed(&previous));
+        assert_eq!(modern.block_at(site.world(-7, 2, -5)), None);
+        assert_eq!(
+            previous.block_at(site.world(-7, 2, -5)),
+            Some(M::Air as u16)
+        );
+        for z in -9..=14 {
+            let cell = site.world(0, 1, z);
+            assert_eq!(modern.block_at(cell), previous.block_at(cell));
+        }
+    }
 
     #[test]
     fn natural_sites_have_open_entrances_persistent_loot_and_complete_mine_tracks() {

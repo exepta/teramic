@@ -1023,3 +1023,42 @@ fn invalid_commands_and_deleted_destinations_do_not_move_players() {
         0
     );
 }
+
+#[test]
+fn two_command_spawned_roosters_fight_each_other_on_both_clients() {
+    use crate::client::ReplicatedCreatures;
+    use terra_core::creatures::{CreatureKind, CreatureSex};
+    use terra_world::edits::EditJournal;
+    let (mut host, mut a, mut b) = pair();
+    host.world_mut()
+        .resource_mut::<GameConfig>()
+        .server
+        .natural_mob_limit = Some(0);
+    command(&mut a, ChatCommand::Send("/spawn teramic::rooster".into()));
+    command(
+        &mut b,
+        ChatCommand::Send("/spawn teramic::blue_red_rooster".into()),
+    );
+    wait(&mut host, &mut [&mut a, &mut b], |host, clients| {
+        let flock = &host.world().resource::<EditJournal>().gameplay().creatures;
+        let rivals: Vec<_> = flock
+            .animals
+            .values()
+            .filter(|a| a.kind == CreatureKind::Rooster)
+            .collect();
+        rivals.len() == 2
+            && rivals
+                .iter()
+                .all(|a| a.health < CreatureKind::Rooster.health())
+            && clients.iter().all(|client| {
+                let replicas = &client.world().resource::<ReplicatedCreatures>().creatures;
+                rivals.iter().all(|a| {
+                    replicas.get(&a.id).is_some_and(|track| {
+                        track.current.health < CreatureKind::Rooster.health()
+                            && track.current.variant == a.variant
+                            && track.current.sex() == CreatureSex::Male
+                    })
+                })
+            })
+    });
+}

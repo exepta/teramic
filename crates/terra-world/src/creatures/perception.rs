@@ -121,26 +121,46 @@ pub(super) fn nearest_visible_at(
     accepts: impl Fn([f64; 3]) -> bool,
     sight_point: impl Fn([f64; 3]) -> [f64; 3],
 ) -> Option<(usize, [f64; 3])> {
-    let mut candidates: Vec<_> = players
-        .iter()
-        .take(128)
+    nearest_visible_target(
+        h,
+        eye,
+        origin,
+        players.iter().copied().take(128),
+        radius,
+        accepts,
+        |p| p,
+        sight_point,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn nearest_visible_target<T: Copy>(
+    h: &Habitat,
+    eye: [f64; 3],
+    origin: [f64; 3],
+    targets: impl Iterator<Item = T>,
+    radius: f64,
+    accepts: impl Fn(T) -> bool,
+    range_point: impl Fn(T) -> [f64; 3],
+    sight_point: impl Fn(T) -> [f64; 3],
+) -> Option<(usize, T)> {
+    let mut candidates: Vec<_> = targets
         .enumerate()
-        .filter(|(_, p)| {
-            super::navigation::valid_point(**p)
-                && distance(origin, **p) <= radius.min(MAX_RANGE).powi(2)
-                && accepts(**p)
+        .filter_map(|(i, target)| {
+            let point = range_point(target);
+            let distance = distance(origin, point);
+            (super::navigation::valid_point(point)
+                && distance <= radius.min(MAX_RANGE).powi(2)
+                && accepts(target))
+            .then_some((i, target, distance))
         })
         .collect();
-    candidates.sort_unstable_by(|(ai, a), (bi, b)| {
-        distance(origin, **a)
-            .total_cmp(&distance(origin, **b))
-            .then(ai.cmp(bi))
-    });
+    candidates.sort_unstable_by(|a, b| a.2.total_cmp(&b.2).then(a.0.cmp(&b.0)));
     candidates
         .into_iter()
         .take(TARGET_PROBES)
-        .find(|(_, point)| visible(h, eye, sight_point(**point)))
-        .map(|(index, point)| (index, *point))
+        .find(|(_, target, _)| visible(h, eye, sight_point(*target)))
+        .map(|(index, target, _)| (index, target))
 }
 
 #[cfg(test)]

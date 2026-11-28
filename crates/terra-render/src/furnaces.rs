@@ -136,6 +136,7 @@ fn setup(
             animation: Vec4::ZERO,
         },
     });
+    molten::setup_geysers(&mut commands, &mut meshes, smoke_material.clone());
     let smoke_entity = commands
         .spawn((
             Name::new("Furnace smoke wisps"),
@@ -475,6 +476,7 @@ fn update(
     session: Option<Res<ClientSession>>,
     journal: Res<EditJournal>,
     chunks: Res<ChunkStore>,
+    weather: Option<Res<crate::weather::WeatherVisual>>,
     mut effects: ResMut<Effects>,
     mut meshes: ResMut<Assets<Mesh>>,
     cameras: Query<(&Transform, &Exposure), (With<TerraCamera>, Without<FurnaceLamp>)>,
@@ -653,32 +655,9 @@ fn update(
         effects.previous_thermal_time,
         &mut sounds,
     );
-    sources.append_geysers(&mut smoke, &chunks, &journal, right, up);
+    let wind = weather.as_ref().map_or(Vec2::ZERO, |weather| weather.wind);
+    sources.append_fumaroles(&mut smoke, time.elapsed_secs(), wind, right, up, block);
     effects.previous_thermal_time = seconds;
-    for &cell in &sources.fumaroles {
-        if !molten::exposed(&chunks, cell, terra_world::lava::FUMAROLE) {
-            continue;
-        }
-        let height = terra_world::lava::plume_height(cell, seconds) as f32;
-        let origin = Vec3::from_array(cell.map(|v| v as f32)) + Vec3::new(0.5, 1.015, 0.5);
-        for i in 0..14 {
-            let age = (time.elapsed_secs() * 0.72 + i as f32 / 14.).fract();
-            let drift = age * age * 0.30;
-            let phase = i as f32 * 2.4 + seconds as f32;
-            let p = origin + Vec3::new(drift * phase.cos(), height * age, drift * phase.sin());
-            let top = p.y.floor() as i64;
-            if ((cell[1] + 1)..=top).any(|y| block([cell[0], y, cell[2]]) != Some(0)) {
-                continue;
-            }
-            smoke.wisp(
-                p,
-                0.07 + age * 0.31,
-                right,
-                up,
-                [0.74, 0.67, 0.64, (1. - age) * 0.48],
-            );
-        }
-    }
     for furnace in nearby {
         let facing = journal
             .object_state(furnace.position)

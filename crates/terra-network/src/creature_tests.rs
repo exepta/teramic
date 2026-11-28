@@ -3,6 +3,109 @@ use terra_core::creatures::*;
 use terra_world::edits::EditJournal;
 
 #[test]
+fn udp_hen_hit_makes_the_rooster_attack_only_the_responsible_player() {
+    use crate::client::CreatureActions;
+    let (mut host, mut a, mut b) = pair();
+    {
+        let mut config = host.world_mut().resource_mut::<GameConfig>();
+        config.server.game_mode = terra_core::GameMode::Survival;
+        config.server.natural_mob_limit = Some(0);
+    }
+    let position = a
+        .world()
+        .resource::<client::ClientSession>()
+        .confirmed_state()
+        .unwrap()
+        .position;
+    let [x, y, z] = position.map(f64::from);
+    let feet = y - f64::from(terra_physics::character::PLAYER_HALF_HEIGHT);
+    let eye = y + f64::from(terra_physics::character::PLAYER_EYE_OFFSET);
+    let terrain = host
+        .world()
+        .resource::<terra_world::streaming::WorldTerrain>();
+    let chunks = host
+        .world()
+        .resource::<terra_world::streaming::ChunkStore>();
+    let journal = host.world().resource::<EditJournal>();
+    let habitat = terra_world::creatures::Habitat {
+        terrain: &terrain.0,
+        chunks,
+        journal,
+    };
+    let mut population = CreaturePopulation::default();
+    let mut spawn = |kind: CreatureKind, at| {
+        let id = spawning::next_command_id(&population).unwrap();
+        let position = habitat.ground(at, kind).expect("loaded flat test ground");
+        population.animals.insert(
+            id,
+            Creature {
+                id,
+                kind,
+                position,
+                home: [
+                    (position[0].floor() as i64).div_euclid(32),
+                    (position[2].floor() as i64).div_euclid(32),
+                ],
+                velocity: [0.0; 3],
+                yaw: 0.0,
+                health: kind.health(),
+                behavior: CreatureBehavior::Rest,
+                timer: 3.0,
+                age: 0.0,
+                variant: 0,
+                needs: CreatureNeeds::full(kind),
+            },
+        );
+        id
+    };
+    let hen = spawn(CreatureKind::Hen, [x + 2.5, feet, z]);
+    let rooster = spawn(CreatureKind::Rooster, [x + 0.3, feet, z + 2.3]);
+    let at = population.animals[&hen].position;
+    let ray = Vec3::new(
+        (at[0] - x) as f32,
+        (at[1] + 0.32 - eye) as f32,
+        (at[2] - z) as f32,
+    )
+    .normalize();
+    host.world_mut()
+        .resource_mut::<EditJournal>()
+        .gameplay_mut()
+        .creatures = population;
+    a.world_mut().resource_mut::<client::ClientSession>().look =
+        [(-ray.x).atan2(-ray.z), ray.y.asin()];
+    std::thread::sleep(Duration::from_millis(500));
+    a.world_mut()
+        .resource_mut::<CreatureActions>()
+        .0
+        .push_back((hen, false));
+    wait(&mut host, &mut [&mut a, &mut b], |host, clients| {
+        let creatures = &host.world().resource::<EditJournal>().gameplay().creatures;
+        let reported_health = |i: usize| {
+            clients[i]
+                .world()
+                .resource::<client::ClientSession>()
+                .stats
+                .survival
+                .health
+        };
+        creatures.animals[&hen].health < CreatureKind::Hen.health()
+            && matches!(
+                creatures.animals[&rooster].behavior,
+                CreatureBehavior::Attack | CreatureBehavior::Hunt
+            )
+            && reported_health(0) < reported_health(1)
+    });
+    assert_eq!(
+        b.world()
+            .resource::<client::ClientSession>()
+            .stats
+            .survival
+            .health,
+        terra_core::SurvivalVitals::default().health
+    );
+}
+
+#[test]
 fn wild_bee_birth_snapshots_keep_two_udp_clients_updating_and_invalid_births_recover() {
     use lightyear::prelude::{MessageSender, MessageSystems};
     use protocol::session::{CreatureSnapshotChannel, CreatureStates};
@@ -99,6 +202,15 @@ fn wild_bee_birth_snapshots_keep_two_udp_clients_updating_and_invalid_births_rec
         mode: taming::CompanionMode::Follow,
     });
     packet.creatures.push(dragon);
+    let hen_id = poultry_id([0, 0], 1).unwrap();
+    let rooster_id = poultry_id([0, 0], 0).unwrap();
+    let mut hen = make(hen_id, CreatureKind::Hen);
+    hen.behavior = CreatureBehavior::Graze;
+    hen.variant = 5;
+    let mut rooster = make(rooster_id, CreatureKind::Rooster);
+    rooster.behavior = CreatureBehavior::Attack;
+    rooster.variant = 3;
+    packet.creatures.extend([hen.clone(), rooster.clone()]);
     for phase in 0..4 {
         packet.tick = base + phase;
         packet.creatures[1].position[0] = 3.0 + phase as f64 * 0.25;
@@ -115,11 +227,13 @@ fn wild_bee_birth_snapshots_keep_two_udp_clients_updating_and_invalid_births_rec
             })
         });
         for client in [&a, &b] {
-            let dragon = &client
+            let replicas = &client
                 .world()
                 .resource::<client::ReplicatedCreatures>()
-                .creatures[&dragon_id]
-                .current;
+                .creatures;
+            let dragon = &replicas[&dragon_id].current;
+            assert_eq!(replicas[&hen_id].current, hen);
+            assert_eq!(replicas[&rooster_id].current, rooster);
             assert_eq!(dragon.needs.dragon, Some(life));
             assert_eq!(dragon.dragon_stage(), dragon_life::DragonStage::Adolescent);
             assert!(client.world().resource::<client::ClientSession>().ready);

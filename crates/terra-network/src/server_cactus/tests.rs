@@ -52,6 +52,9 @@ fn real_server_contacts_hurt_players_and_mobs_with_cooldown_immunity_and_one_dea
         .init_resource::<ServerRuntime>()
         .init_resource::<EditJournal>()
         .init_resource::<riding::Mounts>()
+        .insert_resource(terra_world::streaming::WorldTerrain(
+            terra_world::TerraGenerator::new(Default::default()).unwrap(),
+        ))
         .insert_resource(chunks)
         .add_systems(Update, tick);
     let touch = Vec3::new(3.54, 1.9, 4.5);

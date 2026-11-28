@@ -165,6 +165,16 @@ pub(super) fn build_checked(
                     Vec2::new(0.035, 0.11),
                 );
             }
+        } else if step.walker == Walker::Cat {
+            for (x, z) in [(sign * 0.19, 0.31), (-sign * 0.19, -0.31)] {
+                imprint(Vec2::new(x, z), Vec2::new(0.063, 0.052));
+                for toe in [-1.5_f32, -0.5, 0.5, 1.5] {
+                    imprint(
+                        Vec2::new(x + toe * 0.031, z + 0.087 - toe.abs() * 0.013),
+                        Vec2::new(0.013, 0.021),
+                    );
+                }
+            }
         } else if step.walker == Walker::Bear {
             for (x, z) in [(sign * 0.30, 0.40), (-sign * 0.30, -0.40)] {
                 imprint(Vec2::new(x, z), Vec2::new(0.095, 0.10));

@@ -172,6 +172,13 @@ pub fn model_reference_size(kind: Kind) -> [f64; 3] {
         Kind::Horse | Kind::Zebra => [0.595, 1.95, 2.15],
         Kind::Elephant => [1.9, 3.03, 3.59],
         Kind::StoneGolem => [3.5, 3.95, 1.95],
+        Kind::Hen => [0.41, 0.64, 0.70],
+        Kind::Rooster => [0.48, 0.83, 1.00],
+        Kind::Tiger => [0.86, 1.22, 2.94],
+        Kind::Lion => [0.96, 1.32, 2.88],
+        Kind::Crocodile => [1.14, 0.61, 3.58],
+        Kind::Jaguar => [0.73, 1.01, 2.30],
+        Kind::Snake => [0.55, 0.28, 1.80],
         Kind::Squid => [0.95, 0.95, 2.0],
         Kind::MoonJelly
         | Kind::FireJelly
@@ -382,6 +389,50 @@ pub fn for_creature(a: &Creature) -> Hitboxes {
                     result.add([side * 0.31, 0.27, z], [0.29, 0.54, 0.32]);
                 }
             }
+        }
+        Kind::Tiger | Kind::Lion | Kind::Jaguar => {
+            // Match the separate shoulder, haunch, head and tail of the rig.
+            let s = match a.kind {
+                Kind::Lion => [1.03, 1.04, 0.98],
+                Kind::Jaguar => [0.89, 0.825, 0.79],
+                _ => [1.; 3],
+            };
+            let scaled = |v: [f64; 3]| std::array::from_fn(|i| v[i] * s[i]);
+            for (center, size) in [
+                ([0., 0.70, 0.04], [0.60, 0.53, 1.23]),
+                ([0., 0.74, -0.38], [0.70, 0.63, 0.66]),
+                ([0., 0.70, 0.46], [0.61, 0.57, 0.63]),
+                ([0., 0.93, -0.76], [0.48, 0.45, 0.55]),
+                ([0., 0.90, -0.96], [0.31, 0.25, 0.19]),
+            ] {
+                result.add(scaled(center), scaled(size));
+            }
+            if a.kind == Kind::Lion {
+                result.add([0., 0.88, -0.52], [0.82, 0.71, 0.47]);
+            }
+            for side in [-1., 1.] {
+                for z in [-0.42, 0.47] {
+                    result.add(scaled([side * 0.22, 0.29, z]), scaled([0.19, 0.58, 0.25]));
+                }
+            }
+            result.segment(scaled([0., 0.77, 0.65]), scaled([0., 0.66, 1.77]), 0.22);
+        }
+        Kind::Crocodile => {
+            result.add([0., 0.32, 0.03], [0.75, 0.45, 1.38]);
+            result.add([0., 0.37, -0.84], [0.49, 0.30, 0.62]);
+            result.add([0., 0.33, -1.34], [0.32, 0.25, 0.55]);
+            result.segment([0., 0.33, 0.48], [0., 0.22, 1.14], 0.39);
+            result.segment([0., 0.22, 1.09], [0., 0.16, 1.91], 0.23);
+            for side in [-1., 1.] {
+                for z in [-0.39, 0.48] {
+                    result.add([side * 0.43, 0.11, z], [0.26, 0.22, 0.31]);
+                }
+            }
+        }
+        Kind::Snake => {
+            result.add([0., 0.135, -0.72], [0.49, 0.24, 0.43]);
+            result.add([0., 0.087, -0.08], [0.60, 0.17, 0.94]);
+            result.add([0., 0.072, 0.59], [0.52, 0.14, 0.57]);
         }
         Kind::Stalker => {
             result.add([0.0, 1.62, 0.19], [0.99, 1.15, 0.61]);

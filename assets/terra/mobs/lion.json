@@ -1,0 +1,6 @@
+{
+  "id": "lion", "title": "Lion", "health": 38, "food": 34, "water": 23,
+  "size": [0.96, 1.32, 2.88], "speed": 2.65, "group_size": 2, "sleeps": true,
+  "combat": {"damage": 5.8, "aggro_radius": 19.0, "reach": 2.2, "cooldown": 1.55},
+  "spawn": {"biomes": ["savanna"], "herd_size": [1, 2]}
+}

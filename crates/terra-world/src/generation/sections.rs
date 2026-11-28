@@ -1105,7 +1105,7 @@ impl SectionGenerator {
                         continue;
                     }
                     let global = [start[0] + x as i64, start[2] + z as i64];
-                    let neighbors = crate::water::outlets::HORIZONTAL.map(|[dx, dz]| {
+                    let neighbors = |[dx, dz]: [i64; 2]| {
                         let lx = x as i64 + dx;
                         let lz = z as i64 + dz;
                         if (0..size as i64).contains(&lx) && (0..size as i64).contains(&lz) {
@@ -1124,7 +1124,7 @@ impl SectionGenerator {
                             }
                             outside
                         }
-                    });
+                    };
                     fluid_wake.extend(crate::water::natural_outlets(
                         global,
                         position.y,

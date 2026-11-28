@@ -97,36 +97,29 @@ fn corner(columns: &[SurfaceColumn], x: usize, z: usize, reference: f64) -> Corn
         }
         column
     });
-    let mut levels = [f64::INFINITY; 4];
+    let levels = adjacent.map(|column| column.water_level);
+    let group = super::outlets::level_group(levels, reference);
     let mut wet = 0;
+    let mut count = 0;
+    let mut sum = 0.0;
     let mut dry_bed = f64::INFINITY;
     for column in adjacent {
         if let Some(level) = column.water_level {
-            levels[wet] = level;
             wet += 1;
+            if group.contains(&level) {
+                count += 1;
+                sum += level;
+            }
         } else {
             dry_bed = dry_bed.min(bed(column));
         }
     }
-    levels[..wet].sort_by(f64::total_cmp);
     // Group by actual discontinuities. Comparing each sample with the requesting
     // cell would give different corners when several gentle slopes meet.
-    let mut start = 0;
-    let mut end = wet;
-    for i in 1..wet {
-        if levels[i] - levels[i - 1] >= MIN_LIP_DROP {
-            if reference < levels[i] {
-                end = i;
-                break;
-            }
-            start = i;
-        }
-    }
-    let count = end - start;
     let mean = if count == 0 {
         reference
     } else {
-        levels[start..end].iter().sum::<f64>() / count as f64
+        sum / count as f64
     };
     // A dry low neighbor is a drainage edge. Meet its solid top instead of
     // leaving a suspended horizontal rim. Raised banks retain the shared level.
@@ -147,10 +140,7 @@ fn corner(columns: &[SurfaceColumn], x: usize, z: usize, reference: f64) -> Corn
     };
     let depth = adjacent
         .into_iter()
-        .filter(|c| {
-            c.water_level
-                .is_some_and(|l| count > 0 && l >= levels[start] && l <= levels[end - 1])
-        })
+        .filter(|c| c.water_level.is_some_and(|l| group.contains(&l)))
         .map(|c| (height - bed(c)).max(0.0))
         .sum::<f64>()
         / count.max(1) as f64;

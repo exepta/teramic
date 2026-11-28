@@ -1,4 +1,5 @@
 //! A bounded pool of real PBR lights, discovered only when section geometry changes.
+mod beacon;
 mod distant;
 mod soft_core;
 mod sunlight;
@@ -76,6 +77,7 @@ fn configure_light_updates(app: &mut App) {
 
 pub(super) fn install(app: &mut App) {
     soft_core::install(app);
+    beacon::install(app);
     distant::install(app);
     configure_light_updates(app);
     app.init_resource::<Lamps>()

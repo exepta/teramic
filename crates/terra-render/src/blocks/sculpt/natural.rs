@@ -544,7 +544,17 @@ fn crust<const NX: usize, const NY: usize>(mesh: &mut FacePatch, form: NaturalFo
                     continue;
                 }
                 let k = (edge + 1) % 4;
-                let [a, b] = [corners[edge], corners[k]].map(|[u, v]| [u, v, -base]);
+                let [a, b] = [corners[edge], corners[k]].map(|[u, v]| {
+                    // At a concave terrace corner the caps of two perpendicular
+                    // banks project into the same air cell. A small bevel at
+                    // the root of the lip leaves each bank a distinct plane.
+                    let v = if fringe && base == 0.0 {
+                        v.clamp(0.006, 0.994)
+                    } else {
+                        v
+                    };
+                    [u, v, -base]
+                });
                 let role = if perimeter[edge] {
                     super::skirt_role(slot, edge)
                 } else {
@@ -1196,6 +1206,34 @@ fn coral_cups(mesh: &mut FacePatch) {
 mod tests {
     use super::*;
     use bevy::math::Vec3;
+
+    #[test]
+    fn intersecting_turf_banks_have_bevelled_lips_on_their_shared_corner() {
+        for form in [NaturalForm::Turf, NaturalForm::ReferenceTurf] {
+            for side in [0, 1, 4, 5] {
+                for variant in 0..4 {
+                    let mesh = face(form, side, variant);
+                    let caps = mesh
+                        .iter()
+                        .filter(|part| part.material == super::super::skirt_role(6, 2));
+                    let mut area = 0.0;
+                    for part in caps {
+                        for tri in part.indices.chunks_exact(3) {
+                            let [a, b, c] = [tri[0], tri[1], tri[2]]
+                                .map(|i| Vec3::from_array(part.positions[i as usize]));
+                            let normal = (b - a).cross(c - a);
+                            area += normal.y.abs();
+                            assert!(
+                                normal.x != 0.0 || normal.z != 0.0,
+                                "coplanar grass lip on side {side}"
+                            );
+                        }
+                    }
+                    assert!(area > 0.001, "the bank must still close above the overhang");
+                }
+            }
+        }
+    }
 
     #[test]
     fn nature_details_are_outside_the_supporting_square_and_never_cross_its_sides() {

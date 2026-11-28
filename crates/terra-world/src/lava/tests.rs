@@ -119,7 +119,7 @@ fn reservoir_advances_slowly_recedes_when_cut_and_quenches_on_water() {
     assert!(!chunks.lava_at([8, 1, 7]) && !chunks.lava_at([10, 1, 7]));
 }
 #[test]
-fn steam_is_local_and_stops_under_a_solid_roof() {
+fn steam_damages_only_during_the_burst_and_stops_under_a_solid_roof() {
     let mut app = chamber();
     let mut chunks = app.world_mut().resource_mut::<ChunkStore>();
     let base = [3, 1, 3];
@@ -131,13 +131,27 @@ fn steam_is_local_and_stops_under_a_solid_roof() {
         .set_block([3, 1, 3], FUMAROLE)
         .unwrap();
     let j = EditJournal::default();
-    assert!(plume_height(base, 0.) >= 0.48);
+    let mut clock = (0..700).map(|step| f64::from(step) * 0.01);
+    let quiet = clock
+        .clone()
+        .filter(|&t| plume_height(base, t) == 0.)
+        .count();
+    assert!(quiet > 400);
+    let quiet = clock
+        .clone()
+        .find(|&t| plume_height(base, t) == 0.)
+        .unwrap();
+    let peak = clock.find(|&t| plume_height(base, t) > 3.).unwrap();
     assert_eq!(
-        thermal_damage(&chunks, &j, [3.5, 1.9, 3.5], [0.35, 1.8, 0.35], 0.),
+        thermal_damage(&chunks, &j, [3.5, 2., 3.5], [0.35, 1.8, 0.35], quiet),
+        0.
+    );
+    assert_eq!(
+        thermal_damage(&chunks, &j, [3.5, 2., 3.5], [0.35, 1.8, 0.35], peak),
         3.
     );
     assert_eq!(
-        thermal_damage(&chunks, &j, [4.4, 2., 3.5], [0.35, 1.8, 0.35], 0.),
+        thermal_damage(&chunks, &j, [4.4, 2., 3.5], [0.35, 1.8, 0.35], peak),
         0.
     );
     chunks
@@ -148,7 +162,7 @@ fn steam_is_local_and_stops_under_a_solid_roof() {
         .set_block([3, 2, 3], M::Stone as u16)
         .unwrap();
     assert_eq!(
-        thermal_damage(&chunks, &j, [3.5, 3., 3.5], [0.35, 1.8, 0.35], 0.),
+        thermal_damage(&chunks, &j, [3.5, 3., 3.5], [0.35, 1.8, 0.35], peak),
         0.
     );
 }

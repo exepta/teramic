@@ -207,6 +207,7 @@ fn update(
                 CreatureKind::Sheep | CreatureKind::SpiritFox => Walker::Sheep,
                 CreatureKind::Pig => Walker::Pig,
                 CreatureKind::Bear | CreatureKind::Elephant => Walker::Bear,
+                CreatureKind::Tiger | CreatureKind::Lion | CreatureKind::Jaguar => Walker::Cat,
                 CreatureKind::Stalker | CreatureKind::BloodStalker => Walker::Stalker,
                 CreatureKind::Villager | CreatureKind::Skeleton => Walker::Player,
                 CreatureKind::StoneGolem | CreatureKind::ThornBrute => Walker::Bear,
@@ -222,6 +223,10 @@ fn update(
                 | CreatureKind::Butterfly
                 | CreatureKind::SpiritGloom
                 | CreatureKind::Raven
+                | CreatureKind::Hen
+                | CreatureKind::Rooster
+                | CreatureKind::Crocodile
+                | CreatureKind::Snake
                 | CreatureKind::BloodWisp
                 | CreatureKind::Squid
                 | CreatureKind::MoonJelly

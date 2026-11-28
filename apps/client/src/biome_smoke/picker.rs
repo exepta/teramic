@@ -32,7 +32,18 @@ pub(super) fn views(terrain: &TerraGenerator, kind: terra_core::BiomeKind) -> Op
                 vec![
                     ([2377, 36, -4657], MaterialId::Lava as u16),
                     ([2389, 31, -4659], 0),
-                    ([2389, 30, -4659], MaterialId::GeyserVent as u16),
+                    (
+                        [
+                            2389,
+                            if terrain.config().ecology_revision >= 24 {
+                                26
+                            } else {
+                                30
+                            },
+                            -4659,
+                        ],
+                        MaterialId::GeyserVent as u16,
+                    ),
                 ],
             )),
             BiomeKind::PetrifiedForest => Some((

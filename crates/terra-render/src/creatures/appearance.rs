@@ -15,7 +15,10 @@ impl Appearance {
                 | Kind::Butterfly
                 | Kind::SpiritGloom
                 | Kind::Skeleton
-                | Kind::StoneGolem => animal.variant,
+                | Kind::StoneGolem
+                | Kind::Hen
+                | Kind::Rooster
+                | Kind::Snake => animal.variant,
                 kind if kind.is_dragon() => animal.variant.min(kind.variant_count() - 1),
                 Kind::Villager => model::villager_variant(animal.variant, animal.sex()),
                 Kind::Fish => u8::from(animal.variant >= 2),

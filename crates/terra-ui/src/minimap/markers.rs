@@ -202,6 +202,97 @@ const SHEEP: Sprite = [
     "    bbb    ",
     "           ",
 ];
+const TIGER: Sprite = [
+    " eb     be ",
+    " bbb   bbb ",
+    "  beebebb  ",
+    " bbybbybbb ",
+    " ebeyyyebe ",
+    " beybybyeb ",
+    " bwwwnwwwb ",
+    "  bwwnwwb  ",
+    "   bwbwb   ",
+    "    bbb    ",
+    "           ",
+];
+const LION: Sprite = [
+    "   mmmmm   ",
+    "  mmbbbmm  ",
+    " mmbbbb bmm",
+    " mmbbbbbmm ",
+    " mmbe bebmm",
+    " mmbbb bmm ",
+    " mmbwnwbmm ",
+    "  mmbwbmm  ",
+    "   mmbmm   ",
+    "    mmm    ",
+    "     m     ",
+];
+const JAGUAR: Sprite = [
+    " bb     bb ",
+    " beb   beb ",
+    "  bbbebbb  ",
+    " bebbybbeb ",
+    " bbebbbebb ",
+    " bebb b beb",
+    " bwwwnwwwb ",
+    "  bewwweb  ",
+    "   bbebb   ",
+    "    bbb    ",
+    "           ",
+];
+const CROCODILE: Sprite = [
+    "       gg  ",
+    "      ggg  ",
+    "      gmgg ",
+    "  g  gmmg  ",
+    "   gggmggg ",
+    "    gmg    ",
+    "  gggggg   ",
+    "   geggg   ",
+    "  ggggg    ",
+    " ggggw     ",
+    "gggw       ",
+];
+const SNAKE: Sprite = [
+    "   bbbb    ",
+    "  bbmmbb   ",
+    " bb    bb  ",
+    "      mbb  ",
+    "    bbmb   ",
+    "  bbbb     ",
+    " bmb       ",
+    " bb   bbb  ",
+    "  bmbbbeb  ",
+    "   bmmmbb  ",
+    "        r  ",
+];
+const HEN: Sprite = [
+    "           ",
+    "  rr       ",
+    "  bbb      ",
+    " ybeb    b ",
+    "  bbbb  bb ",
+    "   bbwwbbb ",
+    "   bwwwbb  ",
+    "    bbbb   ",
+    "    y y    ",
+    "   yy yy   ",
+    "           ",
+];
+const ROOSTER: Sprite = [
+    "  rr r     ",
+    "  rrrr   mm",
+    "  ubuu  mm ",
+    " yueu mmm  ",
+    "  ruummm   ",
+    "   ubbbb   ",
+    "   bbbbb   ",
+    "    bbb    ",
+    "    y y    ",
+    "   yy yy   ",
+    "           ",
+];
 const COW: Sprite = [
     " h       h ",
     " hh     hh ",
@@ -372,6 +463,13 @@ pub(super) fn creature(
 ) {
     let sprite = match kind {
         CreatureKind::Sheep => &SHEEP,
+        CreatureKind::Hen => &HEN,
+        CreatureKind::Rooster => &ROOSTER,
+        CreatureKind::Tiger => &TIGER,
+        CreatureKind::Lion => &LION,
+        CreatureKind::Jaguar => &JAGUAR,
+        CreatureKind::Crocodile => &CROCODILE,
+        CreatureKind::Snake => &SNAKE,
         CreatureKind::Cow => &COW,
         CreatureKind::Pig => &PIG,
         CreatureKind::Fish if variant >= 2 => &CLOWNFISH,
@@ -460,6 +558,35 @@ fn sample(sprite: &Sprite, x: i32, y: i32) -> u8 {
 
 fn palette(kind: CreatureKind, variant: u8, glyph: u8) -> [u8; 4] {
     let rgb = match (kind, glyph) {
+        (CreatureKind::Tiger, b'b' | b'y') => [218, 133, 51],
+        (CreatureKind::Jaguar, b'b' | b'y') => [214, 166, 77],
+        (CreatureKind::Lion, b'b') => [209, 164, 94],
+        (CreatureKind::Lion, b'm') => [121, 78, 41],
+        (CreatureKind::Crocodile, b'g') => [119, 136, 80],
+        (CreatureKind::Crocodile, b'm') => [68, 83, 54],
+        (CreatureKind::Snake, b'b') => [
+            [105, 118, 76],
+            [150, 126, 101],
+            [201, 166, 104],
+            [190, 54, 40],
+            [60, 148, 86],
+            [183, 155, 84],
+            [36, 40, 49],
+            [185, 137, 101],
+            [104, 119, 115],
+        ][usize::from(variant % 9)],
+        (CreatureKind::Snake, b'm') => [
+            [232, 201, 92],
+            [53, 46, 43],
+            [120, 91, 59],
+            [247, 218, 131],
+            [235, 234, 209],
+            [57, 48, 44],
+            [244, 228, 189],
+            [119, 80, 57],
+            [69, 86, 81],
+        ][usize::from(variant % 9)],
+        (CreatureKind::Snake, b'r') => [176, 69, 84],
         (CreatureKind::DarkDragon, b'y') => [175, 91, 220],
         (CreatureKind::FireDragon, b'y') => [235, 94, 43],
         (CreatureKind::EarthDragon, b'y') => [208, 148, 75],
@@ -469,6 +596,26 @@ fn palette(kind: CreatureKind, variant: u8, glyph: u8) -> [u8; 4] {
         (CreatureKind::SandWorm, b'y') => [240, 178, 66],
         (CreatureKind::SandWorm, b'o') => [182, 88, 28],
         (CreatureKind::Raven, b'b') => [60, 40, 80],
+        (CreatureKind::Hen | CreatureKind::Rooster, b'r') => [193, 51, 44],
+        (CreatureKind::Hen | CreatureKind::Rooster, b'y') => [234, 164, 52],
+        (CreatureKind::Hen, b'b') => [
+            [222, 216, 190],
+            [146, 80, 46],
+            [210, 155, 73],
+            [76, 83, 86],
+            [136, 92, 42],
+            [101, 116, 132],
+        ][usize::from(variant % 6)],
+        (CreatureKind::Rooster, b'u') => [
+            [228, 166, 46],
+            [228, 229, 213],
+            [154, 160, 144],
+            [224, 170, 100],
+        ][usize::from(variant % 4)],
+        (CreatureKind::Rooster, b'm') => {
+            [[36, 97, 83], [69, 96, 113], [113, 126, 121], [83, 104, 124]][usize::from(variant % 4)]
+        }
+        (CreatureKind::Rooster, b'b') => [92, 60, 45],
         (CreatureKind::BloodSlime | CreatureKind::BloodWisp, b'g' | b'w') => [232, 43, 82],
         (CreatureKind::BloodStalker | CreatureKind::ThornBrute, b'b' | b'm' | b'o') => {
             [109, 29, 45]
@@ -567,6 +714,7 @@ mod tests {
             .into_iter()
             .map(|kind| (kind, 0))
             .chain([(CreatureKind::Fish, 2)])
+            .chain((1..CreatureKind::Snake.variant_count()).map(|v| (CreatureKind::Snake, v)))
         {
             let mut pixels = vec![0; 24 * 24 * 4];
             creature(&mut pixels, 24, [12, 12], kind, variant, false);
@@ -585,6 +733,11 @@ mod tests {
         creature(&mut [], usize::MAX, [0, 0], CreatureKind::Bee, 0, false);
         player(&mut pixels[..3], 1, [0, 0]);
         for sprite in [
+            &TIGER,
+            &LION,
+            &JAGUAR,
+            &CROCODILE,
+            &SNAKE,
             &STALKER,
             &SPIDER,
             &SHEEP,

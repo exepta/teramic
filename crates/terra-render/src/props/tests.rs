@@ -86,7 +86,7 @@ fn botanical_detail_is_deterministic_with_bounded_lod_cost() {
             (
                 PropKind::Grass,
                 [
-                    832 + usize::from(variant < 128 && variant % 8 % 3 == 2) * 184,
+                    816 + usize::from(variant < 128 && variant % 8 % 3 == 2) * 184,
                     160,
                     32,
                 ],
@@ -2062,29 +2062,35 @@ fn grass_lods_retain_the_same_prominent_blades() {
         let shapes = [DetailLevel::Near, DetailLevel::Middle, DetailLevel::Far].map(|level| {
             shapes::template(PropKind::Grass, variant, level, &PropMaterials::default()).unwrap()
         });
+        // The simplified stalk joins the real root/tip centre of each stepped leaf.
+        // Check geometry rather than vertex order: outlines and closed stalks differ.
+        let centre = |points: &[[f32; 3]], top: bool| {
+            let y = points
+                .iter()
+                .map(|p| p[1])
+                .reduce(if top { f32::max } else { f32::min })
+                .unwrap();
+            let mut low = Vec3::splat(f32::INFINITY);
+            let mut high = Vec3::splat(f32::NEG_INFINITY);
+            for &p in points.iter().filter(|p| p[1] == y) {
+                low = low.min(Vec3::from_array(p));
+                high = high.max(Vec3::from_array(p));
+            }
+            (low + high) * 0.5
+        };
         for blade in 0..4 {
-            assert_eq!(
-                &shapes[0][0].positions[blade * 20 + 16..blade * 20 + 20],
-                &shapes[1][0].positions[blade * 20 + 16..blade * 20 + 20]
+            let near = &shapes[0][0].positions[blade * 96..(blade + 1) * 96];
+            let middle = &shapes[1][0].positions[blade * 20..(blade + 1) * 20];
+            let far = &shapes[2][0].positions[blade * 8..(blade + 1) * 8];
+            for top in [false, true] {
+                assert!(centre(near, top).distance(centre(middle, top)) < 1e-5);
+                assert!(centre(near, top).distance(centre(far, top)) < 1e-5);
+            }
+            let reach = centre(near, true) - centre(near, false);
+            assert!(
+                reach.x.hypot(reach.z) > 0.13,
+                "outer blades fan out of their roots"
             );
-            assert_eq!(
-                shapes[0][0].positions[blade * 20],
-                shapes[1][0].positions[blade * 20]
-            );
-        }
-        assert_eq!(shapes[2][0].positions.len(), 32);
-        for blade in 0..4 {
-            let near = &shapes[1][0].positions[blade * 20..blade * 20 + 4];
-            let far = &shapes[2][0].positions[blade * 8..blade * 8 + 4];
-            let center = |points: &[[f32; 3]], a: usize, b: usize| {
-                (Vec3::from_array(points[a]) + Vec3::from_array(points[b])) * 0.5
-            };
-            let near_root = (Vec3::from_array(shapes[1][0].positions[blade * 20])
-                + Vec3::from_array(shapes[1][0].positions[blade * 20 + 8]))
-                * 0.5;
-            assert!(center(far, 0, 3).distance(near_root) < 1e-6);
-            assert!((far[1][1] - near[1][1]).abs() < 1e-6);
-            assert!((far[2][1] - near[2][1]).abs() < 1e-6);
         }
         assert!(shapes[0][0].positions.iter().all(|point| point[1] >= 0.0));
     }

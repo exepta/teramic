@@ -1,0 +1,6 @@
+{
+  "id": "tiger", "title": "Tiger", "health": 34, "food": 32, "water": 25,
+  "size": [0.86, 1.22, 2.94], "speed": 2.8, "group_size": 1, "sleeps": true,
+  "combat": {"damage": 5.5, "aggro_radius": 17.0, "reach": 2.1, "cooldown": 1.45},
+  "spawn": {"biomes": ["savanna"]}
+}

@@ -4,11 +4,61 @@ use crate::SurfaceColumn;
 pub(crate) const HORIZONTAL: [[i64; 2]; 4] = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 pub(super) const MIN_LIP_DROP: f64 = 1.0;
 
+/// Wet columns sharing a water vertex, in NW, NE, SW, SE order.
+pub(super) fn level_group(
+    mut levels: [Option<f64>; 4],
+    reference: f64,
+) -> std::ops::RangeInclusive<f64> {
+    // At a bank one corner of a sloping sheet may be dry. Complete its plane
+    // only to classify the slope; it contributes neither depth nor wet area.
+    // Two plateaus separated by a cliff extrapolate to the original plateaus.
+    if let Some(i) = levels.iter().position(Option::is_none)
+        && let (Some(x), Some(z), Some(opposite)) = (levels[i ^ 1], levels[i ^ 2], levels[i ^ 3])
+        && x != opposite
+        && z != opposite
+        && x != z
+    {
+        levels[i] = Some(x + z - opposite);
+    }
+    let mut sorted = levels.map(|v| v.unwrap_or(f64::INFINITY));
+    sorted.sort_by(f64::total_cmp);
+    let mut lo = sorted[0];
+    for [a, b] in sorted.array_windows() {
+        if b - a >= MIN_LIP_DROP {
+            if reference < *b {
+                return lo..=*a;
+            }
+            lo = *b;
+        }
+    }
+    lo..=sorted[3]
+}
+
+/// Even when two cell centres differ by a metre, a diagonal river can
+/// already share both endpoints of their edge via the adjoining columns.
+pub(crate) fn shares_channel_edge(
+    [dx, dz]: [i64; 2],
+    a: f64,
+    b: f64,
+    mut level_at: impl FnMut([i64; 2]) -> Option<f64>,
+) -> bool {
+    [-1, 1].into_iter().all(|sign| {
+        let (tx, tz) = (dz * sign, dx * sign);
+        let levels = [
+            Some(a),
+            Some(b),
+            level_at([tx, tz]),
+            level_at([dx + tx, dz + tz]),
+        ];
+        level_group(levels, a).contains(&b)
+    })
+}
+
 pub(crate) fn natural_outlets(
     global: [i64; 2],
     section_y: i64,
     column: SurfaceColumn,
-    neighbors: [SurfaceColumn; 4],
+    mut neighbor_at: impl FnMut([i64; 2]) -> SurfaceColumn,
     mut block_at: impl FnMut([i64; 3]) -> u16,
 ) -> Vec<[i64; 3]> {
     let mut result = Vec::new();
@@ -39,7 +89,8 @@ pub(crate) fn natural_outlets(
                 result.push(below);
             }
         }
-        for (offset, neighbor) in HORIZONTAL.into_iter().zip(neighbors) {
+        for offset in HORIZONTAL {
+            let neighbor = neighbor_at(offset);
             let lower = neighbor.water_columns().intervals[layer];
             // A completely wet shared face has no outlet.
             if lower.is_some_and(|w| w.bed <= lo as f64 && w.level > hi as f64) {
@@ -54,7 +105,14 @@ pub(crate) fn natural_outlets(
                 && column.water_flow != [0.; 2]
                 && neighbor.water_flow == [0.; 2]
                 && lower.is_none();
-            let lip = !river_bank && water.level - lower.map_or(floor, |w| w.level) >= MIN_LIP_DROP;
+            let lip = !river_bank
+                && water.level - lower.map_or(floor, |w| w.level) >= MIN_LIP_DROP
+                && !(layer == 0
+                    && lower.is_some_and(|w| {
+                        shares_channel_edge(offset, water.level, w.level, |p| {
+                            neighbor_at(p).water_level
+                        })
+                    }));
             for y in lo..=hi {
                 // Ordinary surface rivers stay within their channel; a real
                 // opening below the adjacent ground is a separate escape path.
@@ -84,6 +142,67 @@ pub(crate) fn natural_outlets(
 mod tests {
     use super::*;
     use crate::{TerraGenerator, water::WaterColumn};
+
+    fn natural_outlets(
+        global: [i64; 2],
+        section_y: i64,
+        column: SurfaceColumn,
+        neighbors: [SurfaceColumn; 4],
+        block_at: impl FnMut([i64; 3]) -> u16,
+    ) -> Vec<[i64; 3]> {
+        super::natural_outlets(
+            global,
+            section_y,
+            column,
+            |offset| {
+                HORIZONTAL
+                    .iter()
+                    .position(|p| *p == offset)
+                    .map_or(column, |i| neighbors[i])
+            },
+            block_at,
+        )
+    }
+
+    #[test]
+    fn a_dry_riverbank_does_not_split_the_neighboring_sloped_sheet() {
+        let bank = [Some(25.09), Some(26.19), Some(24.46), None];
+        assert!(level_group(bank, 25.09).contains(&26.19));
+        assert!(level_group(bank, 26.19).contains(&25.09));
+        let cliff = [Some(25.09), Some(26.19), Some(25.09), None];
+        assert!(!level_group(cliff, 25.09).contains(&26.19));
+    }
+
+    #[test]
+    fn connected_steep_river_edges_do_not_seed_a_second_waterfall() {
+        let terrain = TerraGenerator::new(terra_core::WorldConfig::default()).unwrap();
+        let mut upper = terrain.surface_column(0.5, 0.5);
+        upper.height = 4.0;
+        upper.water_level = Some(12.8);
+        upper.water_flow = [0.6, 1.0];
+        upper.cave.water = None;
+        upper.river_cavity = None;
+        for offset in HORIZONTAL {
+            let [dx, dz] = offset;
+            let neighbor = |[x, z]: [i64; 2]| crate::SurfaceColumn {
+                water_level: Some(
+                    12.8 - (x * dx + z * dz) as f64 * 1.2 - (x * dz + z * dx) as f64 * 0.6,
+                ),
+                ..upper
+            };
+            let target = [offset[0], 12, offset[1]];
+            assert!(shares_channel_edge(offset, 12.8, 11.6, |p| neighbor(p).water_level));
+            let wake = super::natural_outlets([0, 0], 0, upper, neighbor, |p| u16::from(p[1] < 5));
+            assert!(!wake.contains(&target));
+            // Plateaus separated by the same height difference still discharge.
+            let cliff = |[x, z]: [i64; 2]| crate::SurfaceColumn {
+                water_level: Some(if x * dx + z * dz > 0 { 11.6 } else { 12.8 }),
+                ..upper
+            };
+            let wake = super::natural_outlets([0, 0], 0, upper, cliff, |p| u16::from(p[1] < 5));
+            assert!(wake.contains(&target));
+        }
+    }
 
     #[test]
     fn a_real_breach_in_the_bed_or_submerged_wall_drains_even_below_the_surface_section() {

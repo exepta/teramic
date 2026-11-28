@@ -1,0 +1,6 @@
+{
+  "id": "crocodile", "title": "Crocodile", "health": 37, "food": 28, "water": 28,
+  "size": [1.368, 0.732, 4.296], "speed": 1.65, "group_size": 1, "sleeps": false,
+  "combat": {"damage": 6.0, "aggro_radius": 12.0, "reach": 2.35, "cooldown": 1.6},
+  "spawn": {"biomes": ["swamp"]}
+}

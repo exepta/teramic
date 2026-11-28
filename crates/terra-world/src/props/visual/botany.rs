@@ -9,96 +9,91 @@ pub(super) fn grass(
     level: PropDetail,
     palette: &PropPalette,
 ) -> Result<(), String> {
-    if level == PropDetail::Near {
-        return super::botanical_detail::grass(batches, variant, palette);
-    }
-    let foliage = if variant >= 128 {
+    let dry = variant >= 128;
+    let foliage = if dry {
         palette.dry_grass
     } else {
         palette.foliage
     };
-    let dry = variant >= 128;
     let variant = variant % 8;
-    let silhouette = variant % 3;
-    // Corners stay open for other plants sharing this soil cell.
-    // The prominent broad blades survive every LOD. Near-field bent leaves
-    // are added around these simpler silhouettes, never over companion corners.
+    // Four outer leaves establish the silhouette, then shorter offshoots fill
+    // the heart of the tuft. Space between the fans belongs to companion props.
+    // (root x, root z, outward axis, height, reach), all in template metres.
     let blades = [
-        (-0.23, 0.0, 0.46),
-        (0.23, 0.0, 0.52),
-        (0.0, -0.23, 0.40),
-        (0.0, 0.23, 0.45),
-        (-0.065, 0.025, 0.59),
-        (0.075, -0.035, 0.53),
-        (-0.10, -0.045, 0.43),
-        (0.10, 0.045, 0.48),
-        (-0.215, 0.06, 0.28),
-        (0.215, -0.06, 0.31),
-        (-0.06, 0.215, 0.30),
-        (0.06, -0.215, 0.27),
+        (-0.154, -0.036, Vec3::NEG_X, 0.38, 0.188),
+        (0.155, 0.057, Vec3::X, 0.48, 0.189),
+        (0.029, -0.151, Vec3::NEG_Z, 0.42, 0.193),
+        (-0.045, 0.159, Vec3::Z, 0.33, 0.184),
+        (-0.035, 0.024, Vec3::NEG_X, 0.57, 0.114),
+        (0.038, -0.015, Vec3::Z, 0.53, 0.110),
+        (0.124, -0.058, Vec3::X, 0.30, 0.143),
+        (-0.065, -0.091, Vec3::NEG_Z, 0.39, 0.137),
+        (0.062, 0.127, Vec3::Z, 0.22, 0.110),
+        (-0.147, 0.060, Vec3::NEG_X, 0.25, 0.105),
     ];
     let count = match level {
         PropDetail::Near => blades.len(),
         PropDetail::Middle => 8,
         PropDetail::Far => 4,
     };
-    for (i, &(x, z, height)) in blades[..count].iter().enumerate() {
-        let root = Vec3::new(
-            x + (((i * 7 + variant * 3) % 5) as f32 - 2.0) * 0.002,
-            0.0,
-            z + (((i * 3 + variant * 7) % 5) as f32 - 2.0) * 0.002,
-        );
-        let phase = if i % 2 == 0 {
-            0.0
-        } else {
-            std::f32::consts::FRAC_PI_2
-        };
-        let height =
-            height * [0.80, 1.0, 0.89][silhouette] + ((i * 5 + variant) % 3) as f32 * 0.009;
-        let width =
-            (0.070 + ((i * 3 + variant) % 4) as f32 * 0.005) * if i >= 8 { 0.82 } else { 1.0 };
-        let bend = Vec3::ZERO;
+    for (i, &(x, z, axis, height, reach)) in blades[..count].iter().enumerate() {
+        let root = Vec3::new(x, 0., z);
+        let height = height * [0.91, 1.03, 0.97][(i + variant) % 3];
+        let reach = reach * [0.98, 1.02, 1.0][(i * 5 + variant) % 3];
+        let thickness =
+            (0.032 + ((i * 3 + variant) % 4) as f32 * 0.005) * if dry { 0.83 } else { 1.0 };
         let material = foliage[(i + variant) % 3];
         let start = batches.get(&material).map_or(0, |b| b.positions.len());
-        if level == PropDetail::Far {
-            add_ribbon(
+        if level == PropDetail::Near {
+            super::leaf::add_profile(
                 batches,
                 material,
                 root,
-                width,
-                Vec3::Y * height + bend,
-                phase,
+                &super::leaf::grass_profile(reach, height, i < 4),
+                axis,
+                Vec3::Y,
+                thickness,
             )?;
         } else {
-            add_stalk(
-                batches,
-                material,
-                root,
-                Vec2::new(width, width * 0.22),
-                &[Vec3::ZERO, Vec3::Y * height + bend],
-                phase,
-            )?;
-        }
-        if let Some(batch) = batches.get_mut(&material) {
-            batch.colors.resize(batch.positions.len(), [1.0; 4]);
-            let (base, tip) = if dry {
-                ([0.84, 0.84, 0.80], [1.14, 1.10, 0.94])
+            // Join the centres of the same blunt root and tip as the stepped near mesh.
+            let tip = Vec3::Y * height + axis * (0.86 * reach);
+            let width = 0.46 * reach;
+            let yaw = if axis.x != 0.0 {
+                0.0
             } else {
-                ([0.77, 0.87, 0.70], [1.22, 1.17, 0.81])
+                std::f32::consts::FRAC_PI_2
             };
-            for (color, point) in batch.colors[start..]
-                .iter_mut()
-                .zip(&batch.positions[start..])
-            {
-                let weight = (point[1] / height).clamp(0.0, 1.0);
-                *color = [
-                    base[0] + (tip[0] - base[0]) * weight,
-                    base[1] + (tip[1] - base[1]) * weight,
-                    base[2] + (tip[2] - base[2]) * weight,
-                    1.0,
-                ];
+            if level == PropDetail::Middle {
+                add_stalk(
+                    batches,
+                    material,
+                    root,
+                    Vec2::new(width, thickness),
+                    &[Vec3::ZERO, tip],
+                    yaw,
+                )?;
+            } else {
+                add_ribbon(batches, material, root, width, tip, yaw)?;
             }
         }
+        if let Some(mesh) = batches.get_mut(&material) {
+            mesh.colors.resize(mesh.positions.len(), [1.0; 4]);
+            let (base, tip) = if dry {
+                (Vec3::new(0.80, 0.75, 0.61), Vec3::new(1.12, 1.05, 0.83))
+            } else {
+                (Vec3::new(0.69, 0.78, 0.59), Vec3::new(1.07, 1.15, 0.77))
+            };
+            for (color, p) in mesh.colors[start..]
+                .iter_mut()
+                .zip(&mesh.positions[start..])
+            {
+                let shade = base.lerp(tip, (p[1] / height).clamp(0., 1.));
+                *color = [shade.x, shade.y, shade.z, 1.];
+            }
+        }
+    }
+    if level == PropDetail::Near && !dry && variant % 3 == 2 {
+        super::botanical_detail::grass_flowers(batches, palette)?;
     }
     Ok(())
 }
@@ -143,8 +138,9 @@ pub(super) fn bush(
         PropDetail::Far => 3,
     };
     for (i, center) in cushions[..count].iter().enumerate() {
+        let lobe_scale = [1.0, 0.94, 1.035, 0.965, 1.06, 0.915][i % 6];
         let broad = if level == PropDetail::Far { 0.36 } else { 0.26 };
-        let size = Vec3::new(broad, if i == 0 { 0.34 } else { 0.24 }, broad);
+        let size = Vec3::new(broad, if i == 0 { 0.34 } else { 0.24 }, broad) * lobe_scale;
         let center = Vec3::from_array(*center);
         add_box(
             batches,

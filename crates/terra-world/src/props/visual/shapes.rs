@@ -29,7 +29,6 @@ pub(super) fn raw_template(
     let mut batches = BTreeMap::new();
     let fine = level == PropDetail::Near;
     let variant = usize::from(variant);
-    let leaf = palette.foliage[variant % 3];
     if kind == PropKind::AppleFruit {
         return Ok(super::apple(variant as u8, level, palette));
     }
@@ -161,17 +160,7 @@ pub(super) fn raw_template(
             }
         }
         PropKind::SmallPlant => {
-            for i in 0..if fine { 4 } else { 2 } {
-                let h = 0.6 + ((i + variant) % 3) as f32 * 0.13;
-                let x = i as f32 * 0.085 - 0.13;
-                voxel(leaf, [x, h * 0.5, 0.0], [0.035, h, 0.035], Quat::IDENTITY)?;
-                voxel(
-                    palette.stem,
-                    [x, h - 0.04, 0.0],
-                    [0.065, 0.16, 0.065],
-                    Quat::IDENTITY,
-                )?;
-            }
+            super::small_plant::append(&mut batches, variant, level, palette)?;
         }
     }
     Ok(batches.into_values().collect())

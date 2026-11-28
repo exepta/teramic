@@ -10,10 +10,11 @@ pub mod graves;
 mod tests;
 
 pub fn hostile(kind: Kind) -> bool {
-    matches!(
-        kind,
-        Kind::Skeleton | Kind::BloodStalker | Kind::BloodWisp | Kind::ThornBrute
-    )
+    kind.is_biome_predator()
+        || matches!(
+            kind,
+            Kind::Skeleton | Kind::BloodStalker | Kind::BloodWisp | Kind::ThornBrute
+        )
 }
 
 pub(super) fn surface_species(biome: &str, seed: u64) -> Option<Kind> {
@@ -33,7 +34,62 @@ pub fn step(
     players: &[[f64; 3]],
     dt: f32,
     search: bool,
+    nav: Option<&mut navigation::Navigation>,
+) -> Effect {
+    step_observed(
+        a,
+        h,
+        players.iter().copied().take(128).map(Target::player),
+        dt,
+        search,
+        nav,
+        |_| {},
+    )
+}
+
+#[derive(Clone, Copy)]
+pub struct Target {
+    pub position: [f64; 3],
+    pub aim: [f64; 3],
+}
+
+impl Target {
+    pub fn player([x, y, z]: [f64; 3]) -> Self {
+        Self {
+            position: [x, y - 0.9, z],
+            aim: [x, y, z],
+        }
+    }
+
+    pub fn creature(position: [f64; 3], height: f64) -> Self {
+        let [x, y, z] = position;
+        Self {
+            position,
+            aim: [x, y + height * 0.55, z],
+        }
+    }
+}
+
+pub fn ready_to_strike(a: &Creature, h: &Habitat, target: Target) -> bool {
+    a.kind.is_biome_predator()
+        && a.behavior == Behavior::Attack
+        && a.health > 0.0
+        && definitions::get(a.kind).combat.is_some_and(|combat| {
+            let [x, y, z] = a.position;
+            distance(a.position, target.position) <= combat.reach.powi(2)
+                && super::perception::in_melee_arc(a.yaw, a.position, target.position)
+                && super::perception::visible(h, [x, y + a.size()[1] * 0.65, z], target.aim)
+        })
+}
+
+pub fn step_observed(
+    a: &mut Creature,
+    h: &Habitat,
+    targets: impl Iterator<Item = Target> + Clone,
+    dt: f32,
+    search: bool,
     mut nav: Option<&mut navigation::Navigation>,
+    observe: impl FnOnce(usize),
 ) -> Effect {
     if !hostile(a.kind)
         || a.health <= 0.0
@@ -48,7 +104,7 @@ pub fn step(
     let previous_timer = a.timer;
     a.timer = (a.timer - dt).max(0.0);
     a.needs.search_in = (a.needs.search_in - dt).max(0.0);
-    if !a.kind.is_flying() {
+    if !a.kind.is_flying() && !(a.kind == Kind::Crocodile && super::support::swimming(a, h)) {
         super::support::settle(a, h, dt);
     }
     if search {
@@ -69,25 +125,54 @@ pub fn step(
     let committed = a.behavior == Behavior::Attack;
     // Once facing is locked, resolve the swing against a visible target in
     // its arc. A closer enemy outside the arc must not cancel that swing.
+    let predator = a.kind.is_biome_predator();
     let swing_target = if committed {
-        super::perception::nearest_visible(h, eye, [x, y + 0.9, z], players, combat.reach, |p| {
-            super::perception::in_melee_arc(a.yaw, a.position, p)
-        })
+        super::perception::nearest_visible_target(
+            h,
+            eye,
+            if predator {
+                a.position
+            } else {
+                [x, y + 0.9, z]
+            },
+            targets.clone(),
+            combat.reach,
+            |target| super::perception::in_melee_arc(a.yaw, a.position, target.position),
+            |target| {
+                if predator {
+                    target.position
+                } else {
+                    target.aim
+                }
+            },
+            |target| target.aim,
+        )
     } else {
         None
     };
     let seen = swing_target.or_else(|| {
         let chasing = matches!(a.behavior, Behavior::Hunt | Behavior::Attack);
-        super::perception::nearest_visible(
+        super::perception::nearest_visible_target(
             h,
             eye,
             a.position,
-            players,
+            targets,
             combat.aggro_radius * if chasing { 1.25 } else { 1.0 },
             |_| true,
+            |target| {
+                if predator {
+                    target.position
+                } else {
+                    target.aim
+                }
+            },
+            |target| target.aim,
         )
     });
-    let observed = seen.map(|(_, player)| [player[0], player[1] - 0.9, player[2]]);
+    let observed = seen.map(|(_, target)| target.position);
+    if let Some((index, _)) = seen {
+        observe(index);
+    }
     if let Some(target) = observed
         && let Some(nav) = nav.as_deref_mut()
     {
@@ -102,8 +187,10 @@ pub fn step(
     if let Some(target) = observed.or(remembered) {
         let visible = observed.is_some();
         if !committed {
-            a.yaw = ((a.position[0] - target[0]).atan2(a.position[2] - target[2]) as f32)
-                .rem_euclid(std::f32::consts::TAU);
+            let yaw = (a.position[0] - target[0]).atan2(a.position[2] - target[2]);
+            if !predator || h.clear_swimmer_rotated(a.position, a.size(), yaw) {
+                a.yaw = (yaw as f32).rem_euclid(std::f32::consts::TAU);
+            }
         }
         if visible
             && distance(a.position, target) <= combat.reach.powi(2)
@@ -232,6 +319,26 @@ pub(super) fn travel(
     mut nav: Option<&mut navigation::Navigation>,
 ) {
     let before = a.position;
+    if a.kind == Kind::Crocodile {
+        let dx = target[0] - before[0];
+        let dz = target[2] - before[2];
+        let length = dx.hypot(dz).max(0.001);
+        let speed = a.kind.speed() * 1.45;
+        let amount = (speed * f64::from(dt)).min(length);
+        let next = [
+            before[0] + dx / length * amount,
+            before[1],
+            before[2] + dz / length * amount,
+        ];
+        let yaw = (-dx).atan2(-dz);
+        if (super::support::swimming(a, h) || h.wet_footprint(next, a.size(), yaw))
+            && h.clear_swimmer_rotated(before, a.size(), yaw)
+        {
+            a.yaw = (yaw as f32).rem_euclid(std::f32::consts::TAU);
+            super::support::swim_toward(a, h, target, dt, speed);
+            return;
+        }
+    }
     if h.supported_sized(before, a.size(), f64::from(a.yaw))
         .is_none()
     {

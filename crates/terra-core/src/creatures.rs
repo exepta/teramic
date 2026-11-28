@@ -86,9 +86,16 @@ pub enum CreatureKind {
     Zebra,
     FireDragon,
     StoneGolem,
+    Hen,
+    Rooster,
+    Tiger,
+    Lion,
+    Crocodile,
+    Jaguar,
+    Snake,
 }
 impl CreatureKind {
-    pub const ALL: [Self; 39] = [
+    pub const ALL: [Self; 46] = [
         Self::Sheep,
         Self::Cow,
         Self::Pig,
@@ -128,6 +135,13 @@ impl CreatureKind {
         Self::Zebra,
         Self::FireDragon,
         Self::StoneGolem,
+        Self::Hen,
+        Self::Rooster,
+        Self::Tiger,
+        Self::Lion,
+        Self::Crocodile,
+        Self::Jaguar,
+        Self::Snake,
     ];
     pub const fn is_dragon(self) -> bool {
         matches!(
@@ -166,8 +180,10 @@ impl CreatureKind {
             | Self::Elephant
             | Self::Zebra => 1,
             Self::StoneGolem => 2,
+            Self::Tiger | Self::Lion | Self::Crocodile | Self::Jaguar => 1,
+            Self::Snake => 9,
             Self::Skeleton => 3,
-            Self::DarkDragon | Self::WaterDragon => 6,
+            Self::DarkDragon | Self::WaterDragon | Self::Hen => 6,
             _ => 4,
         }
     }
@@ -197,26 +213,36 @@ impl CreatureKind {
         )
     }
     pub fn hostile_to_players(self) -> bool {
+        self.is_biome_predator()
+            || matches!(
+                self,
+                Self::Bear
+                    | Self::StoneGolem
+                    | Self::ReefShark
+                    | Self::WhaleShark
+                    | Self::MediumSpider
+                    | Self::LargeSpider
+                    | Self::Stalker
+                    | Self::Skeleton
+                    | Self::BloodStalker
+                    | Self::BloodWisp
+                    | Self::ThornBrute
+                    | Self::SandWorm
+                    | Self::LavaWorm
+                    | Self::DarkDragon
+                    | Self::FireDragon
+                    | Self::EarthDragon
+                    | Self::WaterDragon
+            )
+    }
+    pub const fn is_biome_predator(self) -> bool {
         matches!(
             self,
-            Self::Bear
-                | Self::StoneGolem
-                | Self::ReefShark
-                | Self::WhaleShark
-                | Self::MediumSpider
-                | Self::LargeSpider
-                | Self::Stalker
-                | Self::Skeleton
-                | Self::BloodStalker
-                | Self::BloodWisp
-                | Self::ThornBrute
-                | Self::SandWorm
-                | Self::LavaWorm
-                | Self::DarkDragon
-                | Self::FireDragon
-                | Self::EarthDragon
-                | Self::WaterDragon
+            Self::Tiger | Self::Lion | Self::Crocodile | Self::Jaguar | Self::Snake
         )
+    }
+    pub const fn venomous(self, variant: u8) -> bool {
+        matches!(self, Self::Snake) && matches!(variant, 1 | 2 | 3 | 7 | 8)
     }
     pub fn health(self) -> f32 {
         definitions::get(self).health
@@ -478,6 +504,8 @@ impl Creature {
     }
     pub fn sex(&self) -> CreatureSex {
         match (self.kind, self.variant) {
+            (CreatureKind::Hen, _) => CreatureSex::Female,
+            (CreatureKind::Rooster, _) => CreatureSex::Male,
             (CreatureKind::Villager, villagers::SWAMP_WITCH) => CreatureSex::Female,
             (CreatureKind::Villager, villagers::SWAMP_WARLOCK) => CreatureSex::Male,
             _ => CreatureSex::from_spawn_id(self.id),
@@ -542,6 +570,10 @@ impl Creature {
                 breeding::species(self.kind)
             } else if spawning::is_command_id(self.id) {
                 true
+            } else if self.kind == CreatureKind::Rooster {
+                poultry_id(self.home, 0) == Some(self.id)
+            } else if self.kind == CreatureKind::Hen {
+                (1..=8).any(|slot| poultry_id(self.home, slot) == Some(self.id))
             } else if self.kind == CreatureKind::Bee {
                 (0..4).any(|slot| bee_id(self.home, slot) == Some(self.id))
             } else if self.kind.is_spider() {
@@ -674,6 +706,12 @@ pub fn gloom_id(cell: [i64; 2]) -> Option<u64> {
 }
 pub fn is_gloom_id(id: u64) -> bool {
     id >> 55 == 1
+}
+
+/// Nine identities per habitat: the rooster is slot zero, followed by up to eight hens.
+pub fn poultry_id(cell: [i64; 2], slot: u8) -> Option<u64> {
+    let cell_key = creature_id(cell, 0)? - 1;
+    (slot <= 8).then(|| (1 << 54) | (cell_key << 2) | u64::from(slot))
 }
 
 #[cfg(test)]
@@ -812,6 +850,56 @@ mod tests {
         assert!(!CreatureKind::HammerheadShark.hostile_to_players());
         assert!(CreatureKind::ReefShark.hostile_to_players());
         assert!(CreatureKind::WhaleShark.hostile_to_players());
+    }
+
+    #[test]
+    fn poultry_sexes_and_slot_identities_survive_serialization() {
+        assert_eq!(CreatureKind::Hen as u8, 39);
+        assert_eq!(CreatureKind::Rooster as u8, 40);
+        let mut identities = BTreeSet::new();
+        for home in [
+            [-31_250, 0],
+            [-1, -1],
+            [-1, 0],
+            [0, -1],
+            [0, 0],
+            [31_250, 31_250],
+        ] {
+            for slot in 0..=8 {
+                let (kind, sex) = if slot == 0 {
+                    (CreatureKind::Rooster, CreatureSex::Male)
+                } else {
+                    (CreatureKind::Hen, CreatureSex::Female)
+                };
+                let id = poultry_id(home, slot).unwrap();
+                assert!(identities.insert(id));
+                assert!(!spawning::is_command_id(id));
+                for variant in 0..kind.variant_count() {
+                    let mut bird = Creature {
+                        id,
+                        kind,
+                        home,
+                        position: [0.0, 3.0, 0.0],
+                        velocity: [0.0; 3],
+                        yaw: 0.0,
+                        health: kind.health(),
+                        behavior: CreatureBehavior::Graze,
+                        timer: 1.6,
+                        age: 0.0,
+                        variant,
+                        needs: CreatureNeeds::full(kind),
+                    };
+                    assert!(bird.valid());
+                    let bytes = serde_json::to_vec(&bird).unwrap();
+                    let restored: Creature = serde_json::from_slice(&bytes).unwrap();
+                    assert_eq!(restored, bird);
+                    assert_eq!(restored.sex(), sex);
+                    bird.id = spawning::next_command_id(&Default::default()).unwrap();
+                    assert!(bird.valid());
+                    assert_eq!(bird.sex(), sex);
+                }
+            }
+        }
     }
     #[test]
     fn bee_ids_do_not_overlap_old_species_and_groups_have_four_members() {

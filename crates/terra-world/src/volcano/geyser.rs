@@ -4,6 +4,8 @@ pub const BASE_RADIUS: f32 = 2.;
 pub const CROWN_RADIUS: f32 = 4.;
 pub const RAIN_RADIUS: f32 = 20.;
 pub const DROPS: usize = 216;
+pub(crate) const SUBMERGED_ECOLOGY_REVISION: u8 = 24;
+pub(crate) const VENT_DEPTH: i64 = 4;
 
 fn key([x, y, z]: [i64; 3]) -> u32 {
     let h = (x as u32).wrapping_mul(0x9e3779b1)
@@ -85,6 +87,33 @@ pub fn heat(seconds: f64, cell: [i64; 3], feet: [f64; 3], body_height: f64) -> f
 }
 
 #[cfg(feature = "bevy")]
+pub fn submerged(
+    chunks: &crate::streaming::ChunkStore,
+    journal: &crate::edits::EditJournal,
+    terrain: &crate::TerraGenerator,
+    cell: [i64; 3],
+) -> bool {
+    use terra_voxel::MaterialId;
+    let block = |p| {
+        chunks
+            .block_at(p)
+            .map(|raw| journal.block(p).unwrap_or(raw))
+    };
+    if block(cell) != Some(MaterialId::GeyserVent as u16) {
+        return false;
+    }
+    let [x, y, z] = cell;
+    let Some(y) = y.checked_add(1) else {
+        return false;
+    };
+    let mouth = [x, y, z];
+    block(mouth).is_some_and(|raw| {
+        MaterialId::from_raw(raw).is_some_and(|m| !m.is_solid())
+            && chunks.fluid_cell_at(terrain, journal, mouth, raw).amount > 0
+    })
+}
+
+#[cfg(feature = "bevy")]
 pub fn open(
     chunks: &crate::streaming::ChunkStore,
     journal: &crate::edits::EditJournal,
@@ -110,6 +139,7 @@ impl Vents {
         &mut self,
         chunks: &crate::streaming::ChunkStore,
         journal: &crate::edits::EditJournal,
+        terrain: &crate::TerraGenerator,
         feet: [f64; 3],
         body_height: f64,
         seconds: f64,
@@ -145,7 +175,7 @@ impl Vents {
                     });
                     for &p in vents.iter() {
                         let dose = heat(seconds, p, feet, body_height);
-                        if dose <= damage || chunks.block_at(p) != Some(vent) {
+                        if dose <= damage || !submerged(chunks, journal, terrain, p) {
                             continue;
                         }
                         let top = p[1] + 1 + HEIGHT as i64;
@@ -193,7 +223,12 @@ mod tests {
     #[cfg(feature = "bevy")]
     #[test]
     fn loaded_outer_rain_hurts_an_exposed_player_and_a_roof_protects_them() {
-        use crate::streaming::{ChunkStore, LoadedSection};
+        use crate::{
+            TerraGenerator,
+            edits::EditJournal,
+            streaming::{ChunkStore, LoadedSection},
+            water::FluidCell,
+        };
         use terra_voxel::{BlockSection, MaterialId, SectionPos};
         let cell = [4, 1, 4];
         let feet = [23., 2., 4.5];
@@ -226,8 +261,28 @@ mod tests {
             .map(|i| f64::from(i) / 100.)
             .find(|t| heat(*t, cell, feet, 1.8) > 0.)
             .unwrap();
+        let terrain = TerraGenerator::new(Default::default()).unwrap();
+        let mut journal = EditJournal::default();
+        let mouth = [4, 2, 4];
+        journal.record(mouth, MaterialId::Air as u16).unwrap();
+        journal.set_fluid(mouth, FluidCell::default()).unwrap();
         assert_eq!(
-            Vents::default().exposure(&chunks, &Default::default(), feet, 1.8, t),
+            Vents::default().exposure(&chunks, &journal, &terrain, feet, 1.8, t),
+            0.
+        );
+        journal
+            .set_fluid(
+                mouth,
+                FluidCell {
+                    amount: 8,
+                    source: true,
+                    flow: [0; 2],
+                },
+            )
+            .unwrap();
+        assert!(submerged(&chunks, &journal, &terrain, cell));
+        assert_eq!(
+            Vents::default().exposure(&chunks, &journal, &terrain, feet, 1.8, t),
             5.
         );
         chunks
@@ -238,7 +293,7 @@ mod tests {
             .set_block([7, 5, 4], MaterialId::Stone as u16)
             .unwrap();
         assert_eq!(
-            Vents::default().exposure(&chunks, &Default::default(), feet, 1.8, t),
+            Vents::default().exposure(&chunks, &journal, &terrain, feet, 1.8, t),
             0.
         );
     }

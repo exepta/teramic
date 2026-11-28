@@ -114,7 +114,7 @@ fn cherry_ecology_is_saved_and_never_retroactively_enabled_in_old_worlds() {
     let legacy = WorldConfig::from_toml("seed=42042").unwrap();
     assert_eq!(legacy.ecology_revision, 0);
     let fresh = WorldConfig::default();
-    assert_eq!(fresh.ecology_revision, 22);
+    assert_eq!(fresh.ecology_revision, 24);
     let serialized = toml::to_string(&fresh).unwrap();
     assert_eq!(WorldConfig::from_toml(&serialized).unwrap(), fresh);
     assert!(!fresh.same_terrain(&WorldConfig {

@@ -2,6 +2,53 @@ use super::*;
 use std::path::PathBuf;
 
 #[test]
+fn poultry_flock_survives_region_save_and_reload_with_dead_birds_and_variants() {
+    use terra_core::creatures::{
+        Creature, CreatureBehavior, CreatureKind, CreatureNeeds, poultry_id,
+    };
+    let directory = root();
+    let world = WorldId(166234);
+    let mut journal = EditJournal::default();
+    let population = &mut journal.gameplay_mut().creatures;
+    let home = [-17, -1];
+    population.explored.insert(home);
+    for slot in 0..=8 {
+        let kind = if slot == 0 {
+            CreatureKind::Rooster
+        } else {
+            CreatureKind::Hen
+        };
+        let id = poultry_id(home, slot).unwrap();
+        population.animals.insert(
+            id,
+            Creature {
+                id,
+                kind,
+                home,
+                position: [-528.5 + f64::from(slot), 4.0, -15.0],
+                velocity: [0.0; 3],
+                yaw: 0.0,
+                behavior: if slot == 8 {
+                    CreatureBehavior::Dead
+                } else {
+                    CreatureBehavior::Graze
+                },
+                health: if slot == 8 { 0.0 } else { kind.health() },
+                timer: 1.0,
+                age: 10.0,
+                variant: slot % kind.variant_count(),
+                needs: CreatureNeeds::full(kind),
+            },
+        );
+    }
+    assert!(population.valid());
+    save_edits(&directory, world, &journal).unwrap();
+    let loaded = load_edits(&directory, world).unwrap();
+    assert_eq!(loaded.gameplay().creatures, journal.gameplay().creatures);
+    fs::remove_dir_all(directory).unwrap();
+}
+
+#[test]
 fn destroyed_filled_chest_contents_survive_real_save_reload_without_inventory_resurrection() {
     use terra_core::{ItemKind, ItemStack};
     use terra_world::streaming::{BlockEditRequest, ChunkStore, LoadedSection, commit_block_edit};

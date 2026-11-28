@@ -39,6 +39,7 @@ impl FoodIndex {
                         | Kind::Sheep
                         | Kind::Pig
                         | Kind::Horse
+                        | Kind::Hen
                 )
         }) {
             let mut position = animal.position;
@@ -116,6 +117,7 @@ pub fn step(
         dt,
         search,
         navigation,
+        |_| {},
     )
 }
 
@@ -136,6 +138,7 @@ pub fn step_owned(
         dt,
         search,
         navigation,
+        |_| {},
     )
 }
 
@@ -147,6 +150,7 @@ pub fn cycle_step(
     dt: f32,
     search: bool,
     navigation: &mut super::navigation::Navigation,
+    on_target: impl FnOnce(Meal),
 ) -> Option<Option<Meal>> {
     step_with_access(
         a,
@@ -156,6 +160,7 @@ pub fn cycle_step(
         dt,
         search,
         navigation,
+        on_target,
     )
 }
 
@@ -167,6 +172,7 @@ fn step_with_access(
     dt: f32,
     search: bool,
     navigation: &mut super::navigation::Navigation,
+    on_target: impl FnOnce(Meal),
 ) -> Option<Option<Meal>> {
     let (index, owned, cycle) = access;
     if !dt.is_finite()
@@ -187,6 +193,7 @@ fn step_with_access(
         }
         return None;
     };
+    on_target(target.meal);
     a.age += f64::from(dt);
     a.timer = (a.timer - dt).max(0.0);
     a.needs.food = (a.needs.food - dt * 0.016).max(0.0);
@@ -274,6 +281,7 @@ pub fn eat(
                         | Kind::Sheep
                         | Kind::Pig
                         | Kind::Horse
+                        | Kind::Hen
                 )
                 || spider.kind == Kind::SmallSpider
                     && !matches!(target.kind, Kind::Bee | Kind::Butterfly)

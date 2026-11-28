@@ -1,8 +1,8 @@
 //! Bounded near-field plant voxels. Shared section batches, no per-detail entities.
 use super::{
-    PropDetail, PropMesh, PropPalette,
+    PropMesh, PropPalette,
     geometry::{add_box, add_stalk},
-    leaf::{add_profile, grass_profile},
+    leaf::add_profile,
 };
 use bevy_math::{Quat, Vec2, Vec3};
 use std::collections::BTreeMap;
@@ -54,90 +54,30 @@ fn voxel(
     Ok(())
 }
 
-pub(super) fn grass(
+pub(super) fn grass_flowers(
     batches: &mut BTreeMap<usize, PropMesh>,
-    variant: usize,
     palette: &PropPalette,
 ) -> Result<(), String> {
-    super::botany::grass(batches, variant, PropDetail::Middle, palette)?;
-    let dry = variant >= 128;
-    let colors = if dry {
-        palette.dry_grass
-    } else {
-        palette.foliage
-    };
-    let variant = variant % 8;
-    for i in 8..22 {
-        let angle = i as f32 * 2.399963 + variant as f32 * 0.13;
-        let radius = 0.055 + (i as f32 / 23.0).sqrt() * 0.205;
-        let mut root = Vec3::new(angle.cos() * radius, 0.0, angle.sin() * radius);
-        if i < 12 {
-            root = [
-                Vec3::new(-0.32, 0.0, 0.0),
-                Vec3::new(0.32, 0.0, 0.0),
-                Vec3::new(0.0, 0.0, -0.32),
-                Vec3::new(0.0, 0.0, 0.32),
-            ][i - 8];
-        }
-        if root.x.abs() < root.z.abs() {
-            root.x = root.x.clamp(-0.07, 0.07);
-        } else {
-            root.z = root.z.clamp(-0.07, 0.07);
-        }
-        let height =
-            (0.24 + ((i * 13 + variant * 7) % 29) as f32 * 0.012) * [0.85, 1.0, 0.94][variant % 3];
-        let width = 0.14 + ((i + variant) % 4) as f32 * 0.012;
-        let material = colors[(i + variant) % 3];
-        let start = batches.get(&material).map_or(0, |b| b.positions.len());
-        let x_leaf = root.x.abs() >= root.z.abs();
-        let sign = if if x_leaf { root.x } else { root.z } > 0.0 {
-            -1.0
-        } else {
-            1.0
-        };
-        let axis = if x_leaf { Vec3::X } else { Vec3::Z } * sign;
-        add_profile(
+    for (i, x) in [-0.12, 0.12].into_iter().enumerate() {
+        let center = Vec3::new(x, 0.27 + i as f32 * 0.09, 0.06);
+        add_stalk(
             batches,
-            material,
-            root,
-            &grass_profile(width, height),
-            axis,
-            Vec3::Y,
-            0.018,
+            palette.stem,
+            Vec3::new(x, 0.0, 0.06),
+            Vec2::splat(0.025),
+            &[Vec3::ZERO, Vec3::Y * center.y],
+            0.0,
         )?;
-        if let Some(mesh) = batches.get_mut(&material) {
-            mesh.colors.resize(mesh.positions.len(), [1.0; 4]);
-            for (color, p) in mesh.colors[start..]
-                .iter_mut()
-                .zip(&mesh.positions[start..])
-            {
-                let t = (p[1] / height).clamp(0.0, 1.0);
-                *color = [0.77 + 0.45 * t, 0.87 + 0.30 * t, 0.70 + 0.11 * t, 1.0];
-            }
+        for size in [Vec3::new(0.10, 0.03, 0.035), Vec3::new(0.035, 0.03, 0.10)] {
+            voxel(batches, palette.flowers[2], center, size, 1.0)?;
         }
-    }
-    if !dry && variant % 3 == 2 {
-        for (i, x) in [-0.12, 0.12].into_iter().enumerate() {
-            let center = Vec3::new(x, 0.27 + i as f32 * 0.09, 0.06);
-            add_stalk(
-                batches,
-                palette.stem,
-                Vec3::new(x, 0.0, 0.06),
-                Vec2::splat(0.025),
-                &[Vec3::ZERO, Vec3::Y * center.y],
-                0.0,
-            )?;
-            for size in [Vec3::new(0.10, 0.03, 0.035), Vec3::new(0.035, 0.03, 0.10)] {
-                voxel(batches, palette.flowers[2], center, size, 1.0)?;
-            }
-            voxel(
-                batches,
-                palette.flowers[1],
-                center + Vec3::Y * 0.02,
-                Vec3::splat(0.03),
-                1.0,
-            )?;
-        }
+        voxel(
+            batches,
+            palette.flowers[1],
+            center + Vec3::Y * 0.02,
+            Vec3::splat(0.03),
+            1.0,
+        )?;
     }
     Ok(())
 }
@@ -154,7 +94,12 @@ pub(super) fn bush(
         Vec3::new(0.065, 0.32, 0.065),
         0.9,
     )?;
-    for i in 0..6 {
+    // Different crown lobes overlap in volume, but each must own its skin:
+    // equal widths put differently coloured leaf faces on the same plane.
+    for (i, width) in [0.218, 0.237, 0.211, 0.230, 0.243, 0.224]
+        .into_iter()
+        .enumerate()
+    {
         let angle = i as f32 * std::f32::consts::TAU / 6.0;
         let center = Vec3::new(
             angle.cos() * 0.10,
@@ -165,7 +110,7 @@ pub(super) fn bush(
             batches,
             palette.foliage[(i + variant) % 3],
             center,
-            Vec3::splat(0.23),
+            Vec3::splat(width),
             0.80,
         )?;
     }
@@ -215,8 +160,11 @@ pub(super) fn bush(
                     0.9,
                 )?;
             } else {
-                for size in [Vec3::new(0.10, 0.032, 0.035), Vec3::new(0.035, 0.032, 0.10)] {
-                    voxel(batches, palette.flowers[color], p, size, 1.0)?;
+                for (dy, size) in [
+                    (0.0, Vec3::new(0.10, 0.032, 0.035)),
+                    (0.004, Vec3::new(0.035, 0.032, 0.10)),
+                ] {
+                    voxel(batches, palette.flowers[color], p + Vec3::Y * dy, size, 1.0)?;
                 }
                 voxel(
                     batches,

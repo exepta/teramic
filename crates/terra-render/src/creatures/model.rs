@@ -15,6 +15,7 @@ mod forest;
 mod horse;
 mod lava_worm;
 mod mammal;
+pub(super) mod poultry;
 pub(super) mod sandworm;
 mod shape;
 pub(super) mod soldier;
@@ -24,6 +25,7 @@ mod stalker;
 pub(super) mod stone_golem;
 mod villager;
 mod voxel;
+pub(super) mod wild;
 
 #[derive(Clone, Copy, Debug)]
 pub(super) enum Part {
@@ -41,6 +43,8 @@ pub(super) enum Part {
     Leg(f32),
     Tail,
     Wing(f32),
+    ReptileJoint(u8),
+    SnakeTongue,
     Proboscis,
     Eyelids,
     Bell,
@@ -92,11 +96,15 @@ pub(super) fn parts_variant(kind: Kind, variant: u8) -> Result<Vec<(Part, Vec3, 
     }
     match kind {
         Kind::Bee => bee::parts(),
+        Kind::Tiger | Kind::Lion | Kind::Crocodile | Kind::Jaguar | Kind::Snake => {
+            wild::parts(kind, variant)
+        }
         Kind::Butterfly => spirit::butterfly(variant),
         Kind::SpiritGloom => spirit::gloom(variant),
         Kind::SpiritFox => spirit::fox(),
         Kind::Skeleton => forest::skeleton(variant),
         Kind::Raven => forest::raven(),
+        Kind::Hen | Kind::Rooster => poultry::parts(kind, variant),
         Kind::BloodSlime => forest::slime(),
         Kind::BloodStalker => forest::stalker(),
         Kind::BloodWisp => forest::wisp(),
@@ -267,6 +275,8 @@ mod tests {
                 // Fifteen tapered basalt rings carry separate lava seams.
                 Kind::LavaWorm => (40, 2.5, 32_000),
                 Kind::Elephant => (10, 3.2, 18_000),
+                Kind::Crocodile => (10, 2.5, 16_000),
+                Kind::Snake => (11, 2.5, 16_000),
                 Kind::Stalker => (11, 3.0, 64_000),
                 // Ten stones, five inlays, an awakening seal and two impact meshes.
                 Kind::StoneGolem => (18, 4.05, 60_000),

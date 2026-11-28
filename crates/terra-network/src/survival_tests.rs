@@ -52,6 +52,77 @@ fn frame(host: &mut App, client: &mut App) {
 }
 
 #[test]
+fn only_venomous_snake_bites_replicate_poison() {
+    use terra_core::{EffectKind, creatures::*};
+    let (mut host, mut client, _) = survival(PlayerStats {
+        survival: SurvivalVitals {
+            health: 80.,
+            hunger: 60.,
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+    host.world_mut()
+        .resource_mut::<GameConfig>()
+        .server
+        .natural_mob_limit = Some(0);
+    let mut health = 80.;
+    for variant in [0, 1] {
+        let [x, y, z] = client
+            .world()
+            .resource::<client::ClientSession>()
+            .confirmed_state()
+            .unwrap()
+            .position
+            .map(f64::from);
+        let feet = y - f64::from(terra_physics::character::PLAYER_HALF_HEIGHT);
+        let kind = CreatureKind::Snake;
+        let id = spawning::next_command_id(&CreaturePopulation::default()).unwrap();
+        let home = [
+            (x.floor() as i64).div_euclid(32),
+            (z.floor() as i64).div_euclid(32),
+        ];
+        let mut population = CreaturePopulation::default();
+        population.animals.insert(
+            id,
+            Creature {
+                id,
+                kind,
+                home,
+                position: [x + 0.95, feet, z],
+                yaw: std::f32::consts::FRAC_PI_2,
+                variant,
+                velocity: [0.; 3],
+                behavior: CreatureBehavior::Rest,
+                timer: 1.,
+                age: 0.,
+                health: kind.health(),
+                needs: CreatureNeeds::full(kind),
+            },
+        );
+        host.world_mut()
+            .resource_mut::<EditJournal>()
+            .gameplay_mut()
+            .creatures = population;
+        wait(&mut host, &mut [&mut client], |_, clients| {
+            let stats = clients[0]
+                .world()
+                .resource::<client::ClientSession>()
+                .stats
+                .survival;
+            stats.health < health
+        });
+        let stats = client
+            .world()
+            .resource::<client::ClientSession>()
+            .stats
+            .survival;
+        assert_eq!(stats.effects.contains(EffectKind::Poison), variant == 1);
+        health = stats.health;
+    }
+}
+
+#[test]
 fn jellyfish_contact_gives_ten_second_poison_that_expires_after_the_contact_ends() {
     use terra_core::{EffectKind, creatures::*};
     let (mut host, mut client, profile) = survival(PlayerStats {

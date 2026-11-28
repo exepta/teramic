@@ -284,6 +284,34 @@ pub fn get(kind: CreatureKind) -> &'static MobDefinition {
                 "stone_golem",
                 include_str!("../../../../assets/terra/mobs/stone_golem.json"),
             ),
+            (
+                "hen",
+                include_str!("../../../../assets/terra/mobs/hen.json"),
+            ),
+            (
+                "rooster",
+                include_str!("../../../../assets/terra/mobs/rooster.json"),
+            ),
+            (
+                "tiger",
+                include_str!("../../../../assets/terra/mobs/tiger.json"),
+            ),
+            (
+                "lion",
+                include_str!("../../../../assets/terra/mobs/lion.json"),
+            ),
+            (
+                "crocodile",
+                include_str!("../../../../assets/terra/mobs/crocodile.json"),
+            ),
+            (
+                "jaguar",
+                include_str!("../../../../assets/terra/mobs/jaguar.json"),
+            ),
+            (
+                "snake",
+                include_str!("../../../../assets/terra/mobs/snake.json"),
+            ),
         ]
         .into_iter()
         .enumerate()

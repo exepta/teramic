@@ -207,6 +207,7 @@ pub(crate) fn install(app: &mut App) {
         .init_resource::<trees::TreeRuntime>()
         .init_resource::<creatures::InspectionTargets>()
         .init_resource::<creatures::DragonChallengers>()
+        .init_resource::<creatures::poultry::Alerts>()
         .init_resource::<villager_defense::Defenses>()
         .init_resource::<pvp::Attacks>()
         .init_resource::<stalkers::Grips>()
@@ -562,6 +563,7 @@ struct ControlWorld<'w, 's> {
     defenses: Option<ResMut<'w, villager_defense::Defenses>>,
     inspections: Option<ResMut<'w, creatures::InspectionTargets>>,
     dragon_challengers: Option<ResMut<'w, creatures::DragonChallengers>>,
+    poultry_alerts: Option<ResMut<'w, creatures::poultry::Alerts>>,
     sleep: Option<ResMut<'w, beds::SleepRuntime>>,
     block_properties: Res<'w, terra_core::block_properties::BlockPropertiesCatalog>,
     recipes: Res<'w, terra_core::crafting::RecipeBook>,

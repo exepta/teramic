@@ -7,8 +7,8 @@ use terra_core::{
 use terra_voxel::SectionPos;
 use terra_world::{edits::SectionDelta, props::PropId};
 
-// World snapshots append the Petrified Forest profile and fire dragon identities.
-pub const PROTOCOL_VERSION: u32 = 164;
+// Creature snapshots include the appended predators and nine snake variants.
+pub const PROTOCOL_VERSION: u32 = 166;
 pub const PROTOCOL_ID: u64 = 0x5445525241000001;
 pub const MAX_INPUT_BACKLOG: usize = 128;
 pub const MAX_TREE_INTEREST: usize = 256;
@@ -994,7 +994,7 @@ mod layout_tests {
                 .collect::<Vec<_>>()
         );
         assert_eq!(received.creatures.len(), 10);
-        assert_eq!(PROTOCOL_VERSION, 164);
+        assert_eq!(PROTOCOL_VERSION, 166);
     }
     #[test]
     fn kinetic_stress_capacity_roundtrip_and_reject_nonfinite_or_impossible_reserves() {

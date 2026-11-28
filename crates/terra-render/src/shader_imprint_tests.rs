@@ -326,29 +326,41 @@ fn actual_particle_solver_and_reconstruction_compile_all_gpu_entry_points() {
 }
 
 #[test]
-fn actual_particle_isosurface_compiles_with_and_without_opaque_depth_clipping() {
+fn particle_surface_beacon_and_sky_compile_with_and_without_opaque_depth_clipping() {
     let mut resolver = engine_shaders();
-    resolver.root = include_str!("../../../assets/shaders/terra_particle_surface.wesl").into();
     let path = "terra::imprint".parse::<ModulePath>().unwrap();
-    for depth in [false, true] {
-        let mut options = wesl::CompileOptions {
-            visibility: false,
-            ..default()
-        };
-        for (name, value) in [("DEPTH_PREPASS", depth), ("VERTEX_POSITIONS", true)] {
-            options.features.set(name, value);
-        }
-        let compiled = wesl::compile(&path, &options, &resolver).unwrap();
-        let wgsl = compiled.syntax.to_string();
-        let module = naga::front::wgsl::parse_str(&wgsl)
+    for (source, entry_points) in [
+        (
+            include_str!("../../../assets/shaders/terra_particle_surface.wesl"),
+            2,
+        ),
+        (include_str!("../../../assets/shaders/terra_beacon.wesl"), 2),
+        (
+            include_str!("../../../assets/shaders/terra_horizon.wesl"),
+            1,
+        ),
+    ] {
+        resolver.root = source.into();
+        for depth in [false, true] {
+            let mut options = wesl::CompileOptions {
+                visibility: false,
+                ..default()
+            };
+            for (name, value) in [("DEPTH_PREPASS", depth), ("VERTEX_POSITIONS", true)] {
+                options.features.set(name, value);
+            }
+            let compiled = wesl::compile(&path, &options, &resolver).unwrap();
+            let wgsl = compiled.syntax.to_string();
+            let module = naga::front::wgsl::parse_str(&wgsl)
+                .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&wgsl)));
+            naga::valid::Validator::new(
+                naga::valid::ValidationFlags::all(),
+                naga::valid::Capabilities::all(),
+            )
+            .validate(&module)
             .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&wgsl)));
-        naga::valid::Validator::new(
-            naga::valid::ValidationFlags::all(),
-            naga::valid::Capabilities::all(),
-        )
-        .validate(&module)
-        .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&wgsl)));
-        assert_eq!(module.entry_points.len(), 2);
+            assert_eq!(module.entry_points.len(), entry_points);
+        }
     }
 }
 

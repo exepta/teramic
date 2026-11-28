@@ -14,6 +14,7 @@ mod scarecrow;
 pub use fruit::apple;
 mod shapes;
 mod sizing;
+mod small_plant;
 mod trunk_fungi;
 mod webs;
 pub use shapes::template;

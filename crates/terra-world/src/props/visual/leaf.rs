@@ -113,18 +113,48 @@ fn triangulate(outline: &[Vec2]) -> Result<Vec<[usize; 3]>, String> {
     Ok(triangles)
 }
 
-pub(super) fn grass_profile(width: f32, height: f32) -> [Vec2; 8] {
-    [
-        [-0.16, 0.0],
-        [0.16, 0.0],
-        [0.16, 0.32],
-        [0.54, 0.32],
-        [0.54, 1.0],
-        [0.30, 1.0],
-        [0.30, 0.70],
-        [-0.16, 0.70],
-    ]
-    .map(|[x, y]| Vec2::new(x * width, y * height))
+/// The overlapping shelves of the longer blades follow the outward curve to
+/// a short, narrow tip. Inner leaves make the same turn in three tiers.
+pub(super) fn grass_profile(reach: f32, height: f32, outer: bool) -> Vec<Vec2> {
+    let outline: &[[f32; 2]] = if outer {
+        &[
+            [-0.32, 0.00],
+            [0.32, 0.00],
+            [0.32, 0.28],
+            [0.60, 0.28],
+            [0.60, 0.56],
+            [0.84, 0.56],
+            [0.84, 0.82],
+            [1.00, 0.82],
+            [1.00, 1.00],
+            [0.72, 1.00],
+            [0.72, 0.82],
+            [0.45, 0.82],
+            [0.45, 0.56],
+            [0.11, 0.56],
+            [0.11, 0.28],
+            [-0.32, 0.28],
+        ]
+    } else {
+        &[
+            [-0.32, 0.00],
+            [0.32, 0.00],
+            [0.32, 0.42],
+            [0.76, 0.42],
+            [0.76, 0.78],
+            [1.00, 0.78],
+            [1.00, 1.00],
+            [0.72, 1.00],
+            [0.72, 0.78],
+            [0.17, 0.78],
+            [0.17, 0.42],
+            [-0.32, 0.42],
+        ]
+    };
+    outline
+        .iter()
+        .map(|[x, y]| Vec2::new(x * reach, y * height))
+        .collect()
 }
 
 #[cfg(test)]
@@ -134,7 +164,7 @@ mod tests {
     #[test]
     fn bent_leaf_is_a_closed_indexed_staircase_without_internal_caps() {
         let mut batches = BTreeMap::new();
-        let outline = grass_profile(0.15, 0.5);
+        let outline = grass_profile(0.15, 0.5, true);
         add_profile(
             &mut batches,
             0,
@@ -146,8 +176,8 @@ mod tests {
         )
         .unwrap();
         let mesh = &batches[&0];
-        assert_eq!(mesh.positions.len(), 48);
-        assert_eq!(mesh.indices.len(), 84);
+        assert_eq!(mesh.positions.len(), 96);
+        assert_eq!(mesh.indices.len(), 180);
         let mut edges = BTreeMap::new();
         for triangle in mesh.indices.chunks_exact(3) {
             for edge in 0..3 {
@@ -178,8 +208,8 @@ mod tests {
                 front_area += cross.length() * 0.5;
             }
         }
-        // Exact union area of the three connected tiers, not a filled AABB.
-        let expected = (0.32 * 0.32 + 0.70 * 0.38 + 0.24 * 0.30) * 0.15 * 0.5;
+        // Exact union area of the four connected tiers, not a filled AABB.
+        let expected = (0.64 * 0.28 + 0.49 * 0.28 + 0.39 * 0.26 + 0.28 * 0.18) * 0.15 * 0.5;
         assert!((front_area - expected).abs() < 1e-6);
         assert!(mesh.positions.iter().all(|p| p[1] >= 0.0 && p[1] <= 0.5));
     }

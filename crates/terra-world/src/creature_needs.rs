@@ -46,8 +46,11 @@ fn food_at(habitat: &Habitat, kind: Kind, position: [i64; 3]) -> Option<WorldPro
         .copied()
 }
 
-fn grazable_savanna(kind: Kind, habitat: &Habitat, ground: [i64; 3]) -> bool {
+fn grazable_ground(kind: Kind, habitat: &Habitat, ground: [i64; 3]) -> bool {
     use terra_voxel::MaterialId as M;
+    if matches!(kind, Kind::Hen | Kind::Rooster) {
+        return super::poultry::forage_ground(habitat, ground);
+    }
     matches!(kind, Kind::Zebra | Kind::Elephant)
         && matches!(
             habitat.block(ground).and_then(M::from_raw),
@@ -58,7 +61,7 @@ fn grazable_savanna(kind: Kind, habitat: &Habitat, ground: [i64; 3]) -> bool {
 fn find_food(animal: &Creature, habitat: &Habitat) -> Option<NeedGoal> {
     let [x, y, z] = animal.position.map(|v| v.floor() as i64);
     let soil = [x, y - 1, z];
-    if grazable_savanna(animal.kind, habitat, soil) {
+    if grazable_ground(animal.kind, habitat, soil) {
         return Some(NeedGoal {
             kind: NeedKind::Food,
             position: soil,
@@ -207,7 +210,7 @@ pub(super) fn update(animal: &mut Creature, habitat: &Habitat, dt: f32, search: 
         let available = match goal.kind {
             NeedKind::Water => water_at(habitat, goal.position),
             NeedKind::Food => {
-                prop.is_some() || grazable_savanna(animal.kind, habitat, goal.position)
+                prop.is_some() || grazable_ground(animal.kind, habitat, goal.position)
             }
             NeedKind::Tree
             | NeedKind::Shelter
@@ -252,7 +255,7 @@ pub(super) fn update(animal: &mut Creature, habitat: &Habitat, dt: f32, search: 
                         section: prop.section,
                         id: prop.id,
                     };
-                } else if grazable_savanna(animal.kind, habitat, goal.position) {
+                } else if grazable_ground(animal.kind, habitat, goal.position) {
                     animal.needs.food = (animal.needs.food + 5.).min(animal.kind.food());
                 }
             }

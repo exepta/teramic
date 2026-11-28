@@ -2,6 +2,7 @@
 mod dragon;
 mod forest;
 mod golem;
+mod poultry;
 mod sandworm;
 mod savanna;
 mod spirit;
@@ -62,6 +63,10 @@ fn setup(
     }
     if std::env::var_os("TERRA_SAVANNA_INSPECT").is_some() {
         savanna::setup(&mut creatures, &mut journal);
+        return;
+    }
+    if std::env::var_os("TERRA_POULTRY_INSPECT").is_some() {
+        poultry::setup(&mut creatures, &mut journal);
         return;
     }
     if std::env::var_os("TERRA_VOLCANIC_INSPECT").is_some() {
@@ -230,6 +235,10 @@ fn run(world: &mut World) {
     }
     if std::env::var_os("TERRA_SAVANNA_INSPECT").is_some() {
         savanna::run(world);
+        return;
+    }
+    if std::env::var_os("TERRA_POULTRY_INSPECT").is_some() {
+        poultry::run(world);
         return;
     }
     if std::env::var_os("TERRA_VOLCANIC_INSPECT").is_some() {

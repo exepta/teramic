@@ -11,6 +11,9 @@ use terra_render::VolcanicSound;
 pub(super) const FIRST: usize = super::lava_worm::FIRST + super::lava_worm::COUNT;
 pub(super) const RUMBLE: usize = FIRST + 4;
 pub(super) const FLOW: usize = FIRST + 5;
+const FLOW_RANGE: f32 = 18.;
+const FLOW_GAIN: f32 = 0.11;
+const BUBBLE_RANGE: f32 = 13.;
 pub(super) const CLIPS: [&str; 6] = [
     "environment/lava-bubble.wav",
     "environment/lava-crust.wav",
@@ -28,6 +31,11 @@ fn stereo(source: Vec3, ear: Vec3, right: Vec3, range: f32, gain: f32) -> [f32; 
         volume * ((1. - pan) * 0.5).sqrt(),
         volume * ((1. + pan) * 0.5).sqrt(),
     ]
+}
+
+fn nearby_stereo(source: Vec3, ear: Vec3, right: Vec3, range: f32, gain: f32) -> [f32; 2] {
+    let falloff = (1. - source.distance(ear) / range).clamp(0., 1.);
+    stereo(source, ear, right, range, gain * falloff)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -54,14 +62,14 @@ pub(super) fn update(
     if let Some((body, camera)) = listener {
         let ear = body.translation + Vec3::Y * terra_physics::character::PLAYER_EYE_OFFSET;
         let right = *camera.right();
-        if let Some(sources) = surfaces {
-            for cell in &sources.surfaces {
-                let source = Vec3::from_array(cell.map(|v| v as f32)) + Vec3::new(0.5, 1., 0.5);
-                let gains = stereo(source, ear, right, 21., 0.35);
-                for (bed, gain) in flow.iter_mut().zip(gains) {
-                    *bed = bed.max(gain);
-                }
-            }
+        if let Some(source) = surfaces.as_deref().and_then(|sources| {
+            sources
+                .surfaces
+                .iter()
+                .map(|p| Vec3::from_array(p.map(|v| v as f32)) + Vec3::new(0.5, 1., 0.5))
+                .min_by(|a, b| a.distance_squared(ear).total_cmp(&b.distance_squared(ear)))
+        }) {
+            flow = nearby_stereo(source, ear, right, FLOW_RANGE, FLOW_GAIN);
         }
         let play = |sound, gains: [f32; 2], pitch| {
             if gains[0].max(gains[1]) > 0.002 {
@@ -90,21 +98,26 @@ pub(super) fn update(
             let (point, sample, range, gain) = match *event {
                 VolcanicSound::Bubble(p) => {
                     if time.elapsed_secs() < *next_breach
-                        || p.distance_squared(ear) >= 15.0_f32.powi(2)
+                        || p.distance_squared(ear) >= BUBBLE_RANGE.powi(2)
                     {
                         continue;
                     }
-                    *next_breach = time.elapsed_secs() + 0.48;
+                    *next_breach = time.elapsed_secs() + 0.68;
                     // A rock fragment splitting on a bubble is shorter and more brittle.
                     let crust = (p.x.floor() as i64 ^ p.z.floor() as i64).rem_euclid(3) == 0;
-                    (p, usize::from(crust), 15., 0.31)
+                    (
+                        p,
+                        usize::from(crust),
+                        BUBBLE_RANGE,
+                        if crust { 0.073 } else { 0.102 },
+                    )
                 }
-                VolcanicSound::Steam(p) => (p, 2, 27., 0.64),
+                VolcanicSound::Steam(p) => (p, 2, 21., 0.26),
             };
             let variation = (point.x.floor() as i64 ^ point.z.floor() as i64).rem_euclid(15);
             play(
                 FIRST + sample,
-                stereo(point, ear, right, range, gain),
+                nearby_stereo(point, ear, right, range, gain),
                 0.9 + variation as f32 * 0.014,
             );
         }
@@ -119,5 +132,29 @@ pub(super) fn update(
     }
     for (out, gain) in sounds.controls.eruption.iter().zip(rumble) {
         out.store(gain.to_bits(), Ordering::Relaxed);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lava_bed_is_quiet_and_falls_off_before_the_next_pool() {
+        let power = |distance: f32| {
+            nearby_stereo(
+                Vec3::Z * distance,
+                Vec3::ZERO,
+                Vec3::X,
+                FLOW_RANGE,
+                FLOW_GAIN,
+            )
+            .into_iter()
+            .map(|gain| gain * gain)
+            .sum::<f32>()
+        };
+        assert!(power(0.) < 0.35_f32.powi(2) / 9.);
+        assert!((power(FLOW_RANGE / 2.) / power(0.) - 0.0625).abs() < 0.0001);
+        assert_eq!(power(FLOW_RANGE), 0.);
     }
 }

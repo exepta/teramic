@@ -1,15 +1,31 @@
 use super::*;
 use terra_core::rails::Piece;
 
-pub(super) fn build(f: &mut Frame<'_>) {
+const TRACKS: [(i64, i64, M, u8); 6] = [
+    (0, -9, M::RailStraight, 0),
+    (0, -5, M::RailSwitchRight, 0),
+    (0, 3, M::RailStraight, 0),
+    (0, 7, M::RailStraight, 0),
+    (0, 11, M::RailBuffer, 0),
+    (5, -1, M::RailStraight, 1),
+];
+
+pub(super) fn build(f: &mut Frame<'_>, fit_ground: bool) {
     // Leave the tramway level. At the downhill end the landing becomes a
     // trestle on timber piles, with a pedestrian staircase alongside the track.
     for z in -10..=14 {
-        let width = if z < 0 { 7 } else { 4 };
+        let width = match z {
+            i64::MIN..=-3 if fit_ground => 1,
+            -2..=-1 if fit_ground => 3,
+            ..=-1 => 7,
+            _ => 4,
+        };
         for x in -width..=width {
             if z >= 0 {
                 f.column(x, z, f.floor(x, z).min(0) - 1, 0, M::HighlandCliffStone);
                 f.column(x, z, 1, 5, M::Air);
+            } else if fit_ground {
+                deck(f, x, z, 3, x.abs() == width && z % 3 == 0);
             } else if f.floor(x, z) < -1 {
                 f.column(x, z, 0, 0, M::SprucePlanks);
                 f.column(x, z, 1, 6, M::Air);
@@ -30,12 +46,14 @@ pub(super) fn build(f: &mut Frame<'_>) {
             }
         }
         if z < -2 && z % 2 == 0 {
-            for x in [-7, 7] {
-                f.put(x, 1, z, M::SpruceFence);
+            for x in [-width, width] {
+                if !fit_ground || f.floor(x, z) < 0 {
+                    f.put(x, 1, z, M::SpruceFence);
+                }
             }
         }
     }
-    f.approach(2, 0, -11);
+    f.approach(if fit_ground { 1 } else { 2 }, 0, -11);
     // The adit has a blasted crown, two ore seams and a working side drift.
     // Its incline and back are native rock; only exposed excavation faces
     // receive fresh mineral staining, while the mountain above is untouched.
@@ -100,9 +118,39 @@ pub(super) fn build(f: &mut Frame<'_>) {
         f.put(-9, 2, 8, M::MineToolRack);
         f.put(-6, 3, 6, M::CrystalLantern);
     }
-    for x in 3..=9 {
-        for z in -2..=0 {
-            f.terrace(x, z, 0, M::CrystalGravel);
+    if !fit_ground {
+        for x in 3..=9 {
+            for z in -2..=0 {
+                f.terrace(x, z, 0, M::CrystalGravel);
+            }
+        }
+    } else {
+        for (x, z, mat, yaw) in TRACKS.into_iter().filter(|&(_, z, _, _)| z < 0) {
+            let local = Piece::new([x, 1, z], mat as u16, yaw).unwrap();
+            for [x, y, z] in crate::rails::cells(local) {
+                if z < 0 && y == 1 {
+                    deck(f, x, z, 3, z % 3 == 0);
+                }
+            }
+        }
+        for (x, z, clearance) in [
+            (-6, -8, 4),
+            (6, -3, 4),
+            (7, -3, 2),
+            (-5, -3, 2),
+            (-5, -4, 2),
+            (-5, -6, 2),
+        ] {
+            deck(f, x, z, clearance, true);
+        }
+        for z in -7..=-4 {
+            for x in 4..=7 {
+                if x == 4 || x == 7 {
+                    deck(f, x, z, 4, true);
+                } else {
+                    f.column(x, z, 2, 4, M::Air);
+                }
+            }
         }
     }
     for z in [0, 4, 8, 12] {
@@ -126,16 +174,9 @@ pub(super) fn build(f: &mut Frame<'_>) {
     }
     // These are genuine track modules. Each owned voxel slice acquires its
     // persistent rail anchor so the player can continue or dismantle the line.
-    for (z, material) in [
-        (-9, M::RailStraight),
-        (-5, M::RailSwitchRight),
-        (3, M::RailStraight),
-        (7, M::RailStraight),
-        (11, M::RailBuffer),
-    ] {
-        rail(f, 0, z, material, 0);
+    for (x, z, material, yaw) in TRACKS {
+        rail(f, x, z, material, yaw);
     }
-    rail(f, 5, -1, M::RailStraight, 1);
     f.put(7, 1, -3, M::CrystalMineCart);
     f.put(-5, 1, -3, M::ExcavationCrate);
     f.put(-5, 2, -3, M::MineToolRack);
@@ -161,6 +202,20 @@ pub(super) fn build(f: &mut Frame<'_>) {
     f.put(3, 2, 10, M::MineToolRack);
     f.put(-5, 1, -6, M::ExcavationCrate);
     f.put(-5, 2, -6, M::CrystalLantern);
+}
+
+fn deck(f: &mut Frame<'_>, x: i64, z: i64, clearance: i64, post: bool) {
+    let ground = f.floor(x, z);
+    if ground < -1 {
+        f.put(x, 0, z, M::SprucePlanks);
+        if post {
+            f.column(x, z, ground + 1, -1, M::SpruceLog);
+        }
+    } else {
+        f.put(x, 0, z, M::CrystalGravel);
+    }
+    // Keep the native slope above the mouth. Only clear the usable height.
+    f.column(x, z, 1, clearance, M::Air);
 }
 
 fn rail(f: &mut Frame<'_>, x: i64, z: i64, mat: M, local_yaw: u8) {

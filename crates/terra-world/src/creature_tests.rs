@@ -68,6 +68,254 @@ fn animal(kind: CreatureKind) -> Creature {
 }
 
 #[test]
+fn hens_peck_on_grass_flee_human_approaches_and_regroup_on_open_ground() {
+    let (terrain, chunks, journal) = fixture();
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut hen = animal(CreatureKind::Hen);
+    hen.needs.food = 2.0;
+    for _ in 0..60 {
+        step(&mut hen, &h, &[], 0.1);
+    }
+    assert!(
+        hen.needs.food > 5.0,
+        "hens find food without breaking the grass"
+    );
+    let start = hen.position;
+    assert!(poultry::alert_hen(
+        &mut hen,
+        &h,
+        [start[0] - 2.0, start[1] + 0.5, start[2]]
+    ));
+    step(&mut hen, &h, &[], 0.1);
+    assert_eq!(hen.behavior, CreatureBehavior::Flee);
+    assert!(hen.position[0] > start[0]);
+    for _ in 0..35 {
+        step(&mut hen, &h, &[], 0.1);
+    }
+    hen.needs.goal = None;
+    hen.behavior = CreatureBehavior::Rest;
+    let leader = [hen.position[0] - 7.0, hen.position[1], hen.position[2]];
+    let before = distance(hen.position, leader);
+    let mut nav = navigation::Navigation::default();
+    assert!(poultry::follow(&mut hen, leader, &h, 0.1, true, &mut nav));
+    assert!(distance(hen.position, leader) < before);
+    let near_player = [hen.position[0], hen.position[1], hen.position[2] + 3.0];
+    step(&mut hen, &h, &[near_player], 0.1);
+    assert_eq!(hen.behavior, CreatureBehavior::Flee);
+}
+
+#[test]
+fn rooster_windup_targets_one_actor_and_never_hits_through_a_wall() {
+    let (terrain, chunks, mut journal) = fixture();
+    let mut rooster = animal(CreatureKind::Rooster);
+    rooster.position = [8.5, 3.0, 8.5];
+    let target = [8.5, 3.45, 7.30];
+    let mut nav = navigation::Navigation::default();
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    assert!(poultry::defend(&mut rooster, &h, target, false, 0.1, true, &mut nav).is_none());
+    assert_eq!(rooster.behavior, CreatureBehavior::Attack);
+    for _ in 0..3 {
+        assert!(poultry::defend(&mut rooster, &h, target, true, 0.1, true, &mut nav).is_none());
+    }
+    // A different target enters on the impact tick and needs its own wind-up.
+    assert!(poultry::defend(&mut rooster, &h, target, false, 0.1, true, &mut nav).is_none());
+    let damage = (0..8)
+        .filter_map(|_| poultry::defend(&mut rooster, &h, target, true, 0.1, true, &mut nav))
+        .collect::<Vec<_>>();
+    assert_eq!(damage, [1.5]);
+    journal.record([8, 3, 7], 1).unwrap();
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    assert!(!poultry::ready_to_strike(&rooster, target, &h));
+    for _ in 0..7 {
+        assert!(poultry::defend(&mut rooster, &h, target, true, 0.1, true, &mut nav).is_none());
+    }
+}
+
+#[test]
+fn predators_aim_at_short_prey_and_can_only_strike_in_their_committed_arc() {
+    let (terrain, chunks, mut journal) = fixture();
+    let mut snake = animal(CreatureKind::Snake);
+    snake.position = [8.5, 3.0, 8.9];
+    snake.behavior = CreatureBehavior::Rest;
+    let prey = forest::Target {
+        position: [8.5, 3.0, 7.7],
+        aim: [8.5, 3.28, 7.7],
+    };
+    // The snake can reach the hen under a low shelf. A ray aimed at
+    // player height would incorrectly select the shelf instead of the hen.
+    journal
+        .record([8, 3, 7], terra_voxel::MaterialId::OakSlab as u16)
+        .unwrap();
+    journal
+        .set_object_state(
+            [8, 3, 7],
+            Some(crate::edits::BlockObjectState {
+                facing: 4,
+                ..Default::default()
+            }),
+        )
+        .unwrap();
+    {
+        let h = Habitat {
+            terrain: &terrain,
+            chunks: &chunks,
+            journal: &journal,
+        };
+        let mut observations = Vec::new();
+        let hits = (0..10)
+            .filter_map(|_| {
+                let effect = forest::step_observed(
+                    &mut snake,
+                    &h,
+                    std::iter::once(prey),
+                    0.1,
+                    true,
+                    None,
+                    |index| observations.push(index),
+                );
+                match effect {
+                    bears::Effect::StrikePlayer { index, damage } => Some((index, damage)),
+                    _ => None,
+                }
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(hits, [(0, 1.6)]);
+        assert!(!observations.is_empty() && observations.iter().all(|&index| index == 0));
+    }
+    journal
+        .record([8, 3, 7], terra_voxel::MaterialId::Stone as u16)
+        .unwrap();
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    for _ in 0..12 {
+        let effect = forest::step_observed(
+            &mut snake,
+            &h,
+            std::iter::once(prey),
+            0.1,
+            true,
+            None,
+            |_| panic!("prey is behind a stone wall"),
+        );
+        assert_eq!(effect, bears::Effect::None);
+    }
+}
+
+#[test]
+fn crocodile_keeps_a_clear_pose_if_the_target_is_visible_through_a_narrow_gap() {
+    let (terrain, chunks, mut journal) = fixture();
+    for z in [7, 9] {
+        journal
+            .record([10, 3, z], terra_voxel::MaterialId::Stone as u16)
+            .unwrap();
+    }
+    let habitat = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    let mut crocodile = animal(CreatureKind::Crocodile);
+    crocodile.position = [9.1, 3., 8.5];
+    crocodile.behavior = CreatureBehavior::Rest;
+    let prey = forest::Target::creature([11., 3., 8.5], 0.6);
+    assert!(habitat.clear_swimmer_rotated(crocodile.position, crocodile.size(), 0.));
+    assert!(!habitat.clear_swimmer_rotated(
+        crocodile.position,
+        crocodile.size(),
+        -std::f64::consts::FRAC_PI_2
+    ));
+    for _ in 0..10 {
+        assert_eq!(
+            forest::step_observed(
+                &mut crocodile,
+                &habitat,
+                std::iter::once(prey),
+                0.1,
+                false,
+                None,
+                |_| {}
+            ),
+            bears::Effect::None
+        );
+        assert!(habitat.clear_swimmer_rotated(
+            crocodile.position,
+            crocodile.size(),
+            crocodile.yaw.into()
+        ));
+    }
+}
+
+#[test]
+fn poultry_spawn_groups_are_atomic_deterministic_and_budgeted() {
+    let (terrain, chunks, journal) = fixture();
+    let (terrain, home, flock) = (0..32)
+        .find_map(|seed| {
+            let mut config = terrain.config().clone();
+            config.seed = terra_core::WorldSeed(seed);
+            let terrain = TerraGenerator::new(config).unwrap();
+            let h = Habitat {
+                terrain: &terrain,
+                chunks: &chunks,
+                journal: &journal,
+            };
+            let (home, flock) = (-1..=1)
+                .flat_map(|x| (-1..=1).map(move |z| [x, z]))
+                .find_map(|home| {
+                    poultry::natural_flock(&h, home, 9)
+                        .ok()
+                        .flatten()
+                        .map(|flock| (home, flock))
+                })?;
+            Some((terrain, home, flock))
+        })
+        .expect("a flat forest habitat for a poultry group");
+    let h = Habitat {
+        terrain: &terrain,
+        chunks: &chunks,
+        journal: &journal,
+    };
+    assert!((4..=9).contains(&flock.len()));
+    assert_eq!(flock[0].kind, CreatureKind::Rooster);
+    assert!(flock[1..].iter().all(|bird| bird.kind == CreatureKind::Hen));
+    assert!(flock.iter().all(Creature::valid));
+    assert_eq!(
+        poultry::natural_flock(&h, home, 9).unwrap(),
+        Some(flock.clone())
+    );
+    assert_eq!(
+        poultry::natural_flock(&h, home, 4).unwrap().unwrap().len(),
+        4
+    );
+    assert!(poultry::natural_flock(&h, home, 3).unwrap().is_none());
+    let mut pop = CreaturePopulation::default();
+    assert!(spawn_cell(&mut pop, &h, home));
+    assert_eq!(pop.animals.into_values().collect::<Vec<_>>(), flock);
+    let unloaded = ChunkStore::default();
+    let unknown = Habitat {
+        chunks: &unloaded,
+        ..h
+    };
+    let mut pop = CreaturePopulation::default();
+    assert!(!spawn_cell(&mut pop, &unknown, home));
+    assert!(pop.explored.is_empty() && pop.animals.is_empty());
+}
+
+#[test]
 fn walking_sweeps_reject_intermediate_gaps_walls_and_unknown_cells() {
     let (terrain, chunks, mut journal) = fixture();
     let start = [7.5, 3.0, 8.5];
@@ -1744,6 +1992,9 @@ fn herd_occupancy_does_not_exclude_any_land_species() {
             CreatureKind::Pig,
             CreatureKind::Butterfly,
             CreatureKind::SpiritGloom,
+            CreatureKind::Hen,
+            CreatureKind::Rooster,
+            CreatureKind::Snake,
         ])
     );
 }

@@ -1,0 +1,16 @@
+[
+  {"source": "Tiger", "de": "Tiger", "en": "Tiger"},
+  {"source": "Lion", "de": "Löwe", "en": "Lion"},
+  {"source": "Crocodile", "de": "Krokodil", "en": "Crocodile"},
+  {"source": "Jaguar", "de": "Jaguar", "en": "Jaguar"},
+  {"source": "Snake", "de": "Schlange", "en": "Snake"},
+  {"source": "Grass Snake", "de": "Ringelnatter", "en": "Grass Snake"},
+  {"source": "Adder", "de": "Kreuzotter", "en": "Adder"},
+  {"source": "Sand Viper", "de": "Sandviper", "en": "Sand Viper"},
+  {"source": "Coral Snake", "de": "Korallenschlange", "en": "Coral Snake"},
+  {"source": "Emerald Tree Boa", "de": "Grüner Hundskopfschlinger", "en": "Emerald Tree Boa"},
+  {"source": "Reticulated Python", "de": "Netzpython", "en": "Reticulated Python"},
+  {"source": "Kingsnake", "de": "Königsnatter", "en": "Kingsnake"},
+  {"source": "Copperhead", "de": "Kupferkopf", "en": "Copperhead"},
+  {"source": "Black Mamba", "de": "Schwarze Mamba", "en": "Black Mamba"}
+]

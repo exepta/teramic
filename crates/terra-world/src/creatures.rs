@@ -20,6 +20,8 @@ pub mod navigation;
 #[path = "creature_needs.rs"]
 mod needs;
 mod perception;
+pub mod poultry;
+mod predators;
 pub mod riding;
 pub mod sandworm;
 pub mod spawning;
@@ -648,7 +650,7 @@ pub fn spawn_cell_away_from_players(
             habitat,
             home,
             terra_core::creatures::definitions::get,
-            available.min(4),
+            available,
         )
     }
 }
@@ -659,7 +661,7 @@ fn spawn_cell_using<'a>(
     home: [i64; 2],
     definition: impl Fn(Kind) -> &'a terra_core::creatures::definitions::MobDefinition,
 ) -> bool {
-    spawn_cell_budgeted_using(population, habitat, home, definition, 4)
+    spawn_cell_budgeted_using(population, habitat, home, definition, 9)
 }
 
 /// The laid-out guardian faces one of the four cardinal entrances. Use its
@@ -736,6 +738,28 @@ fn spawn_cell_budgeted_using<'a>(
         });
         population.explored.insert(home);
         return true;
+    }
+    match poultry::natural_flock(habitat, home, available) {
+        Err(()) => return false,
+        Ok(Some(flock)) => {
+            population.explored.insert(home);
+            for bird in flock {
+                population.animals.entry(bird.id).or_insert(bird);
+            }
+            return true;
+        }
+        Ok(None) => {}
+    }
+    match predators::natural(habitat, home, available, &definition) {
+        Err(()) => return false,
+        Ok(Some(predators)) => {
+            population.explored.insert(home);
+            for predator in predators {
+                population.animals.entry(predator.id).or_insert(predator);
+            }
+            return true;
+        }
+        Ok(None) => {}
     }
     let mut candidates = Vec::new();
     let mut bear_habitat = false;
@@ -1154,12 +1178,7 @@ pub(super) fn step_with_flowers(
     .map(|(index, _)| &players[index]);
     if let Some(player) = nearest.filter(|p| {
         animal.kind != Kind::Fish
-            && distance(**p, animal.position)
-                < if animal.behavior == Behavior::Flee && animal.timer > 0.0 {
-                    2.5_f64.powi(2)
-                } else {
-                    0.95_f64.powi(2)
-                }
+            && distance(**p, animal.position) < poultry::startle_radius(animal).powi(2)
     }) {
         animal.yaw =
             ((player[0] - animal.position[0]).atan2(player[2] - animal.position[2])) as f32;
@@ -1175,13 +1194,14 @@ pub(super) fn step_with_flowers(
             match seed % if animal.kind == Kind::Pig { 5 } else { 4 } {
                 0 => Behavior::Rest,
                 1 if animal.kind == Kind::Sheep => Behavior::Shake,
+                1 | 2 if matches!(animal.kind, Kind::Hen | Kind::Rooster) => Behavior::Graze,
                 _ => Behavior::Wander,
             }
         };
-        animal.timer = if animal.behavior == Behavior::Shake {
-            1.2
-        } else {
-            2.0 + (seed % 60) as f32 * 0.1
+        animal.timer = match animal.behavior {
+            Behavior::Shake => 1.2,
+            Behavior::Graze => 1.2 + (seed % 16) as f32 * 0.1,
+            _ => 2.0 + (seed % 60) as f32 * 0.1,
         };
     }
     if matches!(animal.behavior, Behavior::Rest | Behavior::Shake)

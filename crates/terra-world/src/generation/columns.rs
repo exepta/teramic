@@ -420,11 +420,17 @@ impl PreparedColumn {
     /// Only the mineral basin around a generated vent receives thermal-water
     /// optics. Nearby rivers and underground pools retain their own palette.
     pub fn geothermal_water(&self, pos: [f64; 3]) -> bool {
+        use crate::volcano::geyser::{SUBMERGED_ECOLOGY_REVISION, VENT_DEPTH};
+        let rim_offset = if self.config.ecology_revision >= SUBMERGED_ECOLOGY_REVISION {
+            VENT_DEPTH
+        } else {
+            0
+        };
         self.natural_features
             .iter()
             .filter_map(|p| p.geyser)
             .any(|[x, y, z]| {
-                let dy = pos[1] - y as f64;
+                let dy = pos[1] - (y + rim_offset) as f64;
                 let dx = pos[0] - x as f64 - 0.5;
                 let dz = pos[2] - z as f64 - 0.5;
                 (-5.0..=0.5).contains(&dy) && dx * dx + dz * dz <= 81.

@@ -28,6 +28,7 @@ pub enum Walker {
     Cow,
     Pig,
     Bear,
+    Cat,
     Stalker,
     Spider,
     Dragon,

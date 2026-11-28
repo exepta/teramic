@@ -14,6 +14,7 @@ pub(super) struct CactusWorld<'w, 's> {
     time: Res<'w, Time>,
     config: Res<'w, GameConfig>,
     runtime: Res<'w, ServerRuntime>,
+    terrain: Res<'w, terra_world::streaming::WorldTerrain>,
     chunks: Res<'w, ChunkStore>,
     journal: ResMut<'w, EditJournal>,
     mounts: ResMut<'w, riding::Mounts>,
@@ -65,7 +66,14 @@ pub(super) fn tick(mut world: CactusWorld, mut cooldowns: Local<Cooldowns>) {
             [radius * 2., half * 2., radius * 2.],
             thermal_time,
         )
-        .max(vents.exposure(&world.chunks, &world.journal, feet, half * 2., thermal_time));
+        .max(vents.exposure(
+            &world.chunks,
+            &world.journal,
+            &world.terrain.0,
+            feet,
+            half * 2.,
+            thermal_time,
+        ));
         if contact || heat > 0. {
             let health = peer.vitals.health;
             survival::environmental_damage(
@@ -121,6 +129,7 @@ pub(super) fn tick(mut world: CactusWorld, mut cooldowns: Local<Cooldowns>) {
                 .max(vents.exposure(
                     &world.chunks,
                     &world.journal,
+                    &world.terrain.0,
                     a.position,
                     a.size()[1],
                     thermal_time,

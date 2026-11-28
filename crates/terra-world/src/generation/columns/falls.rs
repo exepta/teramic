@@ -62,15 +62,19 @@ impl SectionGenerator {
             let c = columns[i];
             let own = c.water_columns();
             let mut spans = [None; 3];
+            let mut neighbor_at = |[dx, dz]: [i64; 2]| {
+                let (nx, nz) = (x + dx, z + dz);
+                let c = idx(nx, nz)
+                    .map(|j| &columns[j])
+                    .unwrap_or_else(|| border.entry([nx, nz]).or_insert_with(|| sample(nx, nz)));
+                (c.water_level.is_some() || c.cave.water.is_some()).then(|| *c)
+            };
             for (dx, dz) in [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)] {
                 let nx = x + dx;
                 let nz = z + dz;
-                let n = idx(nx, nz)
-                    .map(|j| &columns[j])
-                    .unwrap_or_else(|| border.entry([nx, nz]).or_insert_with(|| sample(nx, nz)));
-                if n.water_level.is_none() && n.cave.water.is_none() {
+                let Some(n) = neighbor_at([dx, dz]) else {
                     continue;
-                }
+                };
                 for (layer, source) in n.water_columns().intervals[..2].iter().enumerate() {
                     let Some(w) = source else { continue };
                     let under = dx == 0 && dz == 0;
@@ -89,11 +93,21 @@ impl SectionGenerator {
                         && n.water_flow != [0.; 2]
                         && c.water_flow == [0.; 2]
                         && lower.is_none();
-                    let lip = !bank && w.level - lower.map_or(floor, |l| l.level) >= 1.;
+                    let lip = !bank
+                        && w.level - lower.map_or(floor, |l| l.level) >= 1.
+                        && !(layer == 0
+                            && lower.is_some_and(|l| {
+                                crate::water::outlets::shares_channel_edge(
+                                    [dx, dz],
+                                    l.level,
+                                    w.level,
+                                    |p| neighbor_at(p).and_then(|c| c.water_level),
+                                )
+                            }));
                     let open = |top: i64, head: i64| {
                         own.at(top).is_none()
                             && can_hold_fluid(material([x, top, z], c))
-                            && can_hold_fluid(material([nx, head, nz], *n))
+                            && can_hold_fluid(material([nx, head, nz], n))
                     };
                     let (top, head) = if under {
                         if !open(bed - 1, bed) {

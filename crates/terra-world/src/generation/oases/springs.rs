@@ -137,7 +137,7 @@ mod tests {
         assert_eq!(low, basin.level);
         assert!(high - low >= crate::water::MIN_WATERFALL_DROP);
         let top = high as i64 - 1;
-        let neighbors = crate::water::outlets::HORIZONTAL.map(|[a, b]| sample(x + a, z + b));
+        let neighbors = |[a, b]: [i64; 2]| sample(x + a, z + b);
         let outlets =
             crate::water::natural_outlets([x, z], top.div_euclid(16), upper, neighbors, |p| {
                 generator.block_at(p).unwrap()

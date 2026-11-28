@@ -200,6 +200,9 @@ fn run(
         if matches!(state.stage, 0 | 4) && !sunlit(&world.chunks, &prop) {
             return None;
         }
+        if state.stage == 0 {
+            return grass_view(&world.chunks, &prop).map(|view| (prop, view));
+        }
         if state.stage == 4 {
             bush_view(&world.chunks, &prop).map(|view| (prop, view))
         } else {
@@ -252,6 +255,28 @@ fn familiar_view(prop: &WorldProp, stage: usize) -> Transform {
         (Vec3::new(0.9, 0.85, 1.35), root + Vec3::Y * 0.18)
     };
     Transform::from_translation(root + offset).looking_at(target, Vec3::Y)
+}
+
+fn grass_view(chunks: &ChunkStore, prop: &WorldProp) -> Option<Transform> {
+    let root = Vec3::from_array(prop.position.map(|v| v as f32));
+    let eye = root + Vec3::new(0.9, 0.85, 1.35);
+    // Open space between the blades can be targeted through. Aim for the
+    // base of a blade, where the wind displaces its surface the least.
+    for height in [0.18, 0.11, 0.24] {
+        for x in [0.0, -0.12, 0.12, -0.23, 0.23] {
+            let target = root + Vec3::new(x, height, 0.0) * prop.visual_scale();
+            let ray = (target - eye).normalize();
+            let (_, hit) = terra_world::targeting::pick_world(
+                chunks,
+                eye.to_array().map(f64::from),
+                ray.to_array().map(f64::from),
+            );
+            if matches!(hit, Some(WorldTarget::Prop(hit)) if hit.prop.id == prop.id) {
+                return Some(Transform::from_translation(eye).looking_at(target, Vec3::Y));
+            }
+        }
+    }
+    None
 }
 
 fn prop_head(prop: &WorldProp) -> Option<Vec3> {

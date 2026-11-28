@@ -21,7 +21,7 @@ fn all_custom_shader_modules_parse_as_wesl() {
         assert!(!source.contains("#{"), "{}", path.display());
         checked += 1;
     }
-    assert_eq!(checked, 28); // Includes the breaking surf material.
+    assert_eq!(checked, 29); // Includes the rotating Fresnel beam.
 }
 
 #[test]

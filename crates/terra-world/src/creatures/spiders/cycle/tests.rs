@@ -208,7 +208,8 @@ fn scheduled_hunt_reaches_real_food_even_when_not_starving_and_waiting_still_fal
             [2, 7, 7],
             0.1,
             true,
-            &mut nav
+            &mut nav,
+            |_| {}
         ),
         Some(Some(_))
     ));

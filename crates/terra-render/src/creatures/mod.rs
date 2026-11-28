@@ -13,10 +13,12 @@ mod materials;
 mod military;
 mod model;
 mod pet_preview;
+mod poultry_animation;
 mod sandworm;
 mod spirit_animation;
 mod villager_animation;
 mod web_shot;
+mod wild_animation;
 use appearance::Appearance;
 use bevy::prelude::*;
 pub use pet_preview::RenderPetPortrait;
@@ -256,7 +258,13 @@ fn setup(
         } else if kind.is_dragon()
             || matches!(
                 kind,
-                Kind::Butterfly | Kind::SpiritGloom | Kind::Skeleton | Kind::StoneGolem
+                Kind::Butterfly
+                    | Kind::SpiritGloom
+                    | Kind::Skeleton
+                    | Kind::StoneGolem
+                    | Kind::Hen
+                    | Kind::Rooster
+                    | Kind::Snake
             )
         {
             kind.variant_count()
@@ -463,17 +471,19 @@ fn render(
                 .length();
             aim.advance(animal, since, time.delta_secs(), travel, &transform);
         }
-        let timed_melee = matches!(
-            animal.kind,
-            Kind::Skeleton
-                | Kind::StoneGolem
-                | Kind::BloodStalker
-                | Kind::BloodWisp
-                | Kind::ThornBrute
-                | Kind::Bear
-                | Kind::ReefShark
-                | Kind::WhaleShark
-        );
+        let timed_melee = animal.kind.is_biome_predator()
+            || matches!(
+                animal.kind,
+                Kind::Skeleton
+                    | Kind::StoneGolem
+                    | Kind::BloodStalker
+                    | Kind::BloodWisp
+                    | Kind::ThornBrute
+                    | Kind::Bear
+                    | Kind::Rooster
+                    | Kind::ReefShark
+                    | Kind::WhaleShark
+            );
         let strike = if animal.kind == Kind::StoneGolem {
             terra_core::creatures::golem::phase(animal.behavior, animal.timer - since)
         } else if animal.kind == Kind::Skeleton && animal.behavior == Behavior::Emerge {
@@ -667,7 +677,7 @@ fn render(
                 if matches!(part, model::Part::Dragon(joint) | model::Part::DragonLight(joint) if joint.is_effect())
                     || matches!(
                         part,
-                        model::Part::Eyelids | model::Part::Proboscis | model::Part::Silk | model::Part::WebShot
+                        model::Part::Eyelids | model::Part::Proboscis | model::Part::SnakeTongue | model::Part::Silk | model::Part::WebShot
                     )
                 {
                     Visibility::Hidden
@@ -823,6 +833,14 @@ fn animate(
         }
         if matches!(part.0, model::Part::Body) && !matches!(motion.kind, Kind::Fish | Kind::Bee) {
             transform.scale.y = 1.0 + (motion.clock * 2.1).sin() * (0.004 + motion.youth * 0.003);
+        }
+        if motion.kind.is_biome_predator() {
+            wild_animation::animate(motion, part, &mut transform, &mut visibility);
+            continue;
+        }
+        if matches!(motion.kind, Kind::Hen | Kind::Rooster) {
+            poultry_animation::animate(motion, part, &mut transform);
+            continue;
         }
         if motion.kind == Kind::LavaWorm {
             lava_worm::animate(motion, part, &mut transform, &mut visibility);
@@ -1290,7 +1308,10 @@ fn spider_origin(
 
 fn rotation(animal: &terra_core::creatures::Creature) -> Quat {
     let yaw = Quat::from_rotation_y(animal.yaw);
-    if animal.kind.is_dragon() {
+    if animal.kind.is_dragon()
+        || animal.kind.is_biome_predator()
+        || matches!(animal.kind, Kind::Hen | Kind::Rooster)
+    {
         return yaw;
     }
     if animal.kind == Kind::Villager {

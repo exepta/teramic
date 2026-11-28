@@ -1,0 +1,8 @@
+{
+  "id": "snake", "title": "Snake",
+  "variant_titles": ["Grass Snake", "Adder", "Sand Viper", "Coral Snake", "Emerald Tree Boa", "Reticulated Python", "Kingsnake", "Copperhead", "Black Mamba"],
+  "health": 11, "food": 16, "water": 17,
+  "size": [0.55, 0.28, 1.80], "speed": 1.55, "group_size": 1, "sleeps": false,
+  "combat": {"damage": 1.6, "aggro_radius": 3.4, "reach": 1.35, "cooldown": 1.25, "poison_level": 1, "poison_seconds": 9.0},
+  "spawn": {"biomes": ["swamp", "savanna", "petrified_forest", "forest"]}
+}

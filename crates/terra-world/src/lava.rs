@@ -480,12 +480,13 @@ pub(crate) fn tick(
     }
 }
 
-/// Height of an active steam column. Vents always breathe a little between
-/// bursts, and walls cut off both the visible plume and its damage volume.
+/// Height of the hot core during a fumarole's pressure burst.
+/// The renderer and the damage check share the quiet phase between bursts.
 pub fn plume_height(p: [i64; 3], seconds: f64) -> f64 {
     let offset = ((p[0] as u64).wrapping_mul(31) ^ (p[2] as u64).wrapping_mul(17)) % 401;
     let wave = ((seconds * 0.94 + offset as f64 * 0.093).sin() * 0.5 + 0.5).powi(3);
-    0.48 + 2.95 * wave
+    let burst = ((wave - 0.38) / 0.62).clamp(0., 1.);
+    3.43 * burst * burst * (3. - 2. * burst)
 }
 
 /// Feet and body size share the representation used by creature movement.
@@ -547,8 +548,10 @@ pub fn thermal_damage(
                 let raw = chunks.block_at(cell);
                 if raw == Some(FUMAROLE) {
                     let above = feet[1] - (y as f64 + 1.0);
-                    if (x - (rock_x as f64 + 0.5)).hypot(z - (rock_z as f64 + 0.5)) < 0.39
+                    if above >= 0.
                         && above < plume_height(cell, seconds)
+                        && (x - (rock_x as f64 + 0.5)).hypot(z - (rock_z as f64 + 0.5)) < 0.39
+                        && chunks.block_at([rock_x, y + 1, rock_z]) == Some(0)
                     {
                         result = 3.;
                     }

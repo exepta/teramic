@@ -1,0 +1,12 @@
+{
+  "id": "hen",
+  "title": "Hen",
+  "variant_titles": ["Light Sussex Hen", "Partridge Hen", "Buff Hen", "Barred Hen", "Gold-Laced Hen", "Blue-Laced Hen"],
+  "health": 6,
+  "food": 18,
+  "water": 16,
+  "size": [0.41, 0.64, 0.70],
+  "speed": 1.45,
+  "group_size": 4,
+  "sleeps": true
+}
