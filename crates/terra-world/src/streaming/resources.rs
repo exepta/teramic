@@ -273,16 +273,18 @@ impl ChunkStore {
         if !terrain.config().water || !crate::water::can_hold_fluid(block) {
             return crate::water::FluidCell::default();
         }
-        if let Some(fluid) = journal.fluid(global) {
+        let surface = || self.surface_column_at(global[0], global[2]);
+        if let Some(fluid) = crate::water::falls::recorded(global, journal, || {
+            surface().map_or_else(
+                || terrain.geothermal_column(global[0], global[2]),
+                |s| s.falls[2],
+            )
+        }) {
             fluid
-        } else if let Some(surface) = self
-            .columns
-            .get(&[global[0].div_euclid(16), global[2].div_euclid(16)])
-            .and_then(|column| column.surface_at(global[0], global[2]))
-        {
+        } else if let Some(surface) = surface() {
             crate::water::falls::sampled(surface.water_columns(), global, journal)
         } else {
-            crate::water::fluid::natural_cell(terrain, global)
+            crate::water::fluid::raw_fluid_cell(terrain, journal, global)
         }
     }
     pub fn apply_confirmed_delta(
@@ -533,8 +535,7 @@ impl ChunkStore {
             if !self.block_at(p).is_some_and(crate::water::can_hold_fluid) {
                 return None;
             }
-            let cell = journal
-                .fluid(p)
+            let cell = crate::water::falls::recorded(p, journal, || natural.falls[2])
                 .unwrap_or_else(|| crate::water::falls::sampled(natural, p, journal));
             let block = self.block_at(p)?;
             if cell.amount == 0 {

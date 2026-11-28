@@ -69,22 +69,21 @@ impl Sampler<'_> {
         if !super::can_hold_fluid(block) {
             return Some(FluidCell::default());
         }
-        let cell = journal.fluid(p).unwrap_or_else(|| {
-            let natural = self.natural(p);
-            if let Some(c) = self
-                .columns
-                .get(&[p[0], p[2]])
-                .filter(|c| c.falls.iter().any(Option::is_some))
-            {
-                super::falls::sampled(*c, p, journal)
-            } else {
-                natural
-            }
-        });
+        let cell = self
+            .recorded(p, journal)
+            .unwrap_or_else(|| super::falls::sampled(self.water_columns(p), p, journal));
         Some(self.space(journal, p).clamp(cell))
     }
-    fn natural(&mut self, p: [i64; 3]) -> FluidCell {
-        let column = *self.columns.entry([p[0], p[2]]).or_insert_with(|| {
+    fn recorded(&self, p: [i64; 3], journal: &EditJournal) -> Option<FluidCell> {
+        super::falls::recorded(p, journal, || {
+            self.chunks.surface_column_at(p[0], p[2]).map_or_else(
+                || self.terrain.geothermal_column(p[0], p[2]),
+                |s| s.falls[2],
+            )
+        })
+    }
+    fn water_columns(&mut self, p: [i64; 3]) -> WaterColumns {
+        *self.columns.entry([p[0], p[2]]).or_insert_with(|| {
             self.chunks.surface_column_at(p[0], p[2]).map_or_else(
                 || {
                     self.terrain
@@ -92,8 +91,10 @@ impl Sampler<'_> {
                 },
                 |surface| surface.water_columns(),
             )
-        });
-        from_columns(column, p[1])
+        })
+    }
+    fn natural(&mut self, p: [i64; 3]) -> FluidCell {
+        from_columns(self.water_columns(p), p[1])
     }
     fn space(&mut self, journal: &EditJournal, p: [i64; 3]) -> &super::space::FluidSpace {
         self.spaces.entry(p).or_insert_with(|| {
@@ -209,13 +210,13 @@ fn simulate_sampled_step(
         if !chunks.block_at(p).is_some_and(super::can_hold_fluid) {
             continue;
         }
-        if journal.fluid(p).is_none()
-            && chunks.surface_column_at(p[0], p[2]).is_some_and(|c| {
-                c.falls
-                    .into_iter()
-                    .flatten()
-                    .any(|s| s.contains(p[1]) && s.live(p, journal))
-            })
+        if sampler.recorded(p, journal).is_none()
+            && sampler
+                .water_columns(p)
+                .falls
+                .into_iter()
+                .flatten()
+                .any(|s| s.contains(p[1]) && s.live(p, journal))
         {
             // Each segment is continuously supplied by its prepared source.
             // No tick or journal entries are required for the resting stream.

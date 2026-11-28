@@ -147,6 +147,11 @@ impl SectionGenerator {
                 columns[i].falls[2] = Some(*f);
             }
         }
+        for &([x, z], span) in features.iter().flat_map(|f| &f.geothermal_spring) {
+            if let Some(i) = idx(x, z) {
+                columns[i].falls[2] = Some(span);
+            }
+        }
         for source in features
             .iter()
             .flat_map(|f| &f.objects)
@@ -166,6 +171,9 @@ impl SectionGenerator {
             let [x, y, z] = source.position;
             let Some(i) = idx(x, z) else { continue };
             let c = columns[i];
+            if c.falls[2].is_some() {
+                continue;
+            }
             let mut bottom = y;
             while bottom > world_floor
                 && c.water_columns().at(bottom - 1).is_none()
@@ -173,11 +181,9 @@ impl SectionGenerator {
             {
                 bottom -= 1;
             }
-            if columns[i].falls[2].is_none() {
-                let mut span = Fall::new(bottom, y, y, [0, 0]);
-                span.authored = true;
-                columns[i].falls[2] = Some(span);
-            }
+            let mut span = Fall::new(bottom, y, y, [0, 0]);
+            span.authored = true;
+            columns[i].falls[2] = Some(span);
         }
     }
 }

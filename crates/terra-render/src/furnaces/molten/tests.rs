@@ -210,7 +210,7 @@ fn fumarole_hisses_at_plume_onset_once_and_only_while_the_vent_is_exposed() {
     let mut chunks = ChunkStore::default();
     let vent = [2, 1, 3];
     set(&mut chunks, vent, FUMAROLE);
-    let mut sources = VolcanicSources {
+    let sources = VolcanicSources {
         fumaroles: vec![vent],
         ..default()
     };
@@ -221,19 +221,32 @@ fn fumarole_hisses_at_plume_onset_once_and_only_while_the_vent_is_exposed() {
                 && lava::plume_height(vent, t) >= FUMAROLE_HISS_HEIGHT
         })
         .unwrap();
+    let steam_cues = |chunks: &ChunkStore, before, now| {
+        let mut cues = Vec::new();
+        sources.append_fumaroles(
+            &mut Geometry::default(),
+            (before, now),
+            Vec2::ZERO,
+            (Vec3::X, Vec3::Y),
+            |p| chunks.block_at(p),
+            |origin| cues.push(VolcanicSound::Steam(origin)),
+        );
+        cues
+    };
     assert!(matches!(
-        frame(&chunks, &mut sources, t - 0.05, t).1.as_slice(),
+        steam_cues(&chunks, Some(t - 0.05), t).as_slice(),
         [VolcanicSound::Steam(origin)] if origin.distance(Vec3::new(2.5, 2.008, 3.5)) < 1e-5
     ));
     for (a, b) in [(t, t + 0.08), (t, t), (t - 0.80, t), (t + 3., t + 3.08)] {
-        assert!(frame(&chunks, &mut sources, a, b).1.is_empty());
+        assert!(steam_cues(&chunks, Some(a), b).is_empty());
     }
+    assert!(steam_cues(&chunks, None, t).is_empty());
     let roof = [vent[0], vent[1] + 1, vent[2]];
     set(&mut chunks, roof, MaterialId::Stone as u16);
-    assert!(frame(&chunks, &mut sources, t - 0.05, t).1.is_empty());
+    assert!(steam_cues(&chunks, Some(t - 0.05), t).is_empty());
     set(&mut chunks, roof, 0);
     set(&mut chunks, vent, 0);
-    assert!(frame(&chunks, &mut sources, t - 0.05, t).1.is_empty());
+    assert!(steam_cues(&chunks, Some(t - 0.05), t).is_empty());
 }
 
 #[test]
@@ -251,9 +264,14 @@ fn fumaroles_are_clear_between_bursts_and_grow_vertically_from_their_mouth() {
         .unwrap();
     let render = |sources: &VolcanicSources, chunks: &ChunkStore, wind| {
         let mut mesh = Geometry::default();
-        sources.append_fumaroles(&mut mesh, 2.0, wind, Vec3::X, Vec3::Y, |p| {
-            chunks.block_at(p)
-        });
+        sources.append_fumaroles(
+            &mut mesh,
+            (None, sources.seconds),
+            wind,
+            (Vec3::X, Vec3::Y),
+            |p| chunks.block_at(p),
+            |_| {},
+        );
         mesh.positions
     };
     let calm = render(&sources, &chunks, Vec2::ZERO);
@@ -339,6 +357,33 @@ fn geysers_are_discovered_and_drawn_only_with_water_above_the_mouth() {
         "the same authority tick can draw different render frames"
     );
     assert!(draw(&world, t + 6.2).is_empty());
+    let warning_time = (10..2200)
+        .map(|i| f64::from(i) * 0.01)
+        .find(|&t| geyser::boil_progress(t, cell).is_some_and(|p| (0.5..0.52).contains(&p)))
+        .unwrap();
+    let warning = draw(&world, warning_time);
+    assert!(warning.iter().any(|p| (p[1] - 4.04).abs() < 0.001));
+    assert!(warning.iter().all(|p| p[1] < 4.7));
+    assert_ne!(warning, draw(&world, warning_time + 1.0 / 120.0));
+
+    let mut lowered = journal.clone();
+    lowered
+        .set_fluid(
+            mouth,
+            FluidCell {
+                amount: 4,
+                source: true,
+                ..default()
+            },
+        )
+        .unwrap();
+    let lowered_world = GeyserWorld {
+        journal: &lowered,
+        ..world
+    };
+    let lowered_warning = draw(&lowered_world, warning_time);
+    assert!(lowered_warning.iter().any(|p| (p[1] - 3.54).abs() < 0.001));
+    assert_eq!(warning.len(), lowered_warning.len());
     let mut dry = journal.clone();
     dry.set_fluid(mouth, FluidCell::default()).unwrap();
     let dry_world = GeyserWorld {
@@ -346,4 +391,19 @@ fn geysers_are_discovered_and_drawn_only_with_water_above_the_mouth() {
         ..world
     };
     assert!(draw(&dry_world, t).is_empty());
+    assert!(draw(&dry_world, warning_time).is_empty());
+
+    let mut roof = journal.clone();
+    roof.record([mouth[0], mouth[1] + 1, mouth[2]], MaterialId::Stone as u16)
+        .unwrap();
+    assert!(
+        draw(
+            &GeyserWorld {
+                journal: &roof,
+                ..world
+            },
+            warning_time
+        )
+        .is_empty()
+    );
 }

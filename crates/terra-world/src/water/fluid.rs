@@ -40,9 +40,7 @@ pub fn fluid_cell_at(
     if !can_hold_fluid(block) || !terrain.config().water {
         return FluidCell::default();
     }
-    let cell = journal
-        .fluid(global)
-        .unwrap_or_else(|| natural_cell(terrain, global));
+    let cell = raw_fluid_cell(terrain, journal, global);
     if super::space::partial(block) || journal.has_extended_kinetics() {
         super::space::FluidSpace::wet_at(
             journal,
@@ -53,10 +51,10 @@ pub fn fluid_cell_at(
                 } else {
                     journal
                         .block(p)
-                        .or_else(|| (natural_cell(terrain, p).amount > 0).then_some(0))
+                        .or_else(|| (raw_fluid_cell(terrain, journal, p).amount > 0).then_some(0))
                 }
             },
-            |p, _| journal.fluid(p).unwrap_or_else(|| natural_cell(terrain, p)),
+            |p, _| raw_fluid_cell(terrain, journal, p),
         )
         .clamp(cell)
     } else {
@@ -88,11 +86,18 @@ pub fn can_hold_fluid(block: u16) -> bool {
         )
 }
 
-pub(crate) fn natural_cell(terrain: &TerraGenerator, global: [i64; 3]) -> FluidCell {
-    from_columns(
-        terrain.water_columns(global[0] as f64 + 0.5, global[2] as f64 + 0.5),
-        global[1],
-    )
+pub(crate) fn raw_fluid_cell(
+    terrain: &TerraGenerator,
+    journal: &EditJournal,
+    global: [i64; 3],
+) -> FluidCell {
+    super::falls::recorded(global, journal, || {
+        terrain.geothermal_column(global[0], global[2])
+    })
+    .unwrap_or_else(|| {
+        let columns = terrain.water_columns(global[0] as f64 + 0.5, global[2] as f64 + 0.5);
+        super::falls::sampled(columns, global, journal)
+    })
 }
 
 pub(crate) fn from_columns(columns: super::WaterColumns, y: i64) -> FluidCell {

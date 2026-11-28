@@ -102,6 +102,9 @@ impl crate::TerraGenerator {
                 }
             }
         }
+        if columns.intervals[0].is_none() {
+            columns.falls[2] = self.geothermal_column(x.floor() as i64, z.floor() as i64);
+        }
         columns
     }
     pub fn water_column(&self, x: f64, z: f64) -> Option<WaterColumn> {

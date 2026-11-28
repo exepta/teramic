@@ -79,6 +79,7 @@ pub(super) struct NaturalPatch {
     cells: Vec<(Cell, u16)>,
     pub(super) objects: Vec<super::structures::StructureObject>,
     pub(super) geyser: Option<Cell>,
+    pub(super) geothermal_spring: Vec<(Tile, crate::water::falls::Fall)>,
     crystal_landmark: Option<CrystalLandmarkSite>,
     coastal_landmark: Option<CoastalLandmarkSite>,
     rocks: Vec<RockFormation>,
@@ -143,6 +144,22 @@ impl TerraGenerator {
         }
         self.natural_patch([cell[0].div_euclid(TILE_SIZE), cell[2].div_euclid(TILE_SIZE)])
             .block_at(cell)
+    }
+    pub(crate) fn geothermal_column(&self, x: i64, z: i64) -> Option<crate::water::falls::Fall> {
+        let tile = [x, z].map(|v| v.div_euclid(TILE_SIZE));
+        if !ashlands_sanctuary::may_have_spring(self, tile, [x, z]) {
+            return None;
+        }
+        let [cx, cz] = tile.map(|v| (v * TILE_SIZE + 16) as f64);
+        if self.climate_biome_at(cx, cz).weights.ashlands < 0.28 {
+            return None;
+        }
+        let patch = self.natural_patch(tile);
+        let index = patch
+            .geothermal_spring
+            .binary_search_by_key(&[x, z], |(p, _)| *p)
+            .ok()?;
+        Some(patch.geothermal_spring[index].1)
     }
     pub(super) fn natural_patches(&self, start: Cell, size: usize) -> Vec<Arc<NaturalPatch>> {
         if self.config().ecology_revision < 5 {
@@ -318,11 +335,18 @@ fn build(terrain: &TerraGenerator, tile: Tile) -> NaturalPatch {
         Vec::new()
     };
     let mut objects = Vec::new();
+    let mut geothermal_spring = Vec::new();
     if terrain.config().ecology_revision >= 17 {
         savanna::build(&mut habitat, tile, &mut cells);
     }
     if terrain.config().ecology_revision >= 16 {
-        ashlands::build(&mut habitat, tile, &mut cells, &mut objects);
+        ashlands::build(
+            &mut habitat,
+            tile,
+            &mut cells,
+            &mut objects,
+            &mut geothermal_spring,
+        );
     }
     if terrain.config().ecology_revision >= 15 {
         cherry::build(&mut habitat, tile, &mut cells, &mut objects);
@@ -386,11 +410,13 @@ fn build(terrain: &TerraGenerator, tile: Tile) -> NaturalPatch {
                 .find_map(|(p, m)| (*m == MaterialId::GeyserVent as u16).then_some(*p))
         })
         .flatten();
+    geothermal_spring.sort_unstable_by_key(|(p, _)| *p);
     NaturalPatch {
         streams,
         crystal_landmark,
         coastal_landmark,
         geyser,
+        geothermal_spring,
         cells: cells.into_iter().collect(),
         objects,
         rocks,

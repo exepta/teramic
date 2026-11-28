@@ -15,10 +15,23 @@ fn key([x, y, z]: [i64; 3]) -> u32 {
     h ^ (h >> 15)
 }
 
-pub fn phase(seconds: f64, cell: [i64; 3]) -> f32 {
+fn cycle(seconds: f64, cell: [i64; 3]) -> (f64, f64) {
     let key = key(cell);
     let period = 10. + f64::from(key % 70) * 0.1;
-    (seconds + f64::from(key >> 16) * 0.017).rem_euclid(period) as f32
+    let phase = (seconds + f64::from(key >> 16) * 0.017).rem_euclid(period);
+    (phase, period)
+}
+
+pub fn phase(seconds: f64, cell: [i64; 3]) -> f32 {
+    cycle(seconds, cell).0 as f32
+}
+
+/// Fraction of the 2.4-second pressure warning immediately preceding each jet.
+pub fn boil_progress(seconds: f64, cell: [i64; 3]) -> Option<f32> {
+    const WARNING: f64 = 2.4;
+    let (phase, period) = cycle(seconds, cell);
+    let remaining = period - phase;
+    (remaining < WARNING).then_some((1. - remaining / WARNING) as f32)
 }
 
 pub fn surge(seconds: f64, cell: [i64; 3]) -> f32 {
@@ -202,6 +215,23 @@ impl Vents {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn boiling_warns_before_the_jet_and_is_quiet_between_cycles() {
+        for cell in [[20, 30, -40], [2389, 26, -4659], [0, -16, 0]] {
+            let (phase, period) = cycle(0., cell);
+            let jet = period - phase;
+            assert!(boil_progress(jet - 2.5, cell).is_none());
+            let early = boil_progress(jet - 2.2, cell).unwrap();
+            let late = boil_progress(jet - 0.1, cell).unwrap();
+            assert!(early > 0. && early < 0.1);
+            assert!(late > 0.9 && late < 1.);
+            assert_eq!(surge(jet - 0.1, cell), 0.);
+            assert!(boil_progress(jet + 0.1, cell).is_none());
+            assert!(surge(jet + 0.1, cell) > 0.);
+            assert!(boil_progress(jet + 5., cell).is_none());
+        }
+    }
+
     #[test]
     fn droplets_and_scalding_arrive_together_at_the_outer_edge_after_the_jet_peaks() {
         let p = [20, 30, -40];

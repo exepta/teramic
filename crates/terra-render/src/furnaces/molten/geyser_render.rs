@@ -1,4 +1,4 @@
-//! One render-frame batch for the geyser jets and their detached spray.
+//! One render-frame batch for geyser jets, spray and fumarole steam.
 use super::{VolcanicSound, VolcanicSources};
 use crate::furnaces::{Geometry, SmokeMaterial};
 use bevy::prelude::*;
@@ -10,14 +10,16 @@ use terra_world::{
     volcano::geyser,
 };
 
+mod boiling;
+
 #[derive(Resource)]
-pub(super) struct GeyserBatch {
+pub(super) struct GeothermalBatch {
     mesh: Handle<Mesh>,
     entity: Entity,
 }
 
 #[derive(Component)]
-pub(super) struct GeyserMesh;
+pub(super) struct GeothermalMesh;
 
 pub(in crate::furnaces) fn setup(
     commands: &mut Commands,
@@ -27,8 +29,8 @@ pub(in crate::furnaces) fn setup(
     let mesh = meshes.add(crate::furnaces::mesh());
     let entity = commands
         .spawn((
-            Name::new("Geothermal water jets"),
-            GeyserMesh,
+            Name::new("Geothermal jets and steam"),
+            GeothermalMesh,
             Mesh3d(mesh.clone()),
             MeshMaterial3d(material),
             Transform::default(),
@@ -37,7 +39,7 @@ pub(in crate::furnaces) fn setup(
             bevy::camera::visibility::NoFrustumCulling,
         ))
         .id();
-    commands.insert_resource(GeyserBatch { mesh, entity });
+    commands.insert_resource(GeothermalBatch { mesh, entity });
 }
 
 #[derive(Default)]
@@ -81,16 +83,17 @@ pub(super) fn update(
     chunks: Res<ChunkStore>,
     journal: Res<EditJournal>,
     terrain: Option<Res<WorldTerrain>>,
+    weather: Option<Res<crate::weather::WeatherVisual>>,
     cameras: Query<&Transform, With<TerraCamera>>,
-    batch: Res<GeyserBatch>,
+    batch: Res<GeothermalBatch>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut visibility: Query<&mut Visibility, With<GeyserMesh>>,
+    mut visibility: Query<&mut Visibility, With<GeothermalMesh>>,
     mut sounds: MessageWriter<VolcanicSound>,
     mut clock: Local<RenderClock>,
 ) {
     let mut geometry = Geometry::default();
-    if let Some((terrain, camera)) = terrain.as_deref().zip(cameras.iter().next())
-        && !sources.geysers.is_empty()
+    if let Some(camera) = cameras.iter().next()
+        && (!sources.geysers.is_empty() || !sources.fumaroles.is_empty())
     {
         let (before, now) = clock.frame(
             sources.seconds,
@@ -98,27 +101,39 @@ pub(super) fn update(
             time.delta_secs_f64(),
             sources.inspection_seconds.is_some(),
         );
-        let world = GeyserWorld {
-            chunks: &chunks,
-            journal: &journal,
-            terrain: &terrain.0,
-        };
-        for &cell in &sources.geysers {
-            let origin = append_vent(
-                &mut geometry,
-                &world,
-                cell,
-                now,
-                (*camera.right(), *camera.up()),
-            );
-            if let Some(origin) = origin
-                && let Some(before) = before
-                && geyser::surge(before, cell) < 0.20
-                && geyser::surge(now, cell) >= 0.20
-            {
-                sounds.write(VolcanicSound::Steam(origin));
+        let basis = (*camera.right(), *camera.up());
+        if let Some(terrain) = terrain.as_deref() {
+            let world = GeyserWorld {
+                chunks: &chunks,
+                journal: &journal,
+                terrain: &terrain.0,
+            };
+            for &cell in &sources.geysers {
+                let origin = append_vent(&mut geometry, &world, cell, now, basis);
+                if let Some(origin) = origin
+                    && let Some(before) = before
+                    && geyser::surge(before, cell) < 0.20
+                    && geyser::surge(now, cell) >= 0.20
+                {
+                    sounds.write(VolcanicSound::Steam(origin));
+                }
             }
         }
+        let wind = weather.as_ref().map_or(Vec2::ZERO, |weather| weather.wind);
+        sources.append_fumaroles(
+            &mut geometry,
+            (before, now),
+            wind,
+            basis,
+            |p| {
+                chunks
+                    .block_at(p)
+                    .map(|raw| journal.block(p).unwrap_or(raw))
+            },
+            |origin| {
+                sounds.write(VolcanicSound::Steam(origin));
+            },
+        );
     } else {
         clock.presented = None;
     }
@@ -148,8 +163,16 @@ pub(super) fn append_vent(
     (right, up): (Vec3, Vec3),
 ) -> Option<Vec3> {
     let t = geyser::phase(seconds, cell);
+    if t >= 4.6 {
+        if let Some(progress) = geyser::boil_progress(seconds, cell)
+            && geyser::submerged(world.chunks, world.journal, world.terrain, cell)
+        {
+            boiling::append(vapor, world, cell, progress, (right, up));
+        }
+        return None;
+    }
     // The longest raindrops fall for less than this after the jet begins.
-    if t >= 4.6 || !geyser::submerged(world.chunks, world.journal, world.terrain, cell) {
+    if !geyser::submerged(world.chunks, world.journal, world.terrain, cell) {
         return None;
     }
     let open = |p| geyser::open(world.chunks, world.journal, p);
@@ -252,6 +275,92 @@ fn jet(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fumarole_mesh_moves_on_consecutive_frames_with_the_same_server_sample() {
+        use std::time::Duration;
+        use terra_voxel::{BlockSection, MaterialId, SectionPos};
+        use terra_world::streaming::LoadedSection;
+
+        let cell = [4, 3, 4];
+        let owner = SectionPos::default();
+        let mut data = BlockSection::empty(owner).unwrap();
+        data.set_block([4, 3, 4], MaterialId::Fumarole as u16)
+            .unwrap();
+        let mut chunks = ChunkStore::default();
+        chunks.loaded.insert(
+            owner,
+            LoadedSection {
+                data,
+                mesh: None,
+                mesh_epoch: 0,
+                water_epoch: 0,
+                water: None,
+                props: vec![],
+            },
+        );
+        let seconds = (0..200)
+            .map(|i| f64::from(i) * 0.05)
+            .find(|&t| terra_world::lava::plume_height(cell, t) > 3.)
+            .unwrap();
+        let mut app = App::new();
+        app.insert_resource(chunks)
+            .insert_resource(VolcanicSources {
+                fumaroles: vec![cell],
+                seconds,
+                ..default()
+            })
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<EditJournal>()
+            .init_resource::<Time>()
+            .add_message::<VolcanicSound>()
+            .add_systems(PostUpdate, update);
+        let mesh = app
+            .world_mut()
+            .resource_mut::<Assets<Mesh>>()
+            .add(crate::furnaces::mesh());
+        let entity = app
+            .world_mut()
+            .spawn((GeothermalMesh, Visibility::Hidden))
+            .id();
+        app.world_mut().insert_resource(GeothermalBatch {
+            mesh: mesh.clone(),
+            entity,
+        });
+        app.world_mut()
+            .spawn((TerraCamera, Transform::from_xyz(0., 6., 0.)));
+        let positions = |app: &App| {
+            app.world()
+                .resource::<Assets<Mesh>>()
+                .get(&mesh)
+                .unwrap()
+                .attribute(Mesh::ATTRIBUTE_POSITION)
+                .unwrap()
+                .clone()
+        };
+        app.update();
+        assert_eq!(
+            *app.world().get::<Visibility>(entity).unwrap(),
+            Visibility::Visible
+        );
+        let mut previous = positions(&app);
+        for _ in 0..8 {
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_secs_f64(1. / 120.));
+            app.update();
+            let current = positions(&app);
+            assert_ne!(current, previous);
+            previous = current;
+        }
+        let mut source = app.world_mut().resource_mut::<VolcanicSources>();
+        source.seconds += 3.;
+        app.update();
+        assert_eq!(
+            *app.world().get::<Visibility>(entity).unwrap(),
+            Visibility::Hidden
+        );
+    }
 
     #[test]
     fn render_clock_advances_between_ten_hertz_snapshots() {

@@ -136,7 +136,7 @@ fn setup(
             animation: Vec4::ZERO,
         },
     });
-    molten::setup_geysers(&mut commands, &mut meshes, smoke_material.clone());
+    molten::setup_geothermal(&mut commands, &mut meshes, smoke_material.clone());
     let smoke_entity = commands
         .spawn((
             Name::new("Furnace smoke wisps"),
@@ -476,7 +476,6 @@ fn update(
     session: Option<Res<ClientSession>>,
     journal: Res<EditJournal>,
     chunks: Res<ChunkStore>,
-    weather: Option<Res<crate::weather::WeatherVisual>>,
     mut effects: ResMut<Effects>,
     mut meshes: ResMut<Assets<Mesh>>,
     cameras: Query<(&Transform, &Exposure), (With<TerraCamera>, Without<FurnaceLamp>)>,
@@ -570,7 +569,7 @@ fn update(
             .iter()
             .any(|furnace| !furnace.smoke_cells.is_empty())
     });
-    let active = !nearby.is_empty() || has_smoke || alchemy.active() || sources.visible();
+    let active = !nearby.is_empty() || has_smoke || alchemy.active() || sources.has_lava();
     if !active && !effects.visible {
         return;
     }
@@ -637,7 +636,7 @@ fn update(
         }
     }
     effects.visible =
-        !nearby.is_empty() || !cells.is_empty() || alchemy.active() || sources.visible();
+        !nearby.is_empty() || !cells.is_empty() || alchemy.active() || sources.has_lava();
     effects.next = time.elapsed_secs() + 0.05;
     let mut fire = Geometry::default();
     let mut smoke = Geometry::default();
@@ -655,8 +654,6 @@ fn update(
         effects.previous_thermal_time,
         &mut sounds,
     );
-    let wind = weather.as_ref().map_or(Vec2::ZERO, |weather| weather.wind);
-    sources.append_fumaroles(&mut smoke, time.elapsed_secs(), wind, right, up, block);
     effects.previous_thermal_time = seconds;
     for furnace in nearby {
         let facing = journal

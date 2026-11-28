@@ -211,7 +211,7 @@ impl WorldConfig {
             })
     }
 
-    pub const CURRENT_ECOLOGY_REVISION: u8 = 24;
+    pub const CURRENT_ECOLOGY_REVISION: u8 = 26;
     pub const CURRENT_STRUCTURES_REVISION: u8 = 16;
     pub const CURRENT_CAVE_STRUCTURE_REVISION: u8 = 13;
     pub const CURRENT_LANDSCAPE_REVISION: u8 = 9;

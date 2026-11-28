@@ -8,6 +8,7 @@ pub(super) fn build(
     tile: Tile,
     cells: &mut BTreeMap<Cell, u16>,
     objects: &mut Vec<crate::generation::structures::StructureObject>,
+    spring: &mut Vec<(Tile, crate::water::falls::Fall)>,
 ) {
     let origin = tile.map(|v| v * TILE_SIZE);
     let seed = habitat.terrain.config().seed.0;
@@ -21,7 +22,7 @@ pub(super) fn build(
         return;
     }
     let modern = habitat.terrain.config().ecology_revision >= 20;
-    if modern && super::ashlands_sanctuary::build(habitat, tile, cells, objects) {
+    if modern && super::ashlands_sanctuary::build(habitat, tile, cells, objects, spring) {
         return;
     }
     if habitat.terrain.config().ecology_revision >= 21 {

@@ -2,7 +2,7 @@
 use super::Geometry;
 mod geyser_render;
 use bevy::prelude::*;
-pub(super) use geyser_render::setup as setup_geysers;
+pub(super) use geyser_render::setup as setup_geothermal;
 use std::collections::BTreeMap;
 use terra_network::client::ReplicatedPlayers;
 use terra_player::TerraCamera;
@@ -219,31 +219,43 @@ fn bubble_age(seconds: f64, key: u32) -> f32 {
 }
 
 impl VolcanicSources {
-    pub(super) fn visible(&self) -> bool {
-        !self.surfaces.is_empty() || !self.fumaroles.is_empty()
+    pub(super) fn has_lava(&self) -> bool {
+        !self.surfaces.is_empty()
     }
 
     pub(super) fn append_fumaroles(
         &self,
         vapor: &mut Geometry,
-        time: f32,
+        (before, seconds): (Option<f64>, f64),
         wind: Vec2,
-        right: Vec3,
-        up: Vec3,
+        (right, up): (Vec3, Vec3),
         block: impl Fn([i64; 3]) -> Option<u16>,
+        mut hiss: impl FnMut(Vec3),
     ) {
         const WISPS: usize = 18;
         const STEPS: usize = 20;
         const STEM_HEIGHT: f32 = 0.55;
         let wind = Vec3::new(wind.x, 0., wind.y).clamp_length_max(6.);
+        let ascent = (seconds * 0.78).fract() as f32;
+        let swirl = (seconds * 0.59).rem_euclid(std::f64::consts::TAU) as f32;
         for &cell in &self.fumaroles {
-            let pressure = lava::plume_height(cell, self.seconds) as f32;
+            let pressure = lava::plume_height(cell, seconds);
             if pressure <= 0. {
                 continue;
             }
             let Some(origin) = fumarole_origin(cell, &block) else {
                 continue;
             };
+            if pressure >= FUMAROLE_HISS_HEIGHT
+                && before.is_some_and(|previous| {
+                    previous < seconds
+                        && seconds - previous < 0.55
+                        && lava::plume_height(cell, previous) < FUMAROLE_HISS_HEIGHT
+                })
+            {
+                hiss(origin);
+            }
+            let pressure = pressure as f32;
             let key = seed(cell);
             let theta = (key % 4096) as f32 * (std::f32::consts::TAU / 4096.);
             let tilt = Vec3::new(theta.cos(), 0., theta.sin())
@@ -277,11 +289,11 @@ impl VolcanicSources {
             );
             for i in 0..WISPS {
                 let i = i as f32;
-                let age = (time * 0.78 + i / WISPS as f32 + theta).fract();
+                let age = (ascent + i / WISPS as f32 + theta).fract();
                 if age > clearance {
                     continue;
                 }
-                let phase = i * 2.39996 + theta + time * 0.59;
+                let phase = i * 2.39996 + theta + swirl;
                 let expansion = spread_at(lift * age);
                 let spread = 1.05 * expansion.powf(1.55) * (0.7 + pressure * 0.1);
                 let p = rise(age)
@@ -326,19 +338,6 @@ impl VolcanicSources {
         // Suppress transients on teleports, reconnects and after suspended frames.
         let elapsed = self.seconds - previous;
         let continuous = previous >= self.continuous_from && elapsed > 0. && elapsed < 0.55;
-        for &cell in &self.fumaroles {
-            if continuous
-                && lava::plume_height(cell, previous) < FUMAROLE_HISS_HEIGHT
-                && lava::plume_height(cell, self.seconds) >= FUMAROLE_HISS_HEIGHT
-                && let Some(origin) = fumarole_origin(cell, |p| {
-                    chunks
-                        .block_at(p)
-                        .map(|raw| journal.block(p).unwrap_or(raw))
-                })
-            {
-                sounds.write(VolcanicSound::Steam(origin));
-            }
-        }
         for &cell in &self.surfaces {
             let key = seed(cell);
             let age = bubble_age(self.seconds, key);

@@ -2,6 +2,9 @@
 //! shared by the first mesh, remesh and physics, without a simulation tick.
 use super::{FluidCell, FluidSnapshot};
 use crate::{SurfaceColumn, edits::EditJournal};
+use std::collections::hash_map::Entry;
+
+pub(crate) const CALM_SOURCE_REACH: i64 = 3;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Fall {
@@ -29,6 +32,18 @@ impl Fall {
             route: 0,
         }
     }
+    pub(crate) fn calm_pool(bottom: i64, top: i64, source: [i8; 2]) -> Self {
+        Self {
+            authored: true,
+            crest_height: u8::MAX,
+            ..Self::new(bottom, top, top, source)
+        }
+    }
+    fn is_calm(self) -> bool {
+        // Discharge crests are limited to 224/256. The full-block marker
+        // keeps still-water spans the same size as ordinary discharge spans.
+        self.crest_height == u8::MAX
+    }
     pub fn contains(self, y: i64) -> bool {
         (i64::from(self.bottom)..=i64::from(self.top)).contains(&y)
     }
@@ -53,7 +68,7 @@ impl Fall {
                 8
             },
             source: false,
-            flow: if crest {
+            flow: if crest && !self.is_calm() {
                 self.source.map(|v| -v.signum())
             } else {
                 [0; 2]
@@ -68,6 +83,9 @@ impl Fall {
         ];
         if !open(source) {
             return false;
+        }
+        if self.is_calm() {
+            return (p[1]..=i64::from(self.top)).all(|y| open([p[0], y, p[2]]));
         }
         let steps = self.source[0]
             .unsigned_abs()
@@ -130,16 +148,50 @@ pub(crate) fn add_cells(
                 if col.water_columns().at(y).is_some() {
                     continue;
                 }
-                cells.entry(p).or_insert_with(|| {
-                    if journal.is_none_or(|j| span.live(p, j)) {
-                        span.cell(y)
-                    } else {
-                        FluidCell::default()
+                match cells.entry(p) {
+                    Entry::Occupied(mut e)
+                        if span.is_calm()
+                            && journal.is_some_and(|j| {
+                                stale_pool_flow(j, p, *e.get()) && span.live(p, j)
+                            }) =>
+                    {
+                        *e.get_mut() = span.cell(y);
                     }
-                });
+                    Entry::Vacant(e) => {
+                        e.insert(if journal.is_none_or(|j| span.live(p, j)) {
+                            span.cell(y)
+                        } else {
+                            FluidCell::default()
+                        });
+                    }
+                    Entry::Occupied(_) => {}
+                }
             }
         }
     }
+}
+
+fn stale_pool_flow(journal: &EditJournal, p: [i64; 3], cell: FluidCell) -> bool {
+    // Before the basin had a prepared filling, it left transient gradients
+    // in air cells. Explicit withdrawals and edits still own those cells.
+    cell.amount > 0 && !cell.source && journal.block(p).is_none()
+}
+
+pub(crate) fn recorded(
+    p: [i64; 3],
+    journal: &EditJournal,
+    span: impl FnOnce() -> Option<Fall>,
+) -> Option<FluidCell> {
+    journal.fluid(p).filter(|&cell| {
+        cell.amount == 0
+            || cell.source
+            || !span().is_some_and(|span| {
+                span.is_calm()
+                    && span.contains(p[1])
+                    && journal.block(p).is_none()
+                    && span.live(p, journal)
+            })
+    })
 }
 
 pub(crate) fn sampled(
@@ -173,24 +225,38 @@ pub(crate) fn invalidate(
     }
     let [x, _, z] = changed;
     let mut sections = std::collections::BTreeSet::new();
-    for offset in -11..=11 {
-        for [cx, cz] in [[x + offset, z], [x, z + offset]] {
-            let Some(c) = chunks.surface_column_at(cx, cz) else {
-                continue;
-            };
-            for span in c.falls.into_iter().flatten() {
-                if !span.supplied([cx, i64::from(span.bottom), cz], |q| q != changed) {
-                    let lo = i64::from(span.bottom).div_euclid(16);
-                    let hi = i64::from(span.top).div_euclid(16);
-                    for sy in lo..=hi {
-                        for ox in -1..=1 {
-                            for oz in -1..=1 {
-                                sections.insert(terra_voxel::SectionPos::new(
-                                    (cx + ox).div_euclid(16),
-                                    sy,
-                                    (cz + oz).div_euclid(16),
-                                ));
-                            }
+    let reach = if chunks
+        .surface_column_at(x, z)
+        .is_some_and(|c| c.falls[2].is_some_and(|span| span.is_calm() && span.contains(changed[1])))
+    {
+        CALM_SOURCE_REACH
+    } else {
+        0
+    };
+    let axial = (-11..=11).flat_map(|offset| [(x + offset, z, false), (x, z + offset, false)]);
+    let diagonal = (-reach..=reach).flat_map(|dx| {
+        (-reach..=reach)
+            .filter(move |&dz| dx != 0 && dz != 0)
+            .map(move |dz| (x + dx, z + dz, true))
+    });
+    for (cx, cz, calm_only) in axial.chain(diagonal) {
+        let Some(c) = chunks.surface_column_at(cx, cz) else {
+            continue;
+        };
+        for span in c.falls.into_iter().flatten() {
+            if (!calm_only || span.is_calm())
+                && !span.supplied([cx, i64::from(span.bottom), cz], |q| q != changed)
+            {
+                let lo = i64::from(span.bottom).div_euclid(16);
+                let hi = i64::from(span.top).div_euclid(16);
+                for sy in lo..=hi {
+                    for ox in -1..=1 {
+                        for oz in -1..=1 {
+                            sections.insert(terra_voxel::SectionPos::new(
+                                (cx + ox).div_euclid(16),
+                                sy,
+                                (cz + oz).div_euclid(16),
+                            ));
                         }
                     }
                 }

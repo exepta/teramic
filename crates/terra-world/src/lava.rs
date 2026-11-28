@@ -145,6 +145,58 @@ pub struct SurfaceCorner {
     pub downhill: [f32; 2],
 }
 
+/// One-meter steps in generated channels share the downstream lip. The
+/// slope stays inside the upper lava voxel, leaving higher banks and separate
+/// drops intact. The four columns have the same ordering on each chunk side.
+pub fn natural_slope_corner(
+    mut block: impl FnMut([i64; 3]) -> Option<u16>,
+    journal: &EditJournal,
+    vertex: [i64; 3],
+) -> Option<SurfaceCorner> {
+    let cells =
+        [[-1, -1, -1], [-1, -1, 0], [0, -1, -1], [0, -1, 0]].map(|offset| add(vertex, offset));
+    let mut upper = [false; 4];
+    let mut lower = [false; 4];
+    for (i, cell) in cells.into_iter().enumerate() {
+        match block(cell) {
+            Some(LAVA) => {
+                if journal.block(cell) == Some(LAVA) || block(add(cell, [0, 1, 0]))? == LAVA {
+                    return None;
+                }
+                upper[i] = true;
+            }
+            Some(0) => {
+                let below = add(cell, [0, -1, 0]);
+                if block(below) == Some(LAVA) {
+                    if journal.block(below) == Some(LAVA) {
+                        return None;
+                    }
+                    lower[i] = true;
+                } else if block(add(below, [0, -1, 0])) == Some(LAVA) {
+                    // A third level at this vertex belongs to a real ledge.
+                    return None;
+                }
+            }
+            Some(_) => {}
+            None => return None,
+        }
+    }
+    let grade = |a: usize, b: usize| {
+        f32::from(u8::from(upper[a] && lower[b])) - f32::from(u8::from(lower[a] && upper[b]))
+    };
+    let edge_grades = [grade(0, 2), grade(1, 3), grade(0, 1), grade(2, 3)];
+    edge_grades
+        .iter()
+        .any(|&grade| grade != 0.)
+        .then_some(SurfaceCorner {
+            height: 0.,
+            downhill: [
+                edge_grades[0] + edge_grades[1],
+                edge_grades[2] + edge_grades[3],
+            ],
+        })
+}
+
 pub fn surface_corner(
     chunks: &ChunkStore,
     journal: &EditJournal,
@@ -177,8 +229,15 @@ pub fn surface_corner(
             heights[(dx + 1) as usize][(dz + 1) as usize] = Some(h as f32);
         }
     }
-    // Keep the foot of a fall joined to the vertical sheet. Unedited
-    // reservoirs are level. A spreading toe feathers into exposed ground.
+    if !moving
+        && !covered
+        && wet_cells > 0
+        && let Some(slope) = natural_slope_corner(chunks.block_sampler(), journal, vertex)
+    {
+        return slope;
+    }
+    // Keep the foot of a fall joined to the vertical sheet. A spreading toe
+    // feathers into exposed ground.
     let height = if covered || !moving || wet_cells == 0 {
         1.
     } else {
